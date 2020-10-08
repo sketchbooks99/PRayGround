@@ -1,4 +1,4 @@
-#include "Model.h"
+#include "TriangleMesh.h"
 
 // At present, only ".obj" format is supported.
 TriangleMesh::TriangleMesh(const std::string& filename, float3 position, float size, float3 axis, float3 diffuse_color, float3 emission_color) :

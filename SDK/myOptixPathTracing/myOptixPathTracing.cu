@@ -131,7 +131,7 @@ static __forceinline__ __device__ void setPRD(const RadiancePRD& prd)
 	optixSetPayload_1(float_as_int(prd.result.y));
 	optixSetPayload_2(float_as_int(prd.result.z));
 	optixSetPayload_3(float_as_int(prd.depth));
-	optixSetPayload_4(float_as_int(prd.depth));
+	optixSetPayload_4(float_as_int(prd.seed));
 }
 
 // -------------------------------------------------------------------------------
@@ -239,7 +239,7 @@ extern "C" __global__ void __raygen__rg()
 
 	unsigned int seed = tea<4>(idx.y * w + idx.x, subframe_index);
 
-	float3 result = make_float3(0.0f);
+	float3 result = make_float3(0.0f, 0.0f, 0.0f);
 	int i = params.samples_per_launch;
 	do
 	{
@@ -334,6 +334,7 @@ extern "C" __global__ void __closesthit__radiance__dielectric()
 
 	float3 N = normalize((1.0f - u - v) * n0 + u * n1 + v * n2);
 	const float3 P = optixGetWorldRayOrigin() + optixGetRayTmax() * ray_dir;
+	float3 result = make_float3(0.0f);
 
 	float ior = 1.52f;
 
@@ -376,7 +377,7 @@ extern "C" __global__ void __closesthit__radiance__dielectric()
 				prd.depth + 1,
 				seed);
 			reflect_prob = schlick(cos_theta, etai_over_etat);
-			prd.result += (1.0f - reflect_prob) * radiance;
+			result += (1.0f - reflect_prob) * radiance;
 		}
 
 		// reflection
@@ -387,9 +388,10 @@ extern "C" __global__ void __closesthit__radiance__dielectric()
 				w_out,
 				prd.depth + 1,
 				seed);
-			prd.result += reflect_prob * radiance;
+			result += reflect_prob * radiance;
 		}
 	}
+	prd.result = result;
 	setPRD(prd);
 }
 
@@ -423,6 +425,7 @@ extern "C" __global__ void __closesthit__radiance()
 	float3 radiance = make_float3(0.0f);
 	float3 attenuation = rt_data->diffuse_color;
 	float3 w_in = make_float3(0.0f);
+	float3 result = make_float3(0.0f);
 
 	unsigned int seed = prd.seed;
 
@@ -477,7 +480,8 @@ extern "C" __global__ void __closesthit__radiance()
 			prd.depth + 1,
 			seed);
 		radiance += light_emission;
-		prd.result = emission + radiance * attenuation;
-	}
+		result = emission + radiance * attenuation;
+	} 
+	prd.result = result;
 	setPRD(prd);
 }

@@ -55,7 +55,7 @@
 #include <GLFW/glfw3.h>
 
 #include "myOptixPathTracing.h"
-#include "Model.h"
+#include "TriangleMesh.h"
 #include "CUDABuffer.h"
 
 #include <array>
@@ -267,7 +267,7 @@ void initCornelMeshes()
     small_light_indices.emplace_back(make_int3(0, 1, 2));
     small_light_indices.emplace_back(make_int3(3, 4, 5));
     TriangleMesh small_light_mesh(small_light_vertices, small_light_indices, small_light_normals,
-        make_float3(0.0f), make_float3(10.0f, 0.0f, 0.0f));
+        make_float3(0.0f), make_float3(15.0f, 0.0f, 0.0f));
     cornel_meshes.emplace_back(small_light_mesh);
 }
 
@@ -404,7 +404,7 @@ void initLaunchParams( PathTracerState& state )
     ));
     
     /*ParallelogramLight light;
-    light.emission = make_float3(15.0f, 15.0f, 15.0f);
+    light.emission = make_float3(15.0f);
     light.corner = make_float3(343.0f, 548.5f, 227.0f);
     light.v1 = make_float3(0.0f, 0.0f, 105.0f);
     light.v2 = make_float3(-130.0f, 0.0f, 0.0f);

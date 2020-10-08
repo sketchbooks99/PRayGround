@@ -1,5 +1,5 @@
-#ifndef MODEL_H
-#define MODEL_H
+#ifndef TRIANGLEMESH_H
+#define TRIANGLEMESH_H
 
 #include <fstream>
 #include <vector>

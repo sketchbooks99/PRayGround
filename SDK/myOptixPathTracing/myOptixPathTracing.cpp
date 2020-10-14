@@ -305,7 +305,7 @@ void initTriangleMeshes()
     std::cerr << "mmaps.obj normals size: " << meshes.back().normals.size() << std::endl;
     std::cerr << "mmaps.obj indices size: " << meshes.back().indices.size() << std::endl;
 
-    // TODO: Damn! I have to update obj parser to load blender like .obj file.
+    // TODO: Damn! I have to update obj parser to load .obj file from blender or other specified format.
 }
 
 // ========== GLFW callbacks ==========

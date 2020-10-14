@@ -17,14 +17,14 @@ struct Vertex {
     Vertex operator-() const { return Vertex(-x, -y, -z, 0.0f); }
     float operator[](int idx) const {
         assert(idx <= 3);
-        if (idx == 0) return x;
+        if      (idx == 0) return x;
         else if (idx == 1) return y;
         else if (idx == 2) return z;
         else if (idx == 3) return pad;
     }
     float& operator[](int idx) {
         assert(idx <= 3);
-        if (idx == 0) return x;
+        if      (idx == 0) return x;
         else if (idx == 1) return y;
         else if (idx == 2) return z;
         else if (idx == 3) return pad;
@@ -117,16 +117,12 @@ inline Vertex normalize(Vertex v)
 }
  
 struct TriangleMesh {
-    TriangleMesh() : diffuse_color(make_float3(0.0f)), emission_color(make_float3(0.0f)) {}
-    TriangleMesh(const std::string& filename, float3 position, float size, float3 axis,
-                 float3 diffuse_color = make_float3(1.0f), float3 emission_color = make_float3(0.0f));
-    TriangleMesh(std::vector<Vertex> vertices, std::vector<int3> faces, std::vector<Normal> normals, 
-                 float3 diffuse_color = make_float3(1.0f), float3 emission_color = make_float3(0.0f));
+    TriangleMesh() {}
+    TriangleMesh(const std::string& filename, float3 position, float size, float3 axis);
+    TriangleMesh(std::vector<Vertex> vertices, std::vector<int3> faces, std::vector<Normal> normals);
     std::vector<Vertex> vertices;
     std::vector<Normal> normals;
-    std::vector<int3> faces;
-    float3 diffuse_color;
-    float3 emission_color;
+    std::vector<int3> indices;
 };
 
 #endif

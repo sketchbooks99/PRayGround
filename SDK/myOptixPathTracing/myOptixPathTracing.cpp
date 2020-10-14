@@ -56,7 +56,6 @@
 
 #include "myOptixPathTracing.h"
 #include "TriangleMesh.h"
-#include "CUDABuffer.h"
 
 #include <array>
 #include <cstring>
@@ -88,8 +87,6 @@ struct Record
 typedef Record<RayGenData> RayGenRecord;
 typedef Record<MissData> MissRecord;
 typedef Record<HitGroupData> HitGroupRecord;
-typedef Record<BunnyGroupData> BunnyGroupRecord;
-
 
 struct IndexedTriangle
 {
@@ -111,16 +108,22 @@ struct PathTracerState
     std::vector<CUdeviceptr> d_vertices;
     std::vector<CUdeviceptr> d_indices;
     std::vector<CUdeviceptr> d_normals;
+    std::vector<CUdeviceptr> d_materials;
 
     OptixProgramGroup raygen_prog_group = 0;
     OptixProgramGroup radiance_miss_prog_group = 0;
     OptixProgramGroup occlusion_miss_prog_group = 0;
-    OptixProgramGroup radiance_bunny_prog_group = 0;
-    OptixProgramGroup occlusion_bunny_prog_group = 0;
-    OptixProgramGroup radiance_cornel_prog_group = 0;
-    OptixProgramGroup occlusion_cornel_prog_group = 0;
+    OptixProgramGroup radiance_dielectric_prog_group = 0;
+    OptixProgramGroup occlusion_dielectric_prog_group = 0;
+    OptixProgramGroup radiance_diffuse_prog_group = 0;
+    OptixProgramGroup occlusion_diffuse_prog_group = 0;
+    OptixProgramGroup radiance_metal_prog_group = 0;
+    OptixProgramGroup occlusion_metal_prog_group = 0;
+    OptixProgramGroup radiance_emission_prog_group = 0;
+    OptixProgramGroup occlusion_emission_prog_group = 0;
 
     OptixModule ptx_module = 0;
+    OptixModule bsdf_module = 0;
     OptixPipelineCompileOptions pipeline_compile_options = {};
     OptixPipeline pipeline = 0;
 
@@ -135,16 +138,13 @@ struct PathTracerState
 const int32_t TRIANGLE_COUNT = 12;
 const int32_t MAT_COUNT = 5;
 
-std::vector<TriangleMesh> cornel_meshes;
-TriangleMesh bunny("../../model/bunny.obj",                         // filename
-    make_float3(556.0f / 2.0f, 548.0f / 2.0f, 559.2f / 2.0f),     // center position
-    150.0f,                                                 // size
-    make_float3(1, 1, -1),                                    // axis
-    make_float3(0.05f, 0.90f, 0.90f),                       // diffuse color
-    make_float3(0.0f, 0.0f, 0.0f));                         // emission color)
+std::vector<TriangleMesh> meshes;
+std::vector<Material*> materials;
+std::vector<MatType> mat_types;
 
-void initCornelMeshes()
+void initTriangleMeshes()
 {
+    // Floor ------------------------------------
     std::vector<Vertex> floor_vertices;
     std::vector<Normal> floor_normals(6, Normal(0.0f, 1.0f, 0.0f, 0.0f));
     std::vector<int3> floor_indices;
@@ -156,10 +156,11 @@ void initCornelMeshes()
     floor_vertices.emplace_back(556.0f, 0.0f,   0.0f, 0.0f);
     floor_indices.emplace_back(make_int3(0, 1, 2));
     floor_indices.emplace_back(make_int3(3, 4, 5));
-    TriangleMesh floor_meshes = TriangleMesh(floor_vertices, floor_indices, floor_normals,
-        make_float3(0.80f), make_float3(0.0f));
-    cornel_meshes.emplace_back(floor_meshes);
+    TriangleMesh floor_mesh(floor_vertices, floor_indices, floor_normals);
+    meshes.emplace_back(floor_mesh);
+    materials.emplace_back(new Diffuse(make_float3(0.8f)));
 
+    // Ceiling ------------------------------------
     std::vector<Vertex> ceiling_vertices;
     std::vector<Normal> ceiling_normals(6, Normal(0.0f, -1.0f, 0.0f, 0.0f));
     std::vector<int3> ceiling_indices;
@@ -171,10 +172,11 @@ void initCornelMeshes()
     ceiling_vertices.emplace_back(  0.0f, 548.8f, 559.2f, 0.0f);
     ceiling_indices.emplace_back(make_int3(0, 1, 2));
     ceiling_indices.emplace_back(make_int3(3, 4, 5));
-    TriangleMesh ceiling_meshes = TriangleMesh(ceiling_vertices, ceiling_indices, ceiling_normals,
-        make_float3(0.80f), make_float3(0.0f));
-    cornel_meshes.emplace_back(ceiling_meshes);
+    TriangleMesh ceiling_mesh(ceiling_vertices, ceiling_indices, ceiling_normals);
+    meshes.emplace_back(ceiling_mesh);
+    materials.emplace_back(new Diffuse(make_float3(0.8f)));
 
+    // Back wall ------------------------------------
     std::vector<Vertex> back_wall_vertices;
     std::vector<Normal> back_wall_normals(6, Normal(0.0f, 0.0f, -1.0f, 0.0));
     std::vector<int3> back_wall_indices;
@@ -186,10 +188,11 @@ void initCornelMeshes()
     back_wall_vertices.emplace_back(556.0f,   0.0f, 559.2f, 0.0f);
     back_wall_indices.emplace_back(make_int3(0, 1, 2));
     back_wall_indices.emplace_back(make_int3(3, 4, 5));
-    TriangleMesh back_wall_meshes = TriangleMesh(back_wall_vertices, back_wall_indices, back_wall_normals,
-        make_float3(0.80f), make_float3(0.0f));
-    cornel_meshes.emplace_back(back_wall_meshes);
+    TriangleMesh back_wall_mesh(back_wall_vertices, back_wall_indices, back_wall_normals);
+    meshes.emplace_back(back_wall_mesh);
+    materials.emplace_back(new Diffuse(make_float3(0.8f)));
 
+    // Right wall ------------------------------------
     std::vector<Vertex> right_wall_vertices;
     std::vector<Normal> right_wall_normals(6, Normal(1.0f, 0.0f, 0.0f, 0.0f));
     std::vector<int3> right_wall_indices;
@@ -201,10 +204,11 @@ void initCornelMeshes()
     right_wall_vertices.emplace_back(0.0f,   0.0f, 559.2f, 0.0f);
     right_wall_indices.emplace_back(make_int3(0, 1, 2));
     right_wall_indices.emplace_back(make_int3(3, 4, 5));
-    TriangleMesh right_wall_meshes = TriangleMesh(right_wall_vertices, right_wall_indices, right_wall_normals,
-        make_float3(0.05f, 0.80f, 0.05f), make_float3(0.0f));
-    cornel_meshes.emplace_back(right_wall_meshes);
+    TriangleMesh right_wall_mesh(right_wall_vertices, right_wall_indices, right_wall_normals);
+    meshes.emplace_back(right_wall_mesh);
+    materials.emplace_back(new Diffuse(make_float3(0.05f, 0.8f, 0.05f)));
 
+    // Left wall ------------------------------------
     std::vector<Vertex> left_wall_vertices;
     std::vector<Normal> left_wall_normals(6, Normal(-1.0f, 0.0f, 0.0f, 0.0f));
     std::vector<int3> left_wall_indices;
@@ -216,10 +220,11 @@ void initCornelMeshes()
     left_wall_vertices.emplace_back(556.0f, 548.8f,   0.0f, 0.0f);
     left_wall_indices.emplace_back(make_int3(0, 1, 2));
     left_wall_indices.emplace_back(make_int3(3, 4, 5));
-    TriangleMesh left_wall_meshes = TriangleMesh(left_wall_vertices, left_wall_indices, left_wall_normals,
-        make_float3(0.80f, 0.05f, 0.05f), make_float3(0.0f));
-    cornel_meshes.emplace_back(left_wall_meshes);
+    TriangleMesh left_wall_mesh(left_wall_vertices, left_wall_indices, left_wall_normals);
+    meshes.emplace_back(left_wall_mesh);
+    materials.emplace_back(new Diffuse(make_float3(0.8f, 0.05f, 0.05f)));
 
+    // Ceiling light ------------------------------------
     std::vector<Vertex> ceiling_light_vertices;
     std::vector<Normal> ceiling_light_normals(6, Normal(0.0f, -1.0f, 0.0f, 0.0f));
     std::vector<int3> ceiling_light_indices;
@@ -231,10 +236,11 @@ void initCornelMeshes()
     ceiling_light_vertices.emplace_back(343.0f, 548.6f, 332.0f, 0.0f);
     ceiling_light_indices.emplace_back(make_int3(0, 1, 2));
     ceiling_light_indices.emplace_back(make_int3(3, 4, 5));
-    TriangleMesh ceiling_light_meshes = TriangleMesh(ceiling_light_vertices, ceiling_light_indices, ceiling_light_normals,
-        make_float3(0.0f), make_float3(15.0f));
-    cornel_meshes.emplace_back(ceiling_light_meshes);
+    TriangleMesh ceiling_light_mesh(ceiling_light_vertices, ceiling_light_indices, ceiling_light_normals);
+    meshes.emplace_back(ceiling_light_mesh);
+    materials.emplace_back(new Emission(make_float3(15.0f)));
 
+    // Small light ------------------------------------
     std::vector<Vertex> small_light_vertices;
     std::vector<Normal> small_light_normals(6, Normal(0.0f, 0.0f, 1.0f, 0.0f));
     std::vector<int3> small_light_indices;
@@ -266,9 +272,40 @@ void initCornelMeshes()
         cornel_center.z, 0.0f);
     small_light_indices.emplace_back(make_int3(0, 1, 2));
     small_light_indices.emplace_back(make_int3(3, 4, 5));
-    TriangleMesh small_light_mesh(small_light_vertices, small_light_indices, small_light_normals,
-        make_float3(0.0f), make_float3(15.0f, 0.0f, 0.0f));
-    cornel_meshes.emplace_back(small_light_mesh);
+    TriangleMesh small_light_mesh(small_light_vertices, small_light_indices, small_light_normals);
+    meshes.emplace_back(small_light_mesh);
+    materials.emplace_back(new Emission(make_float3(5.0f, 0.1f, 0.1f)));
+
+    // Bunny ------------------------------------
+    //TriangleMesh bunny("../../model/bunny.obj",                         // filename
+    //    make_float3(556.0f / 2.0f, 548.0f / 2.0f, 559.2f / 2.0f),       // center position
+    //    150.0f,                                                         // size
+    //    make_float3(1, 1, -1));                                         // axis
+    //meshes.emplace_back(bunny);
+    //materials.emplace_back(new Dielectric(make_float3(1.0f), 1.52f));
+
+    // MMAPs ------------------------------------
+    TriangleMesh mmaps_glass("../../model/mmaps_glass.obj",
+        cornel_center,
+        2.0f,
+        make_float3(1, 1, 1));
+    meshes.emplace_back(mmaps_glass);
+    materials.emplace_back(new Dielectric(make_float3(1.0f), 1.52f));
+    std::cerr << "mmaps_glass.obj vertices size: " << meshes.back().vertices.size() << std::endl;
+    std::cerr << "mmaps_glass.obj normals size: " << meshes.back().normals.size() << std::endl;
+    std::cerr << "mmaps_glass.obj indices size: " << meshes.back().indices.size() << std::endl;
+
+    TriangleMesh mmaps_mirror("../../model/mmaps.obj",
+        cornel_center,
+        2.0f,
+        make_float3(1, 1, 1));
+    meshes.emplace_back(mmaps_mirror);
+    materials.emplace_back(new Metal(make_float3(1.0f), 1.0f));
+    std::cerr << "mmaps.obj vertices size: " << meshes.back().vertices.size() << std::endl;
+    std::cerr << "mmaps.obj normals size: " << meshes.back().normals.size() << std::endl;
+    std::cerr << "mmaps.obj indices size: " << meshes.back().indices.size() << std::endl;
+
+    // TODO: Damn! I have to update obj parser to load blender like .obj file.
 }
 
 // ========== GLFW callbacks ==========
@@ -371,45 +408,6 @@ void initLaunchParams( PathTracerState& state )
 
     state.params.max_depth = 5;
 
-    std::vector<ParallelogramLight> lights;
-    {
-        ParallelogramLight light;
-        light.emission = make_float3(15.0f, 15.0f, 15.0f);
-        light.corner = make_float3(343.0f, 548.5f, 227.0f);
-        light.v1 = make_float3(0.0f, 0.0f, 105.0f);
-        light.v2 = make_float3(-130.0f, 0.0f, 0.0f);
-        light.normal = normalize(cross(light.v1, light.v2));
-        lights.push_back(light);
-    }
-
-    {
-        ParallelogramLight light;
-        light.emission = make_float3(15.0f, 0.0f, 0.0f);
-        light.corner = make_float3(253.0f, 299.4f, 559.2f / 2.0f);
-        light.v1 = make_float3(25.0f, 0.0f, 559.2f/2.0f);
-        light.v2 = make_float3(0.0f, -25.0f, 559.2f/2.0f);
-        light.normal = normalize(cross(light.v1, light.v2));
-        lights.push_back(light);
-    }
-
-    CUDA_CHECK(cudaMalloc(
-        reinterpret_cast<void**>(&state.params.light),
-        lights.size() * sizeof(ParallelogramLight)
-    ));
-    CUDA_CHECK(cudaMemcpy(
-        reinterpret_cast<void*>(state.params.light),
-        lights.data(), 
-        lights.size() * sizeof(ParallelogramLight),
-        cudaMemcpyHostToDevice
-    ));
-    
-    /*ParallelogramLight light;
-    light.emission = make_float3(15.0f);
-    light.corner = make_float3(343.0f, 548.5f, 227.0f);
-    light.v1 = make_float3(0.0f, 0.0f, 105.0f);
-    light.v2 = make_float3(-130.0f, 0.0f, 0.0f);
-    light.normal = normalize(cross(light.v1, light.v2));
-    state.params.light = light;*/
     state.params.handle         = state.gas_handle;
 
     CUDA_CHECK( cudaStreamCreate( &state.stream) );
@@ -499,6 +497,9 @@ static void context_log_cb( unsigned int level, const char* tag, const char* mes
     std::cerr << "[" << std::setw( 2 ) << level << "][" << std::setw( 12 ) << tag << "]: " << message << "\n";
 }
 
+// ------------------------------------------------------------------------------------------------------------
+// Initialize camera state
+// ------------------------------------------------------------------------------------------------------------
 void initCameraState()
 {
     camera.setEye( make_float3(278.0f, 273.0f, -900.0f ) );
@@ -517,6 +518,9 @@ void initCameraState()
     trackball.setGimbalLock( true );
 }
 
+// ------------------------------------------------------------------------------------------------------------
+// Create context
+// ------------------------------------------------------------------------------------------------------------
 void createContext( PathTracerState& state )
 {
     // Initialize CUDA
@@ -533,93 +537,80 @@ void createContext( PathTracerState& state )
     state.context = context;
 }
 
-static void createTriangleInput(PathTracerState& state, TriangleMesh mesh, std::vector<OptixBuildInput>& triangle_inputs, int mesh_id)
-{
-    // alloc and copy vertices data
-    const size_t vertices_size_in_bytes = mesh.vertices.size() * sizeof(Vertex);
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&state.d_vertices[mesh_id]), vertices_size_in_bytes));
-    CUDA_CHECK(cudaMemcpy(
-        reinterpret_cast<void*>(state.d_vertices[mesh_id]),
-        mesh.vertices.data(), vertices_size_in_bytes,
-        cudaMemcpyHostToDevice
-    ));
-
-    // alloc and copy indices data
-    const size_t indices_size_in_bytes = mesh.faces.size() * sizeof(int3);
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&state.d_indices[mesh_id]), indices_size_in_bytes));
-    CUDA_CHECK(cudaMemcpy(
-        reinterpret_cast<void*>(state.d_indices[mesh_id]),
-        mesh.faces.data(), indices_size_in_bytes,
-        cudaMemcpyHostToDevice
-    ));
-
-    // alloc and copy normals data
-    if (!mesh.normals.empty())
-    {
-        const size_t normals_size_in_bytes = mesh.normals.size() * sizeof(Vertex);
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&state.d_normals[mesh_id]), normals_size_in_bytes));
-        CUDA_CHECK(cudaMemcpy(
-            reinterpret_cast<void*>(state.d_normals[mesh_id]),
-            mesh.normals.data(), normals_size_in_bytes,
-            cudaMemcpyHostToDevice
-        ));
-    }
-
-    // alloc and copy material data
-    CUdeviceptr d_mat_indices = 0;
-    std::vector<uint32_t> mat_indices(mesh.faces.size(), mesh_id);
-    const size_t mat_indices_size_in_bytes = mat_indices.size() * sizeof(uint32_t);
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_mat_indices), mat_indices_size_in_bytes));
-    CUDA_CHECK(cudaMemcpy(
-        reinterpret_cast<void*>(d_mat_indices),
-        mat_indices.data(),
-        mat_indices_size_in_bytes,
-        cudaMemcpyHostToDevice
-    ));
-
-    unsigned int* triangle_input_flags = new unsigned int[1];
-    triangle_input_flags[0] = OPTIX_GEOMETRY_FLAG_DISABLE_ANYHIT;
-
-    // When undefined pointer is set to new pointer in local function, 
-    // behaviour of this pointer will be undefined... maybe...
-    triangle_inputs[mesh_id].type = OPTIX_BUILD_INPUT_TYPE_TRIANGLES;
-    triangle_inputs[mesh_id].triangleArray.vertexFormat = OPTIX_VERTEX_FORMAT_FLOAT3;
-    triangle_inputs[mesh_id].triangleArray.vertexStrideInBytes = sizeof(Vertex);
-    triangle_inputs[mesh_id].triangleArray.numVertices = static_cast<uint32_t>(mesh.vertices.size());
-    triangle_inputs[mesh_id].triangleArray.vertexBuffers = &state.d_vertices[mesh_id];
-    triangle_inputs[mesh_id].triangleArray.flags = triangle_input_flags;
-    triangle_inputs[mesh_id].triangleArray.indexFormat = OPTIX_INDICES_FORMAT_UNSIGNED_INT3;
-    triangle_inputs[mesh_id].triangleArray.indexStrideInBytes = sizeof(int3);
-    triangle_inputs[mesh_id].triangleArray.numIndexTriplets = static_cast<uint32_t>(mesh.faces.size());
-    triangle_inputs[mesh_id].triangleArray.indexBuffer = state.d_indices[mesh_id];
-    triangle_inputs[mesh_id].triangleArray.numSbtRecords = 1;
-    triangle_inputs[mesh_id].triangleArray.sbtIndexOffsetBuffer = d_mat_indices;
-    triangle_inputs[mesh_id].triangleArray.sbtIndexOffsetSizeInBytes = sizeof(uint32_t);
-    triangle_inputs[mesh_id].triangleArray.sbtIndexOffsetStrideInBytes = sizeof(uint32_t);
-}
-
+// ------------------------------------------------------------------------------------------------------------
+// Build Acceleration structure for mesh
+// ------------------------------------------------------------------------------------------------------------
 void buildMeshAccel( PathTracerState& state )
 {
-
-    /*std::cerr << "Num vertices: " << g_vertices.size() << std::endl;
-    std::cerr << "Mat indices: " << g_mat_indices.size() << std::endl;
-    std::cerr << "Num faces: " << g_faces.size() << std::endl;*/
-
-    // TODO: Compare memory between in case of calling function and directly creating in buildMeshAccel()
-
-
-
-    std::vector<OptixBuildInput> triangle_inputs(cornel_meshes.size() + 1);
-    state.d_vertices.resize(cornel_meshes.size() + 1);
-    state.d_indices.resize(cornel_meshes.size() + 1);
-    state.d_normals.resize(cornel_meshes.size() + 1);
+    std::vector<OptixBuildInput> triangle_inputs(meshes.size());
+    state.d_vertices.resize(meshes.size());
+    state.d_indices.resize(meshes.size());
+    state.d_normals.resize(meshes.size());
     int mesh_offset = 0;
-    for (int mesh_id = 0; mesh_id < cornel_meshes.size(); mesh_id++)
+    for (int meshID = 0; meshID < meshes.size(); meshID++)
     {
-        createTriangleInput(state, cornel_meshes[mesh_id], triangle_inputs, mesh_id);
-        mesh_offset++;
+        // alloc and copy vertices data
+        const size_t vertices_size_in_bytes = meshes[meshID].vertices.size() * sizeof(Vertex);
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&state.d_vertices[meshID]), vertices_size_in_bytes));
+        CUDA_CHECK(cudaMemcpy(
+            reinterpret_cast<void*>(state.d_vertices[meshID]),
+            meshes[meshID].vertices.data(), vertices_size_in_bytes,
+            cudaMemcpyHostToDevice
+        ));
+
+        // alloc and copy indices data
+        const size_t indices_size_in_bytes = meshes[meshID].indices.size() * sizeof(int3);
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&state.d_indices[meshID]), indices_size_in_bytes));
+        CUDA_CHECK(cudaMemcpy(
+            reinterpret_cast<void*>(state.d_indices[meshID]),
+            meshes[meshID].indices.data(), indices_size_in_bytes,
+            cudaMemcpyHostToDevice
+        ));
+
+        // alloc and copy normals data
+        if (!meshes[meshID].normals.empty())
+        {
+            const size_t normals_size_in_bytes = meshes[meshID].normals.size() * sizeof(Vertex);
+            CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&state.d_normals[meshID]), normals_size_in_bytes));
+            CUDA_CHECK(cudaMemcpy(
+                reinterpret_cast<void*>(state.d_normals[meshID]),
+                meshes[meshID].normals.data(), normals_size_in_bytes,
+                cudaMemcpyHostToDevice
+            ));
+        }
+
+        // alloc and copy material data
+        CUdeviceptr d_mat_indices = 0;
+        std::vector<uint32_t> mat_indices(meshes[meshID].indices.size(), meshID);
+        const size_t mat_indices_size_in_bytes = mat_indices.size() * sizeof(uint32_t);
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_mat_indices), mat_indices_size_in_bytes));
+        CUDA_CHECK(cudaMemcpy(
+            reinterpret_cast<void*>(d_mat_indices),
+            mat_indices.data(),
+            mat_indices_size_in_bytes,
+            cudaMemcpyHostToDevice
+        ));
+
+        unsigned int* triangle_input_flags = new unsigned int[1];
+        triangle_input_flags[0] = OPTIX_GEOMETRY_FLAG_DISABLE_ANYHIT;
+
+        // When undefined pointer is set to new pointer in local function, 
+        // behaviour of this pointer will be undefined... maybe...
+        triangle_inputs[meshID].type = OPTIX_BUILD_INPUT_TYPE_TRIANGLES;
+        triangle_inputs[meshID].triangleArray.vertexFormat = OPTIX_VERTEX_FORMAT_FLOAT3;
+        triangle_inputs[meshID].triangleArray.vertexStrideInBytes = sizeof(Vertex);
+        triangle_inputs[meshID].triangleArray.numVertices = static_cast<uint32_t>(meshes[meshID].vertices.size());
+        triangle_inputs[meshID].triangleArray.vertexBuffers = &state.d_vertices[meshID];
+        triangle_inputs[meshID].triangleArray.flags = triangle_input_flags;
+        triangle_inputs[meshID].triangleArray.indexFormat = OPTIX_INDICES_FORMAT_UNSIGNED_INT3;
+        triangle_inputs[meshID].triangleArray.indexStrideInBytes = sizeof(int3);
+        triangle_inputs[meshID].triangleArray.numIndexTriplets = static_cast<uint32_t>(meshes[meshID].indices.size());
+        triangle_inputs[meshID].triangleArray.indexBuffer = state.d_indices[meshID];
+        triangle_inputs[meshID].triangleArray.numSbtRecords = 1;
+        triangle_inputs[meshID].triangleArray.sbtIndexOffsetBuffer = d_mat_indices;
+        triangle_inputs[meshID].triangleArray.sbtIndexOffsetSizeInBytes = sizeof(uint32_t);
+        triangle_inputs[meshID].triangleArray.sbtIndexOffsetStrideInBytes = sizeof(uint32_t);
     }
-    createTriangleInput(state, bunny, triangle_inputs, mesh_offset);
 
     OptixAccelBuildOptions accel_options = {};
     accel_options.buildFlags = OPTIX_BUILD_FLAG_ALLOW_COMPACTION;
@@ -667,8 +658,6 @@ void buildMeshAccel( PathTracerState& state )
     ) );
 
     CUDA_CHECK( cudaFree( reinterpret_cast<void*>( d_temp_buffer ) ) );
-    //CUDA_CHECK(cudaFree(reinterpret_cast<void*>(d_mat_indices)));
-
 
     size_t compacted_gas_size;
     CUDA_CHECK( cudaMemcpy( &compacted_gas_size, (void*)emitProperty.result, sizeof(size_t), cudaMemcpyDeviceToHost ) );
@@ -688,6 +677,9 @@ void buildMeshAccel( PathTracerState& state )
     }
 }
 
+// ------------------------------------------------------------------------------------------------------------
+// Create modules
+// ------------------------------------------------------------------------------------------------------------
 void createModule( PathTracerState& state )
 {
     OptixModuleCompileOptions module_compile_options = {};
@@ -725,7 +717,7 @@ void createModule( PathTracerState& state )
 
     // TODO: If I would like to use multiple .cu source, Must I create other PTX module? 
     // - Absolutely YES, haha :)
-    /*{
+    {
         const std::string ptx = sutil::getPtxString(OPTIX_SAMPLE_NAME, OPTIX_SAMPLE_DIR, "bsdf.cu");
         OPTIX_CHECK_LOG(optixModuleCreateFromPTX(
             state.context,
@@ -737,96 +729,197 @@ void createModule( PathTracerState& state )
             &sizeof_log,
             &state.bsdf_module
         ));
-    }*/
+    }
 
 }
 
-static void createBunnyProgram(PathTracerState& state, std::vector<OptixProgramGroup>& program_groups)
+// ------------------------------------------------------------------------------------------------------------
+// Create radiance and occlusion program for dielectric material
+// ------------------------------------------------------------------------------------------------------------
+static void createDiffuseProgram(PathTracerState& state, std::vector<OptixProgramGroup>& program_groups)
 {
-    OptixProgramGroup radiance_bunny_prog_group;
-    OptixProgramGroupOptions radiance_bunny_prog_group_options = {};
-    OptixProgramGroupDesc radiance_bunny_prog_group_desc = {};
-    radiance_bunny_prog_group_desc.kind = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
-    radiance_bunny_prog_group_desc.hitgroup.moduleCH = state.ptx_module;
-    radiance_bunny_prog_group_desc.hitgroup.entryFunctionNameCH = "__closesthit__radiance__dielectric";
+    OptixProgramGroup radiance_diffuse_prog_group;
+    OptixProgramGroupOptions radiance_diffuse_prog_group_options = {};
+    OptixProgramGroupDesc radiance_diffuse_prog_group_desc = {};
+    radiance_diffuse_prog_group_desc.kind = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
+    radiance_diffuse_prog_group_desc.hitgroup.moduleCH = state.bsdf_module;
+    radiance_diffuse_prog_group_desc.hitgroup.entryFunctionNameCH = "__closesthit__radiance__diffuse";
 
     char log[2048];
     size_t sizeof_log = sizeof(log);
     OPTIX_CHECK_LOG(optixProgramGroupCreate(
         state.context,
-        &radiance_bunny_prog_group_desc,
+        &radiance_diffuse_prog_group_desc,
         1,
-        &radiance_bunny_prog_group_options,
+        &radiance_diffuse_prog_group_options,
         log,
         &sizeof_log,
-        &radiance_bunny_prog_group
+        &radiance_diffuse_prog_group
     ));
 
-    program_groups.push_back(radiance_bunny_prog_group);
-    state.radiance_bunny_prog_group = radiance_bunny_prog_group;
+    program_groups.push_back(radiance_diffuse_prog_group);
+    state.radiance_diffuse_prog_group = radiance_diffuse_prog_group;
 
-    OptixProgramGroup occlusion_bunny_prog_group;
-    OptixProgramGroupOptions occlusion_bunny_prog_group_options = {};
-    OptixProgramGroupDesc occlusion_bunny_prog_group_desc = {};
-    occlusion_bunny_prog_group_desc.kind = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
-    occlusion_bunny_prog_group_desc.hitgroup.moduleCH = state.ptx_module;
-    occlusion_bunny_prog_group_desc.hitgroup.entryFunctionNameCH = "__closesthit__occlusion";
+    OptixProgramGroup occlusion_diffuse_prog_group;
+    OptixProgramGroupOptions occlusion_diffuse_prog_group_options = {};
+    OptixProgramGroupDesc occlusion_diffuse_prog_group_desc = {};
+    occlusion_diffuse_prog_group_desc.kind = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
+    occlusion_diffuse_prog_group_desc.hitgroup.moduleCH = state.ptx_module;
+    occlusion_diffuse_prog_group_desc.hitgroup.entryFunctionNameCH = "__closesthit__occlusion";
 
     OPTIX_CHECK_LOG(optixProgramGroupCreate(
         state.context,
-        &occlusion_bunny_prog_group_desc,
+        &occlusion_diffuse_prog_group_desc,
         1,
-        &occlusion_bunny_prog_group_options,
+        &occlusion_diffuse_prog_group_options,
         log,
         &sizeof_log,
-        &occlusion_bunny_prog_group));
-    program_groups.push_back(occlusion_bunny_prog_group);
-    state.occlusion_bunny_prog_group = occlusion_bunny_prog_group;
+        &occlusion_diffuse_prog_group));
+    program_groups.push_back(occlusion_diffuse_prog_group);
+    state.occlusion_diffuse_prog_group = occlusion_diffuse_prog_group;
 }
 
-static void createCornelProgram(PathTracerState& state, std::vector<OptixProgramGroup>& program_groups)
+// ------------------------------------------------------------------------------------------------------------
+// Create radiance and occlusion program for dielectric material
+// ------------------------------------------------------------------------------------------------------------
+static void createDielectricProgram(PathTracerState& state, std::vector<OptixProgramGroup>& program_groups)
 {
-    OptixProgramGroup radiance_cornel_prog_group;
-    OptixProgramGroupOptions radiance_cornel_prog_group_options = {};
-    OptixProgramGroupDesc radiance_cornel_prog_group_desc = {};
-    radiance_cornel_prog_group_desc.kind = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
-    radiance_cornel_prog_group_desc.hitgroup.moduleCH = state.ptx_module;
-    radiance_cornel_prog_group_desc.hitgroup.entryFunctionNameCH = "__closesthit__radiance";
+    OptixProgramGroup radiance_dielectric_prog_group;
+    OptixProgramGroupOptions radiance_dielectric_prog_group_options = {};
+    OptixProgramGroupDesc radiance_dielectric_prog_group_desc = {};
+    radiance_dielectric_prog_group_desc.kind = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
+    radiance_dielectric_prog_group_desc.hitgroup.moduleCH = state.bsdf_module;
+    radiance_dielectric_prog_group_desc.hitgroup.entryFunctionNameCH = "__closesthit__radiance__dielectric";
 
     char log[2048];
     size_t sizeof_log = sizeof(log);
     OPTIX_CHECK_LOG(optixProgramGroupCreate(
         state.context,
-        &radiance_cornel_prog_group_desc,
+        &radiance_dielectric_prog_group_desc,
         1,
-        &radiance_cornel_prog_group_options,
+        &radiance_dielectric_prog_group_options,
         log,
         &sizeof_log,
-        &radiance_cornel_prog_group
+        &radiance_dielectric_prog_group
     ));
 
-    program_groups.push_back(radiance_cornel_prog_group);
-    state.radiance_cornel_prog_group = radiance_cornel_prog_group;
+    program_groups.push_back(radiance_dielectric_prog_group);
+    state.radiance_dielectric_prog_group = radiance_dielectric_prog_group;
 
-    OptixProgramGroup occlusion_cornel_prog_group;
-    OptixProgramGroupOptions occlusion_cornel_prog_group_options = {};
-    OptixProgramGroupDesc occlusion_cornel_prog_group_desc = {};
-    occlusion_cornel_prog_group_desc.kind = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
-    occlusion_cornel_prog_group_desc.hitgroup.moduleCH = state.ptx_module;
-    occlusion_cornel_prog_group_desc.hitgroup.entryFunctionNameCH = "__closesthit__occlusion";
+    OptixProgramGroup occlusion_dielectric_prog_group;
+    OptixProgramGroupOptions occlusion_dielectric_prog_group_options = {};
+    OptixProgramGroupDesc occlusion_dielectric_prog_group_desc = {};
+    occlusion_dielectric_prog_group_desc.kind = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
+    occlusion_dielectric_prog_group_desc.hitgroup.moduleCH = state.ptx_module;
+    occlusion_dielectric_prog_group_desc.hitgroup.entryFunctionNameCH = "__closesthit__occlusion";
 
     OPTIX_CHECK_LOG(optixProgramGroupCreate(
         state.context,
-        &occlusion_cornel_prog_group_desc,
+        &occlusion_dielectric_prog_group_desc,
         1,
-        &occlusion_cornel_prog_group_options,
+        &occlusion_dielectric_prog_group_options,
         log,
         &sizeof_log,
-        &occlusion_cornel_prog_group));
-    program_groups.push_back(occlusion_cornel_prog_group);
-    state.occlusion_cornel_prog_group = occlusion_cornel_prog_group;
+        &occlusion_dielectric_prog_group));
+    program_groups.push_back(occlusion_dielectric_prog_group);
+    state.occlusion_dielectric_prog_group = occlusion_dielectric_prog_group;
 }
 
+// ------------------------------------------------------------------------------------------------------------
+// Create radiance and occlusion program for emission material
+// ------------------------------------------------------------------------------------------------------------
+static void createEmissionProgram(PathTracerState& state, std::vector<OptixProgramGroup>& program_groups)
+{
+    OptixProgramGroup radiance_emission_prog_group;
+    OptixProgramGroupOptions radiance_emission_prog_group_options = {};
+    OptixProgramGroupDesc radiance_emission_prog_group_desc = {};
+    radiance_emission_prog_group_desc.kind = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
+    radiance_emission_prog_group_desc.hitgroup.moduleCH = state.bsdf_module;
+    radiance_emission_prog_group_desc.hitgroup.entryFunctionNameCH = "__closesthit__radiance__emission";
+
+    char log[2048];
+    size_t sizeof_log = sizeof(log);
+    OPTIX_CHECK_LOG(optixProgramGroupCreate(
+        state.context,
+        &radiance_emission_prog_group_desc,
+        1,
+        &radiance_emission_prog_group_options,
+        log,
+        &sizeof_log,
+        &radiance_emission_prog_group
+    ));
+
+    program_groups.push_back(radiance_emission_prog_group);
+    state.radiance_emission_prog_group = radiance_emission_prog_group;
+
+    OptixProgramGroup occlusion_emission_prog_group;
+    OptixProgramGroupOptions occlusion_emission_prog_group_options = {};
+    OptixProgramGroupDesc occlusion_emission_prog_group_desc = {};
+    occlusion_emission_prog_group_desc.kind = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
+    occlusion_emission_prog_group_desc.hitgroup.moduleCH = state.ptx_module;
+    occlusion_emission_prog_group_desc.hitgroup.entryFunctionNameCH = "__closesthit__occlusion";
+
+    OPTIX_CHECK_LOG(optixProgramGroupCreate(
+        state.context,
+        &occlusion_emission_prog_group_desc,
+        1,
+        &occlusion_emission_prog_group_options,
+        log,
+        &sizeof_log,
+        &occlusion_emission_prog_group));
+    program_groups.push_back(occlusion_emission_prog_group);
+    state.occlusion_emission_prog_group = occlusion_emission_prog_group;
+}
+
+// ------------------------------------------------------------------------------------------------------------
+// Create radiance and occlusion program for metal material
+// ------------------------------------------------------------------------------------------------------------
+static void createMetalProgram(PathTracerState& state, std::vector<OptixProgramGroup>& program_groups)
+{
+    OptixProgramGroup radiance_metal_prog_group;
+    OptixProgramGroupOptions radiance_metal_prog_group_options = {};
+    OptixProgramGroupDesc radiance_metal_prog_group_desc = {};
+    radiance_metal_prog_group_desc.kind = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
+    radiance_metal_prog_group_desc.hitgroup.moduleCH = state.bsdf_module;
+    radiance_metal_prog_group_desc.hitgroup.entryFunctionNameCH = "__closesthit__radiance__metal";
+
+    char log[2048];
+    size_t sizeof_log = sizeof(log);
+    OPTIX_CHECK_LOG(optixProgramGroupCreate(
+        state.context,
+        &radiance_metal_prog_group_desc,
+        1,
+        &radiance_metal_prog_group_options,
+        log,
+        &sizeof_log,
+        &radiance_metal_prog_group
+    ));
+
+    program_groups.push_back(radiance_metal_prog_group);
+    state.radiance_metal_prog_group = radiance_metal_prog_group;
+
+    OptixProgramGroup occlusion_metal_prog_group;
+    OptixProgramGroupOptions occlusion_metal_prog_group_options = {};
+    OptixProgramGroupDesc occlusion_metal_prog_group_desc = {};
+    occlusion_metal_prog_group_desc.kind = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
+    occlusion_metal_prog_group_desc.hitgroup.moduleCH = state.ptx_module;
+    occlusion_metal_prog_group_desc.hitgroup.entryFunctionNameCH = "__closesthit__occlusion";
+
+    OPTIX_CHECK_LOG(optixProgramGroupCreate(
+        state.context,
+        &occlusion_metal_prog_group_desc,
+        1,
+        &occlusion_metal_prog_group_options,
+        log,
+        &sizeof_log,
+        &occlusion_metal_prog_group));
+    program_groups.push_back(occlusion_metal_prog_group);
+    state.occlusion_metal_prog_group = occlusion_metal_prog_group;
+}
+
+// ------------------------------------------------------------------------------------------------------------
+// Create Ray generation and miss programs
+// ------------------------------------------------------------------------------------------------------------
 static void createRaygenAndMissProgram( PathTracerState& state, std::vector<OptixProgramGroup> &program_groups )
 {
     OptixProgramGroupOptions program_group_options = {};
@@ -890,11 +983,16 @@ static void createRaygenAndMissProgram( PathTracerState& state, std::vector<Opti
     }
 }
 
+// ------------------------------------------------------------------------------------------------------------
+// Create pipeline object
+// ------------------------------------------------------------------------------------------------------------
 void createPipeline(PathTracerState& state)
 {
     std::vector<OptixProgramGroup> program_groups;
-    createBunnyProgram(state, program_groups);
-    createCornelProgram(state, program_groups);
+    createDiffuseProgram(state, program_groups);
+    createDielectricProgram(state, program_groups);
+    createEmissionProgram(state, program_groups);
+    createMetalProgram(state, program_groups);
     createRaygenAndMissProgram(state, program_groups);
 
     std::cerr << "program_groups.size(): " << program_groups.size() << std::endl;
@@ -933,10 +1031,14 @@ void createPipeline(PathTracerState& state)
     OPTIX_CHECK(optixUtilAccumulateStackSizes(state.raygen_prog_group, &stack_sizes));
     OPTIX_CHECK(optixUtilAccumulateStackSizes(state.radiance_miss_prog_group, &stack_sizes));
     OPTIX_CHECK(optixUtilAccumulateStackSizes(state.occlusion_miss_prog_group, &stack_sizes));
-    OPTIX_CHECK(optixUtilAccumulateStackSizes(state.radiance_bunny_prog_group, &stack_sizes));
-    OPTIX_CHECK(optixUtilAccumulateStackSizes(state.occlusion_bunny_prog_group, &stack_sizes));
-    OPTIX_CHECK(optixUtilAccumulateStackSizes(state.radiance_cornel_prog_group, &stack_sizes));
-    OPTIX_CHECK(optixUtilAccumulateStackSizes(state.occlusion_cornel_prog_group, &stack_sizes));
+    OPTIX_CHECK(optixUtilAccumulateStackSizes(state.radiance_diffuse_prog_group, &stack_sizes));
+    OPTIX_CHECK(optixUtilAccumulateStackSizes(state.occlusion_diffuse_prog_group, &stack_sizes));
+    OPTIX_CHECK(optixUtilAccumulateStackSizes(state.radiance_dielectric_prog_group, &stack_sizes));
+    OPTIX_CHECK(optixUtilAccumulateStackSizes(state.occlusion_dielectric_prog_group, &stack_sizes));
+    /*OPTIX_CHECK(optixUtilAccumulateStackSizes(state.radiance_metal_prog_group, &stack_sizes));
+    OPTIX_CHECK(optixUtilAccumulateStackSizes(state.occlusion_metal_prog_group, &stack_sizes));*/
+    OPTIX_CHECK(optixUtilAccumulateStackSizes(state.radiance_emission_prog_group, &stack_sizes));
+    OPTIX_CHECK(optixUtilAccumulateStackSizes(state.occlusion_emission_prog_group, &stack_sizes));
 
     uint32_t max_trace_depth = 5;
     uint32_t max_cc_depth = 0;
@@ -964,9 +1066,12 @@ void createPipeline(PathTracerState& state)
     ));
 }
 
-// SBT: Shader Binding Table
+// ------------------------------------------------------------------------------------------------------------
+// Create shader binding table (SBT)
+// ------------------------------------------------------------------------------------------------------------
 void createSBT(PathTracerState& state)
 {
+    // For ray-generation program
     CUdeviceptr d_raygen_record;
     const size_t raygen_record_size = sizeof(RayGenRecord);
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_raygen_record), raygen_record_size));
@@ -981,6 +1086,7 @@ void createSBT(PathTracerState& state)
         cudaMemcpyHostToDevice
     ));
 
+    // For miss program
     CUdeviceptr d_miss_records;
     const size_t miss_record_size = sizeof(MissRecord);
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_miss_records), miss_record_size * RAY_TYPE_COUNT));
@@ -998,56 +1104,71 @@ void createSBT(PathTracerState& state)
         cudaMemcpyHostToDevice
     ));
 
-    CUdeviceptr d_hitgroup_records;
+    // For radiance and occlusion program
+    // TODO: Copy Record object w.r.t each materials
     const size_t hitgroup_record_size = sizeof(HitGroupRecord);
-    CUDA_CHECK(cudaMalloc(
-        reinterpret_cast<void**>(&d_hitgroup_records),
-        hitgroup_record_size * RAY_TYPE_COUNT * state.d_vertices.size()
-    ));
-
-    std::vector<HitGroupRecord> hitgroup_records(RAY_TYPE_COUNT * state.d_vertices.size());
-    int mesh_offset = 0;
-    for (int meshID = 0; meshID < cornel_meshes.size(); meshID++)
+    std::vector<HitGroupRecord> hitgroup_records(RAY_TYPE_COUNT * meshes.size());
+    for (int meshID = 0; meshID < meshes.size(); meshID++)
     {
         {
             const int sbt_idx = meshID * RAY_TYPE_COUNT + 0;
 
-            OPTIX_CHECK(optixSbtRecordPackHeader(state.radiance_cornel_prog_group, &hitgroup_records[sbt_idx]));
-            hitgroup_records[sbt_idx].data.emission_color = cornel_meshes[meshID].emission_color;
-            hitgroup_records[sbt_idx].data.diffuse_color = cornel_meshes[meshID].diffuse_color;
-            hitgroup_records[sbt_idx].data.vertices = reinterpret_cast<float4*>(state.d_vertices[meshID]);
-            hitgroup_records[sbt_idx].data.normals = reinterpret_cast<float4*>(state.d_normals[meshID]);
-            hitgroup_records[sbt_idx].data.indices = reinterpret_cast<int3*>(state.d_indices[meshID]);
+            if (materials[meshID]->isEqualType(MatType::DIFFUSE)) {
+                OPTIX_CHECK(optixSbtRecordPackHeader(state.radiance_diffuse_prog_group, &hitgroup_records[sbt_idx]));
+                Diffuse* diffuse_data = (Diffuse*)materials[meshID];
+                hitgroup_records[sbt_idx].data.shading.diffuse.mat_color = diffuse_data->mat_color;
+            } 
+            else if (materials[meshID]->isEqualType(MatType::DIELECTRIC)) {
+                OPTIX_CHECK(optixSbtRecordPackHeader(state.radiance_dielectric_prog_group, &hitgroup_records[sbt_idx]));
+                Dielectric* dielectric_data = (Dielectric*)materials[meshID];
+                hitgroup_records[sbt_idx].data.shading.dielectric.mat_color = dielectric_data->mat_color;
+                hitgroup_records[sbt_idx].data.shading.dielectric.ior = dielectric_data->ior;
+            }
+            else if (materials[meshID]->isEqualType(MatType::METAL)) {
+                OPTIX_CHECK(optixSbtRecordPackHeader(state.radiance_metal_prog_group, &hitgroup_records[sbt_idx]));
+                Metal* metal_data = (Metal*)materials[meshID];
+                hitgroup_records[sbt_idx].data.shading.metal.mat_color = metal_data->mat_color;
+                hitgroup_records[sbt_idx].data.shading.metal.reflection = metal_data->reflection;
+            }
+            else if (materials[meshID]->isEqualType(MatType::EMISSION)) {
+                OPTIX_CHECK(optixSbtRecordPackHeader(state.radiance_emission_prog_group, &hitgroup_records[sbt_idx]));
+                Emission* emission_data = (Emission*)materials[meshID];
+                hitgroup_records[sbt_idx].data.shading.emission.color = emission_data->color;
+            }
+            else
+                throw std::runtime_error("This material type is not supported!\n");
+            
+            hitgroup_records[sbt_idx].data.mesh.vertices = reinterpret_cast<float4*>(state.d_vertices[meshID]);
+            hitgroup_records[sbt_idx].data.mesh.normals = reinterpret_cast<float4*>(state.d_normals[meshID]);
+            hitgroup_records[sbt_idx].data.mesh.indices = reinterpret_cast<int3*>(state.d_indices[meshID]);
         }
 
         {
             const int sbt_idx = meshID * RAY_TYPE_COUNT + 1;
             memset(&hitgroup_records[sbt_idx], 0, hitgroup_record_size);
-            OPTIX_CHECK(optixSbtRecordPackHeader(state.occlusion_cornel_prog_group, &hitgroup_records[sbt_idx]));
+            if (materials[meshID]->isEqualType(MatType::DIFFUSE))
+                OPTIX_CHECK(optixSbtRecordPackHeader(state.occlusion_diffuse_prog_group, &hitgroup_records[sbt_idx]));
+            else if (materials[meshID]->isEqualType(MatType::DIELECTRIC))
+                OPTIX_CHECK(optixSbtRecordPackHeader(state.occlusion_dielectric_prog_group, &hitgroup_records[sbt_idx]));
+            else if (materials[meshID]->isEqualType(MatType::METAL))
+                OPTIX_CHECK(optixSbtRecordPackHeader(state.occlusion_metal_prog_group, &hitgroup_records[sbt_idx]));
+            else if (materials[meshID]->isEqualType(MatType::EMISSION))
+                OPTIX_CHECK(optixSbtRecordPackHeader(state.occlusion_emission_prog_group, &hitgroup_records[sbt_idx]));
+            else
+                throw std::runtime_error("This material type is not supported!\n");
         }
-        mesh_offset++;
     }
 
-    {
-        const int sbt_idx = mesh_offset * RAY_TYPE_COUNT + 0;
-        OPTIX_CHECK(optixSbtRecordPackHeader(state.radiance_bunny_prog_group, &hitgroup_records[sbt_idx]));
-        hitgroup_records[sbt_idx].data.diffuse_color = bunny.diffuse_color;
-        hitgroup_records[sbt_idx].data.emission_color = bunny.emission_color;
-        hitgroup_records[sbt_idx].data.vertices = reinterpret_cast<float4*>(state.d_vertices[mesh_offset]);
-        hitgroup_records[sbt_idx].data.normals = reinterpret_cast<float4*>(state.d_normals[mesh_offset]);
-        hitgroup_records[sbt_idx].data.indices = reinterpret_cast<int3*>(state.d_indices[mesh_offset]);
-    }
-
-    {
-        const int sbt_idx = mesh_offset * RAY_TYPE_COUNT + 1;
-        memset(&hitgroup_records[sbt_idx], 0, hitgroup_record_size);
-        OPTIX_CHECK(optixSbtRecordPackHeader(state.occlusion_bunny_prog_group, &hitgroup_records[sbt_idx]));
-    }
+    CUdeviceptr d_hitgroup_records;
+    CUDA_CHECK(cudaMalloc(
+        reinterpret_cast<void**>(&d_hitgroup_records),
+        hitgroup_record_size * RAY_TYPE_COUNT * meshes.size()
+    ));
 
     CUDA_CHECK(cudaMemcpy(
         reinterpret_cast<void*>(d_hitgroup_records),
         hitgroup_records.data(),
-        hitgroup_record_size * RAY_TYPE_COUNT * state.d_vertices.size(),
+        hitgroup_record_size * RAY_TYPE_COUNT * meshes.size(),
         cudaMemcpyHostToDevice
     ));
 
@@ -1060,16 +1181,21 @@ void createSBT(PathTracerState& state)
     state.sbt.hitgroupRecordCount = hitgroup_records.size();
 }
 
+// ------------------------------------------------------------------------------------------------------------
+// Cleanup state
+// ------------------------------------------------------------------------------------------------------------
 void cleanupState(PathTracerState& state)
 {
     OPTIX_CHECK(optixPipelineDestroy(state.pipeline));
     OPTIX_CHECK(optixProgramGroupDestroy(state.raygen_prog_group));
     OPTIX_CHECK(optixProgramGroupDestroy(state.radiance_miss_prog_group));
     OPTIX_CHECK(optixProgramGroupDestroy(state.occlusion_miss_prog_group));
-    OPTIX_CHECK(optixProgramGroupDestroy(state.radiance_bunny_prog_group));
-    OPTIX_CHECK(optixProgramGroupDestroy(state.occlusion_bunny_prog_group));
-    OPTIX_CHECK(optixProgramGroupDestroy(state.radiance_cornel_prog_group));
-    OPTIX_CHECK(optixProgramGroupDestroy(state.occlusion_cornel_prog_group));
+    OPTIX_CHECK(optixProgramGroupDestroy(state.radiance_dielectric_prog_group));
+    OPTIX_CHECK(optixProgramGroupDestroy(state.occlusion_dielectric_prog_group));
+    OPTIX_CHECK(optixProgramGroupDestroy(state.radiance_diffuse_prog_group));
+    OPTIX_CHECK(optixProgramGroupDestroy(state.occlusion_diffuse_prog_group));
+    OPTIX_CHECK(optixProgramGroupDestroy(state.radiance_emission_prog_group));
+    OPTIX_CHECK(optixProgramGroupDestroy(state.occlusion_emission_prog_group));
     OPTIX_CHECK(optixModuleDestroy(state.ptx_module));
     OPTIX_CHECK(optixDeviceContextDestroy(state.context));
 
@@ -1134,9 +1260,9 @@ int main(int argc, char* argv[])
 
     try
     {
-        initCornelMeshes();
+        initTriangleMeshes();
         initCameraState();
-
+        //createMaterials(state);
         
         // Set up OptiX state
         createContext(state);

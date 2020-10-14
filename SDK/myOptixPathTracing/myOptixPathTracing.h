@@ -26,18 +26,20 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "Material.h"
+#include "Shape.h"
+
+struct RadiancePRD
+{
+    float3 result;
+    unsigned int depth;
+    unsigned int seed;
+};
+
 enum RayType {
     RAY_TYPE_RADIANCE = 0,
     RAY_TYPE_OCCLUSION = 1,
     RAY_TYPE_COUNT
-};
-
-struct ParallelogramLight 
-{
-    float3 corner;
-    float3 v1, v2;
-    float3 normal;
-    float3 emission;
 };
 
 struct Params
@@ -56,11 +58,10 @@ struct Params
     float3 V;
     float3 W;
 
-    ParallelogramLight* light;
     OptixTraversableHandle handle;
 };
 
-enum GlassHitType
+enum HitType
 {
     HIT_OUTSIDE_FROM_OUTSIDE = 1u << 0,
     HIT_OUTSIDE_FROM_INSIDE = 1u << 1,
@@ -77,19 +78,37 @@ struct MissData
     float4 bg_color;
 };
 
-struct HitGroupData
-{
-    float3 emission_color;
-    float3 diffuse_color;
+struct MeshData{
     float4* vertices;
     float4* normals;
     int3* indices;
 };
 
-struct BunnyGroupData
-{
-    float3 diffuse_color;
-    float4* vertices;
-    float4* normals;
-    int3* indices;
+struct DiffuseData {
+    float3 mat_color;
+};
+
+struct MetalData {
+    float3 mat_color;
+    float reflection;
+};
+
+struct DielectricData {
+    float3 mat_color;
+    float ior;
+};
+
+struct EmissionData {
+    float3 color;
+};
+
+// member in union must not have any constructor
+struct HitGroupData {
+    MeshData mesh;
+    union {
+        DiffuseData diffuse;
+        MetalData metal;
+        DielectricData dielectric;
+        EmissionData emission;
+    } shading;
 };

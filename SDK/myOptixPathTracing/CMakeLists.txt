@@ -27,13 +27,21 @@
 #
 
 OPTIX_add_sample_executable( myOptixPathTracing target_name
-  ${SAMPLES_CUDA_DIR}/helpers.h
-  CUDABuffer.h
+
+  # ===== HEADER =====
+  helpers.h
   TriangleMesh.h 
-  TriangleMesh.cpp 
-  myOptixPathTracing.cu
-  myOptixPathTracing.cpp
   myOptixPathTracing.h
+  Shape.h
+  Material.h
+
+  # ===== SOURCE =====
+  myOptixPathTracing.cpp
+  TriangleMesh.cpp 
+
+  # ===== CUDA =====
+  myOptixPathTracing.cu
+  bsdf.cu
 
   OPTIONS -rdc true
   )

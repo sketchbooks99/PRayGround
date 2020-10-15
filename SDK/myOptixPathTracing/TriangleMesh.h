@@ -1,10 +1,12 @@
 #ifndef TRIANGLEMESH_H
 #define TRIANGLEMESH_H
 
-#include <fstream>
 #include <vector>
 #include <sutil/vec_math.h>
 #include <iostream>
+#include <fstream>
+#include <string>
+#include <sstream>
 #include <assert.h>
 
 // TODO: I have to replace all float4 to Vertex ... Fuuuuuuuuuuck!!!
@@ -13,6 +15,7 @@ struct Vertex {
     Vertex() : x(0.0f), y(0.0f), z(0.0f), pad(0.0f) {}
     Vertex(float x, float y, float z, float pad) : x(x), y(y), z(z), pad(pad) {}
     Vertex(float t) : x(t), y(t), z(t), pad(0.0f) {};
+    Vertex(float3 val, float pad) : x(val.x), y(val.y), z(val.z), pad(pad) {}
 
     Vertex operator-() const { return Vertex(-x, -y, -z, 0.0f); }
     float operator[](int idx) const {
@@ -118,8 +121,8 @@ inline Vertex normalize(Vertex v)
  
 struct TriangleMesh {
     TriangleMesh() {}
-    TriangleMesh(const std::string& filename, float3 position, float size, float3 axis);
-    TriangleMesh(std::vector<Vertex> vertices, std::vector<int3> faces, std::vector<Normal> normals);
+    TriangleMesh(const std::string& filename, float3 position, float size, float3 axis, bool isSmooth=true);
+    TriangleMesh(std::vector<Vertex> vertices, std::vector<int3> faces, std::vector<Normal> normals, bool isSmooth=true);
     std::vector<Vertex> vertices;
     std::vector<Normal> normals;
     std::vector<int3> indices;

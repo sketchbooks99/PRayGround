@@ -240,12 +240,12 @@ void initTriangleMeshes()
     meshes.emplace_back(ceiling_light_mesh);
     materials.emplace_back(new Emission(make_float3(15.0f)));
 
+    float3 cornel_center = make_float3(556.0f / 2.0f, 548.0f / 2.0f, 559.2f / 2.0f);
     // Small light ------------------------------------
-    std::vector<Vertex> small_light_vertices;
+    /*std::vector<Vertex> small_light_vertices;
     std::vector<Normal> small_light_normals(6, Normal(0.0f, 0.0f, 1.0f, 0.0f));
     std::vector<int3> small_light_indices;
     float small_light_size = 50.0f;
-    float3 cornel_center = make_float3(556.0f / 2.0f, 548.0f / 2.0f, 559.2f / 2.0f);
     small_light_vertices.emplace_back(
         cornel_center.x - small_light_size / 2.0f,
         cornel_center.y - small_light_size / 2.0f,
@@ -274,36 +274,30 @@ void initTriangleMeshes()
     small_light_indices.emplace_back(make_int3(3, 4, 5));
     TriangleMesh small_light_mesh(small_light_vertices, small_light_indices, small_light_normals);
     meshes.emplace_back(small_light_mesh);
-    materials.emplace_back(new Emission(make_float3(5.0f, 0.1f, 0.1f)));
+    materials.emplace_back(new Emission(make_float3(5.0f, 0.1f, 0.1f)));*/
 
     // Bunny ------------------------------------
     //TriangleMesh bunny("../../model/bunny.obj",                         // filename
-    //    make_float3(556.0f / 2.0f, 548.0f / 2.0f, 559.2f / 2.0f),       // center position
+    //    cornel_center,       // center position
     //    150.0f,                                                         // size
     //    make_float3(1, 1, -1));                                         // axis
     //meshes.emplace_back(bunny);
     //materials.emplace_back(new Dielectric(make_float3(1.0f), 1.52f));
 
     // MMAPs ------------------------------------
-    TriangleMesh mmaps_glass("../../model/mmaps_glass.obj",
+    /*TriangleMesh mmaps_glass("../../model/mmaps_glass.obj",
         cornel_center,
         2.0f,
-        make_float3(1, 1, 1));
+        make_float3(1, 1, 1), false);
     meshes.emplace_back(mmaps_glass);
-    materials.emplace_back(new Dielectric(make_float3(1.0f), 1.52f));
-    std::cerr << "mmaps_glass.obj vertices size: " << meshes.back().vertices.size() << std::endl;
-    std::cerr << "mmaps_glass.obj normals size: " << meshes.back().normals.size() << std::endl;
-    std::cerr << "mmaps_glass.obj indices size: " << meshes.back().indices.size() << std::endl;
+    materials.emplace_back(new Dielectric(make_float3(1.0f), 1.52f));*/
 
     TriangleMesh mmaps_mirror("../../model/mmaps.obj",
         cornel_center,
         2.0f,
-        make_float3(1, 1, 1));
+        make_float3(1, 1, 1), false);
     meshes.emplace_back(mmaps_mirror);
-    materials.emplace_back(new Metal(make_float3(1.0f), 1.0f));
-    std::cerr << "mmaps.obj vertices size: " << meshes.back().vertices.size() << std::endl;
-    std::cerr << "mmaps.obj normals size: " << meshes.back().normals.size() << std::endl;
-    std::cerr << "mmaps.obj indices size: " << meshes.back().indices.size() << std::endl;
+    materials.emplace_back(new Metal(make_float3(1.0f, 1.0f, 1.0f), 1.0f));
 
     // TODO: Damn! I have to update obj parser to load .obj file from blender or other specified format.
 }

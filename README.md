@@ -4,8 +4,9 @@
 This repository is for developping a ray tracing application with NVIDIA OptiX Raytracing Engine.
 
 # TODO
-- .objのローダーをblender由来のオブジェクトも読み込めるように改変する。
-- 下のコードみたいにMaterial と Shape オブジェクトを一緒に管理する？
+- [x] .objのローダーをblender由来のオブジェクトも読み込めるように改変する。
+- [ ] Transform( translate/rotate/scale )を適用できるようにする。
+- [ ] 下のコードみたいにMaterial と Shape オブジェクトを一緒に管理する？
 ```c++
 struct Primitive {
     Shape or Mesh shape; // Is it better to manage with the pointer of abstract class?

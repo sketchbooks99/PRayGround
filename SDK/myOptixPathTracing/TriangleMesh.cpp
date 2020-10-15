@@ -8,25 +8,6 @@ TriangleMesh::TriangleMesh(
     if(filename.substr(filename.length() - 4) == ".obj")
     {
         std::ifstream ifs(filename, std::ios::in);
-        /*for(std::string buffer; ifs >> buffer;)
-        {
-            if(buffer == "v")
-            {
-                float x, y, z;
-                ifs >> x >> y >> z;
-                x *= axis.x;
-                y *= axis.y;
-                z *= axis.z;
-                vertices.emplace_back(x, y, z, 0.0f);
-            } 
-            else if(buffer == "f")
-            {
-                int i0, i1, i2;
-                ifs >> i0 >> i1 >> i2;
-                indices.emplace_back(make_int3(i0-1, i1-1, i2-1));
-            }
-        }
-        ifs.close();*/
         while (!ifs.eof())
         {
             std::string line;
@@ -116,6 +97,7 @@ TriangleMesh::TriangleMesh(
                 }
             }
         }
+        ifs.close();
     }
 
     // Transformation
@@ -130,18 +112,6 @@ TriangleMesh::TriangleMesh(
             if (vertex[i] > max[i]) max[i] = vertex[i];
         }
     }
-
-    /*auto scale = std::numeric_limits<float>::max();
-    for (int i = 0; i < 3; i++)
-    {
-        float d = 1e-6f;    
-        auto ratio = size / (max[i] - min[i] + d);
-        if (ratio < scale)
-            scale = ratio;
-    }
-
-    scale = size;*/
-    
 
     for (auto& vertex : vertices) {
         vertex = (vertex - center) * size + position;

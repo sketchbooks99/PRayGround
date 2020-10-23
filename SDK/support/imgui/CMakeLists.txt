@@ -26,26 +26,25 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-# CUDA compilation doesn't pick up the optixPaging include path target property.
-include_directories( include )
+add_library( imgui STATIC
+  imconfig.h
+  imgui.cpp
+  imgui_demo.cpp
+  imgui_draw.cpp
+  imgui.h
+  imgui_impl_glfw.cpp
+  imgui_impl_glfw.h
+  imgui_impl_opengl3.cpp
+  imgui_impl_opengl3.h
+  imgui_internal.h
+  imgui_widgets.cpp
+  imstb_rectpack.h
+  imstb_textedit.h
+  imstb_truetype.h
+  )
 
-cuda_wrap_srcs( optixPaging OBJ generated_files optixPaging.cu "" OPTIONS "" )
-
-add_library( optixPaging STATIC
-  include/optixPaging/optixPaging.h
-  optixPagingImpl.cpp
-  optixPaging.cu
-  ${generated_files}
-)
-
-target_include_directories( optixPaging PUBLIC include )
-
-# These CUDA files need to be compiled as OBJ, not as PTX
-set_source_files_properties( optixPaging.cu PROPERTIES CUDA_SOURCE_PROPERTY_FORMAT OBJ )
-
-# This file is just for reference in the IDE, don't compile it.
-set_source_files_properties( optixPagingImpl.cpp PROPERTIES HEADER_FILE_ONLY TRUE )
-
-set_property(TARGET optixPaging PROPERTY FOLDER "${OPTIX_IDE_FOLDER}")
-
-source_group("CUDA Files" REGULAR_EXPRESSION ".+\\.cu$")
+target_include_directories( imgui
+  INTERFACE ..
+  PRIVATE . )
+target_compile_definitions( imgui PRIVATE IMGUI_IMPL_OPENGL_LOADER_GLAD )
+target_link_libraries( imgui glfw glad ${OPENGL_gl_LIBRARY})

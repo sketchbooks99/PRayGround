@@ -26,26 +26,42 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-# CUDA compilation doesn't pick up the optixPaging include path target property.
-include_directories( include )
+find_package( OpenGL REQUIRED )
 
-cuda_wrap_srcs( optixPaging OBJ generated_files optixPaging.cu "" OPTIONS "" )
+if( UNIX )
+  # On Unix-like systems, shared libraries can use the soname system.
+  set(GLFW_LIB_NAME glfw)
+else()
+  set(GLFW_LIB_NAME glfw3)
+endif()
 
-add_library( optixPaging STATIC
-  include/optixPaging/optixPaging.h
-  optixPagingImpl.cpp
-  optixPaging.cu
-  ${generated_files}
+# Filter out warnings that cause problems with GLFW.
+if( WARNINGS_AS_ERRORS AND (USING_GNU_CXX OR USING_CLANG_CXX))
+  string( REPLACE "-Wdeclaration-after-statement" "" filtered_c_flags ${CMAKE_C_FLAGS} )
+  string( REPLACE "-Wsign-compare" "" filtered_c_flags ${filtered_c_flags} )
+  push_variable( CMAKE_C_FLAGS "${filtered_c_flags} -Wno-format-truncation -Wno-deprecated" )
+endif()
+add_subdirectory( GLFW )
+set_property( TARGET glfw PROPERTY C_STANDARD 99 )
+if( WARNINGS_AS_ERRORS AND (USING_GNU_CXX OR USING_CLANG_CXX))
+  pop_variable( CMAKE_C_FLAGS )
+endif()
+
+add_subdirectory( imgui )
+
+add_library( glad SHARED
+  KHR/khrplatform.h
+  glad/glad.c
+  glad/glad.h
 )
+target_compile_definitions( glad
+  PRIVATE GLAD_GLAPI_EXPORT_BUILD
+  PUBLIC  GLAD_GLAPI_EXPORT )
+target_include_directories( glad PUBLIC . )
+target_link_libraries( glad PUBLIC ${OPENGL_LIBRARIES} )
 
-target_include_directories( optixPaging PUBLIC include )
 
-# These CUDA files need to be compiled as OBJ, not as PTX
-set_source_files_properties( optixPaging.cu PROPERTIES CUDA_SOURCE_PROPERTY_FORMAT OBJ )
-
-# This file is just for reference in the IDE, don't compile it.
-set_source_files_properties( optixPagingImpl.cpp PROPERTIES HEADER_FILE_ONLY TRUE )
-
-set_property(TARGET optixPaging PROPERTY FOLDER "${OPTIX_IDE_FOLDER}")
-
-source_group("CUDA Files" REGULAR_EXPRESSION ".+\\.cu$")
+# Set IDE folders for targets
+set_property( TARGET glad PROPERTY FOLDER ${OPTIX_IDE_FOLDER} )
+set_property( TARGET glfw PROPERTY FOLDER ${OPTIX_IDE_FOLDER} )
+set_property( TARGET imgui PROPERTY FOLDER ${OPTIX_IDE_FOLDER} )

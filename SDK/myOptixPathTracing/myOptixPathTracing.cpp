@@ -285,12 +285,12 @@ void initTriangleMeshes()
     //materials.emplace_back(new Dielectric(make_float3(1.0f), 1.52f));
 
     // MMAPs ------------------------------------
-    /*TriangleMesh mmaps_glass("../../model/mmaps_glass.obj",
+    TriangleMesh mmaps_glass("../../model/mmaps_glass.obj",
         cornel_center,
         2.0f,
         make_float3(1, 1, 1), false);
     meshes.emplace_back(mmaps_glass);
-    materials.emplace_back(new Dielectric(make_float3(1.0f), 1.52f));*/
+    materials.emplace_back(new Dielectric(make_float3(1.0f), 1.52f));
 
     TriangleMesh mmaps_mirror("../../model/mmaps.obj",
         cornel_center,
@@ -400,7 +400,7 @@ void initLaunchParams( PathTracerState& state )
     state.params.samples_per_launch = samples_per_launch;
     state.params.subframe_index = 0u;
 
-    state.params.max_depth = 5;
+    state.params.max_depth = 10;
 
     state.params.handle         = state.gas_handle;
 

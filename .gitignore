@@ -2,9 +2,6 @@
 
 */build/
 */.vscode/
-*/Cmake/
-*/support/
-*/sutil/
 
 *.vcxproj*
 *.sln

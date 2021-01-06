@@ -105,7 +105,6 @@ TriangleMesh::TriangleMesh(
     auto min = vertices.front(), max = vertices.front();
     for (auto& vertex : vertices)
     {
-        center += vertex / vertices.size();
         for (int i = 0; i < 3; i++)
         {
             if (vertex[i] < min[i]) min[i] = vertex[i];
@@ -114,7 +113,7 @@ TriangleMesh::TriangleMesh(
     }
 
     for (auto& vertex : vertices) {
-        vertex = (vertex - center) * size + position;
+        vertex = vertex * size + position;
     }
 
     // Mesh smoothing

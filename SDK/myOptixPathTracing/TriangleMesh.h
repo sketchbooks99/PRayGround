@@ -20,17 +20,11 @@ struct Vertex {
     Vertex operator-() const { return Vertex(-x, -y, -z, 0.0f); }
     float operator[](int idx) const {
         assert(idx <= 3);
-        if      (idx == 0) return x;
-        else if (idx == 1) return y;
-        else if (idx == 2) return z;
-        else if (idx == 3) return pad;
+        return (&x)[idx];
     }
     float& operator[](int idx) {
         assert(idx <= 3);
-        if      (idx == 0) return x;
-        else if (idx == 1) return y;
-        else if (idx == 2) return z;
-        else if (idx == 3) return pad;
+        return (&x)[idx];
     }
 
     Vertex& operator+=(const Vertex &v)
@@ -61,7 +55,7 @@ struct Vertex {
     float x, y, z, pad;
 };
 
-typedef Vertex Normal;
+using Normal = Vertex;
 
 inline std::ostream& operator<<(std::ostream& out, const Vertex& v)
 {

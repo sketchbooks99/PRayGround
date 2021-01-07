@@ -164,11 +164,15 @@ extern "C" __global__ void __closesthit__radiance__diffuse()
 
     cosine_sample_hemisphere(z1, z2, w_in);
     Onb onb(normal);
-    onb.inverse_transform(w_in);
+	onb.inverse_transform(w_in);
+	
+	/** TODO: Next Event Estimation
+	* Check if surface is occuluded by other surfaces 
+	* in a way from surface to the light.
+	*/
 
     if(prd.depth < params.max_depth)
     {
-        
         float dist = optixGetRayTmax();
         float weight = 1.0f; // Attenuation weight
         float3 radiance = traceRadiance(     // Recursively get radiance from next hitpoint
@@ -179,8 +183,11 @@ extern "C" __global__ void __closesthit__radiance__diffuse()
             seed
         );
         result = radiance * weight;
-    }
-	prd.result = result * diffuse_color;
+	}
+	if(diffuse_data.is_normal)
+		prd.result = result * normal;
+	else
+		prd.result = result * diffuse_color;
     setPRD(prd);
 }
 
@@ -206,7 +213,8 @@ extern "C" __global__ void __closesthit__radiance__dielectric()
     const float3 mat_color = dielectric_data.mat_color;
     const float ior = dielectric_data.ior;
 
-	float3 N = normalize((1.0f - u - v) * n0 + u * n1 + v * n2);
+	float3 normal = normalize((1.0f - u - v) * n0 + u * n1 + v * n2);
+	normal = faceforward(normal, -ray_dir, normal);
 	const float3 P = optixGetWorldRayOrigin() + optixGetRayTmax() * ray_dir;
 	float3 result = make_float3(0.0f);
 
@@ -214,13 +222,13 @@ extern "C" __global__ void __closesthit__radiance__dielectric()
 	float3 front_hit_point = P, back_hit_point = P;
 	if (hit_type & HIT_OUTSIDE_FROM_OUTSIDE || hit_type & HIT_INSIDE_FROM_INSIDE)
 	{
-		front_hit_point += 0.01f * N;
-		back_hit_point -= 0.01f * N;
+		front_hit_point += 0.01f * normal;
+		back_hit_point -= 0.01f * normal;
 	}
 	else
 	{
-		front_hit_point -= 0.01f * N;
-		back_hit_point += 0.01f * N;
+		front_hit_point -= 0.01f * normal;
+		back_hit_point += 0.01f * normal;
 	}
 
 	float etai_over_etat = optixIsTriangleFrontFaceHit() ? (1.0f / ior) : ior;
@@ -229,8 +237,8 @@ extern "C" __global__ void __closesthit__radiance__dielectric()
 	RadiancePRD prd = getPRD();
 
 	float3 w_in = normalize(ray_dir);
-	float cos_theta = fminf(dot(-w_in, N), 1.0f);
-	float reflect_prob = 1.0f;
+	float cos_theta = fminf(dot(-w_in, normal), 1.0f);
+	float reflect_prob = schlick(cos_theta, etai_over_etat);
 
 	//prd->emitted = rt_data->emission_color;
 	float3 w_out = make_float3(0.0f);
@@ -239,7 +247,7 @@ extern "C" __global__ void __closesthit__radiance__dielectric()
 	{
 		// refraction
 		{
-			w_out = refract(w_in, N, etai_over_etat);
+			w_out = refract(w_in, normal, etai_over_etat);
 
 			// I can simply change roughness of glass
 			//w_out += make_float3(rnd(seed), rnd(seed), rnd(seed)) * 1.0f - make_float3(0.5f);
@@ -248,13 +256,12 @@ extern "C" __global__ void __closesthit__radiance__dielectric()
 				w_out,
 				prd.depth + 1,
 				seed);
-			reflect_prob = schlick(cos_theta, etai_over_etat);
 			result += (1.0f - reflect_prob) * radiance;
 		}
 
 		// reflection
 		{
-			w_out = reflect(w_in, N);
+			w_out = reflect(w_in, normal);
 			float3 radiance = traceRadiance(params.handle,
 				front_hit_point,
 				w_out,

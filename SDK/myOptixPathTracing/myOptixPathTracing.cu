@@ -96,11 +96,6 @@ extern "C" __global__ void __raygen__rg()
 		prd.result = make_float3(0.0f);
 		prd.depth = 0;
 		prd.seed = seed;
-		/*result += traceRadiance(
-			params.handle,
-			ray_origin,
-			ray_direction,
-			prd.depth);*/
 		optixTrace(
 			params.handle,
 			ray_origin,

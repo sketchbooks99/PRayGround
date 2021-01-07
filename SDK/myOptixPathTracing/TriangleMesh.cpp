@@ -177,10 +177,7 @@ TriangleMesh::TriangleMesh(std::vector<Vertex> vertices,
             auto p0 = vertices[indices[i].x];
             auto p1 = vertices[indices[i].y];
             auto p2 = vertices[indices[i].z];
-            auto p0_f3 = make_float3(p0.x, p0.y, p0.z);
-            auto p1_f3 = make_float3(p1.x, p1.y, p1.z);
-            auto p2_f3 = make_float3(p2.x, p2.y, p2.z);
-            auto N = normalize(cross(p2_f3 - p0_f3, p1_f3 - p0_f3));
+            auto N = normalize(cross(p2 - p0, p1 - p0));
 
             auto idx = indices[i].x;
             normals[idx] += Normal(N.x, N.y, N.z, 0.0f);

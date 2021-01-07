@@ -36,8 +36,10 @@ struct Metal : public Material {
 
 // Diffuse material
 struct Diffuse : public Material {
-    Diffuse(float3 mat_color=make_float3(0.8f)) : mat_color(mat_color), Material(MatType::DIFFUSE) {}
+    Diffuse(float3 mat_color=make_float3(0.8f), bool is_normal=false)
+    : mat_color(mat_color), is_normal(is_normal), Material(MatType::DIFFUSE) {}
     float3 mat_color;
+    bool is_normal;
 };
 
 // Emissive material

@@ -299,6 +299,13 @@ void initTriangleMeshes()
     meshes.emplace_back(mmaps_mirror);
     materials.emplace_back(new Metal(make_float3(1.0f, 1.0f, 1.0f), 1.0f));
 
+    TriangleMesh teapot("../../model/teapot_normal_merged.obj",
+        cornel_center + make_float3(0.0f, 0.0f, -40.0f),
+        5.0f, 
+        make_float3(1,1,1), true);
+    meshes.emplace_back(teapot);
+    materials.emplace_back(new Diffuse(make_float3(0.05f, 0.05f, 0.80f), true));
+
     // TODO: Damn! I have to update obj parser to load .obj file from blender or other specified format.
 }
 
@@ -1111,6 +1118,7 @@ void createSBT(PathTracerState& state)
                 OPTIX_CHECK(optixSbtRecordPackHeader(state.radiance_diffuse_prog_group, &hitgroup_records[sbt_idx]));
                 Diffuse* diffuse_data = (Diffuse*)materials[meshID];
                 hitgroup_records[sbt_idx].data.shading.diffuse.mat_color = diffuse_data->mat_color;
+                hitgroup_records[sbt_idx].data.shading.diffuse.is_normal = diffuse_data->is_normal;
             } 
             else if (materials[meshID]->isEqualType(MatType::DIELECTRIC)) {
                 OPTIX_CHECK(optixSbtRecordPackHeader(state.radiance_dielectric_prog_group, &hitgroup_records[sbt_idx]));

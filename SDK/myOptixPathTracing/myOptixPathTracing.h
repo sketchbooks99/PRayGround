@@ -86,6 +86,7 @@ struct MeshData{
 
 struct DiffuseData {
     float3 mat_color;
+    bool is_normal;
 };
 
 struct MetalData {

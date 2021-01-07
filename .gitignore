@@ -2,6 +2,7 @@
 
 */build/
 */.vscode/
+/optix7course
 
 *.vcxproj*
 *.sln

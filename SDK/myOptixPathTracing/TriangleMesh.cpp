@@ -5,6 +5,8 @@ TriangleMesh::TriangleMesh(
     const std::string& filename, 
     float3 position, float size, float3 axis, bool isSmooth)
 {
+    std::vector<Normal> tmp_normals;
+    std::vector<int3> normal_indices;
     if(filename.substr(filename.length() - 4) == ".obj")
     {
         std::ifstream ifs(filename, std::ios::in);
@@ -29,14 +31,22 @@ TriangleMesh::TriangleMesh(
                 z *= axis.z;
                 vertices.emplace_back(x, y, z, 0.0f);
             }
+            else if(header == "vn") {
+                float x, y, z;
+                iss >> x >> y >> z;
+                x *= axis.x;
+                y *= axis.y;
+                z *= axis.z;
+                tmp_normals.emplace_back(x, y, z, 0.0f);
+            }
             else if (header == "f")
             {
                 // temporalily vector to store face information
                 std::vector<int> temp_vert_indices;
+                std::vector<int> temp_norm_indices;
 
                 // Future work -----------------------------------
-                /*std::vector<int> temp_tex_indices;
-                std::vector<int> temp_norm_indices;*/
+                // std::vector<int> temp_tex_indices;
                 // ------------------------------------------------ 
                 for (std::string buffer; iss >> buffer;)
                 {
@@ -45,14 +55,14 @@ TriangleMesh::TriangleMesh(
                     {
                         // Input - index(vertex)/index(texture)/index(normal)
                         temp_vert_indices.emplace_back(vert_idx - 1);
-                        /*temp_tex_indices.emplace_back(tex_idx - 1);
-                        temp_norm_indices.emplace_back(norm_idx - 1);*/
+                        temp_norm_indices.emplace_back(norm_idx - 1);
+                        // temp_tex_indices.emplace_back(tex_idx - 1);
                     }
                     else if (sscanf(buffer.c_str(), "%d//%d", &vert_idx, &norm_idx) == 2)
                     {
                         // Input - index(vertex)//index(normal)
                         temp_vert_indices.emplace_back(vert_idx - 1);
-                        //temp_norm_indices.emplace_back(norm_idx - 1);
+                        temp_norm_indices.emplace_back(norm_idx - 1);
                     }
                     else if (sscanf(buffer.c_str(), "%d/%d", &vert_idx, &tex_idx) == 2)
                     {
@@ -74,6 +84,8 @@ TriangleMesh::TriangleMesh(
                 if (temp_vert_indices.size() == 3) {
                     indices.emplace_back(make_int3(
                         temp_vert_indices[0], temp_vert_indices[1], temp_vert_indices[2]));
+                    normal_indices.emplace_back(make_int3(
+                        temp_norm_indices[0], temp_norm_indices[1], temp_norm_indices[2]));
                 }
                 // Get more then 4 inputs.
                 // NOTE: 
@@ -116,43 +128,52 @@ TriangleMesh::TriangleMesh(
         vertex = vertex * size + position;
     }
 
-    // Mesh smoothing
-    normals.resize(vertices.size());
-    auto counts = std::vector<int>(vertices.size(), 0);
-    for(int i=0; i<indices.size(); i++)
-    {
-        auto p0 = vertices[indices[i].x];
-        auto p1 = vertices[indices[i].y];
-        auto p2 = vertices[indices[i].z];
-        auto p0_f3 = make_float3(p0.x, p0.y, p0.z);
-        auto p1_f3 = make_float3(p1.x, p1.y, p1.z);
-        auto p2_f3 = make_float3(p2.x, p2.y, p2.z);
-        auto N = normalize(cross(p2_f3 - p0_f3, p1_f3 - p0_f3));
+    if(normals.empty()) {
+        // Mesh smoothing
+        normals.resize(vertices.size());
+        auto counts = std::vector<int>(vertices.size(), 0);
+        for(int i=0; i<indices.size(); i++)
+        {
+            auto p0 = vertices[indices[i].x];
+            auto p1 = vertices[indices[i].y];
+            auto p2 = vertices[indices[i].z];
+            auto N = static_cast<float3>(normalize(cross(p2 - p0, p1 - p0)));
 
+            if (isSmooth) {
+                auto idx = indices[i].x;
+                normals[idx] += Normal(N, 0.0f);
+                counts[idx]++;
+                idx = indices[i].y;
+                normals[idx] += Normal(N, 0.0f);
+                counts[idx]++;
+                idx = indices[i].z;
+                normals[idx] += Normal(N, 0.0f);
+                counts[idx]++;
+            }
+            else
+            {
+                normals[indices[i].x] = Normal(N, 0.0f);
+                normals[indices[i].y] = Normal(N, 0.0f);
+                normals[indices[i].z] = Normal(N, 0.0f);
+            }
+        }
         if (isSmooth) {
+            for (int i = 0; i < vertices.size(); i++)
+            {
+                normals[i] /= counts[i];
+                normals[i] = normalize(normals[i]);
+            }
+        }
+    } else {
+        // Normals are described by obj file.
+        normals.resize(vertices.size());
+        for(auto i=0; i<indices.size(); i++) {
             auto idx = indices[i].x;
-            normals[idx] += Normal(N, 0.0f);
-            counts[idx]++;
+            normals[idx] = tmp_normals[normal_indices[i].x];
             idx = indices[i].y;
-            normals[idx] += Normal(N, 0.0f);
-            counts[idx]++;
-
+            normals[idx] = tmp_normals[normal_indices[i].y];
             idx = indices[i].z;
-            normals[idx] += Normal(N, 0.0f);
-            counts[idx]++;
-        }
-        else
-        {
-            normals[indices[i].x] = Normal(N, 0.0f);
-            normals[indices[i].y] = Normal(N, 0.0f);
-            normals[indices[i].z] = Normal(N, 0.0f);
-        }
-    }
-    if (isSmooth) {
-        for (int i = 0; i < vertices.size(); i++)
-        {
-            normals[i] /= counts[i];
-            normals[i] = normalize(normals[i]);
+            normals[idx] = tmp_normals[normal_indices[i].z];
         }
     }
 }

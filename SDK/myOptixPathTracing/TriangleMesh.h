@@ -26,6 +26,7 @@ struct Vertex {
         assert(idx <= 3);
         return (&x)[idx];
     }
+    operator float3() { return make_float3(x, y, z); }
 
     Vertex& operator+=(const Vertex &v)
     {

@@ -1,10 +1,13 @@
 #include <optix.h>
 
-#include "myOptixPathTracing.h"
+#include "pathtracer.h"
 #include "random.h"
 
 #include <sutil/vec_math.h>
 #include "helpers.h"
+
+/** URGENTTODO:
+ * Ray must not be launched from shading program. */
 
 extern "C" {
 __constant__ Params params;

@@ -1,4 +1,4 @@
-#include "TriangleMesh.h"
+#include "trianglemesh.h"
 
 // At present, only ".obj" format is supported.
 TriangleMesh::TriangleMesh(

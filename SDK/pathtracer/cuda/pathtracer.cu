@@ -28,7 +28,7 @@
 
 #include <optix.h>
 
-#include "myOptixPathTracing.h"
+#include "pathtracer.h"
 #include "random.h"
 
 #include <sutil/vec_math.h>
@@ -91,6 +91,12 @@ extern "C" __global__ void __raygen__rg()
 		) - 1.0f;
 		float3 ray_direction = normalize(d.x * U + d.y * V + W);
 		float3 ray_origin = eye;
+
+		/** TODO: 
+		 * Shading evaluation should be performed in this loop, not in `closest_hit`
+		 * to enable us not to indenpendently implement shading program for all primitives. 
+		 * Is the system can store and propagate information at intersection point 
+		 * through the scene, as like `SurfaceInteraction` in mitsuba2`, needed? */
 
 		RadiancePRD prd;
 		prd.result = make_float3(0.0f);

@@ -54,8 +54,9 @@
 
 #include <GLFW/glfw3.h>
 
-#include "myOptixPathTracing.h"
-#include "TriangleMesh.h"
+#include "core_util.h"
+#include "pathtracer.h"
+#include "trianglemesh.h"
 
 #include <array>
 #include <cstring>
@@ -84,9 +85,9 @@ struct Record
     T data;
 };
 
-typedef Record<RayGenData> RayGenRecord;
-typedef Record<MissData> MissRecord;
-typedef Record<HitGroupData> HitGroupRecord;
+using RayGenRecord = Record<RayGenData>;
+using MissRecord = Record<MissData>;
+using HitGroupRecord = Record<HitGroupData>;
 
 struct IndexedTriangle
 {
@@ -111,6 +112,7 @@ struct PathTracerState
     std::vector<CUdeviceptr> d_normals;
     std::vector<CUdeviceptr> d_materials;
 
+    // 
     OptixProgramGroup raygen_prog_group = 0;
     OptixProgramGroup radiance_miss_prog_group = 0;
     OptixProgramGroup occlusion_miss_prog_group = 0;
@@ -123,6 +125,7 @@ struct PathTracerState
     OptixProgramGroup radiance_emission_prog_group = 0;
     OptixProgramGroup occlusion_emission_prog_group = 0;
 
+    // 
     OptixModule ptx_module = 0;
     OptixModule bsdf_module = 0;
     OptixPipelineCompileOptions pipeline_compile_options = {};
@@ -141,7 +144,7 @@ const int32_t MAT_COUNT = 5;
 
 std::vector<TriangleMesh> meshes;
 std::vector<Material*> materials;
-std::vector<MatType> mat_types;
+std::vector<MaterialType> mat_types;
 
 void initTriangleMeshes()
 {
@@ -695,7 +698,7 @@ void createModule( PathTracerState& state )
     char log[2048];
     size_t sizeof_log = sizeof(log);
     {
-        const std::string ptx = sutil::getPtxString(OPTIX_SAMPLE_NAME, OPTIX_SAMPLE_DIR, "myOptixPathTracing.cu");
+        const std::string ptx = sutil::getPtxString(OPTIX_SAMPLE_NAME, OPTIX_SAMPLE_DIR, "cuda/pathtracer.cu");
         OPTIX_CHECK_LOG(optixModuleCreateFromPTX(
             state.context,
             &module_compile_options,
@@ -708,10 +711,8 @@ void createModule( PathTracerState& state )
         ));
     }
 
-    // TODO: If I would like to use multiple .cu source, Must I create other PTX module? 
-    // - Absolutely YES, haha :)
     {
-        const std::string ptx = sutil::getPtxString(OPTIX_SAMPLE_NAME, OPTIX_SAMPLE_DIR, "bsdf.cu");
+        const std::string ptx = sutil::getPtxString(OPTIX_SAMPLE_NAME, OPTIX_SAMPLE_DIR, "cuda/bsdf.cu");
         OPTIX_CHECK_LOG(optixModuleCreateFromPTX(
             state.context,
             &module_compile_options,
@@ -1028,8 +1029,8 @@ void createPipeline(PathTracerState& state)
     OPTIX_CHECK(optixUtilAccumulateStackSizes(state.occlusion_diffuse_prog_group, &stack_sizes));
     OPTIX_CHECK(optixUtilAccumulateStackSizes(state.radiance_dielectric_prog_group, &stack_sizes));
     OPTIX_CHECK(optixUtilAccumulateStackSizes(state.occlusion_dielectric_prog_group, &stack_sizes));
-    /*OPTIX_CHECK(optixUtilAccumulateStackSizes(state.radiance_metal_prog_group, &stack_sizes));
-    OPTIX_CHECK(optixUtilAccumulateStackSizes(state.occlusion_metal_prog_group, &stack_sizes));*/
+    OPTIX_CHECK(optixUtilAccumulateStackSizes(state.radiance_metal_prog_group, &stack_sizes));
+    OPTIX_CHECK(optixUtilAccumulateStackSizes(state.occlusion_metal_prog_group, &stack_sizes));
     OPTIX_CHECK(optixUtilAccumulateStackSizes(state.radiance_emission_prog_group, &stack_sizes));
     OPTIX_CHECK(optixUtilAccumulateStackSizes(state.occlusion_emission_prog_group, &stack_sizes));
 
@@ -1059,6 +1060,9 @@ void createPipeline(PathTracerState& state)
     ));
 }
 
+/** MEMO:
+ * Shader binding table connects geometric data to programs and their parameters. */
+
 // ------------------------------------------------------------------------------------------------------------
 // Create shader binding table (SBT)
 // ------------------------------------------------------------------------------------------------------------
@@ -1068,6 +1072,10 @@ void createSBT(PathTracerState& state)
     CUdeviceptr d_raygen_record;
     const size_t raygen_record_size = sizeof(RayGenRecord);
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_raygen_record), raygen_record_size));
+
+    /** MEMO:
+     *  optixSbtRecordPackHeader() and a given OptixProgramGroup 
+     *  object are used to fill the header of an SBT record. */
 
     RayGenRecord rg_sbt = {};
     OPTIX_CHECK(optixSbtRecordPackHeader(state.raygen_prog_group, &rg_sbt));
@@ -1107,34 +1115,36 @@ void createSBT(PathTracerState& state)
             const int sbt_idx = meshID * RAY_TYPE_COUNT + 0;
 
             switch (materials[meshID]->type()) {
-            case MatType::Diffuse:
+            case MaterialType::Diffuse: {
                 OPTIX_CHECK(optixSbtRecordPackHeader(state.radiance_diffuse_prog_group, &hitgroup_records[sbt_idx]));
                 Diffuse* diffuse_data = (Diffuse*)materials[meshID];
                 hitgroup_records[sbt_idx].data.shading.diffuse.mat_color = diffuse_data->mat_color;
                 hitgroup_records[sbt_idx].data.shading.diffuse.is_normal = diffuse_data->is_normal;
                 break;
-            case MatType::Dielectric:
+            }
+            case MaterialType::Dielectric: {
                 OPTIX_CHECK(optixSbtRecordPackHeader(state.radiance_dielectric_prog_group, &hitgroup_records[sbt_idx]));
                 Dielectric* dielectric_data = (Dielectric*)materials[meshID];
                 hitgroup_records[sbt_idx].data.shading.dielectric.mat_color = dielectric_data->mat_color;
                 hitgroup_records[sbt_idx].data.shading.dielectric.ior = dielectric_data->ior;
                 break;
-            case MatType::Metal:
+            }
+            case MaterialType::Metal: {
                 OPTIX_CHECK(optixSbtRecordPackHeader(state.radiance_metal_prog_group, &hitgroup_records[sbt_idx]));
                 Metal* metal_data = (Metal*)materials[meshID];
                 hitgroup_records[sbt_idx].data.shading.metal.mat_color = metal_data->mat_color;
                 hitgroup_records[sbt_idx].data.shading.metal.reflection = metal_data->reflection;
                 break;
-            case MatType::Emission:
+            }
+            case MaterialType::Emission: {
                 OPTIX_CHECK(optixSbtRecordPackHeader(state.radiance_emission_prog_group, &hitgroup_records[sbt_idx]));
                 Emission* emission_data = (Emission*)materials[meshID];
                 hitgroup_records[sbt_idx].data.shading.emission.color = emission_data->color;
                 break;
-            default:
-                throw std::runtime_error("This material type is not supported\n");
             }
-            else
-                throw std::runtime_error("This material type is not supported!\n");
+            default:
+                Throw("This material type is not supported\n");
+            }
             
             hitgroup_records[sbt_idx].data.mesh.vertices = reinterpret_cast<float4*>(state.d_vertices[meshID]);
             hitgroup_records[sbt_idx].data.mesh.normals = reinterpret_cast<float4*>(state.d_normals[meshID]);
@@ -1144,16 +1154,22 @@ void createSBT(PathTracerState& state)
         {
             const int sbt_idx = meshID * RAY_TYPE_COUNT + 1;
             memset(&hitgroup_records[sbt_idx], 0, hitgroup_record_size);
-            if (materials[meshID]->isEqualType(MatType::DIFFUSE))
+            switch(materials[meshID]->type()) {
+            case MaterialType::Diffuse:
                 OPTIX_CHECK(optixSbtRecordPackHeader(state.occlusion_diffuse_prog_group, &hitgroup_records[sbt_idx]));
-            else if (materials[meshID]->isEqualType(MatType::DIELECTRIC))
+                break;
+            case MaterialType::Dielectric:
                 OPTIX_CHECK(optixSbtRecordPackHeader(state.occlusion_dielectric_prog_group, &hitgroup_records[sbt_idx]));
-            else if (materials[meshID]->isEqualType(MatType::METAL))
+                break;
+            case MaterialType::Metal:
                 OPTIX_CHECK(optixSbtRecordPackHeader(state.occlusion_metal_prog_group, &hitgroup_records[sbt_idx]));
-            else if (materials[meshID]->isEqualType(MatType::EMISSION))
+                break;
+            case MaterialType::Emission:
                 OPTIX_CHECK(optixSbtRecordPackHeader(state.occlusion_emission_prog_group, &hitgroup_records[sbt_idx]));
-            else
-                throw std::runtime_error("This material type is not supported!\n");
+                break;
+            default:
+                Throw("This material type is not supported\n");
+            }
         }
     }
 

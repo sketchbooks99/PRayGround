@@ -26,8 +26,8 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "Material.h"
-#include "Shape.h"
+#include "material.h"
+#include "shape.h"
 
 struct RadiancePRD
 {

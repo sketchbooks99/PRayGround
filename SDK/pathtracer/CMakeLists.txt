@@ -26,22 +26,22 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-OPTIX_add_sample_executable( myOptixPathTracing target_name
+OPTIX_add_sample_executable( pathtracer target_name
 
   # ===== HEADER =====
   helpers.h
-  TriangleMesh.h 
-  myOptixPathTracing.h
-  Shape.h
-  Material.h
+  trianglemesh.h 
+  pathtracer.h
+  shape.h
+  material.h
 
   # ===== SOURCE =====
-  myOptixPathTracing.cpp
-  TriangleMesh.cpp 
+  pathtracer.cpp
+  trianglemesh.cpp 
 
   # ===== CUDA =====
-  myOptixPathTracing.cu
-  bsdf.cu
+  cuda/pathtracer.cu
+  cuda/bsdf.cu
 
   OPTIONS -rdc true
   )

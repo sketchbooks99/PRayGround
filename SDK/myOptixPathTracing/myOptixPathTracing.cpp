@@ -98,6 +98,7 @@ struct Instance
     float transform[12];
 };
 
+// This should be set to global scope.
 struct PathTracerState
 {
     OptixDeviceContext context = 0;
@@ -285,7 +286,7 @@ void initTriangleMeshes()
     //materials.emplace_back(new Dielectric(make_float3(1.0f), 1.52f));
 
     // MMAPs ------------------------------------
-    TriangleMesh mmaps_glass("../../model/mmaps_glass.obj",
+    /*TriangleMesh mmaps_glass("../../model/mmaps_glass.obj",
         cornel_center,
         2.0f,
         make_float3(1, 1, 1), false);
@@ -297,16 +298,7 @@ void initTriangleMeshes()
         2.0f,
         make_float3(1, 1, 1), false);
     meshes.emplace_back(mmaps_mirror);
-    materials.emplace_back(new Metal(make_float3(1.0f, 1.0f, 1.0f), 1.0f));
-
-    TriangleMesh teapot("../../model/teapot_normal_merged.obj",
-        cornel_center + make_float3(0.0f, 0.0f, -40.0f),
-        5.0f, 
-        make_float3(1,1,1), true);
-    meshes.emplace_back(teapot);
-    materials.emplace_back(new Diffuse(make_float3(0.05f, 0.05f, 0.80f), true));
-
-    // TODO: Damn! I have to update obj parser to load .obj file from blender or other specified format.
+    materials.emplace_back(new Metal(make_float3(1.0f, 1.0f, 1.0f), 1.0f));*/
 }
 
 // ========== GLFW callbacks ==========
@@ -1114,28 +1106,32 @@ void createSBT(PathTracerState& state)
         {
             const int sbt_idx = meshID * RAY_TYPE_COUNT + 0;
 
-            if (materials[meshID]->isEqualType(MatType::DIFFUSE)) {
+            switch (materials[meshID]->type()) {
+            case MatType::Diffuse:
                 OPTIX_CHECK(optixSbtRecordPackHeader(state.radiance_diffuse_prog_group, &hitgroup_records[sbt_idx]));
                 Diffuse* diffuse_data = (Diffuse*)materials[meshID];
                 hitgroup_records[sbt_idx].data.shading.diffuse.mat_color = diffuse_data->mat_color;
                 hitgroup_records[sbt_idx].data.shading.diffuse.is_normal = diffuse_data->is_normal;
-            } 
-            else if (materials[meshID]->isEqualType(MatType::DIELECTRIC)) {
+                break;
+            case MatType::Dielectric:
                 OPTIX_CHECK(optixSbtRecordPackHeader(state.radiance_dielectric_prog_group, &hitgroup_records[sbt_idx]));
                 Dielectric* dielectric_data = (Dielectric*)materials[meshID];
                 hitgroup_records[sbt_idx].data.shading.dielectric.mat_color = dielectric_data->mat_color;
                 hitgroup_records[sbt_idx].data.shading.dielectric.ior = dielectric_data->ior;
-            }
-            else if (materials[meshID]->isEqualType(MatType::METAL)) {
+                break;
+            case MatType::Metal:
                 OPTIX_CHECK(optixSbtRecordPackHeader(state.radiance_metal_prog_group, &hitgroup_records[sbt_idx]));
                 Metal* metal_data = (Metal*)materials[meshID];
                 hitgroup_records[sbt_idx].data.shading.metal.mat_color = metal_data->mat_color;
                 hitgroup_records[sbt_idx].data.shading.metal.reflection = metal_data->reflection;
-            }
-            else if (materials[meshID]->isEqualType(MatType::EMISSION)) {
+                break;
+            case MatType::Emission:
                 OPTIX_CHECK(optixSbtRecordPackHeader(state.radiance_emission_prog_group, &hitgroup_records[sbt_idx]));
                 Emission* emission_data = (Emission*)materials[meshID];
                 hitgroup_records[sbt_idx].data.shading.emission.color = emission_data->color;
+                break;
+            default:
+                throw std::runtime_error("This material type is not supported\n");
             }
             else
                 throw std::runtime_error("This material type is not supported!\n");

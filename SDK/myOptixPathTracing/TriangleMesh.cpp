@@ -112,68 +112,44 @@ TriangleMesh::TriangleMesh(
         ifs.close();
     }
 
-    // Transformation
-    Vertex center;
-    auto min = vertices.front(), max = vertices.front();
-    for (auto& vertex : vertices)
-    {
-        for (int i = 0; i < 3; i++)
-        {
-            if (vertex[i] < min[i]) min[i] = vertex[i];
-            if (vertex[i] > max[i]) max[i] = vertex[i];
-        }
-    }
-
     for (auto& vertex : vertices) {
         vertex = vertex * size + position;
     }
 
-    if(normals.empty()) {
-        // Mesh smoothing
-        normals.resize(vertices.size());
-        auto counts = std::vector<int>(vertices.size(), 0);
-        for(int i=0; i<indices.size(); i++)
-        {
-            auto p0 = vertices[indices[i].x];
-            auto p1 = vertices[indices[i].y];
-            auto p2 = vertices[indices[i].z];
-            auto N = static_cast<float3>(normalize(cross(p2 - p0, p1 - p0)));
+    // Mesh smoothing
+    normals.resize(vertices.size());
+    auto counts = std::vector<int>(vertices.size(), 0);
+    for(int i=0; i<indices.size(); i++)
+    {
+        auto p0 = vertices[indices[i].x];
+        auto p1 = vertices[indices[i].y];
+        auto p2 = vertices[indices[i].z];
+        auto N = static_cast<float3>(normalize(cross(p2 - p0, p1 - p0)));
 
-            if (isSmooth) {
-                auto idx = indices[i].x;
-                normals[idx] += Normal(N, 0.0f);
-                counts[idx]++;
-                idx = indices[i].y;
-                normals[idx] += Normal(N, 0.0f);
-                counts[idx]++;
-                idx = indices[i].z;
-                normals[idx] += Normal(N, 0.0f);
-                counts[idx]++;
-            }
-            else
-            {
-                normals[indices[i].x] = Normal(N, 0.0f);
-                normals[indices[i].y] = Normal(N, 0.0f);
-                normals[indices[i].z] = Normal(N, 0.0f);
-            }
-        }
         if (isSmooth) {
-            for (int i = 0; i < vertices.size(); i++)
-            {
-                normals[i] /= counts[i];
-                normals[i] = normalize(normals[i]);
-            }
-        }
-    } else {
-        // Normals are described by obj file.
-        normals.resize(vertices.size());
-        for(auto i=0; i<indices.size(); i++) {
             auto idx = indices[i].x;
-            normals[idx] = tmp_normals[normal_indices[i].x];
+            normals[idx] += Normal(N, 0.0f);
+            counts[idx]++;
             idx = indices[i].y;
-            normals[idx] = tmp_normals[normal_indices[i].y];
+            normals[idx] += Normal(N, 0.0f);
+            counts[idx]++;
             idx = indices[i].z;
-            normals[idx] = tmp_normals[normal_indices[i].z];
+            normals[idx] += Normal(N, 0.0f);
+            counts[idx]++;
+        }
+        else
+        {
+            std::cout << Normal(N, 0.0f) << std::endl;
+            normals[indices[i].x] = Normal(N, 0.0f);
+            normals[indices[i].y] = Normal(N, 0.0f);
+            normals[indices[i].z] = Normal(N, 0.0f);
+        }
+    }
+    if (isSmooth) {
+        for (int i = 0; i < vertices.size(); i++)
+        {
+            normals[i] /= counts[i];
+            normals[i] = normalize(normals[i]);
         }
     }
 }

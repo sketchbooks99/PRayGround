@@ -9,7 +9,6 @@
 #include <sstream>
 #include <assert.h>
 
-// TODO: I have to replace all float4 to Vertex ... Fuuuuuuuuuuck!!!
 
 struct Vertex {
     Vertex() : x(0.0f), y(0.0f), z(0.0f), pad(0.0f) {}
@@ -90,7 +89,7 @@ inline Vertex operator*(const Vertex& v, const float t)
 
 inline Vertex operator/(const Vertex& v, const float t)
 {
-    assert(t != 0);
+    assert(t != 0.0f);
     return v * (1 / t);
 }
 
@@ -111,6 +110,7 @@ inline Vertex cross(const Vertex& v1, const Vertex& v2)
 
 inline Vertex normalize(Vertex v)
 {
+    if(v.length() == 0.0f) return v;
     return v / v.length();
 }
  

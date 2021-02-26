@@ -172,6 +172,8 @@ extern "C" __global__ void __closesthit__radiance__diffuse()
 	/** TODO: Next Event Estimation
 	* Check if surface is occuluded by other surfaces 
 	* in a way from surface to the light.
+	* 
+	* Ray must be launched at once for shadow ray.
 	*/
 
     if(prd.depth < params.max_depth)

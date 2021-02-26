@@ -1061,7 +1061,7 @@ void createPipeline(PathTracerState& state)
 }
 
 /** MEMO:
- * Shader binding table connects geometric data to programs and their parameters. */
+ * Shader binding table connects geometric data to programs and their parameters.
 
 // ------------------------------------------------------------------------------------------------------------
 // Create shader binding table (SBT)

@@ -28,6 +28,8 @@ struct SurfaceInteraction {
     Spectrum spectrum;
 
     /** Type of material to identify the shading at intersected point. */
+    /** MEMO:
+     *  Can this be a pointer such as shared_ptr? Can optixTrace() propagate pointer? */
     MaterialType mattype;       
 };
 

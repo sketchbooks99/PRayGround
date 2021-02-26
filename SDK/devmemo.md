@@ -1,3 +1,7 @@
+# 開発用メモ
+
+## cudaのマクロとか
+
 ```c++
 // At cuda
 #if defined(__CUDACC__) || defined(__CUDABE__)

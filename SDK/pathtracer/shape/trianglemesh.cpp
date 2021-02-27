@@ -5,7 +5,7 @@ TriangleMesh::TriangleMesh(
     const std::string& filename, 
     float3 position, float size, float3 axis, bool isSmooth)
 {
-    std::vector<Normal> tmp_normals;
+    std::vector<float3> tmp_normals;
     std::vector<int3> normal_indices;
     if(filename.substr(filename.length() - 4) == ".obj")
     {
@@ -29,7 +29,7 @@ TriangleMesh::TriangleMesh(
                 x *= axis.x;
                 y *= axis.y;
                 z *= axis.z;
-                vertices.emplace_back(x, y, z, 0.0f);
+                vertices.emplace_back(make_float3(x, y, z));
             }
             else if(header == "vn") {
                 float x, y, z;
@@ -37,7 +37,7 @@ TriangleMesh::TriangleMesh(
                 x *= axis.x;
                 y *= axis.y;
                 z *= axis.z;
-                tmp_normals.emplace_back(x, y, z, 0.0f);
+                tmp_normals.emplace_back(make_float3(x, y, z));
             }
             else if (header == "f")
             {
@@ -124,25 +124,24 @@ TriangleMesh::TriangleMesh(
         auto p0 = vertices[indices[i].x];
         auto p1 = vertices[indices[i].y];
         auto p2 = vertices[indices[i].z];
-        auto N = static_cast<float3>(normalize(cross(p2 - p0, p1 - p0)));
+        auto N = normalize(cross(p2 - p0, p1 - p0));
 
         if (isSmooth) {
             auto idx = indices[i].x;
-            normals[idx] += Normal(N, 0.0f);
+            normals[idx] += N;
             counts[idx]++;
             idx = indices[i].y;
-            normals[idx] += Normal(N, 0.0f);
+            normals[idx] += N;
             counts[idx]++;
             idx = indices[i].z;
-            normals[idx] += Normal(N, 0.0f);
+            normals[idx] += N;
             counts[idx]++;
         }
         else
         {
-            std::cout << Normal(N, 0.0f) << std::endl;
-            normals[indices[i].x] = Normal(N, 0.0f);
-            normals[indices[i].y] = Normal(N, 0.0f);
-            normals[indices[i].z] = Normal(N, 0.0f);
+            normals[indices[i].x] = N;
+            normals[indices[i].y] = N;
+            normals[indices[i].z] = N;
         }
     }
     if (isSmooth) {
@@ -154,9 +153,9 @@ TriangleMesh::TriangleMesh(
     }
 }
 
-TriangleMesh::TriangleMesh(std::vector<Vertex> vertices, 
+TriangleMesh::TriangleMesh(std::vector<float3> vertices, 
     std::vector<int3> indices, 
-    std::vector<Normal> normals, 
+    std::vector<float3> normals, 
     bool isSmooth) 
     : vertices(vertices), 
     indices(indices), 
@@ -167,7 +166,7 @@ TriangleMesh::TriangleMesh(std::vector<Vertex> vertices,
     // Mesh smoothing
     if (indices.size() > 32)
     {
-        normals = std::vector<Normal>(vertices.size(), Normal());
+        normals = std::vector<float3>(vertices.size(), make_float3(0.0f));
         auto counts = std::vector<int>(vertices.size(), 0);
         for (int i = 0; i < indices.size(); i++)
         {
@@ -177,15 +176,15 @@ TriangleMesh::TriangleMesh(std::vector<Vertex> vertices,
             auto N = normalize(cross(p2 - p0, p1 - p0));
 
             auto idx = indices[i].x;
-            normals[idx] += Normal(N.x, N.y, N.z, 0.0f);
+            normals[idx] += N;
             counts[idx]++;
 
             idx = indices[i].y;
-            normals[idx] += Normal(N.x, N.y, N.z, 0.0f);
+            normals[idx] += N;
             counts[idx]++;
 
             idx = indices[i].z;
-            normals[idx] += Normal(N.x, N.y, N.z, 0.0f);
+            normals[idx] += N;
             counts[idx]++;
         }
         for (int i = 0; i < vertices.size(); i++)

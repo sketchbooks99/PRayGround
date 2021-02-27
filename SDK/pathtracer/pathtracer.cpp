@@ -54,9 +54,9 @@
 
 #include <GLFW/glfw3.h>
 
-#include "core_util.h"
-#include "pathtracer.h"
-#include "trianglemesh.h"
+#include "core/core_util.h"
+#include "core/pathtracer.h"
+#include "shape/trianglemesh.h"
 
 #include <array>
 #include <cstring>
@@ -149,15 +149,15 @@ std::vector<MaterialType> mat_types;
 void initTriangleMeshes()
 {
     // Floor ------------------------------------
-    std::vector<Vertex> floor_vertices;
-    std::vector<Normal> floor_normals(6, Normal(0.0f, 1.0f, 0.0f, 0.0f));
+    std::vector<float3> floor_vertices;
+    std::vector<float3> floor_normals(6, make_float3(0.0f, 1.0f, 0.0f));
     std::vector<int3> floor_indices;
-    floor_vertices.emplace_back(  0.0f, 0.0f,   0.0f, 0.0f);
-    floor_vertices.emplace_back(  0.0f, 0.0f, 559.2f, 0.0f);
-    floor_vertices.emplace_back(556.0f, 0.0f, 559.2f, 0.0f);
-    floor_vertices.emplace_back(  0.0f, 0.0f,   0.0f, 0.0f);
-    floor_vertices.emplace_back(556.0f, 0.0f, 559.2f, 0.0f);
-    floor_vertices.emplace_back(556.0f, 0.0f,   0.0f, 0.0f);
+    floor_vertices.emplace_back(make_float3(  0.0f, 0.0f,   0.0f));
+    floor_vertices.emplace_back(make_float3(  0.0f, 0.0f, 559.2f));
+    floor_vertices.emplace_back(make_float3(556.0f, 0.0f, 559.2f));
+    floor_vertices.emplace_back(make_float3(  0.0f, 0.0f,   0.0f));
+    floor_vertices.emplace_back(make_float3(556.0f, 0.0f, 559.2f));
+    floor_vertices.emplace_back(make_float3(556.0f, 0.0f,   0.0f));
     floor_indices.emplace_back(make_int3(0, 1, 2));
     floor_indices.emplace_back(make_int3(3, 4, 5));
     TriangleMesh floor_mesh(floor_vertices, floor_indices, floor_normals);
@@ -165,15 +165,15 @@ void initTriangleMeshes()
     materials.emplace_back(new Diffuse(make_float3(0.8f)));
 
     // Ceiling ------------------------------------
-    std::vector<Vertex> ceiling_vertices;
-    std::vector<Normal> ceiling_normals(6, Normal(0.0f, -1.0f, 0.0f, 0.0f));
+    std::vector<float3> ceiling_vertices;
+    std::vector<float3> ceiling_normals(6, make_float3(0.0f, -1.0f, 0.0f));
     std::vector<int3> ceiling_indices;
-    ceiling_vertices.emplace_back(  0.0f, 548.8f,   0.0f, 0.0f);
-    ceiling_vertices.emplace_back(556.0f, 548.8f,   0.0f, 0.0f);
-    ceiling_vertices.emplace_back(556.0f, 548.8f, 559.2f, 0.0f);
-    ceiling_vertices.emplace_back(  0.0f, 548.8f,   0.0f, 0.0f);
-    ceiling_vertices.emplace_back(556.0f, 548.8f, 559.2f, 0.0f);
-    ceiling_vertices.emplace_back(  0.0f, 548.8f, 559.2f, 0.0f);
+    ceiling_vertices.emplace_back(make_float3(  0.0f, 548.8f,   0.0f));
+    ceiling_vertices.emplace_back(make_float3(556.0f, 548.8f,   0.0f));
+    ceiling_vertices.emplace_back(make_float3(556.0f, 548.8f, 559.2f));
+    ceiling_vertices.emplace_back(make_float3(  0.0f, 548.8f,   0.0f));
+    ceiling_vertices.emplace_back(make_float3(556.0f, 548.8f, 559.2f));
+    ceiling_vertices.emplace_back(make_float3(  0.0f, 548.8f, 559.2f));
     ceiling_indices.emplace_back(make_int3(0, 1, 2));
     ceiling_indices.emplace_back(make_int3(3, 4, 5));
     TriangleMesh ceiling_mesh(ceiling_vertices, ceiling_indices, ceiling_normals);
@@ -181,15 +181,15 @@ void initTriangleMeshes()
     materials.emplace_back(new Diffuse(make_float3(0.8f)));
 
     // Back wall ------------------------------------
-    std::vector<Vertex> back_wall_vertices;
-    std::vector<Normal> back_wall_normals(6, Normal(0.0f, 0.0f, -1.0f, 0.0));
+    std::vector<float3> back_wall_vertices;
+    std::vector<float3> back_wall_normals(6, make_float3(0.0f, 0.0f, -1.0f));
     std::vector<int3> back_wall_indices;
-    back_wall_vertices.emplace_back(  0.0f,   0.0f, 559.2f, 0.0f);
-    back_wall_vertices.emplace_back(  0.0f, 548.8f, 559.2f, 0.0f);
-    back_wall_vertices.emplace_back(556.0f, 548.8f, 559.2f, 0.0f);
-    back_wall_vertices.emplace_back(  0.0f,   0.0f, 559.2f, 0.0f);
-    back_wall_vertices.emplace_back(556.0f, 548.8f, 559.2f, 0.0f);
-    back_wall_vertices.emplace_back(556.0f,   0.0f, 559.2f, 0.0f);
+    back_wall_vertices.emplace_back(make_float3(  0.0f,   0.0f, 559.2f));
+    back_wall_vertices.emplace_back(make_float3(  0.0f, 548.8f, 559.2f));
+    back_wall_vertices.emplace_back(make_float3(556.0f, 548.8f, 559.2f));
+    back_wall_vertices.emplace_back(make_float3(  0.0f,   0.0f, 559.2f));
+    back_wall_vertices.emplace_back(make_float3(556.0f, 548.8f, 559.2f));
+    back_wall_vertices.emplace_back(make_float3(556.0f,   0.0f, 559.2f));
     back_wall_indices.emplace_back(make_int3(0, 1, 2));
     back_wall_indices.emplace_back(make_int3(3, 4, 5));
     TriangleMesh back_wall_mesh(back_wall_vertices, back_wall_indices, back_wall_normals);
@@ -197,15 +197,15 @@ void initTriangleMeshes()
     materials.emplace_back(new Diffuse(make_float3(0.8f)));
 
     // Right wall ------------------------------------
-    std::vector<Vertex> right_wall_vertices;
-    std::vector<Normal> right_wall_normals(6, Normal(1.0f, 0.0f, 0.0f, 0.0f));
+    std::vector<float3> right_wall_vertices;
+    std::vector<float3> right_wall_normals(6, make_float3(1.0f, 0.0f, 0.0f));
     std::vector<int3> right_wall_indices;
-    right_wall_vertices.emplace_back(0.0f,   0.0f,   0.0f, 0.0f);
-    right_wall_vertices.emplace_back(0.0f, 548.8f,   0.0f, 0.0f);
-    right_wall_vertices.emplace_back(0.0f, 548.8f, 559.2f, 0.0f);
-    right_wall_vertices.emplace_back(0.0f,   0.0f,   0.0f, 0.0f);
-    right_wall_vertices.emplace_back(0.0f, 548.8f, 559.2f, 0.0f);
-    right_wall_vertices.emplace_back(0.0f,   0.0f, 559.2f, 0.0f);
+    right_wall_vertices.emplace_back(make_float3(0.0f,   0.0f,   0.0f));
+    right_wall_vertices.emplace_back(make_float3(0.0f, 548.8f,   0.0f));
+    right_wall_vertices.emplace_back(make_float3(0.0f, 548.8f, 559.2f));
+    right_wall_vertices.emplace_back(make_float3(0.0f,   0.0f,   0.0f));
+    right_wall_vertices.emplace_back(make_float3(0.0f, 548.8f, 559.2f));
+    right_wall_vertices.emplace_back(make_float3(0.0f,   0.0f, 559.2f));
     right_wall_indices.emplace_back(make_int3(0, 1, 2));
     right_wall_indices.emplace_back(make_int3(3, 4, 5));
     TriangleMesh right_wall_mesh(right_wall_vertices, right_wall_indices, right_wall_normals);
@@ -213,15 +213,15 @@ void initTriangleMeshes()
     materials.emplace_back(new Diffuse(make_float3(0.05f, 0.8f, 0.05f)));
 
     // Left wall ------------------------------------
-    std::vector<Vertex> left_wall_vertices;
-    std::vector<Normal> left_wall_normals(6, Normal(-1.0f, 0.0f, 0.0f, 0.0f));
+    std::vector<float3> left_wall_vertices;
+    std::vector<float3> left_wall_normals(6, make_float3(-1.0f, 0.0f, 0.0f));
     std::vector<int3> left_wall_indices;
-    left_wall_vertices.emplace_back(556.0f,   0.0f,   0.0f, 0.0f);
-    left_wall_vertices.emplace_back(556.0f,   0.0f, 559.2f, 0.0f);
-    left_wall_vertices.emplace_back(556.0f, 548.8f, 559.2f, 0.0f);
-    left_wall_vertices.emplace_back(556.0f,   0.0f,   0.0f, 0.0f);
-    left_wall_vertices.emplace_back(556.0f, 548.8f, 559.2f, 0.0f);
-    left_wall_vertices.emplace_back(556.0f, 548.8f,   0.0f, 0.0f);
+    left_wall_vertices.emplace_back(make_float3(556.0f,   0.0f,   0.0f));
+    left_wall_vertices.emplace_back(make_float3(556.0f,   0.0f, 559.2f));
+    left_wall_vertices.emplace_back(make_float3(556.0f, 548.8f, 559.2f));
+    left_wall_vertices.emplace_back(make_float3(556.0f,   0.0f,   0.0f));
+    left_wall_vertices.emplace_back(make_float3(556.0f, 548.8f, 559.2f));
+    left_wall_vertices.emplace_back(make_float3(556.0f, 548.8f,   0.0f));
     left_wall_indices.emplace_back(make_int3(0, 1, 2));
     left_wall_indices.emplace_back(make_int3(3, 4, 5));
     TriangleMesh left_wall_mesh(left_wall_vertices, left_wall_indices, left_wall_normals);
@@ -229,15 +229,15 @@ void initTriangleMeshes()
     materials.emplace_back(new Diffuse(make_float3(0.8f, 0.05f, 0.05f)));
 
     // Ceiling light ------------------------------------
-    std::vector<Vertex> ceiling_light_vertices;
-    std::vector<Normal> ceiling_light_normals(6, Normal(0.0f, -1.0f, 0.0f, 0.0f));
+    std::vector<float3> ceiling_light_vertices;
+    std::vector<float3> ceiling_light_normals(6, make_float3(0.0f, -1.0f, 0.0f));
     std::vector<int3> ceiling_light_indices;
-    ceiling_light_vertices.emplace_back(343.0f, 548.6f, 227.0f, 0.0f);
-    ceiling_light_vertices.emplace_back(213.0f, 548.6f, 227.0f, 0.0f);
-    ceiling_light_vertices.emplace_back(213.0f, 548.6f, 332.0f, 0.0f);
-    ceiling_light_vertices.emplace_back(343.0f, 548.6f, 227.0f, 0.0f);
-    ceiling_light_vertices.emplace_back(213.0f, 548.6f, 332.0f, 0.0f);
-    ceiling_light_vertices.emplace_back(343.0f, 548.6f, 332.0f, 0.0f);
+    ceiling_light_vertices.emplace_back(make_float3(343.0f, 548.6f, 227.0f));
+    ceiling_light_vertices.emplace_back(make_float3(213.0f, 548.6f, 227.0f));
+    ceiling_light_vertices.emplace_back(make_float3(213.0f, 548.6f, 332.0f));
+    ceiling_light_vertices.emplace_back(make_float3(343.0f, 548.6f, 227.0f));
+    ceiling_light_vertices.emplace_back(make_float3(213.0f, 548.6f, 332.0f));
+    ceiling_light_vertices.emplace_back(make_float3(343.0f, 548.6f, 332.0f));
     ceiling_light_indices.emplace_back(make_int3(0, 1, 2));
     ceiling_light_indices.emplace_back(make_int3(3, 4, 5));
     TriangleMesh ceiling_light_mesh(ceiling_light_vertices, ceiling_light_indices, ceiling_light_normals);
@@ -546,7 +546,7 @@ void buildMeshAccel( PathTracerState& state )
     for (int meshID = 0; meshID < meshes.size(); meshID++)
     {
         // alloc and copy vertices data
-        const size_t vertices_size_in_bytes = meshes[meshID].vertices.size() * sizeof(Vertex);
+        const size_t vertices_size_in_bytes = meshes[meshID].vertices.size() * sizeof(float3);
         CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&state.d_vertices[meshID]), vertices_size_in_bytes));
         CUDA_CHECK(cudaMemcpy(
             reinterpret_cast<void*>(state.d_vertices[meshID]),
@@ -566,7 +566,7 @@ void buildMeshAccel( PathTracerState& state )
         // alloc and copy normals data
         if (!meshes[meshID].normals.empty())
         {
-            const size_t normals_size_in_bytes = meshes[meshID].normals.size() * sizeof(Vertex);
+            const size_t normals_size_in_bytes = meshes[meshID].normals.size() * sizeof(float3);
             CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&state.d_normals[meshID]), normals_size_in_bytes));
             CUDA_CHECK(cudaMemcpy(
                 reinterpret_cast<void*>(state.d_normals[meshID]),
@@ -594,7 +594,7 @@ void buildMeshAccel( PathTracerState& state )
         // behaviour of this pointer will be undefined... maybe...
         triangle_inputs[meshID].type = OPTIX_BUILD_INPUT_TYPE_TRIANGLES;
         triangle_inputs[meshID].triangleArray.vertexFormat = OPTIX_VERTEX_FORMAT_FLOAT3;
-        triangle_inputs[meshID].triangleArray.vertexStrideInBytes = sizeof(Vertex);
+        triangle_inputs[meshID].triangleArray.vertexStrideInBytes = sizeof(float3);
         triangle_inputs[meshID].triangleArray.numVertices = static_cast<uint32_t>(meshes[meshID].vertices.size());
         triangle_inputs[meshID].triangleArray.vertexBuffers = &state.d_vertices[meshID];
         triangle_inputs[meshID].triangleArray.flags = triangle_input_flags;
@@ -1061,7 +1061,7 @@ void createPipeline(PathTracerState& state)
 }
 
 /** MEMO:
- * Shader binding table connects geometric data to programs and their parameters.
+ * Shader binding table connects geometric data to programs and their parameters. */
 
 // ------------------------------------------------------------------------------------------------------------
 // Create shader binding table (SBT)
@@ -1146,8 +1146,8 @@ void createSBT(PathTracerState& state)
                 Throw("This material type is not supported\n");
             }
             
-            hitgroup_records[sbt_idx].data.mesh.vertices = reinterpret_cast<float4*>(state.d_vertices[meshID]);
-            hitgroup_records[sbt_idx].data.mesh.normals = reinterpret_cast<float4*>(state.d_normals[meshID]);
+            hitgroup_records[sbt_idx].data.mesh.vertices = reinterpret_cast<float3*>(state.d_vertices[meshID]);
+            hitgroup_records[sbt_idx].data.mesh.normals = reinterpret_cast<float3*>(state.d_normals[meshID]);
             hitgroup_records[sbt_idx].data.mesh.indices = reinterpret_cast<int3*>(state.d_indices[meshID]);
         }
 

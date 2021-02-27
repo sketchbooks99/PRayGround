@@ -8,118 +8,13 @@
 #include <string>
 #include <sstream>
 #include <assert.h>
-
-
-struct Vertex {
-    Vertex() : x(0.0f), y(0.0f), z(0.0f), pad(0.0f) {}
-    Vertex(float x, float y, float z, float pad) : x(x), y(y), z(z), pad(pad) {}
-    Vertex(float t) : x(t), y(t), z(t), pad(0.0f) {};
-    Vertex(float3 val, float pad) : x(val.x), y(val.y), z(val.z), pad(pad) {}
-
-    Vertex operator-() const { return Vertex(-x, -y, -z, 0.0f); }
-    float operator[](int idx) const {
-        assert(idx <= 3);
-        return (&x)[idx];
-    }
-    float& operator[](int idx) {
-        assert(idx <= 3);
-        return (&x)[idx];
-    }
-    operator float3() { return make_float3(x, y, z); }
-
-    Vertex& operator+=(const Vertex &v)
-    {
-        x += v.x;
-        y += v.y;
-        z += v.z;
-        return *this;
-    }
-
-    Vertex& operator*=(const float t)
-    {
-        x *= t;
-        y *= t;
-        z *= t;
-        return *this;
-    }
-
-    Vertex& operator/=(const float t)
-    {
-        assert(t != 0.0f);
-        return *this *= 1 / t;
-    }
-
-    float length() const { return sqrt(length_squared()); }
-    float length_squared() const { return x * x + y * y + z * z; }
-    
-    float x, y, z, pad;
-};
-
-using Normal = Vertex;
-
-inline std::ostream& operator<<(std::ostream& out, const Vertex& v)
-{
-    return out << v.x << ' ' << v.y << ' ' << v.z;
-}
-
-inline Vertex operator+(const Vertex& v1, const Vertex& v2)
-{
-    return Vertex(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z, 0.0f);
-}
-
-inline Vertex operator+(const Vertex& v, const float3 f)
-{
-    return Vertex(v.x + f.x, v.y + f.y, v.z + f.z, 0.0f);
-}
-
-inline Vertex operator-(const Vertex& v1, const Vertex& v2) 
-{
-    return v1 + (-v2);
-}
-
-inline Vertex operator*(const Vertex& v1, const Vertex& v2)
-{
-    return Vertex(v1.x * v2.x, v1.y * v2.y, v1.z * v2.z, 0.0f);
-}
-
-inline Vertex operator*(const Vertex& v, const float t)
-{
-    return Vertex(v.x * t, v.y * t, v.z * t, 0.0f);
-}
-
-inline Vertex operator/(const Vertex& v, const float t)
-{
-    assert(t != 0.0f);
-    return v * (1 / t);
-}
-
-inline float dot(const Vertex& v1, const Vertex& v2)
-{
-    return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
-}
-
-inline Vertex cross(const Vertex& v1, const Vertex& v2)
-{
-    return Vertex(
-        v1.y * v2.z - v1.z * v2.y,
-        v1.z * v2.x - v1.x * v2.z,
-        v1.x * v2.y - v1.y * v2.x,
-        0.0f
-    );
-}
-
-inline Vertex normalize(Vertex v)
-{
-    if(v.length() == 0.0f) return v;
-    return v / v.length();
-}
  
 struct TriangleMesh {
     TriangleMesh() {}
     TriangleMesh(const std::string& filename, float3 position, float size, float3 axis, bool isSmooth=true);
-    TriangleMesh(std::vector<Vertex> vertices, std::vector<int3> faces, std::vector<Normal> normals, bool isSmooth=true);
-    std::vector<Vertex> vertices;
-    std::vector<Normal> normals;
+    TriangleMesh(std::vector<float3> vertices, std::vector<int3> faces, std::vector<float3> normals, bool isSmooth=true);
+    std::vector<float3> vertices;
+    std::vector<float3> normals;
     std::vector<int3> indices;
 };
 

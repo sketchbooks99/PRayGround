@@ -29,15 +29,18 @@
 OPTIX_add_sample_executable( pathtracer target_name
 
   # ===== HEADER =====
-  helpers.h
-  trianglemesh.h 
-  pathtracer.h
-  shape.h
-  material.h
+  core/helpers.h
+  core/pathtracer.h
+  core/shape.h 
+  core/material.h
+  core/core_util.h 
+
+  shape/trianglemesh.h 
 
   # ===== SOURCE =====
   pathtracer.cpp
-  trianglemesh.cpp 
+  
+  shape/trianglemesh.cpp 
 
   # ===== CUDA =====
   cuda/pathtracer.cu

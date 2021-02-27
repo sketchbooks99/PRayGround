@@ -1,10 +1,10 @@
 #include <optix.h>
 
-#include "pathtracer.h"
+#include "../core/pathtracer.h"
 #include "random.h"
 
 #include <sutil/vec_math.h>
-#include "helpers.h"
+#include "../core/helpers.h"
 
 /** URGENTTODO:
  * Ray must not be launched from shading program. */
@@ -110,12 +110,18 @@ extern "C" __global__ void __closesthit__radiance__emission()
     const float u = optixGetTriangleBarycentrics().x;
     const float v = optixGetTriangleBarycentrics().y;
 
-    const float3 v0 = make_float3(rt_data->mesh.vertices[index.x]);
-    const float3 v1 = make_float3(rt_data->mesh.vertices[index.y]);
-    const float3 v2 = make_float3(rt_data->mesh.vertices[index.z]);
-    const float3 n0 = normalize(make_float3(rt_data->mesh.normals[index.x]));
-    const float3 n1 = normalize(make_float3(rt_data->mesh.normals[index.y]));
-    const float3 n2 = normalize(make_float3(rt_data->mesh.normals[index.z]));
+    // const float3 v0 = make_float3(rt_data->mesh.vertices[index.x]);
+    // const float3 v1 = make_float3(rt_data->mesh.vertices[index.y]);
+    // const float3 v2 = make_float3(rt_data->mesh.vertices[index.z]);
+    // const float3 n0 = normalize(make_float3(rt_data->mesh.normals[index.x]));
+    // const float3 n1 = normalize(make_float3(rt_data->mesh.normals[index.y]));
+    // const float3 n2 = normalize(make_float3(rt_data->mesh.normals[index.z]));
+	const float3 v0 = rt_data->mesh.vertices[index.x];
+	const float3 v1 = rt_data->mesh.vertices[index.y];
+	const float3 v2 = rt_data->mesh.vertices[index.z];
+	const float3 n0 = normalize(rt_data->mesh.normals[index.x]);
+	const float3 n1 = normalize(rt_data->mesh.normals[index.y]);
+	const float3 n2 = normalize(rt_data->mesh.normals[index.z]);
 
     float3 normal = normalize((1.0f - u - v) * n0 + u * n1 + v * n2);
     normal = faceforward(normal, -ray_dir, normal);
@@ -144,12 +150,12 @@ extern "C" __global__ void __closesthit__radiance__diffuse()
     const float u = optixGetTriangleBarycentrics().x;
     const float v = optixGetTriangleBarycentrics().y;
 
-    const float3 v0 = make_float3(rt_data->mesh.vertices[index.x]);
-    const float3 v1 = make_float3(rt_data->mesh.vertices[index.y]);
-    const float3 v2 = make_float3(rt_data->mesh.vertices[index.z]);
-    const float3 n0 = normalize(make_float3(rt_data->mesh.normals[index.x]));
-    const float3 n1 = normalize(make_float3(rt_data->mesh.normals[index.y]));
-    const float3 n2 = normalize(make_float3(rt_data->mesh.normals[index.z]));
+    const float3 v0 = rt_data->mesh.vertices[index.x];
+	const float3 v1 = rt_data->mesh.vertices[index.y];
+	const float3 v2 = rt_data->mesh.vertices[index.z];
+	const float3 n0 = normalize(rt_data->mesh.normals[index.x]);
+	const float3 n1 = normalize(rt_data->mesh.normals[index.y]);
+	const float3 n2 = normalize(rt_data->mesh.normals[index.z]);
 
     const float3 diffuse_color = diffuse_data.mat_color;
 
@@ -208,12 +214,12 @@ extern "C" __global__ void __closesthit__radiance__dielectric()
 	const float u = optixGetTriangleBarycentrics().x;
 	const float v = optixGetTriangleBarycentrics().y;
 
-	const float3 v0 = make_float3(rt_data->mesh.vertices[index.x]);
-	const float3 v1 = make_float3(rt_data->mesh.vertices[index.y]);
-	const float3 v2 = make_float3(rt_data->mesh.vertices[index.z]);
-	const float3 n0 = normalize(make_float3(rt_data->mesh.normals[index.x]));
-	const float3 n1 = normalize(make_float3(rt_data->mesh.normals[index.y]));
-    const float3 n2 = normalize(make_float3(rt_data->mesh.normals[index.z]));
+	const float3 v0 = rt_data->mesh.vertices[index.x];
+	const float3 v1 = rt_data->mesh.vertices[index.y];
+	const float3 v2 = rt_data->mesh.vertices[index.z];
+	const float3 n0 = normalize(rt_data->mesh.normals[index.x]);
+	const float3 n1 = normalize(rt_data->mesh.normals[index.y]);
+	const float3 n2 = normalize(rt_data->mesh.normals[index.z]);
     
     const float3 mat_color = dielectric_data.mat_color;
     const float ior = dielectric_data.ior;
@@ -297,12 +303,12 @@ extern "C" __global__ void __closesthit__radiance__metal()
     const float3 mat_color = metal_data.mat_color;
     const float reflection = metal_data.reflection;
 
-	const float3 v0 = make_float3(rt_data->mesh.vertices[index.x]);
-	const float3 v1 = make_float3(rt_data->mesh.vertices[index.y]);
-	const float3 v2 = make_float3(rt_data->mesh.vertices[index.z]);
-	const float3 n0 = normalize(make_float3(rt_data->mesh.normals[index.x]));
-	const float3 n1 = normalize(make_float3(rt_data->mesh.normals[index.y]));
-    const float3 n2 = normalize(make_float3(rt_data->mesh.normals[index.z]));
+	const float3 v0 = rt_data->mesh.vertices[index.x];
+	const float3 v1 = rt_data->mesh.vertices[index.y];
+	const float3 v2 = rt_data->mesh.vertices[index.z];
+	const float3 n0 = normalize(rt_data->mesh.normals[index.x]);
+	const float3 n1 = normalize(rt_data->mesh.normals[index.y]);
+	const float3 n2 = normalize(rt_data->mesh.normals[index.z]);
     
     float3 N = normalize((1.0f - u - v) * n0 + u * n1 + v * n2);
     const float3 hit_point = optixGetWorldRayOrigin() + optixGetRayTmax() * ray_dir;

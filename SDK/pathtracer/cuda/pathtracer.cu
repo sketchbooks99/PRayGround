@@ -28,11 +28,11 @@
 
 #include <optix.h>
 
-#include "pathtracer.h"
+#include "../core/pathtracer.h"
 #include "random.h"
 
 #include <sutil/vec_math.h>
-#include "helpers.h"
+#include "../core/helpers.h"
 
 extern "C" {
 __constant__ Params params;

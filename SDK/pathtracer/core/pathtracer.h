@@ -79,8 +79,8 @@ struct MissData
 };
 
 struct MeshData{
-    float4* vertices;
-    float4* normals;
+    float3* vertices;
+    float3* normals;
     int3* indices;
 };
 

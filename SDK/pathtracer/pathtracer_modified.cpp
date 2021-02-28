@@ -1111,6 +1111,14 @@ void createSBT(PathTracerState& state)
         HitGroupRecord hitgroup_records[2];
         // sbt for closest-hit program
         { 
+            /** MEMO: 
+             *  Maybe, pointer for material can be realized by allocating memory in device as like ...
+             *  CUdeviceptr d_material;
+             *  const size_t material_size_in_bytes = sizeof(Material); <- Is this can be abstract class?
+             *  CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_material), material_size_in_bytes));
+             *  CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_material), 
+             *             matptr, material_size_in_bytes,
+             *             cudaMemcpyHostToDevice)); */
             switch (materials[meshID]->type()) {
             case MaterialType::Diffuse: {
                 OPTIX_CHECK(optixSbtRecordPackHeader(state.radiance_diffuse_prog_group, &hitgroup_records[0]));

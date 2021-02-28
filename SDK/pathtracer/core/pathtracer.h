@@ -84,32 +84,37 @@ struct MeshData{
     int3* indices;
 };
 
-struct DiffuseData {
-    float3 mat_color;
-    bool is_normal;
-};
+// struct DiffuseData {
+//     float3 mat_color;
+//     bool is_normal;
+// };
 
-struct MetalData {
-    float3 mat_color;
-    float reflection;
-};
+// struct MetalData {
+//     float3 mat_color;
+//     float reflection;
+// };
 
-struct DielectricData {
-    float3 mat_color;
-    float ior;
-};
+// struct DielectricData {
+//     float3 mat_color;
+//     float ior;
+// };
 
-struct EmissionData {
-    float3 color;
-};
+// struct EmissionData {
+//     float3 color;
+// };
 
 // member in union must not have any constructor
 struct HitGroupData {
     MeshData mesh;
-    union {
-        DiffuseData diffuse;
-        MetalData metal;
-        DielectricData dielectric;
-        EmissionData emission;
-    } shading;
+    // union {
+    //     Diffuse diffuse;
+    //     Metal metal;
+    //     Dielectric dielectric;
+    //     Emission emission;
+    // } shading;
+    MaterialPtr material_ptr;
+};
+
+class Primitive {
+    MaterialPtr material;
 };

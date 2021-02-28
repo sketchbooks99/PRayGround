@@ -31,13 +31,12 @@ inline std::ostream& operator<<(std::ostream& out, ShapeType type) {
 #endif
 
 // Abstract class for readability
-class Shape {
+struct Shape {
     virtual ShapeType type() const = 0;
 };
 
 // Mesh Data
-class Mesh : public Shape {
-public:
+struct Mesh : public Shape {
     float4* vertices;
     float4* normals;
     int3* indices;
@@ -45,14 +44,13 @@ public:
     ShapeType type() const override { return ShapeType::Mesh; }
 };
 
-class Sphere : public Shape {
-public:
+struct Sphere : public Shape {
     float radius;
 
     ShapeType type() const override { return ShapeType::Sphere; }
 };
 
-class Plane : public Shape {
+struct Plane : public Shape {
     float size;
     
     ShapeType type() const override { return ShapeType::Plane; }

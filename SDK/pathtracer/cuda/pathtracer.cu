@@ -65,6 +65,35 @@ static __forceinline__ __device__ void setPayloadOcclusion(bool occluded)
 	optixSetPayload_0(static_cast<unsigned int>(occluded));
 }
 
+extern "C" __global__ void __raygen__path() {
+	const int w = params.width;
+	const int h = params.height;
+	const float3 eye = params.eye;
+	const float3 U = params.U;
+	const float3 V = params.V;
+	const float3 W = params.W;
+	const uint3 idx = optixGetLaunchIndex();
+	const int subframe_index = params.subframe_index;
+
+	unsigned int seed = tea<4>(idx.y * w + idx.x, subframe_index);
+
+	float3 result = make_float3(0.0f, 0.0f, 0.0f);
+
+	int i = params.samples_per_launch;
+
+	do
+	{
+		const float2 subpixel_jitter = make_float2(rnd(seed) - 0.5f, rnd(seed) - 0.5f);
+
+		const float2 d = 2.0f * make_float2(
+			(static_cast<float>(idx.x) + subpixel_jitter.x) / static_cast<float>(w),
+			(static_cast<float>(idx.y) + subpixel_jitter.y) / static_cast<float>(h)
+		) - 1.0f;
+		float3 ray_direction = normalize(d.x * U + d.y * V + W);
+		float3 ray_origin = eye;
+	}
+}
+
 // -------------------------------------------------------------------------------
 extern "C" __global__ void __raygen__rg()
 {

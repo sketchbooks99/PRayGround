@@ -1061,7 +1061,10 @@ void createPipeline(PathTracerState& state)
 }
 
 /** MEMO:
- * Shader binding table connects geometric data to programs and their parameters. */
+ * Shader binding table connects geometric data to programs and their parameters. 
+ * 
+ * DEVMEMO: 
+ * Try to independently register the SBT of bsdfs, not to use array of HitGroupRecord. */
 // ------------------------------------------------------------------------------------------------------------
 // Create shader binding table (SBT)
 // ------------------------------------------------------------------------------------------------------------
@@ -1071,10 +1074,6 @@ void createSBT(PathTracerState& state)
     CUdeviceptr d_raygen_record;
     const size_t raygen_record_size = sizeof(RayGenRecord);
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_raygen_record), raygen_record_size));
-
-    /** MEMO:
-     *  optixSbtRecordPackHeader() and a given OptixProgramGroup 
-     *  object are used to fill the header of an SBT record. */
 
     RayGenRecord rg_sbt = {};
     OPTIX_CHECK(optixSbtRecordPackHeader(state.raygen_prog_group, &rg_sbt));
@@ -1093,8 +1092,8 @@ void createSBT(PathTracerState& state)
 
     MissRecord ms_sbt[2];
     OPTIX_CHECK(optixSbtRecordPackHeader(state.radiance_miss_prog_group, &ms_sbt[0]));
-    ms_sbt[0].data.bg_color = make_float4(0.0f);
-    OPTIX_CHECK(optixSbtRecordPackHeader(state.occlusion_miss_prog_group, &ms_sbt[1]));
+    ms_sbt[0].data_color = make_float4(0.0f);
+    OPTIX_CHECK(optixSbtRecordPackHeader(state.occlusion_miss_prog_group, &ms_sbt[0]));
     ms_sbt[1].data.bg_color = make_float4(0.0f);
 
     CUDA_CHECK(cudaMemcpy(
@@ -1104,94 +1103,91 @@ void createSBT(PathTracerState& state)
         cudaMemcpyHostToDevice
     ));
 
-    // For radiance and occlusion program
-    // TODO: Copy Record object w.r.t each materials
+    std::vector<CUdeviceptr> d_hitgroup_records(meshes.size());
     const size_t hitgroup_record_size = sizeof(HitGroupRecord);
-    std::vector<HitGroupRecord> hitgroup_records(RAY_TYPE_COUNT * meshes.size());
-    for (int meshID = 0; meshID < meshes.size(); meshID++)
-    {
-        {
-            const int sbt_idx = meshID * RAY_TYPE_COUNT + 0;
 
+    // For closest-hit and occlusion program   
+    for(size_t meshID=0; meshID < meshes.size(); meshID++) {
+        HitGroupRecord hitgroup_records[2];
+        // sbt for closest-hit program
+        { 
             switch (materials[meshID]->type()) {
             case MaterialType::Diffuse: {
-                OPTIX_CHECK(optixSbtRecordPackHeader(state.radiance_diffuse_prog_group, &hitgroup_records[sbt_idx]));
+                OPTIX_CHECK(optixSbtRecordPackHeader(state.radiance_diffuse_prog_group, &hitgroup_records[0]));
                 Diffuse* diffuse_data = (Diffuse*)materials[meshID];
-                hitgroup_records[sbt_idx].data.shading.diffuse.mat_color = diffuse_data->mat_color;
-                hitgroup_records[sbt_idx].data.shading.diffuse.is_normal = diffuse_data->is_normal;
+                hitgroup_records[0].data.shading.diffuse.mat_color = diffuse_data->mat_color;
+                hitgroup_records[0].data.shading.diffuse.is_normal = diffuse_data->is_normal;
                 break;
             }
             case MaterialType::Dielectric: {
-                OPTIX_CHECK(optixSbtRecordPackHeader(state.radiance_dielectric_prog_group, &hitgroup_records[sbt_idx]));
+                OPTIX_CHECK(optixSbtRecordPackHeader(state.radiance_dielectric_prog_group, &hitgroup_records[0]));
                 Dielectric* dielectric_data = (Dielectric*)materials[meshID];
-                hitgroup_records[sbt_idx].data.shading.dielectric.mat_color = dielectric_data->mat_color;
-                hitgroup_records[sbt_idx].data.shading.dielectric.ior = dielectric_data->ior;
+                hitgroup_records[0].data.shading.dielectric.mat_color = dielectric_data->mat_color;
+                hitgroup_records[0].data.shading.dielectric.ior = dielectric_data->ior;
                 break;
             }
             case MaterialType::Metal: {
-                OPTIX_CHECK(optixSbtRecordPackHeader(state.radiance_metal_prog_group, &hitgroup_records[sbt_idx]));
+                OPTIX_CHECK(optixSbtRecordPackHeader(state.radiance_metal_prog_group, &hitgroup_records[0]));
                 Metal* metal_data = (Metal*)materials[meshID];
-                hitgroup_records[sbt_idx].data.shading.metal.mat_color = metal_data->mat_color;
-                hitgroup_records[sbt_idx].data.shading.metal.reflection = metal_data->reflection;
+                hitgroup_records[0].data.shading.metal.mat_color = metal_data->mat_color;
+                hitgroup_records[0].data.shading.metal.reflection = metal_data->reflection;
                 break;
             }
             case MaterialType::Emission: {
-                OPTIX_CHECK(optixSbtRecordPackHeader(state.radiance_emission_prog_group, &hitgroup_records[sbt_idx]));
+                OPTIX_CHECK(optixSbtRecordPackHeader(state.radiance_emission_prog_group, &hitgroup_records[0]));
                 Emission* emission_data = (Emission*)materials[meshID];
-                hitgroup_records[sbt_idx].data.shading.emission.color = emission_data->color;
+                hitgroup_records[0].data.shading.emission.color = emission_data->color;
                 break;
             }
             default:
                 Throw("This material type is not supported\n");
             }
-            
-            hitgroup_records[sbt_idx].data.mesh.vertices = reinterpret_cast<float3*>(state.d_vertices[meshID]);
-            hitgroup_records[sbt_idx].data.mesh.normals = reinterpret_cast<float3*>(state.d_normals[meshID]);
-            hitgroup_records[sbt_idx].data.mesh.indices = reinterpret_cast<int3*>(state.d_indices[meshID]);
+
+            hitgroup_records[0].data.mesh.vertices = reinterpret_cast<float3*>(state.d_vertices[meshID]);
+            hitgroup_records[0].data.mesh.normals = reinterpret_cast<float3*>(state.d_normals[meshID]);
+            hitgroup_records[0].data.mesh.indices = reinterpret_cast<int3*>(state.d_indices[meshID]);
         }
 
-        {
-            const int sbt_idx = meshID * RAY_TYPE_COUNT + 1;
-            memset(&hitgroup_records[sbt_idx], 0, hitgroup_record_size);
+        { 
+            memset(&hitgroup_records[1], 0, hitgroup_record_size);
             switch(materials[meshID]->type()) {
             case MaterialType::Diffuse:
-                OPTIX_CHECK(optixSbtRecordPackHeader(state.occlusion_diffuse_prog_group, &hitgroup_records[sbt_idx]));
+                OPTIX_CHECK(optixSbtRecordPackHeader(state.occlusion_diffuse_prog_group, &hitgroup_records[1]));
                 break;
             case MaterialType::Dielectric:
-                OPTIX_CHECK(optixSbtRecordPackHeader(state.occlusion_dielectric_prog_group, &hitgroup_records[sbt_idx]));
+                OPTIX_CHECK(optixSbtRecordPackHeader(state.occlusion_dielectric_prog_group, &hitgroup_records[1]));
                 break;
             case MaterialType::Metal:
-                OPTIX_CHECK(optixSbtRecordPackHeader(state.occlusion_metal_prog_group, &hitgroup_records[sbt_idx]));
+                OPTIX_CHECK(optixSbtRecordPackHeader(state.occlusion_metal_prog_group, &hitgroup_records[1]));
                 break;
             case MaterialType::Emission:
-                OPTIX_CHECK(optixSbtRecordPackHeader(state.occlusion_emission_prog_group, &hitgroup_records[sbt_idx]));
+                OPTIX_CHECK(optixSbtRecordPackHeader(state.occlusion_emission_prog_group, &hitgroup_records[1]));
                 break;
             default:
                 Throw("This material type is not supported\n");
             }
         }
+
+        CUDA_CHECK(cudaMalloc(
+            reinterpret_cast<void**>(&d_hitgroup_records[meshID]),
+            hitgroup_record_size * RAY_TYPE_COUNT
+        ));
+
+        CUDA_CHECK(cudaMemcpy(
+            reinterpret_cast<void*>(d_hitgroup_records[meshID]),
+            hitgroup_records,
+            hitgroup_record_size * RAY_TYPE_COUNT,
+            cudaMemcpyHostToDevice
+        ));
     }
-
-    CUdeviceptr d_hitgroup_records;
-    CUDA_CHECK(cudaMalloc(
-        reinterpret_cast<void**>(&d_hitgroup_records),
-        hitgroup_record_size * RAY_TYPE_COUNT * meshes.size()
-    ));
-
-    CUDA_CHECK(cudaMemcpy(
-        reinterpret_cast<void*>(d_hitgroup_records),
-        hitgroup_records.data(),
-        hitgroup_record_size * RAY_TYPE_COUNT * meshes.size(),
-        cudaMemcpyHostToDevice
-    ));
 
     state.sbt.raygenRecord = d_raygen_record;
     state.sbt.missRecordBase = d_miss_records;
     state.sbt.missRecordStrideInBytes = static_cast<uint32_t>(miss_record_size);
     state.sbt.missRecordCount = RAY_TYPE_COUNT;
-    state.sbt.hitgroupRecordBase = d_hitgroup_records;
+    state.sbt.hitgroupRecordBase = *d_hitgroup_records.data();
     state.sbt.hitgroupRecordStrideInBytes = static_cast<uint32_t>(hitgroup_record_size);
-    state.sbt.hitgroupRecordCount = hitgroup_records.size();
+    state.sbt.hitgroupRecordCount = d_hitgroup_records.size() * RAY_TYPE_COUNT;
 }
 
 // ------------------------------------------------------------------------------------------------------------

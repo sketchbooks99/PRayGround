@@ -102,7 +102,11 @@ static __forceinline__ __device__ bool traceOcclusion(
 extern "C" __global__ void __closesthit__radiance__emission()
 {
     HitGroupData* rt_data = (HitGroupData*)optixGetSbtDataPointer();
-	const EmissionData emission_data = rt_data->shading.emission;
+	/** TODO: 
+	 * Material data should be independently allocated to GPU through sbt, 
+	 * and gotten by cuda as like following declaration. 
+	 * Emission* emission = (Emission*)optixGetSbtDataPointer(); */
+	const Emission emission_data = rt_data->shading.emission;
 
     const int prim_idx = optixGetPrimitiveIndex();
     const int3 index = rt_data->mesh.indices[prim_idx];
@@ -110,12 +114,6 @@ extern "C" __global__ void __closesthit__radiance__emission()
     const float u = optixGetTriangleBarycentrics().x;
     const float v = optixGetTriangleBarycentrics().y;
 
-    // const float3 v0 = make_float3(rt_data->mesh.vertices[index.x]);
-    // const float3 v1 = make_float3(rt_data->mesh.vertices[index.y]);
-    // const float3 v2 = make_float3(rt_data->mesh.vertices[index.z]);
-    // const float3 n0 = normalize(make_float3(rt_data->mesh.normals[index.x]));
-    // const float3 n1 = normalize(make_float3(rt_data->mesh.normals[index.y]));
-    // const float3 n2 = normalize(make_float3(rt_data->mesh.normals[index.z]));
 	const float3 v0 = rt_data->mesh.vertices[index.x];
 	const float3 v1 = rt_data->mesh.vertices[index.y];
 	const float3 v2 = rt_data->mesh.vertices[index.z];
@@ -142,7 +140,7 @@ extern "C" __global__ void __closesthit__radiance__emission()
 extern "C" __global__ void __closesthit__radiance__diffuse()
 {
     HitGroupData* rt_data = (HitGroupData*)optixGetSbtDataPointer();
-	DiffuseData diffuse_data = rt_data->shading.diffuse;
+	Diffuse diffuse_data = rt_data->shading.diffuse;
 
     const int prim_idx = optixGetPrimitiveIndex();
     const int3 index = rt_data->mesh.indices[prim_idx];
@@ -206,7 +204,7 @@ extern "C" __global__ void __closesthit__radiance__dielectric()
 {
     // Get binded data by application.
 	HitGroupData* rt_data = (HitGroupData*)optixGetSbtDataPointer();
-	DielectricData dielectric_data = rt_data->shading.dielectric;
+	Dielectric dielectric_data = rt_data->shading.dielectric;
 
 	const int prim_idx = optixGetPrimitiveIndex();
 	const int3 index = rt_data->mesh.indices[prim_idx];
@@ -291,7 +289,7 @@ extern "C" __global__ void __closesthit__radiance__metal()
 {
     // Get binded data by application.
 	HitGroupData* rt_data = (HitGroupData*)optixGetSbtDataPointer();
-	MetalData metal_data = rt_data->shading.metal;
+	Metal metal_data = rt_data->shading.metal;
 
 	const int prim_idx = optixGetPrimitiveIndex();
 	const int3 index = rt_data->mesh.indices[prim_idx];

@@ -33,12 +33,12 @@ OPTIX_add_sample_executable( pathtracer target_name
   core/pathtracer.h
   core/shape.h 
   core/material.h
-  core/core_util.h 
+  core/core_util.h
 
   shape/trianglemesh.h 
 
   # ===== SOURCE =====
-  pathtracer.cpp
+  pathtracer_modified.cpp
   
   shape/trianglemesh.cpp 
 

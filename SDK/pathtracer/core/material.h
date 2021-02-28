@@ -49,7 +49,7 @@ struct Material {
 struct Dielectric : public Material {
     Dielectric(float3 mat_color = make_float3(0.8f), float ior=1.52f) : mat_color(mat_color), ior(ior) {}
 
-    SUTIL_HOSTDEVICE float3 sample() override {}
+    SUTIL_HOSTDEVICE float3 sample() override { return make_float3(0.0f); }
     MaterialType type() const override { return MaterialType::Dielectric; }
 
     float3 mat_color;
@@ -60,7 +60,7 @@ struct Dielectric : public Material {
 struct Metal : public Material {
     Metal(float3 mat_color=make_float3(0.8f), float reflection=1.0f) : mat_color(mat_color), reflection(reflection) {}
 
-    SUTIL_HOSTDEVICE float3 sample() override {}
+    SUTIL_HOSTDEVICE float3 sample() override { return make_float3(0.0f); }
     MaterialType type() const override { return MaterialType::Metal; }
 
     float3 mat_color;
@@ -72,7 +72,7 @@ struct Diffuse : public Material {
     Diffuse(float3 mat_color=make_float3(0.8f), bool is_normal=false)
     : mat_color(mat_color), is_normal(is_normal) {}
     
-    SUTIL_HOSTDEVICE float3 sample() override {}
+    SUTIL_HOSTDEVICE float3 sample() override { return make_float3(0.0f); }
     MaterialType type() const override { return MaterialType::Diffuse; }
 
     float3 mat_color;
@@ -83,7 +83,7 @@ struct Diffuse : public Material {
 struct Emission : public Material {
     Emission(float3 color=make_float3(1.0f)) : color(color) {}
 
-    SUTIL_HOSTDEVICE float3 sample() override {}
+    SUTIL_HOSTDEVICE float3 sample() override {return make_float3(0.0f); }
     MaterialType type() const override { return MaterialType::Emission; }
 
     float3 color;

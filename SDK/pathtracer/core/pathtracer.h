@@ -114,7 +114,3 @@ struct HitGroupData {
     // } shading;
     MaterialPtr material_ptr;
 };
-
-class Primitive {
-    MaterialPtr material;
-};

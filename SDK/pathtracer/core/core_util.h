@@ -5,6 +5,16 @@
 #include <stdexcept>
 #endif
 
+#if !defined(__CUDACC__)
+#define CALLABLE_FUNC
+#define DEVICE_INLINE
+#define DEVICE_FUNC
+#else 
+#define CALLABLE_FUNC extern "C" __device__
+#define DEVICE_INLINE __device__ __forceinline__
+#define DEVICE_FUNC __device__
+#endif
+
 // MACROs to easily define the function.
 #define RG_FUNC(name) __raygen__ ## name
 #define IS_FUNC(name) __intersection__ ## name
@@ -26,12 +36,16 @@
 
 #if !defined(__CUDACC__)
 
+namespace pt {
+
 inline void Throw(const std::string& msg) {
     throw std::runtime_error(msg);
 }
 
 inline void Assert(bool condition, const std::string& msg) {
     if(!condition) Throw(msg);
+}
+
 }
 
 #endif

@@ -104,9 +104,9 @@ struct Onb
 };
 
 // -------------------------------------------------------------------------------
-static __forceinline__ __device__ RadiancePRD getPRD()
+static __forceinline__ __device__ pt::RadiancePRD getPRD()
 {
-	RadiancePRD prd;
+	pt::RadiancePRD prd;
 	prd.result.x = int_as_float(optixGetPayload_0());
 	prd.result.y = int_as_float(optixGetPayload_1());
 	prd.result.z = int_as_float(optixGetPayload_2());
@@ -115,7 +115,7 @@ static __forceinline__ __device__ RadiancePRD getPRD()
 	return prd;
 }
 
-static __forceinline__ __device__ void setPRD(const RadiancePRD& prd)
+static __forceinline__ __device__ void setPRD(const pt::RadiancePRD& prd)
 {
 	optixSetPayload_0(float_as_int(prd.result.x));
 	optixSetPayload_1(float_as_int(prd.result.y));

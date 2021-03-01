@@ -29,6 +29,8 @@
 #include "material.h"
 #include "shape.h"
 
+namespace pt {
+
 struct RadiancePRD
 {
     float3 result;
@@ -112,5 +114,7 @@ struct HitGroupData {
     //     Dielectric dielectric;
     //     Emission emission;
     // } shading;
-    MaterialPtr material_ptr;
+    Material* material_ptr;
 };
+
+}

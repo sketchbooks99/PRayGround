@@ -34,6 +34,8 @@
 #include <sutil/vec_math.h>
 #include "../core/helpers.h"
 
+using namespace pt;
+
 extern "C" {
 __constant__ Params params;
 }
@@ -139,7 +141,7 @@ extern "C" __global__ void __raygen__rg()
 // -------------------------------------------------------------------------------
 extern "C" __global__ void __miss__radiance()
 {
-	MissData* rt_data = reinterpret_cast<MissData*>(optixGetSbtDataPointer());
+	pt::MissData* rt_data = reinterpret_cast<pt::MissData*>(optixGetSbtDataPointer());
 	RadiancePRD prd = getPRD();
 
 	prd.result = make_float3(rt_data->bg_color);

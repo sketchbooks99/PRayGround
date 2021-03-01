@@ -5,6 +5,8 @@
 #include "core_util.h"
 #endif
 
+namespace pt {
+
 enum class ShapeType {
     None,       // None type
     Mesh,       // Mesh with triangle 
@@ -55,3 +57,5 @@ struct Plane : public Shape {
     
     ShapeType type() const override { return ShapeType::Plane; }
 };
+
+}

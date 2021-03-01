@@ -66,6 +66,8 @@
 #include <sstream>
 #include <string>
 
+namespace pt {
+
 bool resize_dirty = false;
 bool minimized = false;
 
@@ -162,7 +164,7 @@ void initTriangleMeshes()
     floor_indices.emplace_back(make_int3(3, 4, 5));
     TriangleMesh floor_mesh(floor_vertices, floor_indices, floor_normals);
     meshes.emplace_back(floor_mesh);
-    materials.emplace_back(new Diffuse(make_float3(0.8f)));
+    materials.emplace_back(new Diffuse(make_float3(0.8f, 0.8f, 0.8f)));
 
     // Ceiling ------------------------------------
     std::vector<float3> ceiling_vertices;
@@ -178,7 +180,7 @@ void initTriangleMeshes()
     ceiling_indices.emplace_back(make_int3(3, 4, 5));
     TriangleMesh ceiling_mesh(ceiling_vertices, ceiling_indices, ceiling_normals);
     meshes.emplace_back(ceiling_mesh);
-    materials.emplace_back(new Diffuse(make_float3(0.8f)));
+    materials.emplace_back(new Diffuse(make_float3(0.8f, 0.8f, 0.8f)));
 
     // Back wall ------------------------------------
     std::vector<float3> back_wall_vertices;
@@ -194,7 +196,7 @@ void initTriangleMeshes()
     back_wall_indices.emplace_back(make_int3(3, 4, 5));
     TriangleMesh back_wall_mesh(back_wall_vertices, back_wall_indices, back_wall_normals);
     meshes.emplace_back(back_wall_mesh);
-    materials.emplace_back(new Diffuse(make_float3(0.8f)));
+    materials.emplace_back(new Diffuse(make_float3(0.8f, 0.8f, 0.8f)));
 
     // Right wall ------------------------------------
     std::vector<float3> right_wall_vertices;
@@ -242,7 +244,7 @@ void initTriangleMeshes()
     ceiling_light_indices.emplace_back(make_int3(3, 4, 5));
     TriangleMesh ceiling_light_mesh(ceiling_light_vertices, ceiling_light_indices, ceiling_light_normals);
     meshes.emplace_back(ceiling_light_mesh);
-    materials.emplace_back(new Emission(make_float3(15.0f)));
+    materials.emplace_back(new Emission(make_float3(15.0f, 15.0f, 15.0f)));
 
     // Small light ------------------------------------
     /*std::vector<Vertex> small_light_vertices;
@@ -1118,7 +1120,7 @@ void createSBT(PathTracerState& state)
              *             cudaMemcpyHostToDevice)); */
             CUdeviceptr d_material = 0;
             // const size_t material_size_in_bytes = sizeof(Material*);
-            const size_t material_size_in_bytes = sizeof(materials[meshID]);
+            const size_t material_size_in_bytes = materials[meshID]->member_size();
             CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_material), material_size_in_bytes));
             CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_material), 
                        materials[meshID],
@@ -1140,7 +1142,7 @@ void createSBT(PathTracerState& state)
                 OPTIX_CHECK(optixSbtRecordPackHeader(state.radiance_emission_prog_group, &hitgroup_records[sbt_idx]));
                 break;
             }
-                
+
             hitgroup_records[sbt_idx].data.material_ptr = reinterpret_cast<Material*>(d_material);
 
             hitgroup_records[sbt_idx].data.mesh.vertices = reinterpret_cast<float3*>(state.d_vertices[meshID]);
@@ -1221,9 +1223,13 @@ void cleanupState(PathTracerState& state)
     CUDA_CHECK(cudaFree(reinterpret_cast<void*>(state.d_params)));
 }
 
+} // namespace end
+
 // ========== Main ==========
 int main(int argc, char* argv[])
 {
+    using namespace pt;
+
     PathTracerState state;
     state.params.width = 768;
     state.params.height = 768;

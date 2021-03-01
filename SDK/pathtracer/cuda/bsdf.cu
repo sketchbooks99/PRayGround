@@ -9,6 +9,8 @@
 /** URGENTTODO:
  * Ray must not be launched from shading program. */
 
+using namespace pt;
+
 extern "C" {
 __constant__ Params params;
 }
@@ -106,7 +108,7 @@ extern "C" __global__ void __closesthit__radiance__emission()
 	 * Material data should be independently allocated to GPU through sbt, 
 	 * and gotten by cuda as like following declaration. 
 	 * Emission* emission = (Emission*)optixGetSbtDataPointer(); */
-	Emission* emission_data = (Emission*)rt_data->material_ptr;
+	Emission* emission_data = reinterpret_cast<Emission*>(rt_data->material_ptr);
 
     const int prim_idx = optixGetPrimitiveIndex();
     const int3 index = rt_data->mesh.indices[prim_idx];
@@ -124,8 +126,8 @@ extern "C" __global__ void __closesthit__radiance__emission()
 
     RadiancePRD prd = getPRD();
 
-    // float3 emission = emission_data->color;
-	float3 emission = make_float3(15.0f);
+	float3 emission = emission_data->color;
+	// float3 emission = make_float3(15.0f);
     float3 result = make_float3(0.0f);
     if(prd.depth < params.max_depth)
     {
@@ -138,7 +140,7 @@ extern "C" __global__ void __closesthit__radiance__emission()
 extern "C" __global__ void __closesthit__radiance__diffuse()
 {
     HitGroupData* rt_data = (HitGroupData*)optixGetSbtDataPointer();
-	Diffuse* diffuse_data = (Diffuse*)rt_data->material_ptr;
+	Diffuse* diffuse_data = reinterpret_cast<Diffuse*>(rt_data->material_ptr);
 
     const int prim_idx = optixGetPrimitiveIndex();
     const int3 index = rt_data->mesh.indices[prim_idx];
@@ -151,8 +153,8 @@ extern "C" __global__ void __closesthit__radiance__diffuse()
 	const float3 n2 = normalize(rt_data->mesh.normals[index.z]);
 
 	/// MEMO: Failed to allocate material_ptr correctly */
-    const float3 diffuse_color = diffuse_data->mat_color;
 	// const float3 diffuse_color = make_float3(1.0f, 1.0f, 1.0f);
+	const float3 diffuse_color = diffuse_data->mat_color;
 
     float3 normal = normalize((1.0f - u - v) * n0 + u * n1 + v * n2);
     normal = faceforward(normal, -ray_dir, normal);
@@ -190,10 +192,7 @@ extern "C" __global__ void __closesthit__radiance__diffuse()
         );
         result = radiance * weight;
 	}
-	if(diffuse_data->is_normal)
-		prd.result = result * normal;
-	else
-		prd.result = result * diffuse_color;
+	prd.result = result * diffuse_color;
     setPRD(prd);
 }
 
@@ -201,7 +200,7 @@ extern "C" __global__ void __closesthit__radiance__dielectric()
 {
     // Get binded data by application.
 	HitGroupData* rt_data = (HitGroupData*)optixGetSbtDataPointer();
-	Dielectric* dielectric_data = (Dielectric*)rt_data->material_ptr;
+	Dielectric* dielectric_data = reinterpret_cast<Dielectric*>(rt_data->material_ptr);
 
 	const int prim_idx = optixGetPrimitiveIndex();
 	const int3 index = rt_data->mesh.indices[prim_idx];
@@ -283,7 +282,7 @@ extern "C" __global__ void __closesthit__radiance__metal()
 {
     // Get binded data by application.
 	HitGroupData* rt_data = (HitGroupData*)optixGetSbtDataPointer();
-	Metal* metal_data = (Metal*)rt_data->material_ptr;
+	Metal* metal_data = reinterpret_cast<Metal*>(rt_data->material_ptr);
 
 	const int prim_idx = optixGetPrimitiveIndex();
 	const int3 index = rt_data->mesh.indices[prim_idx];

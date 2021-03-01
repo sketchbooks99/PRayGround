@@ -2,6 +2,9 @@
 
 #include <optix.h>
 #include <sutil/vec_math.h>
+#include "core_util.h"
+
+namespace pt {
 
 struct Material;
 using MaterialPtr = Material*;
@@ -36,55 +39,89 @@ enum class MaterialType {
     Diffuse = 1u << 0,
     Metal = 1u << 1,
     Dielectric = 1u << 2,
-    Emission = 1u << 3
+    Emission = 1u << 3,
+    Disney = 1u << 4
 };
 
+#if !defined(__CUDACC__)
+inline std::ostream& operator<<(std::ostream& out, MaterialType type) {
+    switch(type) {
+    case MaterialType::Diffuse:
+        return out << "MaterialType::Diffuse";
+    case MaterialType::Metal:
+        return out << "MaterialType::Metal";
+    case MaterialType::Dielectric:
+        return out << "MaterialType::Sphere";
+    case MaterialType::Emission:
+        return out << "MaterialType::Emission";
+    case MaterialType::Disney:
+        return out << "MaterialType::Disney";
+    default:
+        Throw("This MaterialType is not supported\n");
+        return out << "";
+    }
+}
+#endif
+
 // This is abstract class for readability
-struct Material {
+class Material {
+public:    
+    virtual size_t member_size() const = 0;
     virtual MaterialType type() const = 0;
-    virtual SUTIL_HOSTDEVICE float3 sample() = 0;
 };
 
 // Dielectric material
 struct Dielectric : public Material {
-    Dielectric(float3 mat_color = make_float3(0.8f), float ior=1.52f) : mat_color(mat_color), ior(ior) {}
-
-    SUTIL_HOSTDEVICE float3 sample() override { return make_float3(0.0f); }
-    MaterialType type() const override { return MaterialType::Dielectric; }
-
+public:
     float3 mat_color;
     float ior;
+
+public:
+    Dielectric(float3 mat_color = make_float3(0.8f), float ior=1.52f)
+    : mat_color(mat_color), ior(ior) {}
+
+    size_t member_size() const override { return sizeof(mat_color) + sizeof(ior); }
+    MaterialType type() const override { return MaterialType::Dielectric; }
 };
 
 // Metal material
 struct Metal : public Material {
-    Metal(float3 mat_color=make_float3(0.8f), float reflection=1.0f) : mat_color(mat_color), reflection(reflection) {}
-
-    SUTIL_HOSTDEVICE float3 sample() override { return make_float3(0.0f); }
-    MaterialType type() const override { return MaterialType::Metal; }
-
+public:
     float3 mat_color;
     float reflection;
+
+public:
+    Metal(float3 mat_color=make_float3(0.8f), float reflection=1.0f)
+    : mat_color(mat_color), reflection(reflection) {}
+
+    size_t member_size() const override { return sizeof(mat_color) + sizeof(reflection); }
+    MaterialType type() const override { return MaterialType::Metal; }
 };
 
 // Diffuse material
-struct Diffuse : public Material {
+class Diffuse : public Material {
+public:
+    float3 mat_color;
+    bool is_normal;
+
+public:
     Diffuse(float3 mat_color=make_float3(0.8f), bool is_normal=false)
     : mat_color(mat_color), is_normal(is_normal) {}
     
-    SUTIL_HOSTDEVICE float3 sample() override { return make_float3(0.0f); }
+    size_t member_size() const override { return sizeof(mat_color) + sizeof(is_normal); }
     MaterialType type() const override { return MaterialType::Diffuse; }
-
-    float3 mat_color;
-    bool is_normal;
 };
 
 // Emissive material
-struct Emission : public Material {
+class Emission : public Material {
+public:
+    float3 color;
+
+public:
     Emission(float3 color=make_float3(1.0f)) : color(color) {}
 
-    SUTIL_HOSTDEVICE float3 sample() override {return make_float3(0.0f); }
+    size_t member_size() const override { return sizeof(color); }
     MaterialType type() const override { return MaterialType::Emission; }
-
-    float3 color;
 };
+
+}

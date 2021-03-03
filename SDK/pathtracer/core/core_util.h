@@ -3,6 +3,7 @@
 #if !defined(__CUDACC__)
 #include <string>
 #include <stdexcept>
+#include "stream_helpers.h"
 #endif
 
 #if !defined(__CUDACC__)

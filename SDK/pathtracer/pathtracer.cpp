@@ -1215,8 +1215,6 @@ void cleanupState(PathTracerState& state)
     CUDA_CHECK(cudaFree(reinterpret_cast<void*>(state.sbt.raygenRecord)));
     CUDA_CHECK(cudaFree(reinterpret_cast<void*>(state.sbt.missRecordBase)));
     CUDA_CHECK(cudaFree(reinterpret_cast<void*>(state.sbt.hitgroupRecordBase)));
-    /*CUDA_CHECK(cudaFree(reinterpret_cast<void*>(state.d_vertices.data())));
-    CUDA_CHECK(cudaFree(reinterpret_cast<void*>(state.d_indices.data())));*/
     CUDA_CHECK(cudaFree(reinterpret_cast<void*>(state.d_gas_output_buffer)));
     CUDA_CHECK(cudaFree(reinterpret_cast<void*>(state.params.accum_buffer)));
     CUDA_CHECK(cudaFree(reinterpret_cast<void*>(state.d_params)));

@@ -10,28 +10,23 @@ namespace pt {
 template <typename T>
 class CUDABuffer {
 public:
-    CUDABuffer() {}
+    CUDABuffer() { init(); }
     explicit CUDABuffer(T* data, size_t size)
     {
+        init(); 
         allocate(data, size);
-    }
-
-    void init() {
-        m_ptr = 0;
-        is_alloc = false;
-        m_size = 0;
     }
 
     void allocate(std::vector<T> data_vec) {
         allocate(data_vec.size(), sizeof(T) * data_vec.size());
     }
-
     void allocate(T* data, size_t size) {
         Assert(!is_alloc, "This buffer is already allocated. Please use re_allocate() if you need.");
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&m_ptr), size));
+        m_size = size;
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&m_ptr), m_size));
         CUDA_CHECK(cudaMemcpy(
             reinterpret_cast<void*>(ptr),
-            data, size, 
+            data, m_size, 
             cudaMemcpyHostToDevice
         ));
         is_alloc = true;
@@ -49,7 +44,7 @@ public:
     void free() {
         Assert(is_alloc, "This buffer still isn't allocated on device.");
         OPTIX_CHECK(cudaFree(reinterpret_cast<void*>(m_ptr)));
-        is_alloc = false;
+        init();
     }
 
     bool is_allocated() { return is_alloc; }
@@ -57,8 +52,14 @@ public:
     T* data() { return reinterpret_cast<T*>(m_ptr); }
     size_t size() { return m_size; }
 private:
-    CUdeviceptr m_ptr = 0;
-    bool is_alloc = false;
+    void init() {
+        m_ptr = 0;
+        is_alloc = false;
+        m_size = 0;
+    }
+
+    CUdeviceptr m_ptr;
+    bool is_alloc;
     size_t m_size;
 }; 
 

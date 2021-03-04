@@ -10,6 +10,7 @@ namespace pt {
 template <typename T>
 class CUDABuffer {
 public:
+    CUDABuffer() {}
     explicit CUDABuffer(T* data, size_t size)
     {
         allocate(data, size);

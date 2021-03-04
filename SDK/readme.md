@@ -24,28 +24,26 @@
 - クラス名以外は単語の間は `_` でつなぎ、大文字小文字の切り替えで単語を区切らないようにする
 - `template` は使えるところでは積極的に使う。
     - 汎用性が高いクラス構造を目指す。
-- 基本的に `using namespace` は避ける。名前空間をはっきり明記するように。**使う場合は局所的なスコープ(関数内、クラス内など)**
+- 基本的に `using namespace` は避ける。名前空間をはっきり明記するように。**使う場合は局所的なスコープ(関数内、クラス内など)に限定する**
     - ex) 
-        - NG: `using namespace std; string str`;
-        - OK: `std::string str;`
-
+    - NG: `using namespace std; string str;`;
+    - OK: `std::string str;`
 
 例
 ```c++
+template <typename T>
 class Hoge {
 public:
-    explicit Hoge(int val) : m_val(val), m_str("") {}
-    explicit Hoge(int val, const std::string& str) : m_val(val), m_str(str) {}
+    explicit Hoge(T val) : m_val(val), m_str("") {}
+    explicit Hoge(T val, const std::string& str) : m_val(val), m_str(str) {}
 
-    void set_val( int val ) { m_val = val; }
+    void set_val(T val) { m_val = val; }
     int get_val() const { return m_val; }
 
-    void set_str( const std::string& str) { m_str = str; }
+    void set_str(const std::string& str) { m_str = str; }
     std::string get_str() const { return m_str; }
 private:
-    void _init() { m_val = 0; m_str = ""; }
-
-    int m_val;
+    T m_val;
     std::string m_str;
 }
 ```

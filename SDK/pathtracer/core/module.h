@@ -20,6 +20,8 @@ public:
     }
     explicit Module(const std::string& ptx_path, const OptixModuleCompileOptions& options)
     : m_ptx_path(ptx_path), m_options(options) {}
+
+    explicit operator OptixModule() { return m_module; }
     
     void setpath(const std::string& ptx_path) { 
         m_ptx_path = ptx_path;

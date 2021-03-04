@@ -26,8 +26,6 @@ public:
     } 
     void create(const OptixDeviceContext& context) {
         Assert(m_ptx_path != "", "Please configure the ptx module path.");
-
-
     }
 private:
     OptixModule m_module;

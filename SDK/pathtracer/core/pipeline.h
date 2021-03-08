@@ -38,7 +38,7 @@ public:
         _init_depth(); 
     }
 
-    operator OptixPipeline() { return m_pipeline; }
+    explicit operator OptixPipeline() { return m_pipeline; }
 
     /** \brief Compile options. */
     void set_compile_options(const OptixPipelineCompileOptions& op) { m_compile_options = op; }

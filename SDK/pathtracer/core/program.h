@@ -6,6 +6,7 @@
 
 namespace pt { 
 
+/** OptixModule and the name of entry function */
 using ProgramEntry = std::pair<OptixModule, const char*>;
 
 class ProgramGroup {
@@ -124,24 +125,14 @@ public:
         
     }
 
-    /// \brief allocate and copy data from host to device.
+    /** 
+     * \note SBTRecord must be allocated on the device. 
+     * 
+     * \brief Bind SBT and program 
+     **/
     template <typename SBTRecord>
     void bind_sbtrecord(SBTRecord record) {
-        OPTIX_CHECK(optixSbtRecordPackHeader(m_program, &m_record));
-
-        CUdeviceptr d_records = 0;
-        const size_t record_size = sizeof(SBTRecord);
-        CUDA_CHECK(cudaMalloc(
-            reinterpret_cast<void**>(&d_records),
-            record_size
-        ));
-
-        CUDA_CHECK(cudaMemcpy(
-            reinterpret_cast<void*>(d_records),
-            &m_record,
-            record_size,
-            cudaMemcpyHostToDevice
-        ));
+        OPTIX_CHECK(optixSbtRecordPackHeader(m_program, &record));
     }
 
 private:

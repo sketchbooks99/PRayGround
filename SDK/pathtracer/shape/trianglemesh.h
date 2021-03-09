@@ -9,7 +9,18 @@
 #include <assert.h>
 
 #include "../core/shape.h"
- 
+#include "../core/transform.h"
+
+namespace pt {
+
+struct MeshData {
+    float3* vertices;
+    float3* normals;
+    int3* indices;
+    sutil::Transform transform;
+};
+
+#if !defined(__CUDACC__)
 class TriangleMesh : public Shape {
     TriangleMesh() {}
     TriangleMesh(const std::string& filename, float3 position, float size, float3 axis, bool isSmooth=true);
@@ -18,3 +29,6 @@ class TriangleMesh : public Shape {
     std::vector<float3> normals;
     std::vector<int3> indices;
 };
+#endif
+
+}

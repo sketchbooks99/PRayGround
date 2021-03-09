@@ -1,5 +1,7 @@
 #include "trianglemesh.h"
 
+namespace pt {
+
 // At present, only ".obj" format is supported.
 TriangleMesh::TriangleMesh(
     const std::string& filename, 
@@ -193,4 +195,6 @@ TriangleMesh::TriangleMesh(std::vector<float3> vertices,
             normals[i] = normalize(normals[i]);
         }
     }
+}
+
 }

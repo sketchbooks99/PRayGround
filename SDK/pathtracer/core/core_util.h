@@ -3,6 +3,11 @@
 #if !defined(__CUDACC__)
 #include <string>
 #include <stdexcept>
+#include <array>
+#include <cstring>
+#include <fstream>
+#include <iomanip>
+#include <sstream>
 #include "stream_helpers.h"
 #endif
 

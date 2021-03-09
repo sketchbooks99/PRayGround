@@ -26,6 +26,8 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+#pragma once
+
 #include "material.h"
 #include "shape.h"
 
@@ -60,7 +62,7 @@ struct Params
     float3 V;
     float3 W;
 
-    OptixTraversableHandle handle;
+    OptixTraversableHandle handle; // unsigned long long
 };
 
 enum HitType

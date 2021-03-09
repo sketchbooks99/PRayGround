@@ -1,3 +1,5 @@
+#pragma once
+
 #include <optix.h>
 
 namespace pt {
@@ -10,13 +12,14 @@ namespace pt {
 template <typename T>
 class CUDABuffer {
 public:
-    CUDABuffer() { init(); }
+    CUDABuffer() { _init(); }
     explicit CUDABuffer(T* data, size_t size)
     {
-        init(); 
+        _init(); 
         allocate(data, size);
     }
 
+    /// \brief Allocation of data on the device.
     void allocate(std::vector<T> data_vec) {
         allocate(data_vec.size(), sizeof(T) * data_vec.size());
     }
@@ -32,27 +35,30 @@ public:
         is_alloc = true;
     }
 
+    /// \brief Re-allocatio of data on the device. 
     void re_allocate(std::vector<T> data_vec) {
-        init();
+        _init();
         allocate(data_vec);
     }
     void re_allocate(T* data, size_t size) {
-        init();
+        _init();
         allocate(data, size);
     }
 
+    /// \brief Free data from the device.
     void free() {
         Assert(is_alloc, "This buffer still isn't allocated on device.");
         OPTIX_CHECK(cudaFree(reinterpret_cast<void*>(m_ptr)));
-        init();
+        _init();
     }
 
+    /// \brief Get state of the buffer.
     bool is_allocated() { return is_alloc; }
     CUdeviceptr d_ptr() { return m_ptr; }
     T* data() { return reinterpret_cast<T*>(m_ptr); }
     size_t size() { return m_size; }
 private:
-    void init() {
+    void _init() {
         m_ptr = 0;
         is_alloc = false;
         m_size = 0;

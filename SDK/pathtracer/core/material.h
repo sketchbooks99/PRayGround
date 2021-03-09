@@ -6,9 +6,6 @@
 
 namespace pt {
 
-struct Material;
-using MaterialPtr = Material*;
-
 /** MEMO: 
  * If we need to take into account spectral property (not RGB), we should
  * switch Spectrum representation.
@@ -31,8 +28,8 @@ struct SurfaceInteraction {
 
     /** Type of material to identify the shading at intersected point. 
      * MEMO:
-     *  Can this be a pointer such as shared_ptr? Can optixTrace() propagate pointer? */
-    MaterialPtr material_ptr;
+     * Can this be a pointer such as shared_ptr? Can optixTrace() propagate pointer? */
+    
 };
 
 enum class MaterialType {
@@ -66,7 +63,6 @@ inline std::ostream& operator<<(std::ostream& out, MaterialType type) {
 // This is abstract class for readability
 class Material {
 public:    
-    virtual size_t member_size() const = 0;
     virtual MaterialType type() const = 0;
 };
 
@@ -80,7 +76,6 @@ public:
     Dielectric(float3 mat_color = make_float3(0.8f), float ior=1.52f)
     : mat_color(mat_color), ior(ior) {}
 
-    size_t member_size() const override { return sizeof(mat_color) + sizeof(ior); }
     MaterialType type() const override { return MaterialType::Dielectric; }
 };
 
@@ -94,7 +89,6 @@ public:
     Metal(float3 mat_color=make_float3(0.8f), float reflection=1.0f)
     : mat_color(mat_color), reflection(reflection) {}
 
-    size_t member_size() const override { return sizeof(mat_color) + sizeof(reflection); }
     MaterialType type() const override { return MaterialType::Metal; }
 };
 
@@ -108,7 +102,6 @@ public:
     Diffuse(float3 mat_color=make_float3(0.8f), bool is_normal=false)
     : mat_color(mat_color), is_normal(is_normal) {}
     
-    size_t member_size() const override { return sizeof(mat_color) + sizeof(is_normal); }
     MaterialType type() const override { return MaterialType::Diffuse; }
 };
 
@@ -120,7 +113,6 @@ public:
 public:
     Emission(float3 color=make_float3(1.0f)) : color(color) {}
 
-    size_t member_size() const override { return sizeof(color); }
     MaterialType type() const override { return MaterialType::Emission; }
 };
 

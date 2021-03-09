@@ -11,14 +11,17 @@
 #include "stream_helpers.h"
 #endif
 
+#define HOST_ONLY __host__
+#define DEVICE_ONLY __device__
+
 #if !defined(__CUDACC__)
 #define CALLABLE_FUNC
 #define DEVICE_INLINE
-#define DEVICE_FUNC
+#define HOSTDEVICE
 #else 
 #define CALLABLE_FUNC extern "C" __device__
 #define DEVICE_INLINE __device__ __forceinline__
-#define DEVICE_FUNC __device__
+#define HOSTDEVICE __device__ __host__
 #endif
 
 // MACROs to easily define the function.

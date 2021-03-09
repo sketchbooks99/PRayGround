@@ -46,6 +46,14 @@ enum RayType {
     RAY_TYPE_COUNT
 };
 
+struct CameraData {
+    float3 eye;
+    float3 U;
+    float3 V;
+    float3 W;
+    float aperture;
+};
+
 struct Params
 {
     unsigned int subframe_index;
@@ -57,10 +65,7 @@ struct Params
 
     unsigned int max_depth;
 
-    float3 eye;
-    float3 U;
-    float3 V;
-    float3 W;
+    CameraData camera;
 
     OptixTraversableHandle handle; // unsigned long long
 };
@@ -82,41 +87,78 @@ struct MissData
     float4 bg_color;
 };
 
-struct MeshData{
+// ========== Geometry data ==========
+struct MeshData {
     float3* vertices;
     float3* normals;
     int3* indices;
+    // float2 coords;
 };
 
-// struct DiffuseData {
-//     float3 mat_color;
-//     bool is_normal;
-// };
+struct SphereData {
+    float radius;
+};
 
-// struct MetalData {
-//     float3 mat_color;
-//     float reflection;
-// };
+union Geometry {
+    MeshData mesh;
+    SphereData sphere;
+};
 
-// struct DielectricData {
-//     float3 mat_color;
-//     float ior;
-// };
+// ========== Texture Data ==========
+struct CheckerData {
+    float3 color1, color2;
+    float scale;
+};
 
-// struct EmissionData {
-//     float3 color;
-// };
+struct ConstantData {
+    float3 albedo;
+};
+
+struct ImageTextureData {
+    uint width, height;
+    float3 *data;
+};
+
+union Texture {
+    ConstantData constant;
+    CheckerData checker;
+    ImageTextureData image_texture;
+};
+
+// ========== Material Data ==========
+/** MEMO:  
+ *  All of materials store the texture data. 
+ */
+struct DiffuseData {
+    union Texture texture;
+};
+
+struct MetalData {
+    union Texture texture;
+    float fuzz;
+};
+
+struct DielectricData {
+    union Texture texture;
+    float ior;
+};
+
+struct EmissionData {
+    union Texture texture;
+    float strength;
+};
+
+union Material {
+    DiffuseData diffuse;
+    MetalData metal;
+    DielectricData dielectric;
+    EmissionData emission;
+};
 
 // member in union must not have any constructor
 struct HitGroupData {
-    MeshData mesh;
-    // union {
-    //     Diffuse diffuse;
-    //     Metal metal;
-    //     Dielectric dielectric;
-    //     Emission emission;
-    // } shading;
-    Material* material_ptr;
+    union Geometry geometry;
+    union Material material;
 };
 
 }

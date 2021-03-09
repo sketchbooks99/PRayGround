@@ -1,20 +1,21 @@
 # 開発用メモ
 
-## cudaのマクロとか
-
-```c++
-// At cuda
-#if defined(__CUDACC__) || defined(__CUDABE__)
-#    define SUTIL_HOSTDEVICE __host__ __device__
-#    define SUTIL_INLINE __forceinline__
-#    define CONST_STATIC_INIT( ... )
-// At cpp
-#else 
-#    define SUTIL_HOSTDEVICE
-#    define SUTIL_INLINE inline
-#    define CONST_STATIC_INIT( ... ) = __VA_ARGS__
-#endif
-```
+# CUDA
+接頭語の意味
+- 関数
+    - `__global__` : ホスト側から呼び出されてデバイス側で実行される
+    - `__device__` : デバイス側から呼び出されてデバイス側で実行される
+    - `__host__` : ホスト側から呼び出されてホスト側で実行される
+- 変数
+    - `__device__` : グローバルメモリに格納される
+        - `cudaMalloc()`によって領域確保される
+        - 全スレッドからアクセス可能
+    - `__shared__` : オンチップ共有メモリに格納される
+        - 実行時 or コンパイル時に指定される
+        - 同じスレッドブロック内のすべてのスレッドでアクセス可能
+    - 修飾子なし
+        - スカラー型、ベクトル型はレジスタに格納される
+        - レジスタに収まりきらないものはローカルメモリに溢れ出る。
 
 # Rule of coding 
 ## 変数・関数名

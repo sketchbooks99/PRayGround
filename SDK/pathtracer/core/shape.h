@@ -33,29 +33,8 @@ inline std::ostream& operator<<(std::ostream& out, ShapeType type) {
 #endif
 
 // Abstract class for readability
-struct Shape {
+class Shape {
     virtual ShapeType type() const = 0;
-};
-
-// Mesh Data
-struct Mesh : public Shape {
-    float4* vertices;
-    float4* normals;
-    int3* indices;
-
-    ShapeType type() const override { return ShapeType::Mesh; }
-};
-
-struct Sphere : public Shape {
-    float radius;
-
-    ShapeType type() const override { return ShapeType::Sphere; }
-};
-
-struct Plane : public Shape {
-    float size;
-    
-    ShapeType type() const override { return ShapeType::Plane; }
 };
 
 }

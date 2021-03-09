@@ -45,8 +45,8 @@ public:
 
     HOST_ONLY TextureType type() const override { return TextureType::Constant; }
 private:
-    HOST_ONLY setup_env_on_device() override; 
-    HOST_ONLY delete_env_on_device() override;
+    HOST_ONLY setup_on_device() override; 
+    HOST_ONLY delete_on_device() override;
 };
 
 class CheckerTexture : public Texture {
@@ -65,8 +65,8 @@ public:
 
     HOST_ONLY TextureType type() const override { return TextureType::Checker; }
 private: 
-    HOST_ONLY setup_env_on_device() override; 
-    HOST_ONLY delete_env_on_device() override;
+    HOST_ONLY setup_on_device() override; 
+    HOST_ONLY delete_on_device() override;
 };
 
 class ImageTexture {
@@ -82,8 +82,8 @@ public:
     }
     
 private:
-    HOST_ONLY setup_env_on_device() override; 
-    HOST_ONLY delete_env_on_device() override;
+    HOST_ONLY setup_on_device() override; 
+    HOST_ONLY delete_on_device() override;
 }
 
 }

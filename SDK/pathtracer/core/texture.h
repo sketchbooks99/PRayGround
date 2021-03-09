@@ -51,7 +51,7 @@ public:
 
     HOST TextureType type() const override { return TextureType::Constant; }
 private:
-    HOST setup_on_device() override; 
+    HOST setup_on_device() override;
     HOST delete_on_device() override;
 };
 

@@ -19,11 +19,17 @@ public:
         allocate(data, size);
     }
 
+    void alloc(size_t size) {
+        Assert(!is_alloc, "This buffer is already allocated. Please use re_allocate() if you need.");
+        m_size = size;
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&m_ptr), m_size));
+    }
+
     /// \brief Allocation of data on the device.
-    void allocate(std::vector<T> data_vec) {
+    void alloc_copy(std::vector<T> data_vec) {
         allocate(data_vec.size(), sizeof(T) * data_vec.size());
     }
-    void allocate(T* data, size_t size) {
+    void alloc_copy(T* data, size_t size) {
         Assert(!is_alloc, "This buffer is already allocated. Please use re_allocate() if you need.");
         m_size = size;
         CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&m_ptr), m_size));

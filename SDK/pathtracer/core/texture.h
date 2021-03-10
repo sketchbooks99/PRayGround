@@ -94,15 +94,28 @@ public:
     explicit HOSTDEVICE ImageTexture(unsigned int w, unsigned int h) : width(w), height(h) {
 #if !defined(__CUDACC__)
         CUDABuffer<float3> data_buffer;
-        data_buffer.allocate(width*height*sizeof(float3));
+        data_buffer.alloc(width*height*sizeof(float3));
         data = data_buffer.data();
 #endif
     }
 
+    HOSTDEVICE ImageTexture(unsigned int w, unsigned int h, float3* data)
+    : width(w), height(h)
+    {
+#if !defined(__CUDACC__)
+        CUDABuffer<float3> data_buffer;
+        data_buffer.alloc_copy(data, w*h*sizeof(float3));
+        data = data_buffer.data();
+#endif
+    }
+
+    // copy constructor
     explicit HOSTDEVICE ImageTexture(const ImageTexture& image)
     : 
 
     HOST TextureType type() const override { return TextureType::Image; }
+
+    HOSTDEVICE unsigned int getWidth() const { return width; }
     
 private:
     HOST setup_on_device() override; 

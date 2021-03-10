@@ -10,11 +10,11 @@ namespace pt {
  * Initialize object in the device.
  * 
  * \note 
- * Object T must have copy constructor.
+ * 
  */
-template <typename T>
-__global__ void setup_object_on_device(void** d_ptr, const T& obj) {
-    (*d_ptr) = new T(obj);
+template <typename T, Args... args>
+__global__ void setup_object_on_device(T** d_ptr, Args... args) {
+    (*d_ptr) = new T(args...);
 }
 
 /** \brief 
@@ -25,7 +25,7 @@ protected:
     virtual HOST setup_on_device(){}
     virtual HOST delete_on_device(){}
 public:
-    virtual DEVICE_FUNC ~Object() {};
+    virtual DEVICE_FUNC ~Object() {}
 };
 
 }

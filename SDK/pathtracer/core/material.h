@@ -3,6 +3,7 @@
 #include <optix.h>
 #include <sutil/vec_math.h>
 #include "core_util.h"
+#include "object.h"
 
 namespace pt {
 
@@ -23,13 +24,10 @@ struct SurfaceInteraction {
     /** UV coordinate at intersection point. */
     float2 uv;
 
+    float dpdu, dpdv;
+
     /** Spectrum information of ray. */
     float3 spectrum;
-
-    /** Type of material to identify the shading at intersected point. 
-     * MEMO:
-     * Can this be a pointer such as shared_ptr? Can optixTrace() propagate pointer? */
-    
 };
 
 enum class MaterialType {
@@ -61,8 +59,9 @@ inline std::ostream& operator<<(std::ostream& out, MaterialType type) {
 #endif
 
 // This is abstract class for readability
-class Material {
+class Material : public DeviceCallableObject {
 public:    
+    virtual HOSTDEVICE void sample(SurfaceInteraction& si) const = 0;
     virtual MaterialType type() const = 0;
 };
 

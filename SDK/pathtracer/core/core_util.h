@@ -8,6 +8,7 @@
 #include <fstream>
 #include <iomanip>
 #include <sstream>
+#include <random>
 #include "stream_helpers.h"
 #endif
 
@@ -43,10 +44,29 @@
 #define DC_FUNC_STR(name) "__direct_callable__" name
 #define CC_FUNC_STR(name) "__continuation_callable__" name
 
-#if !defined(__CUDACC__)
-
 namespace pt {
 
+template <typename T>
+void swap(T& a, T& b)
+{
+#ifdef __CUDACC__
+    T c(a); a = b; b = c;
+#else   
+    std::swap(a, b);
+#endif
+}
+
+float random_float() {
+    return rand() / (RAND_MAX + 1.0);
+}
+
+float random_float(unsigned int seed) {
+    std::mt19937 rnd_src(seed);
+    std::uniform_real_distribution<float> rnd_dist(0,1);
+    return rnd_dist(rnd_src);
+}
+
+#if !defined(__CUDACC__)
 inline void Throw(const std::string& msg) {
     throw std::runtime_error(msg);
 }
@@ -54,7 +74,6 @@ inline void Throw(const std::string& msg) {
 inline void Assert(bool condition, const std::string& msg) {
     if(!condition) Throw(msg);
 }
+#endif
 
 }
-
-#endif

@@ -1,16 +1,13 @@
 #pragma once 
 
-#include <optix.h>
 #include "core_util.h"
 
 namespace pt {
 
 /** 
- * \brief
- * Initialize object in the device.
+ * \brief Initialize object on device.
  * 
- * \note 
- * 
+ * \note Initailization must be excecuted only once.
  */
 template <typename T, Args... args>
 __global__ void setup_object_on_device(T** d_ptr, Args... args) {

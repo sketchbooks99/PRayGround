@@ -21,20 +21,35 @@ struct SurfaceInteraction {
     /** Surface normal of primitive at intersection point. */
     float3 n;
 
-    /** UV coordinate at intersection point. */
-    float2 uv;
-
-    float dpdu, dpdv;
+    /** Incident and outgoing directions at a surface. */
+    float3 wi;
+    float3 wo;
 
     /** Spectrum information of ray. */
     float3 spectrum;
+
+    /** radiance and attenuation term computed by a material attached with surface. */
+    float3 radiance;
+    float3 attenuation;
+    float3 emission;
+
+    /** UV coordinate at intersection point. */
+    float2 uv;
+
+    /** Derivatives on texture coordinates. */
+    float dpdu, dpdv;
+
+    /** seed for random */
+    unsigned int seed;
+
+    int trace_terminate;
 };
 
 enum class MaterialType {
     Diffuse = 1u << 0,
-    Metal = 1u << 1,
+    Conductor = 1u << 1,
     Dielectric = 1u << 2,
-    Emission = 1u << 3,
+    Emitter = 1u << 3,
     Disney = 1u << 4
 };
 
@@ -43,12 +58,12 @@ inline std::ostream& operator<<(std::ostream& out, MaterialType type) {
     switch(type) {
     case MaterialType::Diffuse:
         return out << "MaterialType::Diffuse";
-    case MaterialType::Metal:
-        return out << "MaterialType::Metal";
+    case MaterialType::Conductor:
+        return out << "MaterialType::Conductor";
     case MaterialType::Dielectric:
         return out << "MaterialType::Sphere";
-    case MaterialType::Emission:
-        return out << "MaterialType::Emission";
+    case MaterialType::Emitter:
+        return out << "MaterialType::Emitter";
     case MaterialType::Disney:
         return out << "MaterialType::Disney";
     default:
@@ -59,60 +74,13 @@ inline std::ostream& operator<<(std::ostream& out, MaterialType type) {
 #endif
 
 // This is abstract class for readability
-class Material : public DeviceCallableObject {
+class Material {
 public:    
     virtual HOSTDEVICE void sample(SurfaceInteraction& si) const = 0;
-    virtual MaterialType type() const = 0;
-};
-
-// Dielectric material
-struct Dielectric : public Material {
-public:
-    float3 mat_color;
-    float ior;
-
-public:
-    Dielectric(float3 mat_color = make_float3(0.8f), float ior=1.52f)
-    : mat_color(mat_color), ior(ior) {}
-
-    MaterialType type() const override { return MaterialType::Dielectric; }
-};
-
-// Metal material
-struct Metal : public Material {
-public:
-    float3 mat_color;
-    float reflection;
-
-public:
-    Metal(float3 mat_color=make_float3(0.8f), float reflection=1.0f)
-    : mat_color(mat_color), reflection(reflection) {}
-
-    MaterialType type() const override { return MaterialType::Metal; }
-};
-
-// Diffuse material
-class Diffuse : public Material {
-public:
-    float3 mat_color;
-    bool is_normal;
-
-public:
-    Diffuse(float3 mat_color=make_float3(0.8f), bool is_normal=false)
-    : mat_color(mat_color), is_normal(is_normal) {}
-    
-    MaterialType type() const override { return MaterialType::Diffuse; }
-};
-
-// Emissive material
-class Emission : public Material {
-public:
-    float3 color;
-
-public:
-    Emission(float3 color=make_float3(1.0f)) : color(color) {}
-
-    MaterialType type() const override { return MaterialType::Emission; }
+    virtual HOSTDEVICE float3 emittance(SurfaceInteraction& si) const = 0;
+    /// FUTURE:
+    // virtual HOSTDEVICE float pdf(const Ray& r, const SurfaceInteraction& si) const = 0; */
+    virtual HOST MaterialType type() const = 0;
 };
 
 }

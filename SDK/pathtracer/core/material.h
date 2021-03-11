@@ -7,6 +7,10 @@
 
 namespace pt {
 
+// Forward declaration
+class Material;
+using MaterialPtr = Material*;
+
 /** MEMO: 
  * If we need to take into account spectral property (not RGB), we should
  * switch Spectrum representation.
@@ -73,7 +77,7 @@ inline std::ostream& operator<<(std::ostream& out, MaterialType type) {
 }
 #endif
 
-// This is abstract class for readability
+// Abstract class to compute scattering properties.
 class Material {
 public:    
     virtual HOSTDEVICE void sample(SurfaceInteraction& si) const = 0;

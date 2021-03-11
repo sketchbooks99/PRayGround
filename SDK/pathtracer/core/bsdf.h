@@ -5,6 +5,17 @@
 
 namespace pt {
 
+HOSTDEVICE INLINE void cosine_sample_hemisphere(const float u1, const float u2, float3& p)
+{
+    const float r = sqrtf(u1);
+    const float phi = 2.0f * M_PTf * u2;
+    p.x = r * cosf(phi);
+    p.y = r * sinf(phi);
+
+    // Project up to hemisphere
+    p.z = sqrtf(fmaxf(0.0f, 1.0f - p.x * p.x - p.y * p.y));
+}
+
 /** 
  * \ref: http://www.pbr-book.org/3ed-2018/Reflection_Models/Specular_Reflection_and_Transmission.html
  * 

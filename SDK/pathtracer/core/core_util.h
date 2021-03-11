@@ -1,28 +1,31 @@
 #pragma once 
 
-#if !defined(__CUDACC__)
-#include <string>
-#include <stdexcept>
-#include <array>
-#include <cstring>
-#include <fstream>
-#include <iomanip>
-#include <sstream>
-#include <random>
-#include "stream_helpers.h"
+#include <optix.h>
+
+#ifndef __CUDACC__
+    #include <string>
+    #include <stdexcept>
+    #include <array>
+    #include <cstring>
+    #include <fstream>
+    #include <iomanip>
+    #include <sstream>
+    #include <random>
+    #include "stream_helpers.h"
 #endif
 
-#define HOST __host__
-#define DEVICE __device__
-
-#if !defined(__CUDACC__)
-#define CALLABLE_FUNC
-#define INLINE inline
-#define HOSTDEVICE
-#else 
-#define CALLABLE_FUNC extern "C" __device__
-#define INLINE __forceinline__
-#define HOSTDEVICE __device__ __host__
+#ifdef __CUDACC__
+    #define CALLABLE_FUNC extern "C" __device__
+    #define INLINE __forceinline__
+    #define HOSTDEVICE __device__ __host__
+    #define HOST __host__
+    #define DEVICE __device__
+#else
+    #define CALLABLE_FUNC
+    #define INLINE inline
+    #define HOSTDEVICE
+    #define HOST 
+    #define DEVICE 
 #endif
 
 // MACROs to easily define the function.

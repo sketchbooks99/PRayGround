@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../core/material.h"
-#include "../core/fresnel.h"
+#include "../core/bsdf.h"
 
 namespace pt {
 

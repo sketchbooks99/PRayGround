@@ -2,16 +2,16 @@
 
 #include <cuda/random.h>
 #include "../core/material.h"
-#include "../core/fresnel.h"
+#include "../core/bsdf.h"
 
 namespace pt {
 
 using FuncPtr = float (*) (unsigned int);
 
 #ifdef __CUDACC__
-Func Random = rnd;
+FuncPtr Random = rnd;
 #else 
-Func Random = random_float;
+FuncPtr Random = random_float;
 #endif
 
 class Dielectric final : public Material {
@@ -23,7 +23,7 @@ public:
     explicit HOSTDEVICE Conductor(float3 a, float ior) : albedo(a), ior(ior) {}
 
     HOSTDEVICE void sample(SurfaceInteraction& si) const override;
-    HOSTDEVICE float3 emittance(SurfaceInteraction& si) const override { return make_float3(0.f); }
+    HOSTDEVICE float3 emittance(SurfaceInteraction& /* si */) const override { return make_float3(0.f); }
 
     HOST MaterialType type() const override { return MaterialType::Dielectric; }
 };

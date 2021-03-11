@@ -156,9 +156,14 @@ union Material {
 };
 
 // member in union must not have any constructor
+// struct HitGroupData {
+//     union Geometry geometry;
+//     union Material material;
+// };
+
 struct HitGroupData {
-    union Geometry geometry;
-    union Material material;
+    void* geometrydata;
+    MaterialPtr matptr;
 };
 
 }

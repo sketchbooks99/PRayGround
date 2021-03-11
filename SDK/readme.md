@@ -29,6 +29,19 @@
   - `optixTrace()`が呼べる。
   - スケジューラによって統制される必要があり、オーバーヘッドが大きくなりやすい。
 
+## 関数
+- `optixReportIntersection()` - OptiX Programing Guide p.72
+  - 三角形は三角形内の重心座標(u,v)をattributeとして格納している。
+    - 使用例) `float n = u*n0 + v*n1 + (1-u-v)*n2 // 法線の線形補間` 
+```C++
+__device__ bool optixReportIntersection(
+  float hitT,                                  // ray time
+  unsigned int hitKind,                        // specify any-hit or closest hit or both
+  unsigned int a0, ..., unsigned int a7 );     // attributes (this is used to communicate with CH program)
+
+__device__ unsigned int optixGetAttribute_0(); // 0 - 7
+```
+
 
 # Rule of coding 
 ## 変数・関数名

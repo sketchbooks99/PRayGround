@@ -4,50 +4,13 @@
 #include <sutil/vec_math.h>
 #include "core_util.h"
 #include "object.h"
+#include "../cuda/cuda_util.cu"
 
 namespace pt {
 
 // Forward declaration
 class Material;
 using MaterialPtr = Material*;
-
-/** MEMO: 
- * If we need to take into account spectral property (not RGB), we should
- * switch Spectrum representation.
- * 
- * If Spectrum is rgb, rgb is float3? char3? I'm not sure which one is better.
- * 
- * NOTE: Currently, `Spectrum` must be a float3 */
-struct SurfaceInteraction {
-    /** position of intersection point in world coordinates. */
-    float3 p;
-
-    /** Surface normal of primitive at intersection point. */
-    float3 n;
-
-    /** Incident and outgoing directions at a surface. */
-    float3 wi;
-    float3 wo;
-
-    /** Spectrum information of ray. */
-    float3 spectrum;
-
-    /** radiance and attenuation term computed by a material attached with surface. */
-    float3 radiance;
-    float3 attenuation;
-    float3 emission;
-
-    /** UV coordinate at intersection point. */
-    float2 uv;
-
-    /** Derivatives on texture coordinates. */
-    float dpdu, dpdv;
-
-    /** seed for random */
-    unsigned int seed;
-
-    int trace_terminate;
-};
 
 enum class MaterialType {
     Diffuse = 1u << 0,

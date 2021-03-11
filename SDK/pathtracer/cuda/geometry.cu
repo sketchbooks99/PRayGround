@@ -48,6 +48,5 @@ CALLABLE_FUNC void IS_FUNC(sphere) {
             si->n = normal; 
             optixReportIntersection(t, 0, float3_as_ints(normal), float_as_int(radius));
         }
-        
     }
 }

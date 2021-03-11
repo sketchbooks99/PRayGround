@@ -6,13 +6,6 @@
 
 namespace pt {
 
-struct SphereHitGroupData {
-    float3 center;
-    float radius;
-    sutil::Transform transform;
-    MaterialPtr matptr;
-};
-
 #if !defined(__CUDACC__)
 class Sphere : public Shape {
 public:

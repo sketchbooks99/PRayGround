@@ -9,7 +9,7 @@ namespace pt {
 class Dielectric final : public Material {
 private:
     float3 albedo;
-    float ior
+    float ior;
 
     HOST void setup_on_device() override {
         CUDA_CHECK(cudaMalloc((void**)&d_ptr, sizeof(MaterialPtr)));
@@ -43,10 +43,11 @@ public:
 
 HOSTDEVICE void Dielectric::sample(SurfaceInteraction& si) const {
     si.attenuation = albedo;
+    si.trace_terminate = false;
     
     float ni = 1.0f; // air
     float nt = ior;  // ior specified 
-    float cosine = dot(wi, si.n);
+    float cosine = dot(si.wi, si.n);
     bool into = cosine < 0;
     float3 outward_normal = into ? si.n : -si.n;
 
@@ -58,10 +59,10 @@ HOSTDEVICE void Dielectric::sample(SurfaceInteraction& si) const {
 
     float reflect_prob = fr(cosine, ni, nt);
 
-    if (cannot_refract || reflect_prob > _rnd(seed))
-        si.wo = reflect(wi, outward_normal);
+    if (cannot_refract || reflect_prob > _rnd(si.seed))
+        si.wo = reflect(si.wi, outward_normal);
     else    
-        si.wo = refract(wi, outward_normal, cosine, ni, nt);
+        si.wo = refract(si.wi, outward_normal, cosine, ni, nt);
 }
 
 }

@@ -1,6 +1,7 @@
 #pragma once 
 
 #include <core/shape.h>
+#include "optix/sphere.cuh"
 
 namespace pt {
 

@@ -8,7 +8,7 @@ namespace pt {
 HOSTDEVICE INLINE void cosine_sample_hemisphere(const float u1, const float u2, float3& p)
 {
     const float r = sqrtf(u1);
-    const float phi = 2.0f * M_PTf * u2;
+    const float phi = 2.0f * M_PIf * u2;
     p.x = r * cosf(phi);
     p.y = r * sinf(phi);
 
@@ -62,12 +62,8 @@ HOSTDEVICE INLINE float ggx(const float3& n, const float3& h, float rough) {
     float d = dot(n, h);
     float dd = d*d;
     float a = (1.0 - (1.0-rough*rough)*dd);
-    float denom = pi * a*a;
+    float denom = M_PIf * a*a;
     return rough*rough / denom;
-}
-
-HOSTDEVICE INLINE float3 reflect(const float3& v, const float3& n) {
-    return v - 2*dot(v,n) * n;
 }
 
 HOSTDEVICE INLINE float3 refract(const float3& v, const float3& n, float ior) {

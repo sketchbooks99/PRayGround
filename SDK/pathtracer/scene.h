@@ -1,6 +1,7 @@
 #pragma once
 
 #include <core/primitive.h>
+#include <core/scene.h>
 
 #include "shape/sphere.h"
 #include "shape/trianglemesh.h"
@@ -10,7 +11,18 @@
 #include "material/diffuse.h"
 #include "material/emitter.h"
 
-std::vector<pt::Primitive> scene() {
+Scene scene() {
+    Scene my_scene;
+    // utility settings
+
+    // camera settings
+    sutil::Camera camera;
+    camera.setEye( make_float3( 278.0f, 273.0f, -900.0f ) );
+    camera.setLookat( make_float3( 278.0f, 273.0f, 330.0f ) );
+    camera.setUp( make_float3( 0.0f, 1.0f, 0.0f ) );
+    camera.setFovY( 35.0f );
+    
+
     std::vector<pt::Primitive> primitives;
 
     pt::MaterialPtr red_diffuse = new Diffuse(make_float3(0.8f, 0.05f, 0.05f));

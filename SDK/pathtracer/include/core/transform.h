@@ -3,13 +3,13 @@
 #include <sutil/Matrix.h>
 #include <vec_math.h>
 
-#include "core_util.h"
+#include <core/util.h>
 #include "ray.h"
 
 namespace pt {
 
 /// \brief Multiply matrix with positional vector.
-HOSTDEVICE INLINE float3 point_mul(const Matrix4x4& m, const float3& p) {
+HOSTDEVICE INLINE float3 point_mul(const sutil::Matrix4x4& m, const float3& p) {
     float x = m[0*4+0]*p.x + m[0*4+1]*p.y + m[0*4+2]*p.z + m[0*4+3];
     float y = m[1*4+0]*p.x + m[1*4+1]*p.y + m[1*4+2]*p.z + m[1*4+3];
     float z = m[2*4+0]*p.x + m[2*4+1]*p.y + m[2*4+2]*p.z + m[2*4+3];
@@ -21,7 +21,7 @@ HOSTDEVICE INLINE float3 point_mul(const Matrix4x4& m, const float3& p) {
 }
 
 /// \brief Muitiply matrix with normal.
-HOSTDEVICE INLINE float3 normal_mul(const Matrix4x4& m, const float3& n) {
+HOSTDEVICE INLINE float3 normal_mul(const sutil::Matrix4x4& m, const float3& n) {
     float x = n.x, y = n.y, z = n.z;
     return make_float3(m[0*4+0]*x + m[1*4*0]*y + m[2*4+0]*z,
                        m[0*4+1]*x + m[1*4*1]*y + m[2*4+1]*z,
@@ -29,20 +29,20 @@ HOSTDEVICE INLINE float3 normal_mul(const Matrix4x4& m, const float3& n) {
 }
 
 /// \brief Multiply matrix with vector.
-HOSTDEVICE INLINE float3 vector_mul(const Matrix4x4& m, const float3& v) {
+HOSTDEVICE INLINE float3 vector_mul(const sutil::Matrix4x4& m, const float3& v) {
     float x = v.x, y = v.y, z = v.z;
-    return make_float3(m[0*4+0]*x + m[0*4+1]*y + m.mat[0*4+2]*z,
-                       m[1*4+0]*x + m[1*4+1]*y + m.mat[1*4+2]*z,
-                       m[2*4+0]*x + m[2*4+1]*y + m.mat[2*4+2]*z);
+    return make_float3(m[0*4+0]*x + m[0*4+1]*y + m[0*4+2]*z,
+                       m[1*4+0]*x + m[1*4+1]*y + m[1*4+2]*z,
+                       m[2*4+0]*x + m[2*4+1]*y + m[2*4+2]*z);
 }
 
 class Transform {
 public:
-    Matrix4x4 mat, matInv;
+    sutil::Matrix4x4 mat, matInv;
 
     HOSTDEVICE Transform() {}
-    HOSTDEVICE explicit Transform(Matrix4x4 m) : mat(m), mat(m.inverse()) {}
-    HOSTDEVICE explicit Transform(Matrix4x4 m, Matrix4x4 mInv) : mat(m), matInv(mInv) {}
+    HOSTDEVICE explicit Transform(sutil::Matrix4x4 m) : mat(m), matInv(m.inverse()) {}
+    HOSTDEVICE explicit Transform(sutil::Matrix4x4 m, sutil::Matrix4x4 mInv) : mat(m), matInv(mInv) {}
 
     HOSTDEVICE void rotate_x(const float radians) { this->rotate(radians, make_float3(1, 0, 0)); }
     HOSTDEVICE void rotate_y(const float radians) { this->rotate(radians, make_float3(0, 1, 0)); }

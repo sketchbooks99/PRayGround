@@ -1,6 +1,6 @@
 #pragma once 
 
-#include <optix.h>
+#include <core/util.h>
 #include <sutil/vec_math.h>
 #include <core/transform.h>
 #include <core/material.h>

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "util.h"
-#include "shape.h"
-#include "material.h"
-#include "transform.h"
+#include <core/util.h>
+#include <core/shape.h>
+#include <core/material.h>
+#include <core/transform.h>
 
 namespace pt {
 
@@ -19,6 +19,6 @@ public:
 
     ShapeType get_shapetype() const { return shape_ptr->type(); }
     MaterialType get_materialtype() const { return material_ptr->type(); }
-}
+};
 
 }

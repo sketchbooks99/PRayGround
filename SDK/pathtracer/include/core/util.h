@@ -2,6 +2,7 @@
 
 #include <optix.h>
 #include <cuda/random.h>
+#include <sutil/Exception.h>
 
 #ifndef __CUDACC__
     #include <string>

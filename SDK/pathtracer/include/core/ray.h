@@ -10,17 +10,10 @@
 
 namespace pt {
 
-class Ray {
-public:
+struct Ray {
     DEVICE Ray(const float3& o, const float3&d, float t) : o(o), d(d), t(t) {}
     DEVICE Ray(const float3& o, const float3&d, float t, float3 c) 
     : o(o), d(d), t(t), c(c) {}
-
-    DEVICE float3 origin() { return o; }
-    DEVICE float3 direction() { return d; }
-    DEVICE float time() { return t; }
-    DEVICE float3 color() { return c; }
-private:
     /* Position of ray origin in world coordinates. */
     float3 o;
 

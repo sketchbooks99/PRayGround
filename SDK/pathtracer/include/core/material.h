@@ -1,15 +1,15 @@
 #pragma once
 
+#include <cuda_runtime.h>
 #include <optix.h>
 #include <sutil/vec_math.h>
 #include <core/util.h>
-#include <core/object.h>
 #include <optix/util.h>
 
 namespace pt {
 
+/** \note Currently, CPU tracing is not implemented. */
 bool cpu_trace_occlusion(unsigned long long, float3, float3, float, float) { }
-
 float3 cpu_trace_radiance(unsigned long long, float3, float3, float, float) { }
 
 using TraceOcclusionFunc = bool (*) (unsigned long long, float3, float3, float, float);
@@ -56,7 +56,7 @@ inline std::ostream& operator<<(std::ostream& out, MaterialType type) {
  * 
  * \note Initailization must be excecuted only once.
  */
-template <typename T, Args... args>
+template <typename T, typename... Args>
 __global__ void setup_material_on_device(T** d_ptr, Args... args) {
     (*d_ptr) = new T(args...);
 }

@@ -1,13 +1,10 @@
 #include <optix.h>
 
-#include "../core/pathtracer.h"
-#include "random.h"
+#include <core/pathtracer.h>
+#include <cuda/random.h>
 
 #include <sutil/vec_math.h>
-#include "../core/helpers.h"
-
-/** URGENTTODO:
- * Ray must not be launched from shading program. */
+#include <optix/helpers.h>
 
 using namespace pt;
 

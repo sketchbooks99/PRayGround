@@ -1,6 +1,7 @@
 #pragma once 
 
 #include <optix.h>
+#include <cuda/random.h>
 
 #ifndef __CUDACC__
     #include <string>
@@ -49,15 +50,16 @@
 
 namespace pt {
 
-template <typename T>
-void swap(T& a, T& b)
-{
+float random_float();
+float random_float(unsigned int);
+
+using RandFunc = float (*) (unsigned int);
+
 #ifdef __CUDACC__
-    T c(a); a = b; b = c;
-#else   
-    std::swap(a, b);
+    RandFunc _rnd = rnd;
+#else  
+    RandFunc _rnd = random_float;
 #endif
-}
 
 float random_float() {
     return rand() / (RAND_MAX + 1.0);
@@ -67,6 +69,16 @@ float random_float(unsigned int seed) {
     std::mt19937 rnd_src(seed);
     std::uniform_real_distribution<float> rnd_dist(0,1);
     return rnd_dist(rnd_src);
+}
+
+template <typename T>
+void swap(T& a, T& b)
+{
+#ifdef __CUDACC__
+    T c(a); a = b; b = c;
+#else   
+    std::swap(a, b);
+#endif
 }
 
 #if !defined(__CUDACC__)

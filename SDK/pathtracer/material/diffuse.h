@@ -7,17 +7,6 @@
 namespace pt {
 
 class Diffuse final : public Material {
-    using RandFunc = float (*) (unsigned int);
-    using TraceOcclusionFunc = bool (*) (
-        OptixTraversableHandle, float3, float3, float, float);
-
-#ifdef __CUDACC__
-    RandFunc _random = rnd;
-    TraceOcclusionFunc _trace_occlusion = traceOcclusion;
-#else 
-    RandFunc _random = random_float;
-    TraceOcclusionFunc _trace_occlusion = cpu_trace_occlusion;
-#endif
 
 private:
     float3 albedo;
@@ -36,8 +25,8 @@ HOSTDEVICE void sample(SurfaceInteraction& si) {
     unsigned int seed = si.seed;
 
     {
-        const float z1 = Random(seed);
-        const float z2 = Random(seed);
+        const float z1 = _rnd(seed);
+        const float z2 = _rnd(seed);
 
         float3 w_in; 
         cosine_sample_hemisphere(z1, z2, w_in);
@@ -48,8 +37,8 @@ HOSTDEVICE void sample(SurfaceInteraction& si) {
         si.attenuation *= albedo;
     }
 
-    const float z1 = Random(seed);
-    const float z2 = Random(seed);
+    const float z1 = _rnd(seed);
+    const float z2 = _rnd(seed);
     prd.seed = seed;
 
     ParallelgramLight light = param.light;

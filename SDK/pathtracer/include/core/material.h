@@ -8,6 +8,17 @@
 
 namespace pt {
 
+bool cpu_trace_occlusion(unsigned long long, float3, float3, float, float) { }
+
+float3 cpu_trace_radiance(unsigned long long, float3, float3, float, float) { }
+
+using TraceOcclusionFunc = bool (*) (unsigned long long, float3, float3, float, float);
+#ifdef __CUDACC__
+    TraceOcclusionFunc _trace_occlusion = trace_occlusion;
+#else 
+    TraceOcclusionFunc _trace_occlusion = cpu_trace_occlusion;
+#endif
+
 // Forward declaration
 class Material;
 using MaterialPtr = Material*;

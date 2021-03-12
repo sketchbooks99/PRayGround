@@ -33,19 +33,6 @@
 
 namespace pt {
 
-struct RadiancePRD
-{
-    float3 result;
-    unsigned int depth;
-    unsigned int seed;
-};
-
-enum RayType {
-    RAY_TYPE_RADIANCE = 0,
-    RAY_TYPE_OCCLUSION = 1,
-    RAY_TYPE_COUNT
-};
-
 struct CameraData {
     float3 eye;
     float3 U;

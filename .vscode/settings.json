@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "vector": "cpp",
-        "ios": "cpp"
+        "ios": "cpp",
+        "random": "cpp",
+        "*.cu": "cpp"
     }
 }

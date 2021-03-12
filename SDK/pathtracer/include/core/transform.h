@@ -6,7 +6,7 @@
 #include "core_util.h"
 #include "ray.h"
 
-namespace sutil {
+namespace pt {
 
 /// \brief Multiply matrix with positional vector.
 HOSTDEVICE INLINE float3 point_mul(const Matrix4x4& m, const float3& p) {

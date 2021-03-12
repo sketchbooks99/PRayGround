@@ -6,14 +6,6 @@
 
 namespace pt {
 
-using FuncPtr = float (*) (unsigned int);
-
-#ifdef __CUDACC__
-FuncPtr Random = rnd;
-#else 
-FuncPtr Random = random_float;
-#endif
-
 class Dielectric final : public Material {
 private:
     float3 albedo;
@@ -45,7 +37,7 @@ HOSTDEVICE void Dielectric::sample(SurfaceInteraction& si) const {
 
     float reflect_prob = fr(cosine, ni, nt);
 
-    if (cannot_refract || reflect_prob > Random(seed))
+    if (cannot_refract || reflect_prob > _rnd(seed))
         si.wo = reflect(wi, outward_normal);
     else    
         si.wo = refract(wi, outward_normal, cosine, ni, nt);

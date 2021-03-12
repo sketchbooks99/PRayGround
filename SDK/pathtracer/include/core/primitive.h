@@ -1,17 +1,24 @@
 #pragma once
 
-#include "core_util.h"
+#include "util.h"
 #include "shape.h"
 #include "material.h"
+#include "transform.h"
 
 namespace pt {
 
 class Primitive {
 private:
-    Shape* shape_ptr;
-    Material* material_ptr;
-public:
+    ShapePtr shape_ptr;
+    MaterialPtr material_ptr;
+    Transform* transform;
 
+public:
+    Primitive(ShapePtr shape, MaterialPtr material, Transform* transform)
+    : shape_ptr(shape), material_ptr(material), transform(transform) {}
+
+    ShapeType get_shapetype() const { return shape_ptr->type(); }
+    MaterialType get_materialtype() const { return material_ptr->type(); }
 }
 
 }

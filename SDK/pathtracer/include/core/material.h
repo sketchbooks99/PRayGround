@@ -2,9 +2,9 @@
 
 #include <optix.h>
 #include <sutil/vec_math.h>
-#include "core_util.h"
-#include "object.h"
-#include "../cuda/cuda_util.cu"
+#include <core/util.h>
+#include <core/object.h>
+#include <optix/util.h>
 
 namespace pt {
 
@@ -51,14 +51,37 @@ inline std::ostream& operator<<(std::ostream& out, MaterialType type) {
 }
 #endif
 
+/** 
+ * \brief Initialize object on device.
+ * 
+ * \note Initailization must be excecuted only once.
+ */
+template <typename T, Args... args>
+__global__ void setup_material_on_device(T** d_ptr, Args... args) {
+    (*d_ptr) = new T(args...);
+}
+
+template <typename T>
+__global__ void delete_material_on_device(T** d_ptr) {
+    delete (void*)*d_ptr;
+}
+
 // Abstract class to compute scattering properties.
 class Material {
-public:    
+protected:
+    MaterialPtr d_ptr { nullptr }; // device pointer.
+
+    virtual void setup_on_device() = 0;
+    virtual void delete_on_device() = 0;
+
+public:
     virtual HOSTDEVICE void sample(SurfaceInteraction& si) const = 0;
     virtual HOSTDEVICE float3 emittance(SurfaceInteraction& si) const = 0;
     /// FUTURE:
     // virtual HOSTDEVICE float pdf(const Ray& r, const SurfaceInteraction& si) const = 0; */
     virtual HOST MaterialType type() const = 0;
+
+    HOST MaterialPtr get_dptr() { return d_ptr; }
 };
 
 }

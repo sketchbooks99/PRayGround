@@ -1,8 +1,13 @@
 #pragma once
 
+#include <core/util.h>
+
 namespace pt {
 
 #if !defined(__CUDACC__)
+
+class Shape;
+using ShapePtr = Shape*;
 
 enum class ShapeType {
     None,       // None type

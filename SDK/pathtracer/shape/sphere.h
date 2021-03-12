@@ -1,8 +1,6 @@
 #pragma once 
 
-#include "../core/shape.h"
-#include "../core/transform.h"
-#include "../core/material.h"
+#include <core/shape.h>
 
 namespace pt {
 

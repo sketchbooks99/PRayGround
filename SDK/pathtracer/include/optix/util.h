@@ -3,7 +3,7 @@
 #include <sutil/vec_math.h>
 #include <cuda/helpers.h>
 
-#include "../core/core_util.h"
+#include <core/util.h>
 
 namespace pt {
 

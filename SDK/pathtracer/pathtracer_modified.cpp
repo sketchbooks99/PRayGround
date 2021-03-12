@@ -22,18 +22,14 @@
 #include <GLFW/glfw3.h>
 
 // include optix utilities
-#include "core/cudabuffer.h"
-#include "core/program.h"
-#include "core/module.h"
-#include "core/pipeline.h"
-#include "core/program.h"
+#include <optix/module.h>
+#include <optix/object.h>
+#include <optix/pipeline.h>
+#include <optix/sbt.h>
+#include <optix/program.h>
 
 // include application utilities
-#include "core/core_util.h"
-#include "core/ray.h"
-#include "core/shape.h"
-#include "core/pathtracer.h"
-#include "core/material.h"
+
 
 bool resize_dirty = false;
 bool minimized = false;

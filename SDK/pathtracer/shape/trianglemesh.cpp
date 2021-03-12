@@ -1,5 +1,13 @@
 #include "trianglemesh.h"
 
+#include <vector>
+#include <sutil/vec_math.h>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <sstream>
+#include <assert.h>
+
 namespace pt {
 
 // At present, only ".obj" format is supported.

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <sutil/vec_math.h>
-#include "../core/core_util.h"
+#include <core/util.h>
 
 namespace pt {
 

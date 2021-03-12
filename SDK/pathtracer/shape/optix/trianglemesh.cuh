@@ -2,6 +2,8 @@
 
 #include <core/util.h>
 #include <sutil/vec_math.h>
+#include <core/transform.h>
+#include <core/material.h>
 
 namespace pt {
 
@@ -9,7 +11,7 @@ struct MeshHitGroupData {
     float3* vertices;
     float3* normals;
     int3* indices;
-    pt::Transform transform;
+    Transform transform;
     MaterialPtr matptr;
 };
 
@@ -28,6 +30,7 @@ CALLABLE_FUNC void CH_FUNC(mesh)
 	const float3 n1 = normalize(rt_data->mesh.normals[index.y]);
 	const float3 n2 = normalize(rt_data->mesh.normals[index.z]);
 
+    // Linear interpolation of normal by barycentric coordinates.
     float3 n = normalize( (1.0f-u-v)*n0 + u*n1 + v*n2 );
     n = faceforward(n, -rd, n);
 

@@ -1,24 +1,8 @@
 #pragma once
 
-#include <vector>
-#include <sutil/vec_math.h>
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <sstream>
-#include <assert.h>
-
-#include "../core/shape.h"
-#include "../core/transform.h"
+#include <core/shape.h>
 
 namespace pt {
-
-struct MeshData {
-    float3* vertices;
-    float3* normals;
-    int3* indices;
-    sutil::Transform transform;
-};
 
 #if !defined(__CUDACC__)
 class TriangleMesh : public Shape {

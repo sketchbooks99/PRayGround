@@ -1,6 +1,6 @@
 #include <optix.h>
 
-#include "core_util.h"
+#include <core/util.h>
 
 /**!
  Texture should be return evaluated color 

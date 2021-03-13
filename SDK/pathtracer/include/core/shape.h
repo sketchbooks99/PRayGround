@@ -5,8 +5,6 @@
 
 namespace pt {
 
-#if !defined(__CUDACC__)
-
 class Shape;
 using ShapePtr = Shape*;
 
@@ -16,6 +14,8 @@ enum class ShapeType {
     Sphere,     // Sphere 
     Plane       // Plane (rectangle)
 };
+
+#ifndef __CUDACC__
 
 inline std::ostream& operator<<(std::ostream& out, ShapeType type) {
     switch(type) {
@@ -31,12 +31,14 @@ inline std::ostream& operator<<(std::ostream& out, ShapeType type) {
         return out << "";
     }
 }
+#endif
 
 // Abstract class for readability
 class Shape {
-    virtual ShapeType type() const = 0;
+    virtual HOST ShapeType type() const = 0;
+    virtual HOST void build_input() const = 0;
+
 };
 
-#endif
 
 }

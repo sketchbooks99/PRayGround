@@ -5,7 +5,6 @@
 
 namespace pt {
 
-#if !defined(__CUDACC__)
 class Sphere : public Shape {
 public:
     explicit Sphere(float3 c, float r) : center(c), radius(r) {}
@@ -15,6 +14,5 @@ private:
     float3 center;
     float radius;
 };
-#endif
 
 }

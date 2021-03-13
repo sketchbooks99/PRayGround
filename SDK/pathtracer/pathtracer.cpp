@@ -54,8 +54,8 @@
 
 #include <GLFW/glfw3.h>
 
-#include "core/core_util.h"
-#include "core/pathtracer.h"
+#include <core/util.h>
+#include <core/pathtracer.h>
 #include "shape/trianglemesh.h"
 
 #include <array>

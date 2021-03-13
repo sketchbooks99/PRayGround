@@ -13,6 +13,7 @@
     #include <iomanip>
     #include <sstream>
     #include <random>
+    #include <vector>
     #include "stream_helpers.h"
 #endif
 

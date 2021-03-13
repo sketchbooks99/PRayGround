@@ -5,7 +5,6 @@
 
 namespace pt {
 
-#if !defined(__CUDACC__)
 class TriangleMesh : public Shape {
     TriangleMesh() {}
     TriangleMesh(const std::string& filename, float3 position, float size, float3 axis, bool isSmooth=true);
@@ -14,6 +13,5 @@ class TriangleMesh : public Shape {
     std::vector<float3> normals;
     std::vector<int3> indices;
 };
-#endif
 
 }

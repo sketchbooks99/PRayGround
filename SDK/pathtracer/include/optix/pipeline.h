@@ -1,8 +1,8 @@
 #pragma once
 
 #include <optix.h>
-#include "core_util.h"
-#include "program.h"
+#include <core/util.h>
+#include <optix/program.h>
 
 namespace pt {
 
@@ -14,7 +14,7 @@ public:
         m_compile_options.traversableGraphFlags = OPTIX_TRAVERSABLE_GRAPH_ALLOW_SINGLE_GAS;
         m_compile_options.numPayloadValues = 5;
         m_compile_options.numAttributeValues = 2;
-        m_compile_options.pipelineLaunchParamsVariableName = params_name;
+        m_compile_options.pipelineLaunchParamsVariableName = params_name.c_str();
     #ifdef DEBUG
         m_compile_options.exceptionFlags = OPTIX_EXCEPTION_FLAG_DEBUG | OPTIX_EXCEPTION_FLAG_TRACE_DEPTH | OPTIX_EXCEPTION_FLAG_STACK_OVERFLOW;
     #else   
@@ -41,11 +41,20 @@ public:
     explicit operator OptixPipeline() { return m_pipeline; }
 
     /** \brief Compile options. */
-    void set_compile_options(const OptixPipelineCompileOptions& op) { m_compile_options = op; }
+    void set_compile_options( const OptixPipelineCompileOptions& op ) { m_compile_options = op; }
+    void use_motion_blur( bool is_use ) { m_compile_options.usesMotionBlur = is_use; }
+    void set_traversable_graph_flags( unsigned int flags ) { m_compile_options.traversableGraphFlags = flags; }
+    void set_num_payloads( const int num_payloads ) { m_compile_options.numPayloadValues = num_payload; }
+    void set_num_attributes( const int num_attributes ) { m_compile_options.numAttributeValues = num_attributes; }
+    void set_launch_variable_name( const std::string& params_name ) { m_compile_options.pipelineLaunchParamsVariableName = params_name.c_str(); }
+    void set_exception_flags( const OptixExceptionFlags flags ) { m_compile_options.exceptionFlags = flags; }
+
     OptixPipelineCompileOptions compile_options() const { return m_compile_options; }
 
     /** \brief Link options */
     void set_link_options(const OptixPipelineLinkOptions& op) { m_link_options = op; }
+    void set_link_trace_depth( const unsigned int depth ) { m_link_options.maxTraceDepth = depth; }
+    void set_link_debug_level( const OptixCompileDebugLevel& debug_level ) { m_link_options.debugLevel = debug_level; }
     OptixPipelineLinkOptions link_options() const { return m_link_options; }
 
     /** \brief Create pipeline object and calculate the stack sizes of pipeline. */

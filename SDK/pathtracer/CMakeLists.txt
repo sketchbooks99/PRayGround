@@ -29,11 +29,11 @@
 OPTIX_add_sample_executable( pathtracer target_name
 
   # ===== HEADER =====
-  core/helpers.h
-  core/pathtracer.h
-  core/shape.h 
-  core/material.h
-  core/core_util.h
+  # core/helpers.h
+  # core/pathtracer.h
+  # core/shape.h 
+  # core/material.h
+  # core/core_util.h
 
   shape/trianglemesh.h 
 

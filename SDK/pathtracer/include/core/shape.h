@@ -5,9 +5,6 @@
 
 namespace pt {
 
-class Shape;
-using ShapePtr = Shape*;
-
 enum class ShapeType {
     None,       // None type
     Mesh,       // Mesh with triangle 
@@ -36,9 +33,9 @@ inline std::ostream& operator<<(std::ostream& out, ShapeType type) {
 // Abstract class for readability
 class Shape {
     virtual HOST ShapeType type() const = 0;
-    virtual HOST void build_input() const = 0;
-
+    virtual HOST void build_input( OptixBuildInput& bi ) const = 0;
 };
 
+using ShapePtr = Shape*;
 
 }

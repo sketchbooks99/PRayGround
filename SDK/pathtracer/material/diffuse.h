@@ -8,20 +8,6 @@
 namespace pt {
 
 class Diffuse final : public Material {
-private:
-    float3 albedo;
-
-    HOST void setup_on_device() override {
-        CUDA_CHECK(cudaMalloc((void**)&d_ptr, sizeof(MaterialPtr)));
-        setup_material_on_device<<<1,1>>>((Diffuse**)&d_ptr, albedo);
-        CUDA_SYNC_CHECK();
-    }
-
-    HOST void delete_on_device() override {
-        delete_material_on_device<<<1,1>>>(d_ptr);
-        CUDA_SYNC_CHECK();
-    }
-
 public:
     explicit HOSTDEVICE Diffuse(float3 a) : albedo(a) {
         #ifndef __CUDACC__
@@ -39,6 +25,19 @@ public:
     HOSTDEVICE float3 emittance(SurfaceInteraction& /* si */) const override { return make_float3(0.f); }
 
     HOSTDEVICE MaterialType type() const override { return MaterialType::Diffuse; }
+private:
+    HOST void setup_on_device() override {
+        CUDA_CHECK(cudaMalloc((void**)&d_ptr, sizeof(MaterialPtr)));
+        setup_material_on_device<<<1,1>>>((Diffuse**)&d_ptr, albedo);
+        CUDA_SYNC_CHECK();
+    }
+
+    HOST void delete_on_device() override {
+        delete_material_on_device<<<1,1>>>(d_ptr);
+        CUDA_SYNC_CHECK();
+    }
+
+    float3 albedo;
 };
 
 HOSTDEVICE void Diffuse::sample(SurfaceInteraction& si) const {

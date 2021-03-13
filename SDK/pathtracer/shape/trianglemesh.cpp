@@ -1,16 +1,19 @@
 #include "trianglemesh.h"
 
-#include <vector>
-#include <sutil/vec_math.h>
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <sstream>
-#include <assert.h>
-
 namespace pt {
 
-// At present, only ".obj" format is supported.
+void TriangleMesh::_create_ptr_on_device() {
+    const size_t vertices_size_in_bytes = vertices.size() * sizeof(float3);
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(d_vertices), vertices_size_in_bytes));
+    CUDA_CHECK(cudaMemcpy(
+        reinterpret_cast<void*>(state.d_vertices),
+        vertices.data(), vertices_size_in_bytes,
+        cudaMemcpyHostToDevice
+    ));
+}
+
+/** \note At present, only .obj file format is supported. */
+// ------------------------------------------------------------------
 TriangleMesh::TriangleMesh(
     const std::string& filename, 
     float3 position, float size, float3 axis, bool isSmooth)
@@ -163,6 +166,7 @@ TriangleMesh::TriangleMesh(
     }
 }
 
+// ------------------------------------------------------------------
 TriangleMesh::TriangleMesh(std::vector<float3> vertices, 
     std::vector<int3> indices, 
     std::vector<float3> normals, 
@@ -171,7 +175,7 @@ TriangleMesh::TriangleMesh(std::vector<float3> vertices,
     indices(indices), 
     normals(normals)
 {
-    assert(vertices.size() == normals.size());
+    Assert(vertices.size() == normals.size(), "The size of vertices and normals are not equal.");
 
     // Mesh smoothing
     if (indices.size() > 32)
@@ -203,6 +207,15 @@ TriangleMesh::TriangleMesh(std::vector<float3> vertices,
             normals[i] = normalize(normals[i]);
         }
     }
+}
+
+// ------------------------------------------------------------------
+HOST void TriangleMesh::build_input( OptixBuildInput& bi ) const {
+    bi.type = OPTIX_BUILD_INPUT_TYPE_TRIANGLES;
+    bi.triangleArray.vertexFormat = OPTIX_VERTEX_FORMAT_FLOAT3;
+    bi.triangleArray.vertexStrideInBytes = sizeof(float3);
+    bi.triangleArray.numVertices = static_cast<uint32_t>(vertices.size());
+    bi.triangleArray.vertexBuffers = 
 }
 
 }

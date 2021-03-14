@@ -12,7 +12,7 @@ public:
     TriangleMesh(std::vector<float3> vertices, std::vector<int3> faces, std::vector<float3> normals, bool isSmooth=true);
 
     HOST ShapeType type() const override { return ShapeType::Mesh; }
-    HOST void build_input( OptixBuildInput& bi ) const override;
+    HOST void build_input( OptixBuildInput& bi, uint32_t sbt_idx ) const override;
 private:
     void _create_ptr_on_device();
 

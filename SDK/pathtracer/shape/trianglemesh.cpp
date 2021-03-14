@@ -227,7 +227,19 @@ TriangleMesh::TriangleMesh(std::vector<float3> vertices,
 }
 
 // ------------------------------------------------------------------
-HOST void TriangleMesh::build_input( OptixBuildInput& bi ) const {
+HOST void TriangleMesh::build_input( OptixBuildInput& bi, uint32_t sbt_idx ) const {
+    // Prepare the indices of shader binding table
+    CUdeviceptr d_sbt_indices;
+    std::vector<uint32_t> sbt_indices( indices.size(), sbt_idx );
+    size_t size_sbt_indices_in_bytes = sbt_indices.size() * sizeof(uint32_t);
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_sbt_indices), size_sbt_indices_in_bytes));
+    CUDA_CHECK(cudaMemcpy(
+        reinterpret_cast<void*>(d_sbt_indices),
+        sbt_indices.data(),
+        sbt_indices.size(),
+        cudaMemcpyHostToDevice
+    ));
+
     bi.type = OPTIX_BUILD_INPUT_TYPE_TRIANGLES;
     bi.triangleArray.vertexFormat = OPTIX_VERTEX_FORMAT_FLOAT3;
     bi.triangleArray.vertexStrideInBytes = sizeof(float3);

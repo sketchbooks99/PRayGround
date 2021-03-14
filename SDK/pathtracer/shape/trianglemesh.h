@@ -20,9 +20,9 @@ private:
     std::vector<float3> normals;
     std::vector<int3> indices;
 
-    CUdeviceptr d_vertices;
-    CUdeviceptr d_normals;
-    CUdeviceptr d_indices;
+    CUdeviceptr d_vertices { 0 };
+    CUdeviceptr d_normals { 0 };
+    CUdeviceptr d_indices { 0 };
 };
 
 }

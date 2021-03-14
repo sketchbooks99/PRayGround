@@ -41,6 +41,7 @@ struct CameraData {
     float aperture;
 };
 
+// Parameters are configured when ray tracing on device is launched. 
 struct Params
 {
     unsigned int subframe_index;
@@ -63,94 +64,6 @@ enum HitType
     HIT_OUTSIDE_FROM_INSIDE = 1u << 1,
     HIT_INSIDE_FROM_OUTSIDE = 1u << 2,
     HIT_INSIDE_FROM_INSIDE = 1u << 3
-};
-
-struct RayGenData 
-{
-};
-
-struct MissData
-{
-    float4 bg_color;
-};
-
-// ========== Geometry data ==========
-struct MeshData {
-    float3* vertices;
-    float3* normals;
-    int3* indices;
-    // float2 coords;
-};
-
-struct SphereData {
-    float radius;
-};
-
-union Geometry {
-    MeshData mesh;
-    SphereData sphere;
-};
-
-// ========== Texture Data ==========
-struct CheckerData {
-    float3 color1, color2;
-    float scale;
-};
-
-struct ConstantData {
-    float3 albedo;
-};
-
-struct ImageTextureData {
-    uint width, height;
-    float3 *data;
-};
-
-union Texture {
-    ConstantData constant;
-    CheckerData checker;
-    ImageTextureData image_texture;
-};
-
-// ========== Material Data ==========
-/** MEMO:  
- *  All of materials store the texture data. 
- */
-struct DiffuseData {
-    union Texture texture;
-};
-
-struct MetalData {
-    union Texture texture;
-    float fuzz;
-};
-
-struct DielectricData {
-    union Texture texture;
-    float ior;
-};
-
-struct EmissionData {
-    union Texture texture;
-    float strength;
-};
-
-union Material {
-    DiffuseData diffuse;
-    MetalData metal;
-    DielectricData dielectric;
-    EmissionData emission;
-};
-
-// member in union must not have any constructor
-// struct HitGroupData {
-//     union Geometry geometry;
-//     union Material material;
-// };
-
-struct HitGroupData {
-    void* geometrydata;
-    MaterialPtr matptr;
 };
 
 }

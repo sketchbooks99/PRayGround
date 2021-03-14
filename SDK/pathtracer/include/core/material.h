@@ -69,7 +69,7 @@ __global__ void delete_material_on_device(T** d_ptr) {
 // Abstract class to compute scattering properties.
 class Material {
 protected:
-    MaterialPtr d_ptr { nullptr }; // device pointer.
+    CUdeviceptr d_ptr { 0 }; // device pointer.
 
     virtual void setup_on_device() = 0;
     virtual void delete_on_device() = 0;
@@ -81,7 +81,7 @@ public:
     // virtual HOSTDEVICE float pdf(const Ray& r, const SurfaceInteraction& si) const = 0; */
     virtual HOST MaterialType type() const = 0;
 
-    HOST MaterialPtr get_dptr() { return d_ptr; }
+    HOST CUdeviceptr get_dptr() { return d_ptr; }
 };
 
 }

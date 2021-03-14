@@ -30,6 +30,4 @@ private:
     float4 m_bgcolor;
 };
 
-
-
 }

@@ -32,6 +32,7 @@ inline std::ostream& operator<<(std::ostream& out, ShapeType type) {
 
 // Abstract class for readability
 class Shape {
+public:
     virtual HOST ShapeType type() const = 0;
     virtual HOST void build_input( OptixBuildInput& bi ) const = 0;
 };

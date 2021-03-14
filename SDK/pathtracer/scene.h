@@ -11,8 +11,8 @@
 #include "material/diffuse.h"
 #include "material/emitter.h"
 
-Scene scene() {
-    Scene my_scene;
+pt::Scene scene() {
+    pt::Scene my_scene;
     // utility settings
 
     // camera settings

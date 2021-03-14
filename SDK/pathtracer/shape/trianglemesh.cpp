@@ -8,8 +8,25 @@ void TriangleMesh::_create_ptr_on_device() {
     CUDA_CHECK(cudaMemcpy(
         reinterpret_cast<void*>(state.d_vertices),
         vertices.data(), vertices_size_in_bytes,
-        cudaMemcpyHostToDevice
-    ));
+        cudaMemcpyHostToDevice));
+
+    const size_t indices_size_in_bytes = indices.size() * sizeof(int3);
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_indices), indices_size_in_bytes));
+    CUDA_CHECK(cudaMemcpy(
+        reinterpret_cast<void*>(d_indices),
+        indices.data(), indices_size_in_bytes,
+        cudaMemcpyHostToDevice));
+
+    if (!normals.empty())
+    {
+        const size_t normals_size_in_bytes = normals.size() * sizeof(float3);
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_normals), normals_size_in_bytes));
+        CUDA_CHECK(cudaMemcpy(
+            reinterpret_cast<void*>(d_normals),
+            normals.data(), normals_size_in_bytes,
+            cudaMemcpyHostToDevice
+        ));
+    }
 }
 
 /** \note At present, only .obj file format is supported. */
@@ -215,7 +232,16 @@ HOST void TriangleMesh::build_input( OptixBuildInput& bi ) const {
     bi.triangleArray.vertexFormat = OPTIX_VERTEX_FORMAT_FLOAT3;
     bi.triangleArray.vertexStrideInBytes = sizeof(float3);
     bi.triangleArray.numVertices = static_cast<uint32_t>(vertices.size());
-    bi.triangleArray.vertexBuffers = 
+    bi.triangleArray.vertexBuffers = &d_vertices;
+    bi.triangleArray.flags = (unsigned int*)(OPTIX_GEOMETRY_FLAG_DISABLE_ANYHIT);
+    bi.triangleArray.indexFormat = OPTIX_INDICES_FORMAT_UNSIGNED_INT3;
+    bi.triangleArray.indexStrideInBytes = sizeof(int3);
+    bi.triangleArray.numIndexTriplets = static_cast<uint32_t>(indices.size());
+    bi.triangleArray.indexBuffer = d_indices;
+    bi.triangleArray.numSbtRecords = 1;
+    bi.triangleArray.sbtIndexOffsetBuffer = d_sbt_indices;
+    bi.triangleArray.sbtIndexOffsetSizeInBytes = sizeof(uint32_t);
+    bi.triangleArray.sbtIndexOffsetStrideInBytes = sizeof(uint32_t);
 }
 
 }

@@ -83,7 +83,8 @@ void swap(T& a, T& b)
 #endif
 }
 
-#if !defined(__CUDACC__)
+/** Error handling at the host side. */
+#ifndef __CUDACC__
 inline void Throw(const std::string& msg) {
     throw std::runtime_error(msg);
 }

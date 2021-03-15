@@ -2,6 +2,7 @@
 
 #include <utility> // for std::pair< , >
 #include <core/util.h>
+#include <optix.h>
 
 namespace pt { 
 

@@ -4,10 +4,9 @@
 
 namespace pt {
 
-void Scene::prepare_on_device(const std::vector<ProgramGroup>& prg_groups, Params& params)
+void Scene::prepare_on_device(const std::vector<ProgramGroup>& prg_groups)
 {
-    params.width = m_width;
-    params.height = m_height;
+    
 }
 
 }

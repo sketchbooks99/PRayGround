@@ -19,7 +19,6 @@ private:
     ShapePtr m_shape_ptr;
     MaterialPtr m_material_ptr;
     Transform m_transform;
-    ProgramGroup m_program_group;
     uint32_t sbt_index { 0 }; // For managing sbt index which associated with a shader.
 };
 

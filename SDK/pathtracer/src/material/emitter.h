@@ -1,6 +1,6 @@
 #pragma once 
 
-#include "../core/material.h"
+#include <core/material.h>
 
 namespace pt {
 

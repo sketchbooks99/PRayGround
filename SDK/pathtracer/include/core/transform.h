@@ -1,10 +1,10 @@
 #pragma once 
 
 #include <sutil/Matrix.h>
-#include <vec_math.h>
+#include <sutil/vec_math.h>
 
 #include <core/util.h>
-#include "ray.h"
+#include <core/ray.h>
 
 namespace pt {
 

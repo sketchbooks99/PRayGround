@@ -26,12 +26,12 @@ public:
 private:
     void setup_on_device() override {
         CUDA_CHECK(cudaMalloc((void**)&d_ptr, sizeof(MaterialPtr)));
-        setup_material_on_device<<<1,1>>>((Conductor**)&d_ptr, albedo, fuzz);
+        setup_object_on_device<<<1,1>>>((Conductor**)&d_ptr, albedo, fuzz);
         CUDA_SYNC_CHECK();
     }
 
     void delete_on_device() override {
-        delete_material_on_device<<<1,1>>>(d_ptr);
+        delete_object_on_device<<<1,1>>>(d_ptr);
         CUDA_SYNC_CHECK();
     }
 

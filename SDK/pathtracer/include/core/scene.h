@@ -7,7 +7,7 @@ namespace pt {
 
 class Scene {
 public:
-    explicit Scene() {}
+    Scene() {}
 
     void add_primitive(const Primitive& p) { m_primitives.push_back(p); }
     std::vector<Primitive> get_primitives() const { return m_primitives; }
@@ -24,10 +24,12 @@ public:
     void set_bgcolor(const float4& bg) { m_bgcolor = bg; }
     float4 get_bgcolor() const { return m_bgcolor; }
 private:
-    std::vector<Primitive> m_primitives;
-    sutil::Camera m_camera;
-    unsigned int m_width, m_height;
-    float4 m_bgcolor;
+    std::vector<Primitive> m_primitives;    // Primitives to describe the scene.
+    sutil::Camera m_camera;                 // Camera. 
+    unsigned int m_width, m_height;         // Dimensions of output result.
+    float4 m_bgcolor;                       // Background color
+    unsigned int m_depth;                   // Maximum depth of ray tracing.
+    unsigned int samples_per_launch;        // Specify the number of samples per call of optixLaunch.
 };
 
 }

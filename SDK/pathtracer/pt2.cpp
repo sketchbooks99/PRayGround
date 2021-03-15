@@ -23,12 +23,13 @@
 
 // include optix utilities
 #include <optix/module.h>
-#include <optix/object.h>
 #include <optix/pipeline.h>
 #include <optix/sbt.h>
 #include <optix/program.h>
 
 // include application utilities
+#include <core/cudabuffer.h>
+#include <core/pathtracer.h>
 
 
 bool resize_dirty = false;
@@ -62,7 +63,7 @@ static void mouseButtonCallback( GLFWwindow* window, int button, int action, int
 
 static void cursorPosCallback( GLFWwindow* window, double xpos, double ypos )
 {
-    Params* params = static_cast<Params*>( glfwGetWindowUserPointer( window ));
+    pt::Params* params = static_cast<pt::Params*>( glfwGetWindowUserPointer( window ));
 
     if(mouse_button == GLFW_MOUSE_BUTTON_LEFT ) {
         trackball.setViewMode( sutil::Trackball::LookAtFixed );
@@ -84,7 +85,7 @@ static void windowSizeCallback( GLFWwindow* window, int32_t res_x, int32_t res_y
     
     sutil::ensureMinimumSize( res_x, res_y );
 
-    Params* params = static_cast<Params*>( glfwGetWindowUserPointer( window ));
+    pt::Params* params = static_cast<pt::Params*>( glfwGetWindowUserPointer( window ));
     params->width = res_x;
     params->height = res_y;
     camera_changed = true;
@@ -130,26 +131,26 @@ void printUsageAndExit( const char* argv0 )
     exit( 0 );
 }
 
-void initLaunchParams( PathTracerState& state )
+void initLaunchParams( pt::Params& params )
 {
     CUDA_CHECK (cudaMalloc(
-        reinterpret_cast<void**>( &state.params.accum_buffer ),
-        state.params.width * state.params.height * sizeof( float4 )
+        reinterpret_cast<void**>( &params.accum_buffer ),
+        params.width * params.height * sizeof( float4 )
     ));
-    state.params.frame_buffer = nullptr; // Will be set when output buffer is mapped
+    params.frame_buffer = nullptr; // Will be set when output buffer is mapped
 
-    state.params.samples_per_launch = samples_per_launch;
-    state.params.subframe_index = 0u;
+    params.samples_per_launch = samples_per_launch;
+    params.subframe_index = 0u;
 
-    state.params.max_depth = 10;
+    params.max_depth = 10;
 
-    state.params.handle         = state.gas_handle;
+    params.handle         = state.gas_handle;
 
     CUDA_CHECK( cudaStreamCreate( &state.stream) );
-    CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &state.d_params ), sizeof( Params ) ) );
+    CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &state.d_params ), sizeof( pt::Params ) ) );
 }
 
-void handleCameraUpdate( Params& params )
+void handleCameraUpdate( pt::Params& params )
 {
     if( !camera_changed )
         return;
@@ -160,7 +161,7 @@ void handleCameraUpdate( Params& params )
     camera.UVWFrame( params.camera.U, params.camera.V, params.camera.W );
 }
 
-void handleResize( sutil::CUDAOutputBuffer<uchar4>& output_buffer, Params& params)
+void handleResize( sutil::CUDAOutputBuffer<uchar4>& output_buffer, pt::Params& params)
 {
     if( !resize_dirty )
         return;
@@ -176,7 +177,7 @@ void handleResize( sutil::CUDAOutputBuffer<uchar4>& output_buffer, Params& param
     ));
 }
 
-void updateState( sutil::CUDAOutputBuffer<uchar4>& output_buffer, Params& params )
+void updateState( sutil::CUDAOutputBuffer<uchar4>& output_buffer, pt::Params& params )
 {
     // Update params on device
     if( camera_changed || resize_dirty )

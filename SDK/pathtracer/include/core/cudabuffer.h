@@ -27,7 +27,7 @@ public:
 
     /// \brief Allocation of data on the device.
     void alloc_copy(std::vector<T> data_vec) {
-        allocate(data_vec.size(), sizeof(T) * data_vec.size());
+        alloc_copy(data_vec.size(), sizeof(T) * data_vec.size());
     }
     void alloc_copy(T* data, size_t size) {
         Assert(!is_alloc, "This buffer is already allocated. Please use re_allocate() if you need.");

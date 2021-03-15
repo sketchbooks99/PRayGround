@@ -7,11 +7,10 @@
 
 namespace pt {
 
-struct SphereHitGroupData {
+struct SphereData {
     float3 center;
     float radius;
     Transform transform;
-    MaterialPtr matptr;
 };
 
 CALLABLE_FUNC void IS_FUNC(sphere)() {

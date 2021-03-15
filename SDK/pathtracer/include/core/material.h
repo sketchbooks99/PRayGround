@@ -51,29 +51,8 @@ inline std::ostream& operator<<(std::ostream& out, MaterialType type) {
 }
 #endif
 
-/** 
- * \brief Initialize object on device.
- * 
- * \note Initailization must be excecuted only once.
- */
-template <typename T, typename... Args>
-__global__ void setup_material_on_device(T** d_ptr, Args... args) {
-    (*d_ptr) = new T(args...);
-}
-
-template <typename T>
-__global__ void delete_material_on_device(T** d_ptr) {
-    delete (void*)*d_ptr;
-}
-
 // Abstract class to compute scattering properties.
 class Material {
-protected:
-    CUdeviceptr d_ptr { 0 }; // device pointer.
-
-    virtual void setup_on_device() = 0;
-    virtual void delete_on_device() = 0;
-
 public:
     virtual HOSTDEVICE void sample(SurfaceInteraction& si) const = 0;
     virtual HOSTDEVICE float3 emittance(SurfaceInteraction& si) const = 0;
@@ -82,6 +61,11 @@ public:
     virtual HOST MaterialType type() const = 0;
 
     HOST CUdeviceptr get_dptr() { return d_ptr; }
+protected:
+    CUdeviceptr d_ptr { 0 }; // device pointer.
+
+    virtual void setup_on_device() = 0;
+    virtual void delete_on_device() = 0;
 };
 
 }

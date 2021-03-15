@@ -31,7 +31,7 @@ private:
     }
 
     HOST void delete_on_device() override {
-        delete_material_on_device<<<1,1>>>(d_ptr);
+        delete_object_on_device<<<1,1>>>(d_ptr);
         CUDA_SYNC_CHECK();
     }
 

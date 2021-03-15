@@ -1,19 +1,11 @@
-#include <optix.h>
+#pragma once
 
 #include <sutil/vec_math.h>
 #include <cuda/helpers.h>
-
 #include <core/util.h>
 
 namespace pt {
 
-/** MEMO: 
- * If we need to take into account spectral property (not RGB), we should
- * switch Spectrum representation.
- * 
- * If Spectrum is rgb, rgb is float3? char3? I'm not sure which one is better.
- * 
- * NOTE: Currently, `Spectrum` must be a float3 */
 
 enum RayType {
     RAY_TYPE_RADIANCE = 0,
@@ -21,6 +13,7 @@ enum RayType {
     RAY_TYPE_COUNT = 2
 };
 
+/// @note Currently \c spectrum is RGB representation, not spectrum. 
 struct SurfaceInteraction {
     /** position of intersection point in world coordinates. */
     float3 p;

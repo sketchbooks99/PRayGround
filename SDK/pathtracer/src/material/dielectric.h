@@ -28,12 +28,12 @@ public:
 private:
     HOST void setup_on_device() override {
         CUDA_CHECK(cudaMalloc((void**)&d_ptr, sizeof(MaterialPtr)));
-        setup_material_on_device<<<1,1>>>((Dielectric**)&d_ptr, albedo, ior);
+        setup_object_on_device<<<1,1>>>((Dielectric**)&d_ptr, albedo, ior);
         CUDA_SYNC_CHECK();
     }
 
     HOST void delete_on_device() override {
-        delete_material_on_device<<<1,1>>>(d_ptr);
+        delete_object_on_device<<<1,1>>>(d_ptr);
         CUDA_SYNC_CHECK();
     }
     float3 albedo;

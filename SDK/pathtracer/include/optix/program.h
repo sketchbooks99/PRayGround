@@ -18,6 +18,22 @@ public:
     /** \brief Enable to cast from `ProgramGroup` to `OptixProgramGroup` */
     explicit operator OptixProgramGroup() return { m_program; }
 
+    template <typename ...Entries>
+    void create(const OptixDeviceContext& ctx, Entries... entries)
+    {
+        switch(m_program_kind)
+        case OPTIX_PROGRAM_GROUP_KIND_RAYGEN:
+             OPTIX_PROGRAM_GROUP_KIND_MISS: 
+             OPTIX_PROGRAM_GROUP_KIND_EXCEPTION:
+            create_single_program(ctx, entries...);
+            break;
+        case OPTIX_PROGRAM_GROUP_KIND_HITGROUP:
+            create_hitgroup_program(ctx, entries...);
+            break;
+        case OPTIX_PROGRAM_GROUP_KIND_CALLABLES:
+            create_callable_program(ctx, entries...);
+    }
+
     /** \brief Creation of a single-call program (Raygen, Miss, Exception) */
     void create_single_program(const OptixDeviceContext& ctx, 
                 const ProgramEntry& entry)
@@ -36,12 +52,15 @@ public:
         case OPTIX_PROGRAM_GROUP_KIND_RAYGEN:
             prog_desc.raygen.module = entry.first;
             prog_desc.raygen.entryFunctionName = entry.second;
+            break;
         case OPTIX_PROGRAM_GROUP_KIND_MISS:
             prog_desc.miss.module = entry.first;
             prog_desc.miss.entryFunctionName = entry.second;
+            break;
         case OPTIX_PROGRAM_GROUP_KIND_EXCEPTION:
             prog_desc.exception.module = entry.first;
             prog_desc.exception.entryFunctionName = entry.second;
+            break;
         }
 
         OPTIX_CHECK_LOG(optixProgramGroupCreate(
@@ -121,8 +140,7 @@ public:
             &m_program_options,
             &sizeof_log,
             &m_program
-        ));
-        
+        ));   
     }
 
     /** 
@@ -131,10 +149,9 @@ public:
      * \brief Bind SBT and program 
      **/
     template <typename SBTRecord>
-    void bind_sbtrecord(SBTRecord record) {
+    void bind_sbtrecord(const SBTRecord& record) {
         OPTIX_CHECK(optixSbtRecordPackHeader(m_program, &record));
     }
-
 private:
     OptixProgramGroup m_program;
     OptixProgramGroupKind m_program_kind;

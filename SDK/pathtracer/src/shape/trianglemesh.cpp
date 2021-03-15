@@ -1,33 +1,7 @@
 #include "trianglemesh.h"
+#include <core/cudabuffer.h>
 
 namespace pt {
-
-void TriangleMesh::_create_ptr_on_device() {
-    const size_t vertices_size_in_bytes = vertices.size() * sizeof(float3);
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(d_vertices), vertices_size_in_bytes));
-    CUDA_CHECK(cudaMemcpy(
-        reinterpret_cast<void*>(d_vertices),
-        vertices.data(), vertices_size_in_bytes,
-        cudaMemcpyHostToDevice));
-
-    const size_t indices_size_in_bytes = indices.size() * sizeof(int3);
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_indices), indices_size_in_bytes));
-    CUDA_CHECK(cudaMemcpy(
-        reinterpret_cast<void*>(d_indices),
-        indices.data(), indices_size_in_bytes,
-        cudaMemcpyHostToDevice));
-
-    if (!normals.empty())
-    {
-        const size_t normals_size_in_bytes = normals.size() * sizeof(float3);
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_normals), normals_size_in_bytes));
-        CUDA_CHECK(cudaMemcpy(
-            reinterpret_cast<void*>(d_normals),
-            normals.data(), normals_size_in_bytes,
-            cudaMemcpyHostToDevice
-        ));
-    }
-}
 
 /** \note At present, only .obj file format is supported. */
 // ------------------------------------------------------------------
@@ -225,6 +199,23 @@ TriangleMesh::TriangleMesh(std::vector<float3> vertices,
         }
     }
 }
+
+// ------------------------------------------------------------------
+HOST void TriangleMesh::prepare_shapedata() const {
+    CUDABuffer<float3> d_vertices_buf;
+    CUDABuffer<float3> d_normals_buf;
+    CUDABuffer<int3> d_indices_buf;
+    d_vertices_buf.alloc_copy(vertices);
+    d_normals_buf.alloc_copy(normals);
+    d_indices_buf.alloc_copy(indices);
+
+    MeshData = {
+        d_vertices_buf.data(),
+        d_normals_buf.data(),
+        d_indices_buf.data().
+        Transform()
+    };
+}   
 
 // ------------------------------------------------------------------
 HOST void TriangleMesh::build_input( OptixBuildInput& bi, uint32_t sbt_idx ) const {

@@ -28,7 +28,7 @@ public:
 private:
     HOST void setup_on_device() override {
         CUDA_CHECK(cudaMalloc((void**)&d_ptr, sizeof(MaterialPtr)));
-        setup_material_on_device<<<1,1>>>((Diffuse**)&d_ptr, albedo);
+        setup_object_on_device<<<1,1>>>((Diffuse**)&d_ptr, albedo);
         CUDA_SYNC_CHECK();
     }
 

@@ -28,8 +28,8 @@
 
 #pragma once
 
-#include "material.h"
-#include "shape.h"
+#include <core/material.h>
+#include <core/shape.h>
 
 namespace pt {
 

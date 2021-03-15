@@ -2,15 +2,20 @@
 
 #include <optix.h>
 #include <core/util.h>
+#include <core/material.h>
 
 namespace pt {
+
+struct RayGenData {};
 
 struct MissData {
     float4 bg_color;
 };
 
 struct ShapeData {
+    /// Pointer that stores geometries data (e.g. \c pt::MeshData )
     void* data;
+    MaterialPtr matptr;
 };
 
 template <typename T>
@@ -20,12 +25,7 @@ struct Record
     T data;
 };
 
-struct EmptyRecord
-{
-    __align__ (OPTIX_SBT_RECORD_ALIGNMENT) char header[OPTIX_SBT_RECORD_HEADER_SIZE];
-};
-
-using RayGenRecord = EmptyRecord;
+using RayGenRecord = Record<RayGenData>;
 using MissRecord = Record<MissData>;
 using HitGroupRecord = Record<ShapeData>;
 

@@ -7,12 +7,11 @@
 
 namespace pt {
 
-struct MeshHitGroupData {
+struct MeshData {
     float3* vertices;
     float3* normals;
     int3* indices;
     Transform transform;
-    MaterialPtr matptr;
 };
 
 CALLABLE_FUNC void CH_FUNC(mesh)()

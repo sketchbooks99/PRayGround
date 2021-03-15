@@ -6,7 +6,7 @@ void TriangleMesh::_create_ptr_on_device() {
     const size_t vertices_size_in_bytes = vertices.size() * sizeof(float3);
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(d_vertices), vertices_size_in_bytes));
     CUDA_CHECK(cudaMemcpy(
-        reinterpret_cast<void*>(state.d_vertices),
+        reinterpret_cast<void*>(d_vertices),
         vertices.data(), vertices_size_in_bytes,
         cudaMemcpyHostToDevice));
 
@@ -228,7 +228,7 @@ TriangleMesh::TriangleMesh(std::vector<float3> vertices,
 
 // ------------------------------------------------------------------
 HOST void TriangleMesh::build_input( OptixBuildInput& bi, uint32_t sbt_idx ) const {
-    // Prepare the indices of shader binding table
+    // Prepare the indices of shader binding table on device.
     CUdeviceptr d_sbt_indices;
     std::vector<uint32_t> sbt_indices( indices.size(), sbt_idx );
     size_t size_sbt_indices_in_bytes = sbt_indices.size() * sizeof(uint32_t);
@@ -245,7 +245,7 @@ HOST void TriangleMesh::build_input( OptixBuildInput& bi, uint32_t sbt_idx ) con
     bi.triangleArray.vertexStrideInBytes = sizeof(float3);
     bi.triangleArray.numVertices = static_cast<uint32_t>(vertices.size());
     bi.triangleArray.vertexBuffers = &d_vertices;
-    bi.triangleArray.flags = (unsigned int*)(OPTIX_GEOMETRY_FLAG_DISABLE_ANYHIT);
+    bi.triangleArray.flags = (unsigned int*)(OPTIX_GEOMETRY_FLAG_NONE);
     bi.triangleArray.indexFormat = OPTIX_INDICES_FORMAT_UNSIGNED_INT3;
     bi.triangleArray.indexStrideInBytes = sizeof(int3);
     bi.triangleArray.numIndexTriplets = static_cast<uint32_t>(indices.size());

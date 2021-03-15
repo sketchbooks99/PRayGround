@@ -1,6 +1,7 @@
 #pragma once
 
 #include <core/util.h>
+#include <core/aabb.h>
 #include <sutil/vec_math.h>
 
 namespace pt {
@@ -35,6 +36,7 @@ class Shape {
 public:
     virtual HOST ShapeType type() const = 0;
     virtual HOST void build_input( OptixBuildInput& bi, uint32_t sbt_idx ) const = 0;
+    virtual HOST AABB bound() const = 0;
 };
 
 using ShapePtr = Shape*;

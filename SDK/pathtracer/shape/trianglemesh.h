@@ -13,6 +13,13 @@ public:
 
     HOST ShapeType type() const override { return ShapeType::Mesh; }
     HOST void build_input( OptixBuildInput& bi, uint32_t sbt_idx ) const override;
+    /**
+     * @note 
+     * Currently, triangle never need AABB at intersection test on the device side.
+     * For future work, I'd like to make this renderer can switch a computing device 
+     * (CPU/GPU) depends on an application.
+     */
+    HOST AABB bound() {} 
 private:
     void _create_ptr_on_device();
 

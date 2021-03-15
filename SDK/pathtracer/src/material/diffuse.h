@@ -33,7 +33,7 @@ private:
     }
 
     HOST void delete_on_device() override {
-        delete_material_on_device<<<1,1>>>(d_ptr);
+        delete_object_on_device<<<1,1>>>(d_ptr);
         CUDA_SYNC_CHECK();
     }
 
@@ -45,8 +45,8 @@ HOSTDEVICE void Diffuse::sample(SurfaceInteraction& si) const {
     si.trace_terminate = false;
 
     {
-        const float z1 = _rnd(seed);
-        const float z2 = _rnd(seed);
+        const float z1 = rnd(seed);
+        const float z2 = rnd(seed);
 
         float3 w_in; 
         cosine_sample_hemisphere(z1, z2, w_in);
@@ -57,8 +57,8 @@ HOSTDEVICE void Diffuse::sample(SurfaceInteraction& si) const {
         si.attenuation *= albedo;
     }
 
-    const float z1 = _rnd(seed);
-    const float z2 = _rnd(seed);
+    const float z1 = rnd(seed);
+    const float z2 = rnd(seed);
     si.seed = seed;
 
     // ParallelgramLight light = param.light;

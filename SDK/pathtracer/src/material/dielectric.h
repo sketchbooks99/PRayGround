@@ -58,7 +58,7 @@ HOSTDEVICE void Dielectric::sample(SurfaceInteraction& si) const {
 
     float reflect_prob = fr(cosine, ni, nt);
 
-    if (cannot_refract || reflect_prob > _rnd(si.seed))
+    if (cannot_refract || reflect_prob > rnd(si.seed))
         si.wo = reflect(si.wi, outward_normal);
     else    
         si.wo = refract(si.wi, outward_normal, cosine, ni, nt);

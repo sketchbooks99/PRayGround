@@ -56,15 +56,7 @@
 
 #include <core/util.h>
 #include <core/pathtracer.h>
-#include "shape/trianglemesh.h"
-
-#include <array>
-#include <cstring>
-#include <fstream>
-#include <iomanip> 
-#include <iostream> 
-#include <sstream>
-#include <string>
+#include "src/shape/trianglemesh.h"
 
 bool resize_dirty = false;
 bool minimized = false;

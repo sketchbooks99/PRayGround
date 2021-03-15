@@ -1,6 +1,5 @@
 #pragma once 
 
-#include <optix.h>
 #include <utility> // for std::pair< , >
 #include <core/util.h>
 
@@ -11,6 +10,7 @@ using ProgramEntry = std::pair<OptixModule, const char*>;
 
 class ProgramGroup {
 public: 
+    ProgramGroup() {}
     explicit ProgramGroup(OptixProgramGroupKind prg_kind) : ProgramGroup(prg_kind, {}) {}
     explicit ProgramGroup(OptixProgramGroupKind prg_kind, OptixProgramGroupOptions prg_options)
     : m_program_kind(prg_kind), m_program_options(prg_options) {}

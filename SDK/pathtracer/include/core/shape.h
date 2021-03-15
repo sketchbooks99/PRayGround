@@ -13,8 +13,6 @@ enum class ShapeType {
     Plane       // Plane (rectangle)
 };
 
-#ifndef __CUDACC__
-
 inline std::ostream& operator<<(std::ostream& out, ShapeType type) {
     switch(type) {
     case ShapeType::None:
@@ -29,7 +27,6 @@ inline std::ostream& operator<<(std::ostream& out, ShapeType type) {
         return out << "";
     }
 }
-#endif
 
 // Abstract class for readability
 class Shape {

@@ -1,11 +1,11 @@
 #pragma once
 
+#include <optix.h>
 #include <sutil/vec_math.h>
 #include <cuda/helpers.h>
-#include <core/util.h>
+#include <optix/macros.h>
 
 namespace pt {
-
 
 enum RayType {
     RAY_TYPE_RADIANCE = 0,

@@ -18,12 +18,12 @@ public:
         m_ptx_path = "";
         m_options.maxRegisterCount = OPTIX_COMPILE_DEFAULT_MAX_REGISTER_COUNT;
         m_options.optLevel = OPTIX_COMPILE_OPTIMIZATION_DEFAULT;
-        m_options.debugLevel = OPTIX_COMPILE_DEBUG_LINEINFO;
+        m_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_LINEINFO;
     }
     explicit Module(const std::string& ptx_path) : m_ptx_path(ptx_path) {
         m_options.maxRegisterCount = OPTIX_COMPILE_DEFAULT_MAX_REGISTER_COUNT;
         m_options.optLevel = OPTIX_COMPILE_OPTIMIZATION_DEFAULT;
-        m_options.debugLevel = OPTIX_COMPILE_DEBUG_LINEINFO;
+        m_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_LINEINFO;
     }
     explicit Module(const std::string& ptx_path, const OptixModuleCompileOptions& options)
     : m_ptx_path(ptx_path), m_options(options) {}
@@ -36,7 +36,7 @@ public:
         char log[2048];
         size_t sizeof_log = sizeof(log);
     
-        const std::string ptx = sutil::getPtxString(OPTIX_SAMPLE_NAME, OPTIX_SAMPLE_DIR, m_ptx_path);
+        const std::string ptx = sutil::getPtxString(OPTIX_SAMPLE_NAME, OPTIX_SAMPLE_DIR, m_ptx_path.c_str());
         OPTIX_CHECK_LOG(optixModuleCreateFromPTX(
             ctx, 
             &m_options,
@@ -70,7 +70,7 @@ public:
         bound_values->sizeInBytes = size_in_bytes;
         bound_values->boundValuePtr = bound_value_ptr;
         bound_values->annotation = annotation;
-        m_options.boundValues = bound_value_entry;
+        m_options.boundValues = bound_values;
     }
     void set_boundvalues(const OptixModuleCompileBoundValueEntry* bound_values) { m_options.boundValues = bound_values; }
     void set_numbounds(const unsigned int num_bound) { m_options.numBoundValues = num_bound; }

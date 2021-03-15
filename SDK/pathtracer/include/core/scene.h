@@ -10,7 +10,7 @@ class Scene {
 public:
     Scene() {}
 
-    void prepare_on_device(const std::vector<ProgramGroup>& prg_groups, Params& params);
+    void prepare_on_device();
 
     void add_primitive(const Primitive& p) { m_primitives.push_back(p); }
     std::vector<Primitive> get_primitives() const { return m_primitives; }

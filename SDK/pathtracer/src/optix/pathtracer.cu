@@ -28,38 +28,17 @@
 
 #include <optix.h>
 
-#include "../core/pathtracer.h"
-#include "random.h"
-
+#include <core/pathtracer.h>
 #include <sutil/vec_math.h>
-#include "../core/helpers.h"
-
-using namespace pt;
+#include <cuda/random.h>
+#include <optix/util.h>
+#include <optix/helpers.h>
+#include "../shape/optix/sphere.cuh"
+#include "../shape/optix/trianglemesh.cuh"
 
 extern "C" {
-__constant__ Params params;
+__constant__ pt::Params params;
 }
-
-//struct RadiancePRD
-//{
-//	float3 emitted;
-//	float3 radiance;
-//	float3 attenuation;
-//	float3 origin;
-//	float3 direction;
-//	unsigned int seed;
-//	unsigned int depth;
-//	int countEmitted;
-//	int done;
-//	int pad;
-//};
-
-// struct RadiancePRD
-// {
-// 	float3 result;
-// 	unsigned int depth;
-// 	unsigned int seed;
-// };
 
 // -------------------------------------------------------------------------------
 static __forceinline__ __device__ void setPayloadOcclusion(bool occluded)
@@ -68,7 +47,7 @@ static __forceinline__ __device__ void setPayloadOcclusion(bool occluded)
 }
 
 // -------------------------------------------------------------------------------
-extern "C" __global__ void __raygen__rg()
+CALLABLE_FUNC void RG_FUNC(raygen)()
 {
 	const int w = params.width;
 	const int h = params.height;
@@ -100,10 +79,8 @@ extern "C" __global__ void __raygen__rg()
 		 * Is the system can store and propagate information at intersection point 
 		 * through the scene, as like `SurfaceInteraction` in mitsuba2`, needed? */
 
-		RadiancePRD prd;
-		prd.result = make_float3(0.0f);
-		prd.depth = 0;
-		prd.seed = seed;
+		SurfaceInteraction si;
+		si.seed = seed;
 		optixTrace(
 			params.handle,
 			ray_origin,
@@ -116,9 +93,7 @@ extern "C" __global__ void __raygen__rg()
 			RAY_TYPE_RADIANCE,
 			RAY_TYPE_COUNT,
 			RAY_TYPE_RADIANCE,
-			float3_as_args(prd.result),
-			reinterpret_cast<unsigned int&>(prd.depth),
-			reinterpret_cast<unsigned int&>(prd.seed)
+			si
 		);
 
 		result += prd.result;
@@ -139,7 +114,7 @@ extern "C" __global__ void __raygen__rg()
 }
 
 // -------------------------------------------------------------------------------
-extern "C" __global__ void __miss__radiance()
+CALLABLE_FUNC void MS_FUNC(radiance)()
 {
 	pt::MissData* rt_data = reinterpret_cast<pt::MissData*>(optixGetSbtDataPointer());
 	RadiancePRD prd = getPRD();
@@ -150,7 +125,7 @@ extern "C" __global__ void __miss__radiance()
 }
 
 // -------------------------------------------------------------------------------
-extern "C" __global__ void __closesthit__occlusion()
+CALLABLE_FUNC void CH_FUNC(occlusion) ()
 {
 	setPayloadOcclusion(true);
 }

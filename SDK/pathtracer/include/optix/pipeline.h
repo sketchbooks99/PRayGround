@@ -11,7 +11,7 @@ public:
     explicit Pipeline(const std::string& params_name) {
         // Compile options;
         m_compile_options.usesMotionBlur = false;
-        m_compile_options.traversableGraphFlags = OPTIX_TRAVERSABLE_GRAPH_ALLOW_SINGLE_GAS;
+        m_compile_options.traversableGraphFlags = OPTIX_TRAVERSABLE_GRAPH_FLAG_ALLOW_SINGLE_GAS;
         m_compile_options.numPayloadValues = 5;
         m_compile_options.numAttributeValues = 2;
         m_compile_options.pipelineLaunchParamsVariableName = params_name.c_str();
@@ -44,7 +44,7 @@ public:
     void set_compile_options( const OptixPipelineCompileOptions& op ) { m_compile_options = op; }
     void use_motion_blur( bool is_use ) { m_compile_options.usesMotionBlur = is_use; }
     void set_traversable_graph_flags( unsigned int flags ) { m_compile_options.traversableGraphFlags = flags; }
-    void set_num_payloads( const int num_payloads ) { m_compile_options.numPayloadValues = num_payload; }
+    void set_num_payloads( const int num_payloads ) { m_compile_options.numPayloadValues = num_payloads; }
     void set_num_attributes( const int num_attributes ) { m_compile_options.numAttributeValues = num_attributes; }
     void set_launch_variable_name( const std::string& params_name ) { m_compile_options.pipelineLaunchParamsVariableName = params_name.c_str(); }
     void set_exception_flags( const OptixExceptionFlags flags ) { m_compile_options.exceptionFlags = flags; }
@@ -58,11 +58,11 @@ public:
     OptixPipelineLinkOptions link_options() const { return m_link_options; }
 
     /** \brief Create pipeline object and calculate the stack sizes of pipeline. */
-    void create(const OptixDeviceContext &ctx, const std::vector<ProgramGroup>& prg_groups) {
+    void create(const OptixDeviceContext &ctx, const std::vector<OptixProgramGroup>& prg_groups) {
         // Create pipeline from program groups.
         char log[2048];
         size_t sizeof_log = sizeof(log);
-        OPTIX_CHECK_LOG(optixPipelinCreate(
+        OPTIX_CHECK_LOG(optixPipelineCreate(
             ctx,
             &m_compile_options,
             &m_link_options,
@@ -70,13 +70,13 @@ public:
             prg_groups.size(),
             log, 
             &sizeof_log, 
-            m_pipeline
+            &m_pipeline
         ));
 
         // Specify the max traversal depth and calculate the stack sizes.
         OptixStackSizes stack_sizes = {};
         for (auto& prg_group : prg_groups) {
-            OPTIX_CHECK(optixUtilAccumulateStackSizes((OptixProgramGroup)prg_group, &stack_sizes));
+            OPTIX_CHECK(optixUtilAccumulateStackSizes(prg_group, &stack_sizes));
         }
         
         uint32_t dc_stacksize_from_traversal;

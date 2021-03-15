@@ -12,20 +12,20 @@ using ProgramEntry = std::pair<OptixModule, const char*>;
 class ProgramGroup {
 public: 
     ProgramGroup() {}
-    explicit ProgramGroup(OptixProgramGroupKind prg_kind) : ProgramGroup(prg_kind, {}) {}
+    explicit ProgramGroup(OptixProgramGroupKind prg_kind) : m_program_kind(prg_kind), m_program_options({}) {}
     explicit ProgramGroup(OptixProgramGroupKind prg_kind, OptixProgramGroupOptions prg_options)
     : m_program_kind(prg_kind), m_program_options(prg_options) {}
 
     /** \brief Enable to cast from `ProgramGroup` to `OptixProgramGroup` */
-    explicit operator OptixProgramGroup() return { m_program; }
+    explicit operator OptixProgramGroup() { return m_program; }
 
     template <typename ...Entries>
     void create(const OptixDeviceContext& ctx, Entries... entries)
     {
-        switch(m_program_kind)
+        switch(m_program_kind) {
         case OPTIX_PROGRAM_GROUP_KIND_RAYGEN:
-             OPTIX_PROGRAM_GROUP_KIND_MISS: 
-             OPTIX_PROGRAM_GROUP_KIND_EXCEPTION:
+        case OPTIX_PROGRAM_GROUP_KIND_MISS: 
+        case OPTIX_PROGRAM_GROUP_KIND_EXCEPTION:
             create_single_program(ctx, entries...);
             break;
         case OPTIX_PROGRAM_GROUP_KIND_HITGROUP:
@@ -33,6 +33,8 @@ public:
             break;
         case OPTIX_PROGRAM_GROUP_KIND_CALLABLES:
             create_callable_program(ctx, entries...);
+            break;
+        }
     }
 
     /** \brief Creation of a single-call program (Raygen, Miss, Exception) */
@@ -80,7 +82,7 @@ public:
     void create_hitgroup_program(const OptixDeviceContext& ctx, 
                                  const ProgramEntry& ch_entry) 
     {
-        create_hitgroup_program(ctx, ch_entry, ProgramEntry(nullptr, nullptr), ProgramEntry(nullptr, nullptr))
+        create_hitgroup_program(ctx, ch_entry, ProgramEntry(nullptr, nullptr), ProgramEntry(nullptr, nullptr));
     }
     /** \brief Closest-hit and intersection program are used to create hitgroup program. */
     void create_hitgroup_program(const OptixDeviceContext& ctx,
@@ -113,6 +115,7 @@ public:
             &prog_desc,
             1,
             &m_program_options,
+            log,
             &sizeof_log, 
             &m_program
         ));
@@ -121,7 +124,8 @@ public:
     /** Creation of callable programs */
     void create_callable_program(const OptixDeviceContext& ctx, 
                                  const ProgramEntry& dc_entry, 
-                                 const ProgramEntry& cc_entry) {
+                                 const ProgramEntry& cc_entry) 
+    {
         Assert(m_program_kind == OPTIX_PROGRAM_GROUP_KIND_CALLABLES,
                "The OptixProgramGroupKind " + to_str(m_program_kind) + " is not a callble program.");
         
@@ -139,19 +143,10 @@ public:
             &prog_desc, 
             1,
             &m_program_options,
+            log,
             &sizeof_log,
             &m_program
         ));   
-    }
-
-    /** 
-     * \note SBTRecord must be allocated on the device. 
-     * 
-     * \brief Bind SBT and program 
-     **/
-    template <typename SBTRecord>
-    void bind_sbtrecord(const SBTRecord& record) {
-        OPTIX_CHECK(optixSbtRecordPackHeader(m_program, &record));
     }
 private:
     OptixProgramGroup m_program;

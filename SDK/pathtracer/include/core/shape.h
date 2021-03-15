@@ -3,6 +3,7 @@
 #include <core/util.h>
 #include <core/aabb.h>
 #include <sutil/vec_math.h>
+#include <optix/macros.h>
 
 namespace pt {
 
@@ -31,11 +32,10 @@ inline std::ostream& operator<<(std::ostream& out, ShapeType type) {
 // Abstract class for readability
 class Shape {
 public:
-    virtual HOST ShapeType type() const = 0;
-    virtual HOST void prepare_shapedata() const = 0;
-    virtual HOST void build_input( OptixBuildInput& bi, uint32_t sbt_idx ) const = 0;
-    virtual HOST AABB bound() const = 0;
-
+    virtual ShapeType type() const = 0;
+    virtual void prepare_shapedata() const = 0;
+    virtual void build_input( OptixBuildInput& bi, uint32_t sbt_idx ) const = 0;
+    virtual AABB bound() const = 0;
 protected:
     CUdeviceptr d_data_ptr;
 };

@@ -12,7 +12,7 @@ struct MissData {
     float4 bg_color;
 };
 
-struct ShapeData {
+struct HitGroupData {
     /// Pointer that stores geometries data (e.g. \c pt::MeshData )
     void* data;
     MaterialPtr matptr;
@@ -27,6 +27,6 @@ struct Record
 
 using RayGenRecord = Record<RayGenData>;
 using MissRecord = Record<MissData>;
-using HitGroupRecord = Record<ShapeData>;
+using HitGroupRecord = Record<HitGroupData>;
 
 }

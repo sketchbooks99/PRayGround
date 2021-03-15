@@ -2,9 +2,9 @@
 
 #include <sutil/Matrix.h>
 #include <sutil/vec_math.h>
-
 #include <core/util.h>
 #include <core/ray.h>
+#include <optix/macros.h>
 
 namespace pt {
 

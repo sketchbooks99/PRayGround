@@ -23,7 +23,6 @@ public:
      */
     HOST AABB bound() {} 
 private:
-
     std::vector<float3> vertices;
     std::vector<float3> normals;
     std::vector<int3> indices;

@@ -209,10 +209,10 @@ HOST void TriangleMesh::prepare_shapedata() const {
     d_normals_buf.alloc_copy(normals);
     d_indices_buf.alloc_copy(indices);
 
-    MeshData = {
+    MeshData data = {
         d_vertices_buf.data(),
         d_normals_buf.data(),
-        d_indices_buf.data().
+        d_indices_buf.data(),
         Transform()
     };
 }   

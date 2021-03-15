@@ -26,8 +26,8 @@ inline std::ostream& operator<<(std::ostream& out, const OptixProgramGroupKind& 
         return out << "OPTIX_PROGRAM_GROUP_KIND_EXCEPTION";
     case OPTIX_PROGRAM_GROUP_KIND_HITGROUP:
         return out << "OPTIX_PROGRAM_GROUP_KIND_HITGROUP";
-    case OPTIX_PROGRAM_GROUP_KIND_EXCEPTION:
-        return out << "OPTIX_PROGRAM_GROUP_KIND_EXCEPTION";
+    case OPTIX_PROGRAM_GROUP_KIND_CALLABLES:
+        return out << "OPTIX_PROGRAM_GROUP_KIND_CALLABLES";
     default:
         return out << "";
     }

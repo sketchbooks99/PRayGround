@@ -7,12 +7,12 @@ namespace pt {
 
 class Sphere : public Shape {
 public:
-    explicit Sphere(float3 c, float r) : center(c), radius(r) {}
+    explicit Sphere(float3 c, float r) : m_center(c), m_radius(r) {}
 
     HOST ShapeType type() const override { return ShapeType::Sphere; }
     HOST AABB bound() const override { 
-        return AABB( center - make_float3(radius),
-                     center + make_float3(radius) );
+        return AABB( m_center - make_float3(m_radius),
+                     m_center + make_float3(m_radius) );
     }
     HOST void build_input( OptixBuildInput& bi, uint32_t sbt_idx ) const override
     {
@@ -31,10 +31,9 @@ public:
         bi.customPrimitiveArray.flags = (unsigned int*)(OPTIX_GEOMETRY_FLAG_NONE);
         bi.customPrimitiveArray.numSbtRecords = 1;
     }
-    
 private:
-    float3 center;
-    float radius;
+    float3 m_center;
+    float m_radius;
 };
 
 }

@@ -2,6 +2,7 @@
 
 #include <core/util.h>
 #include <sutil/vec_math.h>
+#include <optix.h>
 
 namespace pt {
 

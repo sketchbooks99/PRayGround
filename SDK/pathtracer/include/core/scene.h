@@ -10,8 +10,9 @@ class Scene {
 public:
     Scene() {}
 
+    void create_hitgroup_programs(const OptixDeviceContext& ctx, const OptixModule& module);
     /** \brief build geomerty acceleration structure. */
-    void build_gas();
+    void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data);
     /** 
      * \brief Create SBT with HitGroupData. 
      * \note SBTs for raygen and miss program is not created at this.

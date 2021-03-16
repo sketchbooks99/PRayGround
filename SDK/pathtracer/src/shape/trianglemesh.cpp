@@ -201,7 +201,7 @@ TriangleMesh::TriangleMesh(std::vector<float3> vertices,
 }
 
 // ------------------------------------------------------------------
-HOST void TriangleMesh::prepare_shapedata() const {
+void TriangleMesh::prepare_data() {
     CUDABuffer<float3> d_vertices_buf;
     CUDABuffer<float3> d_normals_buf;
     CUDABuffer<int3> d_indices_buf;
@@ -215,10 +215,17 @@ HOST void TriangleMesh::prepare_shapedata() const {
         d_indices_buf.data(),
         Transform()
     };
+
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_data_ptr), sizeof(MeshData)));
+    CUDA_CHECK(cudaMemcpy(
+        reinterpret_cast<void*>(d_data_ptr),
+        &data, sizeof(MeshData),
+        cudaMemcpyHostToDevice
+    ));
 }   
 
 // ------------------------------------------------------------------
-HOST void TriangleMesh::build_input( OptixBuildInput& bi, uint32_t sbt_idx ) const {
+HOST void TriangleMesh::build_input( OptixBuildInput& bi, uint32_t sbt_idx ) {
     // Prepare the indices of shader binding table on device.
     CUdeviceptr d_sbt_indices;
     std::vector<uint32_t> sbt_indices( indices.size(), sbt_idx );

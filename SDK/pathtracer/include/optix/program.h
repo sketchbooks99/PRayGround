@@ -19,8 +19,9 @@ public:
     /** \brief Enable to cast from `ProgramGroup` to `OptixProgramGroup` */
     explicit operator OptixProgramGroup() { return m_program; }
 
-    template <typename ...Entries>
-    void create(const OptixDeviceContext& ctx, Entries... entries)
+    /** \brief create program groups depends on OptixProgramGroupKind */
+    template <typename Context, typename ...Entries>
+    void create(const Context& ctx, Entries... entries)
     {
         switch(m_program_kind) {
         case OPTIX_PROGRAM_GROUP_KIND_RAYGEN:
@@ -147,6 +148,11 @@ public:
             &sizeof_log,
             &m_program
         ));   
+    }
+
+    template <typename SBTRecord>
+    void bind_sbt_and_program(SBTRecord record) {
+        OPTIX_CHECK(optixSbtRecordPackHeader(m_program, &record));
     }
 private:
     OptixProgramGroup m_program;

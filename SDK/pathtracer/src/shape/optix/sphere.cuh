@@ -1,9 +1,9 @@
 #pragma once 
 
-#include <core/util.h>
 #include <sutil/vec_math.h>
 #include <core/transform.h>
 #include <core/material.h>
+#include <optix/sbt.h>
 
 namespace pt {
 
@@ -14,7 +14,7 @@ struct SphereData {
 };
 
 CALLABLE_FUNC void IS_FUNC(sphere)() {
-    const pt::SphereHitGroupData* sphere_data = reinterpret_cast<pt::SphereHitGroupData*>(optixGetSbtDataPointer());
+    const pt::HitGroupData* sphere_data = reinterpret_cast<pt::HitGroupData*>(optixGetSbtDataPointer());
 
     const float radius = sphere_data->radius;
     const float3 center = sphere_data->center;

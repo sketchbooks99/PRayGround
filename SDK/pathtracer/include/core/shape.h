@@ -4,6 +4,7 @@
 #include <core/aabb.h>
 #include <sutil/vec_math.h>
 #include <optix/macros.h>
+#include <map>
 
 namespace pt {
 
@@ -12,6 +13,17 @@ enum class ShapeType {
     Mesh,       // Mesh with triangle 
     Sphere,     // Sphere 
     Plane       // Plane (rectangle)
+};
+
+/** 
+ * \brief 
+ * Map object to easily get string of shape via ShapeType, 
+ * ex) 
+ *  const char* shape_str = shape_map[ShapeType::Mesh] -> "mesh"
+ **/
+static std::map<ShapeType, const char*> shape_map = {
+    {ShapeType::Mesh, "mesh"},
+    {ShapeType::Sphere, "sphere"}
 };
 
 inline std::ostream& operator<<(std::ostream& out, ShapeType type) {
@@ -29,15 +41,37 @@ inline std::ostream& operator<<(std::ostream& out, ShapeType type) {
     }
 }
 
+struct AccelData {
+    struct HandleData {
+        OptixTraversableHandle handle;
+        CUdeviceptr d_buffer;
+        unsigned int count;
+    };
+    HandleData meshes;
+    HandleData customs;
+
+    ~AccelData() {
+        if (meshes.d_buffer) CUDA_CHECK(cudaFree(reinterpret_cast<void*>(meshes.d_buffer)));
+        if (customs.d_buffer) CUDA_CHECK(cudaFree(reinterpret_cast<void*>(customs.d_buffer)));
+    }
+};
+
 // Abstract class for readability
 class Shape {
 public:
     virtual ShapeType type() const = 0;
-    virtual void prepare_shapedata() const = 0;
-    virtual void build_input( OptixBuildInput& bi, uint32_t sbt_idx ) const = 0;
     virtual AABB bound() const = 0;
+
+    virtual void prepare_data() = 0;
+    virtual void build_input( OptixBuildInput& bi, uint32_t sbt_idx ) = 0;
+    void free_aabb_buffer() {
+        if (d_aabb_buffer) CUDA_CHECK(cudaFree(reinterpret_cast<void*>(d_aabb_buffer))); 
+    }
+
+    CUdeviceptr get_dptr() { return d_data_ptr; }
 protected:
-    CUdeviceptr d_data_ptr;
+    CUdeviceptr d_data_ptr { 0 };
+    CUdeviceptr d_aabb_buffer { 0 };
 };
 
 using ShapePtr = Shape*;

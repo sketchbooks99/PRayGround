@@ -4,9 +4,13 @@
 
 namespace pt {
 
-void Scene::prepare_on_device(const std::vector<ProgramGroup>& prg_groups)
-{
-    
+void Scene::build_gas() {
+    std::vector<OptixBuildInput> build_inputs_mesh;   // Mesh
+    std::vector<OptixBuildInput> build_inputs_custom; // Custom primitives
+}
+
+void Scene::create_hitgroup_sbt(const OptixModule& module, OptixShaderBindingTable& sbt) {
+
 }
 
 }

@@ -10,11 +10,18 @@ namespace pt {
 
 class Primitive {
 public:
+    // Constructors.
     Primitive(ShapePtr shape_ptr, MaterialPtr material_ptr, const Transform& transform, uint32_t sbt_index)
     : m_shape_ptr(shape_ptr), m_material_ptr(material_ptr), m_transform(m_transform), sbt_index(sbt_index) {}
+
+    // Member functions.
     ShapeType get_shapetype() const { return m_shape_ptr->type(); }
     MaterialType get_materialtype() const { return m_material_ptr->type(); }
+
+    void build_input(OptixBuildInput& bi) { m_shape_ptr->build_input( bi, sbt_index ); }
+
 private:
+    // Member variables.
     ShapePtr m_shape_ptr;
     MaterialPtr m_material_ptr;
     Transform m_transform;

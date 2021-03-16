@@ -534,7 +534,6 @@ void buildMeshAccel( PathTracerState& state )
     state.d_vertices.resize(meshes.size());
     state.d_indices.resize(meshes.size());
     state.d_normals.resize(meshes.size());
-    int mesh_offset = 0;
     for (int meshID = 0; meshID < meshes.size(); meshID++)
     {
         // alloc and copy vertices data

@@ -581,8 +581,6 @@ void buildMeshAccel( PathTracerState& state )
         unsigned int* triangle_input_flags = new unsigned int[1];
         triangle_input_flags[0] = OPTIX_GEOMETRY_FLAG_DISABLE_ANYHIT;
 
-        // When undefined pointer is set to new pointer in local function, 
-        // behaviour of this pointer will be undefined... maybe...
         triangle_inputs[meshID].type = OPTIX_BUILD_INPUT_TYPE_TRIANGLES;
         triangle_inputs[meshID].triangleArray.vertexFormat = OPTIX_VERTEX_FORMAT_FLOAT3;
         triangle_inputs[meshID].triangleArray.vertexStrideInBytes = sizeof(float3);
@@ -603,7 +601,6 @@ void buildMeshAccel( PathTracerState& state )
     accel_options.buildFlags = OPTIX_BUILD_FLAG_ALLOW_COMPACTION;
     accel_options.operation = OPTIX_BUILD_OPERATION_BUILD;
 
-    // BUG: Invalid arguments error occured with `triangleArray.flags`. 
     OptixAccelBufferSizes gas_buffer_sizes;
     OPTIX_CHECK( optixAccelComputeMemoryUsage(
         state.context,

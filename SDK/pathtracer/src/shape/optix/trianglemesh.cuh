@@ -4,6 +4,7 @@
 #include <sutil/vec_math.h>
 #include <core/transform.h>
 #include <core/material.h>
+#include <optix/sbt.h>
 
 namespace pt {
 
@@ -16,7 +17,8 @@ struct MeshData {
 
 CALLABLE_FUNC void CH_FUNC(mesh)()
 {
-    const MeshHitGroupData* mesh_data = reinterpret_cast<MeshHitGroupData*>(optixGetSbtDataPointer());
+    const HitGroupData* data = reinterpret_cast<HitGroupData*>(optixGetSbtDataPointer());
+    const MeshData* mesh_data = reinterpret_cast<MeshData*>(data->shapedata);
 
     const int prim_idx = optixGetPrimitiveIndex();
     const int3 index = mesh_data->indices[prim_idx];
@@ -40,7 +42,7 @@ CALLABLE_FUNC void CH_FUNC(mesh)()
     si->p = ro + tmax*rd;
     si->n = n;
     si->wi = rd;
-    mesh_data->matptr->sample(*si);
+    data->matptr->sample(*si);
 }
 
 }

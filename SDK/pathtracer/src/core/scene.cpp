@@ -16,7 +16,7 @@ void Scene::build_gas(const OptixDeviceContext& ctx, AccelData& accel_data) {
 
     for (auto &p : m_primitives) {
         if (p.shapetype() == ShapeType::Mesh) meshes.push_back(p);
-        else                                      customs.push_back(p);
+        else                                  customs.push_back(p);
     }
 
     auto build_single_gas = [&ctx](std::vector<Primitive> primitives, AccelData::HandleData& handle) {

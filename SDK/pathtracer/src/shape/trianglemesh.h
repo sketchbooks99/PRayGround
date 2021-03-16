@@ -21,7 +21,7 @@ public:
      * For future work, I'd like to make this renderer can switch a computing device 
      * (CPU/GPU) depends on an application.
      */
-    AABB bound() {} 
+    AABB bound() const override { return AABB(); } 
 private:
     std::vector<float3> vertices;
     std::vector<float3> normals;

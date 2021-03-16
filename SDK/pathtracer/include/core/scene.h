@@ -23,13 +23,19 @@ public:
     std::vector<Primitive> get_primitives() const { return m_primitives; }
 
     void set_width(const unsigned int w) { m_width = w; }
-    unsigned int get_width() const { return m_width; }
+    unsigned int width() const { return m_width; }
 
     void set_height(const unsigned int h) { m_height = h; }
-    unsigned int get_height() const { return m_height; }
+    unsigned int height() const { return m_height; }
 
     void set_bgcolor(const float4& bg) { m_bgcolor = bg; }
-    float4 get_bgcolor() const { return m_bgcolor; }
+    float4 bgcolor() const { return m_bgcolor; }
+
+    void set_depth(unsigned int d) { m_depth = d; }
+    unsigned int depth() const { return m_depth; }
+
+    void set_samples_per_launch(unsigned int spl) { m_samples_per_launch = spl; }
+    unsigned int samples_per_launch() const { return m_samples_per_launch; }
 private:
     std::vector<Primitive> m_primitives;    // Primitives to describe the scene.
     unsigned int m_width, m_height;         // Dimensions of output result.

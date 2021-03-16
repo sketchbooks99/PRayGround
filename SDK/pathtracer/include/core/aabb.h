@@ -8,6 +8,7 @@ namespace pt {
 
 class AABB {
 public:
+    AABB() : m_min(make_float3(0.f)), m_max(make_float3(0.f)) {}
     AABB(float3 min, float3 max) : m_min(min), m_max(max) {}
     float3 min() const { return m_min; }
     float3 max() const { return m_max; }

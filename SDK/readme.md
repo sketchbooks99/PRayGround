@@ -17,6 +17,21 @@
     - スカラー型、ベクトル型はレジスタに格納される
     - レジスタに収まりきらないものはローカルメモリに溢れ出る。
 
+## デバイス側にクラスのコピーオブジェクトを生成する。
+ref : https://codereview.stackexchange.com/questions/193367/cuda-c-host-device-polymorphic-class-implementation
+
+```c++
+template <typename T, typename... Args>
+__global__ void create_object_on_device(T** d_ptr, Args... args) {
+  d_ptr = new T(args...);
+}
+
+Diffuse* diffuse = new Diffuse(make_float3(0.8f));
+CUdeviceptr d_ptr;
+cudaMalloc(reinterpret_cast<void**>(&d_ptr), sizeof(diffuse));
+create_object_on_device<<<1,1>>>(reinterpret_cast<Diffuse**>(&d_ptr), diffuse->albedo); 
+```
+
 # OptiX
 
 ## プログラム

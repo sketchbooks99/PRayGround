@@ -1,4 +1,0 @@
-# CMake generation dependency list for this directory.
-C:/Users/lunae/Desktop/OptiX/SDK/CMake/FindCUDA/run_nvcc.cmake
-C:/Users/lunae/Desktop/OptiX/SDK/build/lib/optixPaging/CMakeFiles/optixPaging.dir/optixPaging_generated_optixPaging.cu.obj.depend
-C:/Users/lunae/Desktop/OptiX/SDK/lib/optixPaging/CMakeLists.txt

@@ -1,5 +1,0 @@
-# CMake generation dependency list for this directory.
-C:/Program Files/CMake/share/cmake-3.19/Modules/FindOpenGL.cmake
-C:/Program Files/CMake/share/cmake-3.19/Modules/FindPackageHandleStandardArgs.cmake
-C:/Program Files/CMake/share/cmake-3.19/Modules/FindPackageMessage.cmake
-C:/Users/lunae/Desktop/OptiX/SDK/support/CMakeLists.txt

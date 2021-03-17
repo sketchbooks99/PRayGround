@@ -1,25 +1,91 @@
-# OptiX
-このリポジトリはNVIDIA OptiX Raytracing Engine にまつわる開発を進めるリポジトリです。
+# 開発用メモ
 
-This repository is for developping a ray tracing application with NVIDIA OptiX Raytracing Engine.
+# CUDA
+接頭語の意味
+- 関数
+  - `__global__` : ホスト側から呼び出されてデバイス側で実行される
+  - `__device__` : デバイス側から呼び出されてデバイス側で実行される
+  - `__host__` : ホスト側から呼び出されてホスト側で実行される
+- 変数
+  - `__device__` : グローバルメモリに格納される
+    - `cudaMalloc()`によって領域確保される
+    - 全スレッドからアクセス可能
+  - `__shared__` : オンチップ共有メモリに格納される
+  - 実行時 or コンパイル時に指定される 
+    - 同じスレッドブロック内のすべてのスレッドでアクセス可能
+    - 修飾子なし
+    - スカラー型、ベクトル型はレジスタに格納される
+    - レジスタに収まりきらないものはローカルメモリに溢れ出る。
 
-# TODO
-- [x] .objのローダーをblender由来のオブジェクトも読み込めるように改変する。
-- [ ] Transform( translate/rotate/scale )を適用できるようにする。
-- [ ] 下のコードみたいにMaterial と Shape オブジェクトを一緒に管理する？
+## デバイス側にクラスのコピーオブジェクトを生成する。
+ref : https://codereview.stackexchange.com/questions/193367/cuda-c-host-device-polymorphic-class-implementation
+
 ```c++
-struct Primitive {
-    Shape or Mesh shape; // Is it better to manage with the pointer of abstract class?
-    Material material;
-};
+template <typename T, typename... Args>
+__global__ void create_object_on_device(T** d_ptr, Args... args) {
+  d_ptr = new T(args...);
+}
 
-// before
-std::vector<TriangleMesh> meshes;
-std::vector<Material*> materials;
-meshes.emplace_back(mesh);
-materials.emplace_back(new Material());
+Diffuse* diffuse = new Diffuse(make_float3(0.8f));
+CUdeviceptr d_ptr;
+cudaMalloc(reinterpret_cast<void**>(&d_ptr), sizeof(diffuse));
+create_object_on_device<<<1,1>>>(reinterpret_cast<Diffuse**>(&d_ptr), diffuse->albedo); 
+```
 
-// after
-std::vector<Primitive> primitives;
-primitives.emplace_back(mesh, new Material());
+# OptiX
+
+## プログラム
+- Direct callable program
+  - `optixTrace()` が呼べない
+  - 関数から即座に呼べる。
+  - `OptixDiractCallable()`で呼ぶ。
+  - テクスチャ切り替えに向いている
+- Continuation callable program
+  - `optixTrace()`が呼べる。
+  - スケジューラによって統制される必要があり、オーバーヘッドが大きくなりやすい。
+
+## 関数
+- `optixReportIntersection()` - OptiX Programing Guide p.72
+  - 三角形は三角形内の重心座標(u,v)をattributeとして格納している。
+    - 使用例) `float n = u*n0 + v*n1 + (1-u-v)*n2 // 法線の線形補間` 
+```C++
+__device__ bool optixReportIntersection(
+  float hitT,                                  // ray time
+  unsigned int hitKind,                        // specify any-hit or closest hit or both
+  unsigned int a0, ..., unsigned int a7 );     // attributes (this is used to communicate with CH program)
+
+__device__ unsigned int optixGetAttribute_0(); // 0 - 7
+```
+
+
+# Rule of coding 
+## 変数・関数名
+- クラス名は大文字で始める
+- メンバ変数はできるだけ、`m_` で始める。
+- プライベート関数は `_` で始める。
+- クラス名以外は単語の間は `_` でつなぎ、大文字小文字の切り替えで単語を区切らないようにする
+- `template` は使えるところでは積極的に使う。
+  - 汎用性が高いクラス構造を目指す。
+- 基本的に `using namespace` は避ける。名前空間をはっきり明記するように。**使う場合は局所的なスコープ(関数内、クラス内など)に限定する**
+  - ex) 
+  - NG: `using namespace std; string str;`;
+  - OK: `std::string str;`
+
+例
+```c++
+template <typename T>
+class Hoge {
+public:
+    explicit Hoge(T val) : m_val(val), m_str("") {}
+    explicit Hoge(T val, const std::string& str) : m_val(val), m_str(str) {}
+
+    void set_val(T val) { m_val = val; }
+    int get_val() const { return m_val; }
+
+    void set_str(const std::string& str) { m_str = str; }
+    std::string get_str() const { return m_str; }
+private:
+    T m_val;
+    std::string m_str;
+}
 ```

@@ -1,0 +1,23 @@
+﻿  Building NVCC (Device) object lib/ptx/Release/optixPaging_generated_optixPaging.cu.obj
+  optixPaging.cu
+  optixPaging.cu
+  Building Custom Rule C:/Users/lunae/Desktop/OptiX/SDK/lib/optixPaging/CMakeLists.txt
+  CMake is re-running because C:/Users/lunae/Desktop/OptiX/SDK/build/lib/optixPaging/CMakeFiles/generate.stamp is out-of-date.
+    the file 'C:/Users/lunae/Desktop/OptiX/SDK/build/lib/optixPaging/CMakeFiles/optixPaging.dir/optixPaging_generated_optixPaging.cu.obj.depend'
+    is newer than 'C:/Users/lunae/Desktop/OptiX/SDK/build/lib/optixPaging/CMakeFiles/generate.stamp.depend'
+    result='-1'
+  -- Selecting Windows SDK version 10.0.18362.0 to target Windows 10.0.21318.
+  CMake Deprecation Warning at CMakeLists.txt:94 (cmake_policy):
+    Compatibility with CMake < 2.8.12 will be removed from a future version of
+    CMake.
+  
+    Update the VERSION argument <min> value or use a ...<max> suffix to tell
+    CMake that the project does not need compatibility with older versions.
+  
+  
+  -- Could NOT find Vulkan (missing: VULKAN_LIBRARY VULKAN_INCLUDE_DIR) 
+  -- Using Win32 for window creation
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/lunae/Desktop/OptiX/SDK/build
+  optixPaging.vcxproj -> C:\Users\lunae\Desktop\OptiX\SDK\build\lib\Release\optixPaging.lib

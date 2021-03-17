@@ -1,0 +1,19 @@
+﻿  Building Custom Rule C:/Users/lunae/Desktop/OptiX/SDK/myOptixPathTracing/CMakeLists.txt
+  myOptixPathTracing.cpp
+  TriangleMesh.cpp
+C:\Users\lunae\Desktop\OptiX\SDK\myOptixPathTracing\TriangleMesh.cpp(151,35): warning C4244: '引数': '_Ty' から 'const float' への変換です。データが失われる可能性があります。
+          with
+          [
+              _Ty=int
+          ]
+C:\Users\lunae\Desktop\OptiX\SDK\myOptixPathTracing\TriangleMesh.cpp(193,35): warning C4244: '引数': '_Ty' から 'const float' への変換です。データが失われる可能性があります。
+          with
+          [
+              _Ty=int
+          ]
+C:\Users\lunae\Desktop\OptiX\SDK\myOptixPathTracing\myOptixPathTracing.cpp(659,1): warning C4267: '引数': 'size_t' から 'unsigned int' に変換しました。データが失われているかもしれません。
+C:\Users\lunae\Desktop\OptiX\SDK\myOptixPathTracing\myOptixPathTracing.cpp(550,9): warning C4189: 'mesh_offset': ローカル変数が初期化されましたが、参照されていません
+C:\Users\lunae\Desktop\OptiX\SDK\myOptixPathTracing\myOptixPathTracing.cpp(1026,1): warning C4267: '引数': 'size_t' から 'unsigned int' に変換しました。データが失われているかもしれません。
+C:\Users\lunae\Desktop\OptiX\SDK\myOptixPathTracing\myOptixPathTracing.cpp(1183,60): warning C4267: '=': 'size_t' から 'unsigned int' に変換しました。データが失われているかもしれません。
+     ライブラリ C:/Users/lunae/Desktop/OptiX/SDK/build/lib/Debug/myOptixPathTracing.lib とオブジェクト C:/Users/lunae/Desktop/OptiX/SDK/build/lib/Debug/myOptixPathTracing.exp を作成中
+  myOptixPathTracing.vcxproj -> C:\Users\lunae\Desktop\OptiX\SDK\build\bin\Debug\myOptixPathTracing.exe

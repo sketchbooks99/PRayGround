@@ -1,0 +1,5 @@
+﻿  Building NVCC (Device) object lib/ptx/Debug/optixPaging_generated_optixPaging.cu.obj
+  optixPaging.cu
+  optixPaging.cu
+  Building Custom Rule C:/Users/lunae/Desktop/OptiX/SDK/lib/optixPaging/CMakeLists.txt
+  optixPaging.vcxproj -> C:\Users\lunae\Desktop\OptiX\SDK\build\lib\Debug\optixPaging.lib

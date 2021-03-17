@@ -1,0 +1,10 @@
+﻿  Building Custom Rule C:/Users/lunae/Desktop/OptiX/SDK/sutil/CMakeLists.txt
+  Camera.cpp
+  GLDisplay.cpp
+  PPMLoader.cpp
+  Scene.cpp
+  sutil.cpp
+  Trackball.cpp
+C:\Users\lunae\Desktop\OptiX\SDK\support\tinyexr/tinyexr.h(7335,16): warning C5208: typedef 名で使用されている名前のないクラスでは、静的でないデータ メンバー、メンバーの列挙値、メンバー クラス以外のメンバーを宣言できません (ソース ファイルをコンパイルしています C:\Users\lunae\Desktop\OptiX\SDK\sutil\sutil.cpp)
+     ライブラリ C:/Users/lunae/Desktop/OptiX/SDK/build/lib/Debug/sutil_7_sdk.lib とオブジェクト C:/Users/lunae/Desktop/OptiX/SDK/build/lib/Debug/sutil_7_sdk.exp を作成中
+  sutil_7_sdk.vcxproj -> C:\Users\lunae\Desktop\OptiX\SDK\build\bin\Debug\sutil_7_sdk.dll

@@ -1,0 +1,10 @@
+^C:\USERS\LUNAE\DESKTOP\OPTIX\SDK\MYOPTIXPATHTRACING\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/lunae/Desktop/OptiX/SDK -BC:/Users/lunae/Desktop/OptiX/SDK/build --check-stamp-file C:/Users/lunae/Desktop/OptiX/SDK/build/myOptixPathTracing/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

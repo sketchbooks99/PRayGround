@@ -1,0 +1,9 @@
+C:/Users/lunae/Desktop/OptiX/SDK/build/CMakeFiles/ALL_BUILD.dir
+C:/Users/lunae/Desktop/OptiX/SDK/build/CMakeFiles/ZERO_CHECK.dir
+C:/Users/lunae/Desktop/OptiX/SDK/build/myOptixPathTracing/CMakeFiles/myOptixPathTracing.dir
+C:/Users/lunae/Desktop/OptiX/SDK/build/sutil/CMakeFiles/sutil_7_sdk.dir
+C:/Users/lunae/Desktop/OptiX/SDK/build/lib/optixPaging/CMakeFiles/optixPaging.dir
+C:/Users/lunae/Desktop/OptiX/SDK/build/support/CMakeFiles/glad.dir
+C:/Users/lunae/Desktop/OptiX/SDK/build/support/GLFW/CMakeFiles/ALL_BUILD.dir
+C:/Users/lunae/Desktop/OptiX/SDK/build/support/GLFW/src/CMakeFiles/glfw.dir
+C:/Users/lunae/Desktop/OptiX/SDK/build/support/imgui/CMakeFiles/imgui.dir

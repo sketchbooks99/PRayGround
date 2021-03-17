@@ -91,7 +91,9 @@ struct Transform {
     }
 
     DEVICE float3 transform_ray(const Ray& r) {
-        float ro = point_mul(r.o)
+        float ro = point_mul(r.origin());
+        float rd = vector_mul(r.direction());
+        return Ray(ro, rd, r.time(), r.color());
     }
 #endif
 };

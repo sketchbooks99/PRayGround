@@ -71,7 +71,6 @@ private:
     // Member variables.
     ShapePtr m_shape_ptr;
     MaterialPtr m_material_ptr;
-    Transform m_transform;
 
     /** 
      * @param
@@ -83,7 +82,30 @@ private:
     uint32_t m_sbt_index { 0 };
 };
 
-void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data, const std::vector<Primitive> primitives) {
+// ---------------------------------------------------------------------
+/** 
+ * \note 
+ * Transform stored in this class never be modified from outside, 
+ * so transform operations must be performed before constructing 
+ * this class.
+ */
+class PrimitiveInstance {
+public:
+    PrimitiveInstance() {}
+    PrimitiveInstance(const Transform& t) : m_transform(t) {}
+    PrimitiveInstance(const Transform& transform, const std::vector<Primitive>& primitives)
+    : m_transform(transform), m_primitives(primitives) {}
+
+    void add_primitive(const Primitive& p) { m_primitives.push_back(p); }
+    void set_transform(const Transform& t) { m_transform = t; } 
+private:
+    Transform m_transform;
+    std::vector<Primitive> m_primitives;
+}
+
+
+// ---------------------------------------------------------------------
+void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data, const std::vector<Primitive>& primitives) {
     std::vector<Primitive> meshes;
     std::vector<Primitive> customs;
 
@@ -179,9 +201,8 @@ void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data, const std::
 
 void build_ias(const OptixDeviceContext& ctx, 
                const AccelData& accel_data,
-               const std::vector<Primitive>& primitives, 
                std::vector<OptixInstance>& instances, 
-               const Transform& transform)
+               const PrimitiveInstance& prim_instance)
 {
     
 }

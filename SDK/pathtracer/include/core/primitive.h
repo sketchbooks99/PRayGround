@@ -1,3 +1,14 @@
+/** 
+ * \file primitive.h
+ * \brief Management of primitives include shape and material.
+ * \author Shunji Kiuchi
+ * 
+ * \details 
+ * Primitive has shape, material and its program on CUDA 
+ * to describe primitive behaivior during rendering. 
+ * PrimitiveInstance has the array of primitives and transform
+ * to easily construct Instance AS. 
+ */
 #pragma once
 
 #include <core/util.h>
@@ -48,11 +59,11 @@ public:
     void free_temp_buffer() { if (m_shape_ptr->type() != ShapeType::Mesh) m_shape_ptr->free_aabb_buffer(); }
 
     // Bind programs and HitGroupRecord
-    void bind_radiance_record(HitGroupRecord record) {
+    void bind_radiance_record(const HitGroupRecord& record) {
         Assert(!m_program_groups.empty(), "ProgramGroups is not allocated.");
         m_program_groups[0].bind_sbt_and_program(record);
     }
-    void bind_occlusion_record(HitGroupRecord record) {
+    void bind_occlusion_record(const HitGroupRecord& record) {
         Assert(m_program_groups.size() > 1, "Occlusion program is not contained in rendering.");
         m_program_groups[1].bind_sbt_and_program(record);
     }
@@ -94,12 +105,13 @@ private:
 class PrimitiveInstance {
 public:
     PrimitiveInstance() : m_transform(Transform()) {}
-    PrimitiveInstance(const Transform& transform) : m_transform(transform) {}
-    PrimitiveInstance(const Transform& transform, const std::vector<Primitive>& primitives)
+    explicit PrimitiveInstance(const Transform& transform) : m_transform(transform) {}
+    explicit PrimitiveInstance(const Transform& transform, const std::vector<Primitive>& primitives)
     : m_transform(transform), m_primitives(primitives) {}
 
     void add_primitive(const Primitive& p) { m_primitives.push_back(p); }
     std::vector<Primitive> primitives() const { return m_primitives; }
+    
     void set_transform(const Transform& t) { m_transform = t; } 
     Transform transform() const { return m_transform; }
 private:
@@ -226,6 +238,7 @@ void build_ias(const OptixDeviceContext& ctx,
                             ? OPTIX_INSTANCE_FLAG_DISABLE_TRANSFORM 
                             : OPTIX_INSTANCE_FLAG_NONE;
 
+    // Create OptixInstance for the meshes.
     if (accel_data.meshes.handle) {
         OptixInstance instance = { 
             {transform.mat[0], transform.mat[1], transform.mat[2], transform.mat[3],
@@ -234,10 +247,11 @@ void build_ias(const OptixDeviceContext& ctx,
             instance_id, sbt_base, visibility_mask, flags, 
             accel_data.meshes.handle, {0, 0} /* pad */
         };
-        sbt_base++;
+        sbt_base += (unsigned int)accel_data.meshes.count;
         instances.push_back(instance);
     }
 
+    // Create OptixInstance for the custom geometry.
     if (accel_data.customs.handle) {
         OptixInstance instance = { 
             {transform.mat[0], transform.mat[1], transform.mat[2], transform.mat[3],
@@ -248,7 +262,6 @@ void build_ias(const OptixDeviceContext& ctx,
         };
         instances.push_back(instance);
     }
-
 }
 
 }

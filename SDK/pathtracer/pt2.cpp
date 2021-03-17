@@ -32,6 +32,10 @@
 #include <core/cudabuffer.h>
 #include <core/pathtracer.h>
 #include <core/scene.h>
+#include <core/primitive.h>
+
+// Header file describe the scene
+#include "scene_file.h"
 
 bool resize_dirty = false;
 bool minimized = false;
@@ -145,6 +149,7 @@ void initLaunchParams( pt::Params& params )
 
     params.max_depth = 10;
 
+    /** \todo Must be handle of instance AS */
     params.handle         = state.gas_handle;
 
     CUDA_CHECK( cudaStreamCreate( &state.stream) );
@@ -195,7 +200,7 @@ void launchSubframe( sutil::CUDAOutputBuffer<uchar4>& output_buffer, PathTracerS
     state.params.frame_buffer  = result_buffer_data;
     CUDA_CHECK( cudaMemcpyAsync(
         reinterpret_cast<void*>( state.d_params ),
-        &state.params, sizeof( Params ),
+        &state.params, sizeof( pt::Params ),
         cudaMemcpyHostToDevice, state.stream
     ));
 
@@ -204,7 +209,7 @@ void launchSubframe( sutil::CUDAOutputBuffer<uchar4>& output_buffer, PathTracerS
         state.pipeline, 
         state.stream,
         reinterpret_cast<CUdeviceptr>( state.d_params ),
-        sizeof( Params ),
+        sizeof( pt::Params ),
         &state.sbt,
         state.params.width,
         state.params.height,
@@ -236,8 +241,27 @@ static void context_log_cb( unsigned int level, const char* tag, const char* mes
 
 // ========== Main ==========
 int main(int argc, char* argv[]) {
-    OptixDeviceContext ctx;
+    // Initialize CUDA
+    CUDA_CHECK(cudaFree(0));
 
+    // Create device context.
+    OptixDeviceContext context;
+    CUcontext cu_ctx = 0;
+    OPTIX_CHECK(optixInit());
+    OptixDeviceContextOptions options = {};
+    options.logCallbackFunction = &context_log_cb;
+    options.logCallbackLevel = 4;
+    OPTIX_CHECK(optixDeviceContextCreate(cu_ctx, &options, &context));
+
+    /// Load scene from \c scene_file.h 
+    pt::Scene scene = my_scene();
+
+    
+
+
+    // =======================================================================
+    // ↓ SAMPLE CODE 
+    // =======================================================================
     sutil::CUDAOutputBufferType output_buffer_type = sutil::CUDAOutputBufferType::GL_INTEROP;
 
     std::string outfile;
@@ -258,9 +282,9 @@ int main(int argc, char* argv[]) {
         {
             const std::string dims_arg = arg.substr(6);
             int w, h;
-            sutil::parseDimensions(dims_arg.c_str, w, h);
-            state.params.width = w;
-            state.params.height = h;
+            sutil::parseDimensions(dims_arg.c_str(), w, h);
+            scene.set_width(w);
+            scene.set_height(h);
         }
         else if (arg == "--launch-samples" || arg == "-s")
         {

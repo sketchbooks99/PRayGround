@@ -10,20 +10,72 @@ class Scene {
 public:
     Scene() {}
 
-    void create_hitgroup_programs(const OptixDeviceContext& ctx, const OptixModule& module);
-    /** \brief build geomerty acceleration structure. */
-    void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data);
-    void build_ias(const OptixDeviceContext& ctx, 
-                   const AccelData& accel_data, 
-                   const Transform& transform, 
-                   std::vector<OptixInstance> instances());
+    /** 
+     * \brief Create programs associated with primitives.
+     */
+    void create_hitgroup_programs(const OptixDeviceContext& ctx, const OptixModule& module) {
+        for (auto &ps : m_primitives_instances) { 
+            for (auto &p : ps.primitives()) {
+                p.create_programs(ctx, module);
+            }
+        }
+    }
+
     /** 
      * \brief Create SBT with HitGroupData. 
-     * \note SBTs for raygen and miss program is not created at this.
+     * \note SBTs for raygen and miss program aren't created at here.
      */
-    void create_hitgroup_sbt(const OptixModule& module, OptixShaderBindingTable& sbt);
+    void create_hitgroup_sbt(const OptixModule& module, OptixShaderBindingTable& sbt) {
+        const size_t hitgroup_record_size = sizeof(HitGroupRecord);
+        unsigned int sbt_idx = 0;
+        unsigned int num_hitgroup_records = 0;
+        std::vector<HitGroupRecord> hitgroup_records;
+        for (auto &ps : m_primitives_instances) {
+            for (auto &p : ps.primitives()) {
+                for (int i=0; i<RAY_TYPE_COUNT; i++) {
+                    // Bind sbt to radiance program groups. 
+                    if (i == 0) 
+                    {
+                        HitGroupRecord record;
+                        record.data.shapedata = p.shape()->get_dptr();
+                        record.data.matptr = p.material()->get_dptr();
+                        p.bind_radiance_record(record);
+                        hitgroup_records.push_back(record);
+                        sbt_idx++;
+                    } 
+                    // Bind sbt to occlusion program groups.
+                    else if (i == 1) 
+                    {
+                        HitGroupRecord record;
+                        memset(&record, 0, hitgroup_record_size);
+                        p.bind_occlusion_record(record);
+                        hitgroup_records.push_back(record);
+                        sbt_idx++;
+                    }
+                    num_hitgroup_records++;
+                }
+            }
+        }
 
-    void add_primitive(const PrimitiveInstance& ps) { m_primitives_instances.push_back(ps); }
+        // Prepare the device side data buffer of HitGroupRecord.
+        CUdeviceptr d_hitgroup_records;
+        CUDA_CHECK(cudaMalloc( 
+            reinterpret_cast<void**>(&d_hitgroup_records), 
+            hitgroup_record_size * num_hitgroup_records 
+            ));
+        CUDA_CHECK(cudaMemcpy(
+            reinterpret_cast<void*>(d_hitgroup_records), 
+            hitgroup_records.data(), 
+            hitgroup_record_size * num_hitgroup_records, 
+            cudaMemcpyHostToDevice 
+            ));
+
+        sbt.hitgroupRecordBase = d_hitgroup_records;
+        sbt.callablesRecordStrideInBytes = static_cast<uint32_t>( hitgroup_record_size );
+        sbt.callablesRecordCount = num_hitgroup_records;
+    }
+
+    void add_primitive_instance(const PrimitiveInstance& ps) { m_primitives_instances.push_back(ps); }
     std::vector<PrimitiveInstance> primitive_instances() const { return m_primitives_instances; }
 
     void set_width(const unsigned int w) { m_width = w; }

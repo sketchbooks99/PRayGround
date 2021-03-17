@@ -60,9 +60,9 @@ public:
     // virtual HOSTDEVICE float pdf(const Ray& r, const SurfaceInteraction& si) const = 0; */
     virtual HOST MaterialType type() const = 0;
 
-    HOST CUdeviceptr get_dptr() { return d_ptr; }
+    HOST MaterialPtr get_dptr() { return d_ptr; }
 protected:
-    CUdeviceptr d_ptr { 0 }; // device pointer.
+    MaterialPtr d_ptr { 0 }; // device pointer.
 
     virtual void setup_on_device() = 0;
     virtual void delete_on_device() = 0;

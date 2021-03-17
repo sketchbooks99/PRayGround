@@ -254,10 +254,24 @@ int main(int argc, char* argv[]) {
     OPTIX_CHECK(optixDeviceContextCreate(cu_ctx, &options, &context));
 
     /// Load scene from \c scene_file.h 
-    pt::Scene scene = my_scene();
+    pt::Scene scene = my_scene();    
+
+    // Root instance AS to manage all geometry ASs.
+    OptixInstance root_instance;
+    // Build children instance ASs that contain the geometry AS. 
+    std::vector<OptixInstance> instances;
+    std::vector<pt::AccelData> accels;
+    unsigned int sbt_base_offset = 0; 
+    unsigned int instance_id = 0;
+    for (auto &ps : scene.primitive_instances()) {
+        pt::AccelData accel;
+        pt::build_gas(context, accel, ps.primitives());
+        pt::build_ias(context, accel, ps, sbt_base_offset, instance_id, instances);
+        sbt_base_offset += (accel.meshes.count + accel.customs.count);
+        instance_id++;
+    }
 
     
-
 
     // =======================================================================
     // ↓ SAMPLE CODE 

@@ -8,41 +8,24 @@
 
 namespace pt {
 
-/// \brief Multiply matrix with positional vector.
-HOSTDEVICE INLINE float3 point_mul(const sutil::Matrix4x4& m, const float3& p) {
-    float x = m[0*4+0]*p.x + m[0*4+1]*p.y + m[0*4+2]*p.z + m[0*4+3];
-    float y = m[1*4+0]*p.x + m[1*4+1]*p.y + m[1*4+2]*p.z + m[1*4+3];
-    float z = m[2*4+0]*p.x + m[2*4+1]*p.y + m[2*4+2]*p.z + m[2*4+3];
-    float w = m[3*4+0]*p.x + m[3*4+1]*p.y + m[3*4+2]*p.z + m[3*4+3];
-    if (w == 1)
-        return make_float3(x, y, z);
-    else
-        return make_float3(x, y, z) / w;
-}
-
-/// \brief Muitiply matrix with normal.
-HOSTDEVICE INLINE float3 normal_mul(const sutil::Matrix4x4& m, const float3& n) {
-    float x = n.x, y = n.y, z = n.z;
-    return make_float3(m[0*4+0]*x + m[1*4*0]*y + m[2*4+0]*z,
-                       m[0*4+1]*x + m[1*4*1]*y + m[2*4+1]*z,
-                       m[0*4+2]*x + m[1*4*2]*y + m[2*4+2]*z);
-}
-
-/// \brief Multiply matrix with vector.
-HOSTDEVICE INLINE float3 vector_mul(const sutil::Matrix4x4& m, const float3& v) {
-    float x = v.x, y = v.y, z = v.z;
-    return make_float3(m[0*4+0]*x + m[0*4+1]*y + m[0*4+2]*z,
-                       m[1*4+0]*x + m[1*4+1]*y + m[1*4+2]*z,
-                       m[2*4+0]*x + m[2*4+1]*y + m[2*4+2]*z);
-}
-
-class Transform {
-public:
+struct Transform {
     sutil::Matrix4x4 mat, matInv;
 
-    Transform() {}
-    explicit Transform(sutil::Matrix4x4 m) : mat(m), matInv(m.inverse()) {}
-    explicit Transform(sutil::Matrix4x4 m, sutil::Matrix4x4 mInv) : mat(m), matInv(mInv) {}
+    HOSTDEVICE Transform() {}
+    explicit HOSTDEVICE Transform(sutil::Matrix4x4 m) : mat(m), matInv(m.inverse()) {}
+    explicit HOSTDEVICE Transform(sutil::Matrix4x4 m, sutil::Matrix4x4 mInv) : mat(m), matInv(mInv) {}
+
+    HOSTDEVICE Transform operator*(const Transform& t) {
+        sutil::Matrix4x4 m = mat * t.mat;
+        sutil::Matrix4x4 mInv = t.matInv * matInv;
+        return Transform(m, mInv);
+    }
+
+    HOSTDEVICE Transform operator*=(const Transform& t) {
+        mat = mat * t.mat;
+        matInv = t.matInv * matInv;
+        return *this;
+    }
 
 #ifdef __CUDACC__
     DEVICE Transform() {}
@@ -58,48 +41,59 @@ public:
     }
 #endif 
 
-    void rotate_x(const float radians) { this->rotate(radians, make_float3(1, 0, 0)); }
-    void rotate_y(const float radians) { this->rotate(radians, make_float3(0, 1, 0)); }
-    void rotate_z(const float radians) { this->rotate(radians, make_float3(0, 0, 1)); }
-    void rotate(const float radians, const float3& axis);
+#ifndef __CUDACC__
+    HOST void rotate_x(const float radians) { this->rotate(radians, make_float3(1, 0, 0)); }
+    HOST void rotate_y(const float radians) { this->rotate(radians, make_float3(0, 1, 0)); }
+    HOST void rotate_z(const float radians) { this->rotate(radians, make_float3(0, 0, 1)); }
+    HOST void rotate(const float radians, const float3& axis) {
+        sutil::Matrix4x4 rotateMat = sutil::Matrix4x4::rotate(radians, axis);
+        sutil::Matrix4x4 rotateMatInv = rotateMat.inverse();
+        *this *= Transform(rotateMat, rotateMatInv);
+    }
     
-    void translate(const float3& v); 
+    HOST void translate(const float3& v) {
+        sutil::Matrix4x4 translateMat = sutil::Matrix4x4::translate(v);
+        sutil::Matrix4x4 translateMatInv = translateMat.inverse();
+        *this *= Transform(translateMat, translateMatInv);
+    }
 
-    void scale(const float s) { this->scale(make_float3(s)); }
-    void scale(const float3& v);
-
-#ifdef __CUDAC__
+    HOST void scale(const float s) { this->scale(make_float3(s)); }
+    HOST void scale(const float3& s) {
+        sutil::Matrix4x4 scaleMat = sutil::Matrix4x4::scale(s);
+        sutil::Matrix4x4 scaleMatInv = scaleMat.inverse();
+        *this *= Transform(scaleMat, scaleMatInv);
+    }
+#else
     DEVICE float3 point_mul(const float3& p) {
-
+        float x = mat[0*4+0]*p.x + mat[0*4+1]*p.y + mat[0*4+2]*p.z + mat[0*4+3];
+        float y = mat[1*4+0]*p.x + mat[1*4+1]*p.y + mat[1*4+2]*p.z + mat[1*4+3];
+        float z = mat[2*4+0]*p.x + mat[2*4+1]*p.y + mat[2*4+2]*p.z + mat[2*4+3];
+        float w = mat[3*4+0]*p.x + mat[3*4+1]*p.y + mat[3*4+2]*p.z + mat[3*4+3];
+        if (w == 1)
+            return make_float3(x, y, z);
+        else
+            return make_float3(x, y, z) / w;
     }
 
     DEVICE float3 vector_mul(const float3& v) {
-
+        float x = v.x, y = v.y, z = v.z;
+        return make_float3(mat[0*4+0]*x + mat[0*4+1]*y + mat[0*4+2]*z,
+                           mat[1*4+0]*x + mat[1*4+1]*y + mat[1*4+2]*z,
+                           mat[2*4+0]*x + mat[2*4+1]*y + mat[2*4+2]*z);
     }
 
+    // Multiply itself and normal
     DEVICE float3 normal_mul(const float3& n) {
-
+        float x = n.x, y = n.y, z = n.z;
+        return make_float3(matInv[0*4+0]*x + matInv[1*4*0]*y + matInv[2*4+0]*z,
+                           matInv[0*4+1]*x + matInv[1*4*1]*y + matInv[2*4+1]*z,
+                           matInv[0*4+2]*x + matInv[1*4*2]*y + matInv[2*4+2]*z);
     }
 
     DEVICE float3 transform_ray(const Ray& r) {
-        
+        float ro = point_mul(r.o)
     }
 #endif
 };
-
-HOSTDEVICE INLINE Transform operator*(const Transform& t1, const Transform& t2) {
-    auto mat = t1.mat * t2.mat;
-    auto matInv = t2.matInv * t1.matInv;
-    return Transform(mat, matInv);
-}
-
-/// \note Ray transformation is performed only in the device.
-#ifdef __CUDACC__ 
-HOSTDEVICE INLINE Ray operator*(const Transform& t, const Ray& r) {
-    float3 ro = point_mul(t.matInv, r.origin());
-    float3 rd = vector_mul(t.matInv, r.direction());
-    return Ray(ro, rd);
-}
-#endif
 
 }

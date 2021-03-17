@@ -179,7 +179,9 @@ void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data, const std::
 
 void build_ias(const OptixDeviceContext& ctx, 
                const AccelData& accel_data,
-               const std::vector<Primitive>& primitives)
+               const std::vector<Primitive>& primitives, 
+               std::vector<OptixInstance>& instances, 
+               const Transform& transform)
 {
     
 }

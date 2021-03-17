@@ -27,7 +27,6 @@ pt::Scene my_scene() {
     pt::MaterialPtr white_diffuse = new pt::Diffuse(make_float3(0.8f, 0.8f, 0.8f));
     pt::MaterialPtr emitter = new pt::Emitter(make_float3(1.0f), 10.0f);
 
-
     // Floor ------------------------------------
     std::vector<float3> floor_vertices;
     std::vector<float3> floor_normals(6, make_float3(0.0f, 1.0f, 0.0f));

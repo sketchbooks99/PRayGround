@@ -31,7 +31,28 @@ inline void Throw(const std::string& msg) {
 }
 
 inline void Assert(bool condition, const std::string& msg) {
-    if(!condition) Throw(msg);
+    if (!condition) Throw(msg);
+}
+
+/**
+ * \brief 
+ * Dummy free function for end of recursive cuda_free() using variadic templates.
+ */ 
+inline void cuda_free() {}
+
+template <typename T>
+inline void cuda_free(T data) {
+    CUDA_CHECK(cudaFree(reinterpret_cast<void*>(data)));
+}
+
+/** 
+ * \brief 
+ * Recursive free of object.
+ */
+template <typename Head, typename... Args>
+inline void cuda_frees(Head head, Args... args) {
+    cuda_free(head);
+    cuda_frees(args...);
 }
 #endif
 

@@ -21,6 +21,22 @@ public:
         }
     }
 
+    std::vector<OptixProgramGroup> hitgroup_programs() {
+        std::vector<OptixProgramGroup> program_groups;
+        for (auto &ps : m_primitives_instances) {
+            for (auto &p : ps.primitives()) {
+                std::vector<ProgramGroup> programs = p.program_groups();
+                /**
+                 * \brief Insert hitgroup programs of primitive at end of vector.
+                 * 
+                 * \note \c ProgramGroup is implicitly casted to \c OptixProgramGroup at here.
+                 */
+                std::copy(programs.begin(), programs.end(), std::back_inserter(program_groups));
+            }
+        }
+        return program_groups;
+    }
+
     /** 
      * \brief Create SBT with HitGroupData. 
      * \note SBTs for raygen and miss program aren't created at here.

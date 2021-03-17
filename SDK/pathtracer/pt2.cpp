@@ -245,19 +245,17 @@ int main(int argc, char* argv[]) {
     CUDA_CHECK(cudaFree(0));
 
     // Create device context.
-    OptixDeviceContext context;
+    OptixDeviceContext optix_context;
     CUcontext cu_ctx = 0;
     OPTIX_CHECK(optixInit());
     OptixDeviceContextOptions options = {};
     options.logCallbackFunction = &context_log_cb;
     options.logCallbackLevel = 4;
-    OPTIX_CHECK(optixDeviceContextCreate(cu_ctx, &options, &context));
+    OPTIX_CHECK(optixDeviceContextCreate(cu_ctx, &options, &optix_context));
 
     /// Load scene from \c scene_file.h 
     pt::Scene scene = my_scene();    
 
-    // Root instance AS to manage all geometry ASs.
-    OptixInstance root_instance;
     // Build children instance ASs that contain the geometry AS. 
     std::vector<OptixInstance> instances;
     std::vector<pt::AccelData> accels;
@@ -265,13 +263,80 @@ int main(int argc, char* argv[]) {
     unsigned int instance_id = 0;
     for (auto &ps : scene.primitive_instances()) {
         pt::AccelData accel;
-        pt::build_gas(context, accel, ps.primitives());
-        pt::build_ias(context, accel, ps, sbt_base_offset, instance_id, instances);
+        pt::build_gas(optix_context, accel, ps.primitives());
+        /// New OptixInstance are pushed back to \c instances
+        pt::build_ias(optix_context, accel, ps, sbt_base_offset, instance_id, instances);
+        accels.push_back(accel);
         sbt_base_offset += (accel.meshes.count + accel.customs.count);
         instance_id++;
     }
 
+    // Create all instances on the device.
+    pt::CUDABuffer<OptixInstance> d_instances;
+    d_instances.alloc_copy(instances);
+
+    // Prepare build input for instances.
+    OptixBuildInput instance_input = {};
+    instance_input.type = OPTIX_BUILD_INPUT_TYPE_INSTANCES;
+    instance_input.instanceArray.instances = d_instances.d_ptr();
+    instance_input.instanceArray.numInstances = (unsigned int) instances.size();
+
+    OptixAccelBuildOptions accel_options = {};
+    accel_options.buildFlags = OPTIX_BUILD_FLAG_NONE; 
+    accel_options.operation = OPTIX_BUILD_OPERATION_BUILD;
+
+    OptixAccelBufferSizes ias_buffer_sizes;
+    OPTIX_CHECK(optixAccelComputeMemoryUsage(
+        optix_context, 
+        &accel_options, 
+        &instance_input, 
+        1, 
+        &ias_buffer_sizes ));
+
+    // Allocate buffer to build acceleration structure
+    CUdeviceptr d_temp_buffer;
+    CUDA_CHECK(cudaMalloc(
+        reinterpret_cast<void**>(&d_temp_buffer), 
+        ias_buffer_sizes.outputSizeInBytes ));
+    CUdeviceptr d_ias_output_buffer; 
+    CUDA_CHECK(cudaMalloc(
+        reinterpret_cast<void**>(d_ias_output_buffer), 
+        ias_buffer_sizes.outputSizeInBytes ));
     
+    OptixTraversableHandle ias_handle;
+    // Build instance AS contains all GASs to describe the scene.
+    OPTIX_CHECK(optixAccelBuild(
+        optix_context, 
+        0,                  // CUDA stream
+        &accel_options, 
+        &instance_input, 
+        1,                  // num build inputs
+        d_temp_buffer, 
+        ias_buffer_sizes.tempSizeInBytes, 
+        d_ias_output_buffer, 
+        ias_buffer_sizes.outputSizeInBytes, 
+        &ias_handle, 
+        nullptr,            // emitted property list
+        0                   // num emitted properties
+    ));
+
+    pt::cuda_free(d_temp_buffer);
+    d_instances.free();
+
+    pt::Pipeline optix_pipeline("params");
+    // Create module 
+    pt::Module optix_module("optix/pathtracer.cu");
+    optix_module.create(optix_context, optix_pipeline.compile_options());
+
+    
+    // Raygen programs
+    pt::ProgramGroup raygen_program(OPTIX_PROGRAM_GROUP_KIND_RAYGEN);
+    raygen_program.create(optix_context, pt::ProgramEntry(optix_module, RG_FUNC_STR("raygen")));
+    // Miss programs
+    std::vector<pt::ProgramGroup> miss_programs(RAY_TYPE_COUNT, pt::ProgramGroup(OPTIX_PROGRAM_GROUP_KIND_MISS));
+    miss_programs[0].create(optix_context, pt::ProgramEntry(optix_module, MS_FUNC_STR("radiance"))); // miss radiance
+    miss_programs[1].create(optix_context, pt::ProgramEntry(nullptr, nullptr));                      // miss occlusion
+
 
     // =======================================================================
     // ↓ SAMPLE CODE 

@@ -9,34 +9,24 @@ namespace pt {
 class Pipeline {
 public:
     explicit Pipeline(const std::string& params_name) {
-        // Compile options;
-        m_compile_options.usesMotionBlur = false;
-        m_compile_options.traversableGraphFlags = OPTIX_TRAVERSABLE_GRAPH_FLAG_ALLOW_SINGLE_GAS;
-        m_compile_options.numPayloadValues = 5;
-        m_compile_options.numAttributeValues = 2;
+        _init_compile_options();
         m_compile_options.pipelineLaunchParamsVariableName = params_name.c_str();
-    #ifdef DEBUG
-        m_compile_options.exceptionFlags = OPTIX_EXCEPTION_FLAG_DEBUG | OPTIX_EXCEPTION_FLAG_TRACE_DEPTH | OPTIX_EXCEPTION_FLAG_STACK_OVERFLOW;
-    #else   
-        m_compile_options.exceptionFlags = OPTIX_EXCEPTION_FLAG_NONE;
-    #endif
-
-        // Link options;
-        m_link_options.maxTraceDepth = 2;
-        m_link_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_FULL;
-
-        // Depth settings
+        _init_link_options();
         _init_depth();
     }
+    
     explicit Pipeline(OptixPipelineCompileOptions op) : m_compile_options(op) 
     { 
+        _init_link_options();
         _init_depth(); 
     }
-    explicit Pipeline(OptixPipelineCompileOptions c_op, OptixPipelineLinkOptions l_op)
+    
+    Pipeline(OptixPipelineCompileOptions c_op, OptixPipelineLinkOptions l_op)
     : m_compile_options(c_op), m_link_options(l_op) 
     { 
         _init_depth(); 
     }
+    
 
     explicit operator OptixPipeline() { return m_pipeline; }
 
@@ -116,6 +106,23 @@ public:
     uint32_t get_dc_depth() const { return m_dc_depth; }
 
 private:
+    void _init_compile_options() { 
+        // Compile options;
+        m_compile_options.usesMotionBlur = false;
+        m_compile_options.traversableGraphFlags = OPTIX_TRAVERSABLE_GRAPH_FLAG_ALLOW_SINGLE_GAS;
+        m_compile_options.numPayloadValues = 5;
+        m_compile_options.numAttributeValues = 2;
+        m_compile_options.pipelineLaunchParamsVariableName = "";
+#ifdef DEBUG
+        m_compile_options.exceptionFlags = OPTIX_EXCEPTION_FLAG_DEBUG | OPTIX_EXCEPTION_FLAG_TRACE_DEPTH | OPTIX_EXCEPTION_FLAG_STACK_OVERFLOW;
+#else   
+        m_compile_options.exceptionFlags = OPTIX_EXCEPTION_FLAG_NONE;
+#endif
+    }
+    void _init_link_options() {
+        m_link_options.maxTraceDepth = 2;
+        m_link_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_FULL;
+    }
     void _init_depth() { m_trace_depth = 5; m_cc_depth = 0; m_dc_depth = 0; }
     OptixPipelineCompileOptions m_compile_options;
     OptixPipelineLinkOptions m_link_options;

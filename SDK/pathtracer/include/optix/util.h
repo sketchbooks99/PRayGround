@@ -5,13 +5,13 @@
 #include <cuda/helpers.h>
 #include <optix/macros.h>
 
-namespace pt {
-
 enum RayType {
     RAY_TYPE_RADIANCE = 0,
     RAY_TYPE_OCCLUSION = 1,
     RAY_TYPE_COUNT = 2
 };
+
+namespace pt {
 
 /// @note Currently \c spectrum is RGB representation, not spectrum. 
 struct SurfaceInteraction {

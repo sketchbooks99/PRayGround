@@ -14,11 +14,17 @@ template <typename T>
 class CUDABuffer {
 public:
     CUDABuffer() { _init(); }
+    explicit CUDABuffer(std::vector<T> vec) : CUDABuffer(vec.data(), vec.size()*sizeof(T)) {}
     explicit CUDABuffer(T* data, size_t size)
     {
         _init(); 
-        allocate(data, size);
+        alloc_copy(data, size);
     }
+
+    ~CUDABuffer() { free(); }
+
+    // Enable cast to CUdeviceptr. 
+    operator CUdeviceptr() { return d_ptr; }
 
     void alloc(size_t size) {
         Assert(!is_alloc, "This buffer is already allocated. Please use re_allocate() if you need.");

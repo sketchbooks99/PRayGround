@@ -10,8 +10,8 @@ namespace pt {
 
 class Primitive {
 public:
-    Primitive(ShapePtr shape_ptr, MaterialPtr material_ptr, const Transform& transform, uint32_t sbt_index)
-    : m_shape_ptr(m_shape_ptr), m_material_ptr(m_material_ptr), m_transform(transform), m_sbt_index(sbt_index) {
+    Primitive(ShapePtr shape_ptr, MaterialPtr material_ptr, uint32_t sbt_index)
+    : m_shape_ptr(m_shape_ptr), m_material_ptr(m_material_ptr), m_sbt_index(sbt_index) {
         m_program_groups.resize(RAY_TYPE_COUNT);
         for (auto &pg : m_program_groups) {
             pg = ProgramGroup(OPTIX_PROGRAM_GROUP_KIND_HITGROUP);
@@ -61,7 +61,6 @@ public:
     uint32_t sbt_index() const { return m_sbt_index; }
     MaterialPtr material() const { return m_material_ptr; }
     ShapePtr shape() const  { return m_shape_ptr; }
-    Transform transform() const { return m_transform; }
     ShapeType shapetype() const { return m_shape_ptr->type(); }
     MaterialType materialtype() const { return m_material_ptr->type(); }
 
@@ -84,6 +83,9 @@ private:
 
 // ---------------------------------------------------------------------
 /** 
+ * \brief
+ * This class store the primitives with same transformation.
+ * 
  * \note 
  * Transform stored in this class never be modified from outside, 
  * so transform operations must be performed before constructing 
@@ -91,20 +93,29 @@ private:
  */
 class PrimitiveInstance {
 public:
-    PrimitiveInstance() {}
-    PrimitiveInstance(const Transform& t) : m_transform(t) {}
+    PrimitiveInstance() : m_transform(Transform()) {}
+    PrimitiveInstance(const Transform& transform) : m_transform(transform) {}
     PrimitiveInstance(const Transform& transform, const std::vector<Primitive>& primitives)
     : m_transform(transform), m_primitives(primitives) {}
 
     void add_primitive(const Primitive& p) { m_primitives.push_back(p); }
+    std::vector<Primitive> primitives() const { return m_primitives; }
     void set_transform(const Transform& t) { m_transform = t; } 
+    Transform transform() const { return m_transform; }
 private:
     Transform m_transform;
     std::vector<Primitive> m_primitives;
-}
+};
 
 
 // ---------------------------------------------------------------------
+/** 
+ * \brief 
+ * Building geometry AS from primitives that share the same transformation.
+ * 
+ * \note 
+ * Call of this funcion :  build_gas(ctx, accel_data, primitive_instances.primitives());
+ */ 
 void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data, const std::vector<Primitive>& primitives) {
     std::vector<Primitive> meshes;
     std::vector<Primitive> customs;
@@ -199,12 +210,45 @@ void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data, const std::
     build_single_gas(customs, accel_data.customs);
 }
 
+// ---------------------------------------------------------------------
 void build_ias(const OptixDeviceContext& ctx, 
                const AccelData& accel_data,
-               std::vector<OptixInstance>& instances, 
-               const PrimitiveInstance& prim_instance)
+               const PrimitiveInstance& prim_instance, 
+               const unsigned int sbt_base_offset,
+               const unsigned int instance_id,
+               std::vector<OptixInstance>& instances)
 {
-    
+    const unsigned int visibility_mask = 255;
+
+    Transform transform = prim_instance.transform();
+    unsigned int sbt_base = sbt_base_offset;
+    unsigned int flags = prim_instance.transform().is_identity() 
+                            ? OPTIX_INSTANCE_FLAG_DISABLE_TRANSFORM 
+                            : OPTIX_INSTANCE_FLAG_NONE;
+
+    if (accel_data.meshes.handle) {
+        OptixInstance instance = { 
+            {transform.mat[0], transform.mat[1], transform.mat[2], transform.mat[3],
+             transform.mat[4], transform.mat[5], transform.mat[6], transform.mat[7],
+             transform.mat[8], transform.mat[9], transform.mat[10], transform.mat[11]},
+            instance_id, sbt_base, visibility_mask, flags, 
+            accel_data.meshes.handle, {0, 0} /* pad */
+        };
+        sbt_base++;
+        instances.push_back(instance);
+    }
+
+    if (accel_data.customs.handle) {
+        OptixInstance instance = { 
+            {transform.mat[0], transform.mat[1], transform.mat[2], transform.mat[3],
+             transform.mat[4], transform.mat[5], transform.mat[6], transform.mat[7],
+             transform.mat[8], transform.mat[9], transform.mat[10], transform.mat[11]},
+            instance_id, sbt_base, visibility_mask, flags, 
+            accel_data.customs.handle, {0, 0} /* pad */
+        };
+        instances.push_back(instance);
+    }
+
 }
 
 }

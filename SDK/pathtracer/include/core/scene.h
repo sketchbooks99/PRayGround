@@ -23,8 +23,8 @@ public:
      */
     void create_hitgroup_sbt(const OptixModule& module, OptixShaderBindingTable& sbt);
 
-    void add_primitive(const Primitive& p) { m_primitives.push_back(p); }
-    std::vector<Primitive> get_primitives() const { return m_primitives; }
+    void add_primitive(const PrimitiveInstance& ps) { m_primitives_instances.push_back(ps); }
+    std::vector<PrimitiveInstance> primitive_instances() const { return m_primitives_instances; }
 
     void set_width(const unsigned int w) { m_width = w; }
     unsigned int width() const { return m_width; }
@@ -41,11 +41,11 @@ public:
     void set_samples_per_launch(unsigned int spl) { m_samples_per_launch = spl; }
     unsigned int samples_per_launch() const { return m_samples_per_launch; }
 private:
-    std::vector<Primitive> m_primitives;    // Primitives to describe the scene.
-    unsigned int m_width, m_height;         // Dimensions of output result.
-    float4 m_bgcolor;                       // Background color
-    unsigned int m_depth;                   // Maximum depth of ray tracing.
-    unsigned int m_samples_per_launch;      // Specify the number of samples per call of optixLaunch.
+    std::vector<PrimitiveInstance> m_primitives_instances;  // Primitive instances with same transformation.
+    unsigned int m_width, m_height;                         // Dimensions of output result.
+    float4 m_bgcolor;                                       // Background color
+    unsigned int m_depth;                                   // Maximum depth of ray tracing.
+    unsigned int m_samples_per_launch;                      // Specify the number of samples per call of optixLaunch.
 };
 
 }

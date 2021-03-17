@@ -40,7 +40,7 @@ pt::Scene my_scene() {
     floor_indices.emplace_back(make_int3(0, 1, 2));
     floor_indices.emplace_back(make_int3(3, 4, 5));
     pt::ShapePtr floor_mesh = new pt::TriangleMesh(floor_vertices, floor_indices, floor_normals);
-    scene.add_primitive(pt::Primitive(floor_mesh, white_diffuse, pt::Transform(), 0));
+    scene.add_primitive(pt::Primitive(floor_mesh, white_diffuse, 0));
 
     // Ceiling ------------------------------------
     std::vector<float3> ceiling_vertices;

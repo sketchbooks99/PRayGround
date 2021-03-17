@@ -27,6 +27,14 @@ struct Transform {
         return *this;
     }
 
+    HOSTDEVICE bool operator==(const Transform& t) {
+        return (t.mat == mat) && (t.matInv == matInv);
+    }
+
+    HOSTDEVICE bool is_identity() {
+        return (mat == sutil::Matrix4x4::identity()) && (matInv == sutil::Matrix4x4::identity());
+    }
+
 #ifdef __CUDACC__
     DEVICE Transform() {}
     DEVICE Transform(float m[12], float inv[12]) {

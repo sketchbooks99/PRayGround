@@ -28,9 +28,10 @@
 #include <optix/program.h>
 
 // include application utilities
+#include <core/util.h>
 #include <core/cudabuffer.h>
 #include <core/pathtracer.h>
-
+#include <core/scene.h>
 
 bool resize_dirty = false;
 bool minimized = false;

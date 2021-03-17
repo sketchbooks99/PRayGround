@@ -40,19 +40,51 @@ class Transform {
 public:
     sutil::Matrix4x4 mat, matInv;
 
-    HOSTDEVICE Transform() {}
-    HOSTDEVICE explicit Transform(sutil::Matrix4x4 m) : mat(m), matInv(m.inverse()) {}
-    HOSTDEVICE explicit Transform(sutil::Matrix4x4 m, sutil::Matrix4x4 mInv) : mat(m), matInv(mInv) {}
+    Transform() {}
+    explicit Transform(sutil::Matrix4x4 m) : mat(m), matInv(m.inverse()) {}
+    explicit Transform(sutil::Matrix4x4 m, sutil::Matrix4x4 mInv) : mat(m), matInv(mInv) {}
 
-    HOSTDEVICE void rotate_x(const float radians) { this->rotate(radians, make_float3(1, 0, 0)); }
-    HOSTDEVICE void rotate_y(const float radians) { this->rotate(radians, make_float3(0, 1, 0)); }
-    HOSTDEVICE void rotate_z(const float radians) { this->rotate(radians, make_float3(0, 0, 1)); }
-    HOSTDEVICE void rotate(const float radians, const float3& axis);
+#ifdef __CUDACC__
+    DEVICE Transform() {}
+    DEVICE Transform(float m[12], float inv[12]) {
+        for (int i=0; i<12; i++) {
+            mat[i] = m[i];
+            matInv[i] = inv[i];
+        }
+        mat[12] = mat[13] = mat[14] = 0.f;
+        mat[15] = 1.f;
+        matInv[12] = matInv[13] = matInv[14] = 0.f;
+        matInv[15] = 1.f;
+    }
+#endif 
+
+    void rotate_x(const float radians) { this->rotate(radians, make_float3(1, 0, 0)); }
+    void rotate_y(const float radians) { this->rotate(radians, make_float3(0, 1, 0)); }
+    void rotate_z(const float radians) { this->rotate(radians, make_float3(0, 0, 1)); }
+    void rotate(const float radians, const float3& axis);
     
-    HOSTDEVICE void translate(const float3& v); 
+    void translate(const float3& v); 
 
-    HOSTDEVICE void scale(const float s) { this->scale(make_float3(s)); }
-    HOSTDEVICE void scale(const float3& v);
+    void scale(const float s) { this->scale(make_float3(s)); }
+    void scale(const float3& v);
+
+#ifdef __CUDAC__
+    DEVICE float3 point_mul(const float3& p) {
+
+    }
+
+    DEVICE float3 vector_mul(const float3& v) {
+
+    }
+
+    DEVICE float3 normal_mul(const float3& n) {
+
+    }
+
+    DEVICE float3 transform_ray(const Ray& r) {
+        
+    }
+#endif
 };
 
 HOSTDEVICE INLINE Transform operator*(const Transform& t1, const Transform& t2) {

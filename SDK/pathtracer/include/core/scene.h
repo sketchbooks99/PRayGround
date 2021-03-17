@@ -13,6 +13,10 @@ public:
     void create_hitgroup_programs(const OptixDeviceContext& ctx, const OptixModule& module);
     /** \brief build geomerty acceleration structure. */
     void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data);
+    void build_ias(const OptixDeviceContext& ctx, 
+                   const AccelData& accel_data, 
+                   const Transform& transform, 
+                   std::vector<OptixInstance> instances());
     /** 
      * \brief Create SBT with HitGroupData. 
      * \note SBTs for raygen and miss program is not created at this.

@@ -3,7 +3,7 @@
 #include <sutil/Matrix.h>
 #include <sutil/vec_math.h>
 #include <include/core/util.h>
-#include <include/core/ray.h>
+#include <include/optix/ray.h>
 #include <include/optix/macros.h>
 
 namespace pt {
@@ -11,7 +11,7 @@ namespace pt {
 struct Transform {
     sutil::Matrix4x4 mat, matInv;
 
-    HOSTDEVICE Transform() {}
+    explicit HOSTDEVICE Transform() : mat(sutil::Matrix4x4::identity()), matInv(sutil::Matrix4x4::identity()) {}
     explicit HOSTDEVICE Transform(sutil::Matrix4x4 m) : mat(m), matInv(m.inverse()) {}
     explicit HOSTDEVICE Transform(sutil::Matrix4x4 m, sutil::Matrix4x4 mInv) : mat(m), matInv(mInv) {}
 
@@ -36,7 +36,6 @@ struct Transform {
     }
 
 #ifdef __CUDACC__
-    DEVICE Transform() {}
     DEVICE Transform(float m[12], float inv[12]) {
         for (int i=0; i<12; i++) {
             mat[i] = m[i];
@@ -98,9 +97,9 @@ struct Transform {
                            matInv[0*4+2]*x + matInv[1*4*2]*y + matInv[2*4+2]*z);
     }
 
-    DEVICE float3 transform_ray(const Ray& r) {
-        float ro = point_mul(r.origin());
-        float rd = vector_mul(r.direction());
+    DEVICE Ray transform_ray(const Ray& r) {
+        float3 ro = point_mul(r.origin());
+        float3 rd = vector_mul(r.direction());
         return Ray(ro, rd, r.time(), r.color());
     }
 #endif

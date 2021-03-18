@@ -35,16 +35,19 @@ CALLABLE_FUNC void IS_FUNC(sphere)() {
 
     if (discriminant > 0.0f) {
         float sqrtd = sqrtf(discriminant);
-        bool near_valid = true, far_valid = true;
+        float root1 = (-half_b - sqrtd) / a;
+        bool check_second = true;
+        if ( root1 > tmin && root1 < tmax ) {
+            float3 normal = (ray_orig + normalize(ray_dir) * root1 - center) / radius;
+            optixReportIntersection(root1, 0, float3_as_ints(normal));
+        }
 
-        float root = (-half_b - sqrtd) / a;
-        near_valid = !(root < tmin || root > tmax); 
-        root = (-half_b + sqrtd) / a;
-        far_valid = !(root < tmin || root > tmax);
-
-        if (near_valid && far_valid) {
-            float3 normal = (si->p - center) / radius;
-            optixReportIntersection(t, 0, float3_as_ints(normal));
+        if (check_second) {
+            float root2 = (-half_b + sqrtd) / a;
+            if ( root2 > tmin && root2 < tmax ) {
+                float3 normal = (ray_orig + normalize(ray_dir) * root2 - center) / radius;
+                optixReportIntersection(root2, 0, float3_as_ints(normal));
+            }
         }
     }
 }

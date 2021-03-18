@@ -1,5 +1,6 @@
 #pragma once 
 
+#ifndef __CUDACC__
 #include <sutil/Exception.h>
 #include <cuda_runtime.h>
 #include <string>
@@ -12,6 +13,7 @@
 #include <random>
 #include <vector>
 #include <include/core/stream_helpers.h>
+#endif
 
 namespace pt {
 

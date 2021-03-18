@@ -70,23 +70,4 @@ __forceinline__ __device__ uchar4 make_color( const float4& c )
     reinterpret_cast<unsigned int&>((u).y), \
     reinterpret_cast<unsigned int&>((u).z)
 
-// -------------------------------------------------------------------------------
-static __forceinline__ __device__ pt::RadiancePRD getPRD()
-{
-	pt::RadiancePRD prd;
-	prd.result.x = int_as_float(optixGetPayload_0());
-	prd.result.y = int_as_float(optixGetPayload_1());
-	prd.result.z = int_as_float(optixGetPayload_2());
-	prd.depth = optixGetPayload_3();
-	prd.seed = optixGetPayload_4();
-	return prd;
-}
-
-static __forceinline__ __device__ void setPRD(const pt::RadiancePRD& prd)
-{
-	optixSetPayload_0(float_as_int(prd.result.x));
-	optixSetPayload_1(float_as_int(prd.result.y));
-	optixSetPayload_2(float_as_int(prd.result.z));
-	optixSetPayload_3(float_as_int(prd.depth));
-	optixSetPayload_4(float_as_int(prd.seed));
-}
+#define float3_as_ints( u ) float_as_int( u.x ), float_as_int( u.y ), float_as_int( u.z )

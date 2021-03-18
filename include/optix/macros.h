@@ -33,6 +33,8 @@
 #define DC_FUNC_STR(name) "__direct_callable__" name
 #define CC_FUNC_STR(name) "__continuation_callable__" name
 
+#ifndef __CUDACC__
+#include <string>
 /** 
  * \note These functions are used in few cases, 
  * especially when you don't want to write \c name directly. 
@@ -45,3 +47,5 @@ inline const char* ms_func_str(std::string name) { return ("__miss__" + name).c_
 inline const char* ex_func_str(std::string name) { return ("__exception__" + name).c_str(); }
 inline const char* dc_func_str(std::string name) { return ("__direct_callabel__" + name).c_str(); }
 inline const char* cc_func_str(std::string name) { return ("__continuation_callable__" + name).c_str(); }
+
+#endif

@@ -17,10 +17,11 @@ public:
     DEVICE Ray(const float3& o, const float3&d, float t, float3 c) 
     : o(o), d(d), t(t), c(c) {}
 
+    DEVICE float3 at(const float time) { return o + d * time; }
     DEVICE float3 origin() const { return o; }
     DEVICE float3 direction() const { return d; }
     DEVICE float time() const { return t; }
-    DEVICE float color() const { return c; }
+    DEVICE float3 color() const { return c; }
 
 private:
     /* Position of ray origin in world coordinates. */

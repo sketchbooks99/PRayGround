@@ -2,10 +2,7 @@
 
 #include <optix.h>
 #include <include/core/material.h>
-
-#ifndef __CUDACC__
 #include <include/core/util.h>
-#endif
 
 namespace pt {
 

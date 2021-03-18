@@ -1,8 +1,7 @@
 #pragma once
 
 #include <optix.h>
-#include <sutil/vec_math.h>
-#include <cuda/helpers.h>
+#include <include/optix/helpers.h>
 #include <include/optix/macros.h>
 
 enum RayType {
@@ -51,6 +50,8 @@ struct SurfaceInteraction {
     int trace_terminate;
 };
 
+}
+
 #ifdef __CUDACC__
 
 INLINE DEVICE void* unpack_pointer( unsigned int i0, unsigned int i1 )
@@ -60,18 +61,18 @@ INLINE DEVICE void* unpack_pointer( unsigned int i0, unsigned int i1 )
     return ptr;
 }
 
-INLINE DEVICE void pack_pointer(void* ptr, unsigned int& i0, unsigned int i1)
+INLINE DEVICE void pack_pointer(void* ptr, unsigned int& i0, unsigned int& i1)
 {
     const unsigned long long uptr = reinterpret_cast<unsigned long long>( ptr );
     i0 = uptr >> 32;
     i1 = uptr & 0x00000000ffffffff;
 }
 
-INLINE DEVICE SurfaceInteraction* get_surfaceinteraction()
+INLINE DEVICE pt::SurfaceInteraction* get_surfaceinteraction()
 {
     const unsigned int u0 = optixGetPayload_0();
     const unsigned int u1 = optixGetPayload_1();
-    return reinterpret_cast<SurfaceInteraction*>( unpack_pointer(u0, u1) ); 
+    return reinterpret_cast<pt::SurfaceInteraction*>( unpack_pointer(u0, u1) ); 
 }
 
 INLINE DEVICE bool trace_occlusion(
@@ -102,13 +103,13 @@ INLINE DEVICE void traceRadiance(
     float3                 ray_direction,
     float                  tmin,
     float                  tmax,
-    SurfaceInteraction*    si
+    pt::SurfaceInteraction*    si
 ) 
 {
     // TODO: deduce stride from num ray-types passed in params
 
     unsigned int u0, u1;
-    packPointer( si, u0, u1 );
+    pack_pointer( si, u0, u1 );
     optixTrace(
         handle,
         ray_origin,
@@ -125,5 +126,3 @@ INLINE DEVICE void traceRadiance(
 }
 
 #endif
-
-}

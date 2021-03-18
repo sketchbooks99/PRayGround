@@ -84,7 +84,7 @@ project(OptiX-Samples)
 # This enforces a particular version of CMake that we require to process the script files
 # properly.  We rely on CXX_STANDARD, which was added in CMake 3.1.
 cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -106,7 +106,7 @@ endif()
 # Add paths to our CMake code to the module path, so they can be found automatically by
 # CMake.
 set(CMAKE_MODULE_PATH
-  "${CMAKE_SOURCE_DIR}/../SDK/CMake"
+  "${CMAKE_SOURCE_DIR}/CMake"
   ${CMAKE_MODULE_PATH}
   )
 
@@ -200,7 +200,7 @@ if(NOT PASSED_FIRST_CONFIGURE)
     endif()
   endif()
 
-  if(CMAKE_CXX_STANDARD EQUAL 11)
+  if(CMAKE_CXX_STANDARD EQUAL 17)
     set(SAMPLES_NVRTC_CXX "-std=c++11")
   else()
     set(SAMPLES_NVRTC_CXX "")
@@ -259,9 +259,9 @@ else (WIN32)
   endif()
 endif (WIN32)
 
-set(SAMPLES_CUDA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/cuda")
+set(SAMPLES_CUDA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../cuda")
 
-set(SAMPLES_SUPPORT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../SDK/support")
+set(SAMPLES_SUPPORT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../support")
 
 # NVRTC include paths relative to the sample path
 set(SAMPLES_RELATIVE_INCLUDE_DIRS "\\
@@ -375,12 +375,13 @@ endfunction()
 # If you wish to start your own sample, you can copy one of the sample's directories.
 # Just make sure you rename all the occurances of the sample's name in the C code as well
 # and the CMakeLists.txt file.
-add_subdirectory(pathtracer)
+add_subdirectory(src)
+# add_subdirectory(pathtracer/src/texture)
 
 # Our sutil library.  The rules to build it are found in the subdirectory.
 add_subdirectory(sutil)
 # Our other libraries.
-add_subdirectory( lib/optixPaging )
+add_subdirectory(lib/optixPaging)
 # Third-party support libraries.
 add_subdirectory(support)
 

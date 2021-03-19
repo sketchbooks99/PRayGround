@@ -5,6 +5,11 @@
 
 namespace pt {
 
+class Conductor;
+
+template void setup_object_on_device<Conductor**>();
+template void delete_object_on_device<Material*>();
+
 class Conductor final : public Material {
 public:
     HOSTDEVICE Conductor(float3 a, float f) : albedo(a), fuzz(f) {

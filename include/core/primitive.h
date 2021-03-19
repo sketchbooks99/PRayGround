@@ -33,10 +33,12 @@ public:
     void create_programs(const OptixDeviceContext& ctx, const OptixModule& module) {
         Assert(!m_program_groups.empty(), "ProgramGroup is not allocated.");
         if (shapetype() == ShapeType::Mesh) {
+            // Program for mesh is only a closest-hit program. 
             m_program_groups[0].create(ctx, ProgramEntry(module, ch_func_str(shape_map[shapetype()]) ) );
             if (m_program_groups.size() > 1)
                 m_program_groups[1].create(ctx, ProgramEntry(module, CH_FUNC_STR("occlusion") ) );
         } else {
+            // Programs for custom primitives must include closeset-hit and intersection programs.
             m_program_groups[0].create(ctx, ProgramEntry(module, ch_func_str(shape_map[shapetype()]) ), 
                                             ProgramEntry(module, is_func_str(shape_map[shapetype()]) ) );
             if (m_program_groups.size() > 1)

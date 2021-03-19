@@ -30,8 +30,8 @@
 #include <cuda/random.h>
 #include <include/optix/util.h>
 #include <include/core/pathtracer.h>
-#include "../shape/optix/sphere.cuh"
-#include "../shape/optix/trianglemesh.cuh"
+#include <src/shape/optix/sphere.cuh>
+#include <src/shape/optix/trianglemesh.cuh>
 
 extern "C" {
 __constant__ pt::Params params;
@@ -117,29 +117,4 @@ CALLABLE_FUNC void MS_FUNC(radiance)()
 CALLABLE_FUNC void CH_FUNC(occlusion) ()
 {
 	setPayloadOcclusion(true);
-}
-
-/** 
- * \brief Initialize object on device.
- * 
- * \note Initailization must be excecuted only once.
- */
-template <typename T, typename... Args>
-__global__ void setup_object(T** d_ptr, Args... args) {
-    (*d_ptr) = new T(args...);
-}
-
-template <typename T>
-__global__ void delete_object(T** d_ptr) {
-    delete (void*)*d_ptr;
-}
-
-template <typename T, typename... Args>
-__host__ void setup_object_on_device(T** d_ptr, Args... args) {
-	setup_object<<<1,1>>>(d_ptr, args);
-}
-
-template <typename T, typename... Args>
-__host__ void delete_object_on_device(T** d_ptr) {
-	delete_object<<<1,1>>>(d_ptr, args);
 }

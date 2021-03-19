@@ -1,6 +1,6 @@
 #pragma once
 
-#include <core/shape.h>
+#include <include/core/shape.h>
 #include "optix/trianglemesh.cuh"
 
 namespace pt {

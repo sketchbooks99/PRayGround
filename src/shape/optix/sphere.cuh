@@ -13,11 +13,13 @@ struct SphereData {
     Transform transform;
 };
 
+}
+
 #ifdef __CUDACC__
 
 CALLABLE_FUNC void IS_FUNC(sphere)() {
-    const HitGroupData* data = reinterpret_cast<HitGroupData*>(optixGetSbtDataPointer());
-    const SphereData* sphere_data = reinterpret_cast<SphereData*>(data->shapedata);
+    const pt::HitGroupData* data = reinterpret_cast<pt::HitGroupData*>(optixGetSbtDataPointer());
+    const pt::SphereData* sphere_data = reinterpret_cast<pt::SphereData*>(data->shapedata);
 
     const float radius = sphere_data->radius;
     const float3 center = sphere_data->center;
@@ -53,7 +55,7 @@ CALLABLE_FUNC void IS_FUNC(sphere)() {
 }
 
 CALLABLE_FUNC void CH_FUNC(sphere)() {
-    const HitGroupData* data = reinterpret_cast<HitGroupData*>(optixGetSbtDataPointer());
+    const pt::HitGroupData* data = reinterpret_cast<pt::HitGroupData*>(optixGetSbtDataPointer());
 
     const float3 ro = optixGetWorldRayOrigin();
     const float3 rd = optixGetWorldRayDirection();
@@ -68,7 +70,7 @@ CALLABLE_FUNC void CH_FUNC(sphere)() {
 
     n = faceforward(n, -rd, n);
 
-    SurfaceInteraction* si = get_surfaceinteraction();
+    pt::SurfaceInteraction* si = get_surfaceinteraction();
     si->p = ro + tmax*rd;
     si->n = n;
     si->wi = rd;
@@ -76,5 +78,3 @@ CALLABLE_FUNC void CH_FUNC(sphere)() {
 }
 
 #endif
-
-}

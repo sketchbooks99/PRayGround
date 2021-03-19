@@ -268,6 +268,7 @@ set(SAMPLES_RELATIVE_INCLUDE_DIRS "\\
   \"cuda\", \\
   \"sutil\", \\
   \"include\", \\
+  \"src/shape/optix\", \\
   \".\", ")
 
 # NVRTC absolute include paths to the headers used to build the samples
@@ -376,7 +377,6 @@ endfunction()
 # Just make sure you rename all the occurances of the sample's name in the C code as well
 # and the CMakeLists.txt file.
 add_subdirectory(src)
-# add_subdirectory(pathtracer/src/texture)
 
 # Our sutil library.  The rules to build it are found in the subdirectory.
 add_subdirectory(sutil)

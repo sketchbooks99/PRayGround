@@ -89,8 +89,10 @@ public:
         ));
     }
 
-    /** Creation of hitgroup programs */
-    /** \brief Only the closest-hit program is used to create hitgroup program. */
+    /** 
+     * \brief Creation of hitgroup programs 
+     * \note Only the closest-hit program is used to create hitgroup program. 
+     */
     void create_hitgroup_program(const OptixDeviceContext& ctx, 
                                  const ProgramEntry& ch_entry) 
     {

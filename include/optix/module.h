@@ -42,7 +42,7 @@ public:
     
         const std::string ptx = sutil::getPtxString(OPTIX_SAMPLE_NAME, OPTIX_SAMPLE_DIR, m_ptx_path.c_str());
         OPTIX_CHECK_LOG(optixModuleCreateFromPTX(
-            ctx, 
+            ctx,
             &m_options,
             &pipeline_options, 
             ptx.c_str(),

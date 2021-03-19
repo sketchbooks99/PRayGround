@@ -10,13 +10,13 @@ enum RayType {
     RAY_TYPE_COUNT = 2
 };
 
-namespace pt {
-
 template <typename T, typename... Args>
-__host__ void setup_object_on_device(T** d_ptr, Args ...args);
+void setup_object_on_device(T** d_ptr, Args ...args);
 
 template <typename T>
-__host__ void delete_object_on_device(T* d_ptr);
+void delete_object_on_device(T* d_ptr);
+
+namespace pt {
 
 /// @note Currently \c spectrum is RGB representation, not spectrum. 
 struct SurfaceInteraction {

@@ -15,12 +15,14 @@ struct MeshData {
     Transform transform;
 };
 
+}
+
 #ifdef __CUDACC__
 
 CALLABLE_FUNC void CH_FUNC(mesh)()
 {
-    const HitGroupData* data = reinterpret_cast<HitGroupData*>(optixGetSbtDataPointer());
-    const MeshData* mesh_data = reinterpret_cast<MeshData*>(data->shapedata);
+    const pt::HitGroupData* data = reinterpret_cast<pt::HitGroupData*>(optixGetSbtDataPointer());
+    const pt::MeshData* mesh_data = reinterpret_cast<pt::MeshData*>(data->shapedata);
 
     const int prim_idx = optixGetPrimitiveIndex();
     const int3 index = mesh_data->indices[prim_idx];
@@ -40,7 +42,7 @@ CALLABLE_FUNC void CH_FUNC(mesh)()
     float3 n = normalize( (1.0f-u-v)*n0 + u*n1 + v*n2 );
     n = faceforward(n, -rd, n);
 
-    SurfaceInteraction* si = get_surfaceinteraction();
+    pt::SurfaceInteraction* si = get_surfaceinteraction();
     si->p = ro + tmax*rd;
     si->n = n;
     si->wi = rd;
@@ -48,5 +50,3 @@ CALLABLE_FUNC void CH_FUNC(mesh)()
 }
 
 #endif
-
-}

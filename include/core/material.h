@@ -20,7 +20,7 @@ enum class MaterialType {
     Disney = 1u << 4
 };
 
-#if !defined(__CUDACC__)
+#ifndef __CUDACC__
 inline std::ostream& operator<<(std::ostream& out, MaterialType type) {
     switch(type) {
     case MaterialType::Diffuse:

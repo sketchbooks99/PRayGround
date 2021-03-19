@@ -30,7 +30,7 @@
 # add_subdirectory(include/optix)
 
 set_source_files_properties(
-  ${CMAKE_CURRENT_SOURCE_DIR}/optix/pathtracer.cu 
+  ${CMAKE_CURRENT_SOURCE_DIR}/optix/create_obj.cu 
   PROPERTIES CUDA_SOURCE_PROPERTY_FORMAT OBJ
 )
 
@@ -40,24 +40,23 @@ OPTIX_add_sample_executable( pathtracer target_name
   material/conductor.h 
   material/dielectric.h 
   material/diffuse.h
-  material/emitter.h 
+  material/emitter.h
 
   shape/sphere.h
   shape/trianglemesh.h 
 
   # ===== SOURCE =====
   pathtracer.cpp
-  
-  shape/trianglemesh.cpp 
+  shape/trianglemesh.cpp
 
   # ===== CUDA =====
   optix/pathtracer.cu
-  optix/bsdf.cuh
-  optix/texture.cuh
-  shape/optix/trianglemesh.cuh
+  # optix/bsdf.cuh
+  optix/create_obj.cu
   shape/optix/sphere.cuh
+  shape/optix/trianglemesh.cuh
 
-  OPTIONS -rdc true
+  # OPTIONS -rdc true
   )
 
 target_link_libraries( ${target_name}

@@ -130,7 +130,7 @@ private:
  * \note 
  * Call of this funcion :  build_gas(ctx, accel_data, primitive_instances.primitives());
  */ 
-void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data, const PrimitiveInstance& ps) {
+void build_gas(OptixDeviceContext& ctx, AccelData& accel_data, const PrimitiveInstance& ps) {
     std::vector<Primitive> meshes;
     std::vector<Primitive> customs;
 
@@ -155,21 +155,19 @@ void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data, const Primi
 
         handle.count = primitives_subset.size();
 
-        std::vector<OptixBuildInput> build_inputs;
-        for (auto &p : primitives_subset) {
-            OptixBuildInput build_input;
-            if (p.shapetype() == ShapeType::Mesh) {
+        std::vector<OptixBuildInput> build_inputs(primitives_subset.size());
+        for (size_t i=0; i<primitives_subset.size(); i++) {
+            if (primitives_subset[i].shapetype() == ShapeType::Mesh) {
                 CUDABuffer<float> d_pre_transform;
                 float T[12] = {transform.mat[0], transform.mat[1], transform.mat[2], transform.mat[3],
                                transform.mat[4], transform.mat[5], transform.mat[6], transform.mat[7],
                                transform.mat[8], transform.mat[9], transform.mat[10], transform.mat[11]};
                 d_pre_transform.alloc_copy(T, sizeof(float)*12);
-                build_input.triangleArray.preTransform = d_pre_transform.d_ptr();
-                build_input.triangleArray.transformFormat = OPTIX_TRANSFORM_FORMAT_MATRIX_FLOAT12;
+                build_inputs[i].triangleArray.preTransform = d_pre_transform.d_ptr();
+                build_inputs[i].triangleArray.transformFormat = OPTIX_TRANSFORM_FORMAT_MATRIX_FLOAT12;
             }
-            p.prepare_shapedata();
-            p.build_input(build_input);
-            build_inputs.push_back(build_input);
+            primitives_subset[i].prepare_shapedata();
+            primitives_subset[i].build_input(build_inputs[i]);
         }
 
         Message("build_single_gas : Finished to prepare build inputs");
@@ -178,14 +176,14 @@ void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data, const Primi
         accel_options.buildFlags = OPTIX_BUILD_FLAG_ALLOW_COMPACTION;
         accel_options.operation = OPTIX_BUILD_OPERATION_BUILD;
 
-        Message()
+        Message("Build input size: ", build_inputs.size());
 
         OptixAccelBufferSizes gas_buffer_sizes;
         OPTIX_CHECK(optixAccelComputeMemoryUsage(
             ctx,
             &accel_options,
             build_inputs.data(),
-            static_cast<unsigned int>(build_inputs.size()),
+            static_cast<int>(build_inputs.size()),
             &gas_buffer_sizes
         ));
 

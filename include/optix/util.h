@@ -10,12 +10,6 @@ enum RayType {
     RAY_TYPE_COUNT = 2
 };
 
-template <typename T, typename... Args>
-void setup_object_on_device(T** d_ptr, Args ...args);
-
-template <typename T>
-void delete_object_on_device(T* d_ptr);
-
 namespace pt {
 
 /// @note Currently \c spectrum is RGB representation, not spectrum. 
@@ -97,7 +91,7 @@ INLINE DEVICE bool trace_occlusion(
     return occluded;
 }
 
-INLINE DEVICE void traceRadiance(
+INLINE DEVICE void trace_radiance(
     OptixTraversableHandle handle,
     float3                 ray_origin,
     float3                 ray_direction,

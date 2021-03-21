@@ -381,12 +381,13 @@ int main(int argc, char* argv[]) {
         pt::RayGenRecord rg_sbt = {};
         OPTIX_CHECK(optixSbtRecordPackHeader((OptixProgramGroup)raygen_program, &rg_sbt));
         d_raygen_record.alloc_copy(&rg_sbt, sizeof(pt::RayGenRecord));
+        pt::Message("main() : Created raygen programs");
 
         // Miss programs
         std::vector<pt::ProgramGroup> miss_programs(RAY_TYPE_COUNT, pt::ProgramGroup(OPTIX_PROGRAM_GROUP_KIND_MISS));
-        miss_programs[0].create(optix_context, pt::ProgramEntry((OptixModule)pt_module, MS_FUNC_STR("radiance"))); // miss radiance
-        miss_programs[1].create(optix_context, pt::ProgramEntry(nullptr, nullptr));                      // miss occlusion
-        std::copy(miss_programs.begin(), miss_programs.end(), std::back_inserter(program_groups));
+        miss_programs[0].create(optix_context, pt::ProgramEntry((OptixModule)pt_module, MS_FUNC_STR("radiance")));      // miss radiance
+        miss_programs[1].create(optix_context, pt::ProgramEntry(nullptr, nullptr));                                     // miss occlusion
+        std::copy(miss_programs.begin(), miss_programs.end(), std::back_inserter(program_groups));                      
         // Create sbt for miss programs
         pt::CUDABuffer<pt::MissRecord> d_miss_record;
         pt::MissRecord ms_sbt[RAY_TYPE_COUNT];
@@ -395,6 +396,7 @@ int main(int argc, char* argv[]) {
             ms_sbt[i].data.bg_color = make_float4(0.f);
         }
         d_miss_record.alloc_copy(ms_sbt, sizeof(pt::MissRecord)*RAY_TYPE_COUNT);
+        pt::Message("main() : Created miss programs");
 
         // Create the sbt for raygen and miss programs
         optix_sbt.raygenRecord = d_raygen_record.d_ptr();

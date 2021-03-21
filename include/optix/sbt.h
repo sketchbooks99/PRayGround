@@ -18,6 +18,7 @@ struct HitGroupData {
     MaterialPtr matptr;
 };
 
+#ifndef __CUDACC__
 template <typename T>
 struct Record 
 {
@@ -28,5 +29,7 @@ struct Record
 using RayGenRecord = Record<RayGenData>;
 using MissRecord = Record<MissData>;
 using HitGroupRecord = Record<HitGroupData>;
+
+#endif
 
 }

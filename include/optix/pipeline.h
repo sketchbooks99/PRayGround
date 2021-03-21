@@ -111,8 +111,8 @@ private:
         // Compile options;
         m_compile_options.usesMotionBlur = false;
         m_compile_options.traversableGraphFlags = OPTIX_TRAVERSABLE_GRAPH_FLAG_ALLOW_ANY;
-        m_compile_options.numPayloadValues = 8;
-        m_compile_options.numAttributeValues = 8;
+        m_compile_options.numPayloadValues = 5;
+        m_compile_options.numAttributeValues = 5;
         m_compile_options.pipelineLaunchParamsVariableName = "";
 #ifdef DEBUG
         m_compile_options.exceptionFlags = OPTIX_EXCEPTION_FLAG_DEBUG | OPTIX_EXCEPTION_FLAG_TRACE_DEPTH | OPTIX_EXCEPTION_FLAG_STACK_OVERFLOW;
@@ -124,8 +124,8 @@ private:
         m_link_options.maxTraceDepth = 5;
         m_link_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_FULL;
     }
-    OptixPipelineCompileOptions m_compile_options;
-    OptixPipelineLinkOptions m_link_options;
+    OptixPipelineCompileOptions m_compile_options {};
+    OptixPipelineLinkOptions m_link_options {};
     OptixPipeline m_pipeline;
     uint32_t m_trace_depth { 5 }; 
     uint32_t m_cc_depth { 0 }; 

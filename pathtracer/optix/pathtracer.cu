@@ -29,6 +29,7 @@
 #include <optix.h>
 #include <cuda/random.h>
 #include <include/optix/util.h>
+#include <include/optix/sbt.h>
 #include <include/core/pathtracer.h>
 #include "../shape/optix/sphere.cuh"
 #include "../shape/optix/trianglemesh.cuh"
@@ -76,18 +77,18 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 		 * Is the system can store and propagate information at intersection point 
 		 * through the scene, as like `SurfaceInteraction` in mitsuba2`, needed? */
 
-		pt::SurfaceInteraction *si = get_surfaceinteraction();
-		si->seed = seed;
-		traceRadiance(
+		pt::SurfaceInteraction si;
+		si.seed = seed;
+		trace_radiance(
 			params.handle, 
 			ray_origin, 
 			ray_direction, 
 			0.01f, 
 			1e16f, 
-			si
+			&si
 		);
 
-		result += si->radiance;
+		result += si.radiance;
 	} while (--i);
 
 	const uint3 launch_index = optixGetLaunchIndex();

@@ -116,6 +116,12 @@ public:
 
         char log[2048];
         size_t sizeof_log = sizeof(log);
+
+        if (!ch_entry.second) Message("CH entry is nullptr!");
+        else                  Message(ch_entry.second);
+        if (!ah_entry.second) Message("AH entry is nullptr!");
+        if (!is_entry.second) Message("IS entry is nullptr!");
+
         OptixProgramGroupDesc prog_desc = {};
         prog_desc.kind = m_program_kind;
         prog_desc.hitgroup.moduleCH = ch_entry.first;

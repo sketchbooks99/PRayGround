@@ -20,7 +20,9 @@ public:
     
     HOSTDEVICE float3 emittance(SurfaceInteraction& si) const override { return make_float3(0.f); }
 
-    HOST MaterialType type() const override { return MaterialType::Conductor; }
+#ifndef __CUDACC__
+    MaterialType type() const override { return MaterialType::Conductor; }
+#endif
 
 private:
     void setup_on_device() override;

@@ -151,7 +151,7 @@ void build_gas(OptixDeviceContext& ctx, AccelData& accel_data, const PrimitiveIn
             handle.count = 0;
         }
 
-        Message("build_single_gas : AccelData handle inited");
+        Message("build_single_gas() : AccelData handle inited");
 
         handle.count = primitives_subset.size();
 
@@ -170,7 +170,7 @@ void build_gas(OptixDeviceContext& ctx, AccelData& accel_data, const PrimitiveIn
             primitives_subset[i].build_input(build_inputs[i]);
         }
 
-        Message("build_single_gas : Finished to prepare build inputs");
+        Message("build_single_gas() : Finished to prepare build inputs");
 
         OptixAccelBuildOptions accel_options = {};
         accel_options.buildFlags = OPTIX_BUILD_FLAG_ALLOW_COMPACTION;
@@ -187,7 +187,7 @@ void build_gas(OptixDeviceContext& ctx, AccelData& accel_data, const PrimitiveIn
             &gas_buffer_sizes
         ));
 
-        Message("build_single_gas : Computed the amount of memory for building AS.");
+        Message("build_single_gas() : Computed the amount of memory for building AS.");
 
         // temporarily buffer to build AS
         CUdeviceptr d_temp_buffer;
@@ -201,7 +201,7 @@ void build_gas(OptixDeviceContext& ctx, AccelData& accel_data, const PrimitiveIn
             compactedSizeOffset + 8
         ));
 
-        Message("build_single_gas : Prepare the compacted output.");
+        Message("build_single_gas() : Prepare the compacted output.");
 
         OptixAccelEmitDesc emitProperty = {};
         emitProperty.type = OPTIX_PROPERTY_TYPE_COMPACTED_SIZE;
@@ -222,7 +222,7 @@ void build_gas(OptixDeviceContext& ctx, AccelData& accel_data, const PrimitiveIn
             1
         ));
 
-        Message("build_single_gas : Builded Acceleration Structure");
+        Message("build_single_gas() : Builded Acceleration Structure");
         
         // Free temporarily buffers 
         CUDA_CHECK(cudaFree(reinterpret_cast<void*>(d_temp_buffer)));
@@ -241,13 +241,11 @@ void build_gas(OptixDeviceContext& ctx, AccelData& accel_data, const PrimitiveIn
             handle.d_buffer = d_buffer_temp_output_gas_and_compacted_size;
         }
 
-        Message("build_single_gas : Cleanup temporarily buffers.");
+        Message("build_single_gas() : Cleanup temporarily buffers.");
     };
     
-    Message("Began to build GAS for mesh");
-    build_single_gas(meshes, ps.transform(), accel_data.meshes);
-    Message("Began to build GAS for custom primitives");
-    build_single_gas(customs, ps.transform(), accel_data.customs);
+    if (meshes.size() > 0) build_single_gas(meshes, ps.transform(), accel_data.meshes);
+    if (customs.size() > 0) build_single_gas(customs, ps.transform(), accel_data.customs);
 }
 
 // ---------------------------------------------------------------------

@@ -47,14 +47,17 @@ public:
     virtual HOSTDEVICE float3 emittance(SurfaceInteraction& si) const = 0;
     /// FUTURE:
     // virtual HOSTDEVICE float pdf(const Ray& r, const SurfaceInteraction& si) const = 0; */
-    virtual HOST MaterialType type() const = 0;
 
-    HOST MaterialPtr get_dptr() { return d_ptr; }
+#ifndef __CUDACC__
+    virtual MaterialType type() const = 0;
+    MaterialPtr get_dptr() { return d_ptr; }
+#endif
+
 protected:
     MaterialPtr d_ptr { 0 }; // device pointer.
-
     virtual void setup_on_device() = 0;
     virtual void delete_on_device() = 0;
+
 };
 
 }

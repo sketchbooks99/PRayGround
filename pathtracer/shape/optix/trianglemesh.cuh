@@ -12,7 +12,7 @@ struct MeshData {
     float3* vertices;
     float3* normals;
     int3* indices;
-    Transform transform;
+    // Transform transform;
 };
 
 }

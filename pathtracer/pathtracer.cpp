@@ -426,6 +426,7 @@ int main(int argc, char* argv[]) {
 
         if (outfile.empty())
         {
+            pt::Message("Starting path tracer...");
             GLFWwindow* window = sutil::initUI("Path Tracer", params.width, params.height);
             glfwSetMouseButtonCallback(window, mouseButtonCallback);
             glfwSetCursorPosCallback(window, cursorPosCallback);

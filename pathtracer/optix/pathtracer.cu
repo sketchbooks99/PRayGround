@@ -30,8 +30,8 @@
 #include <cuda/random.h>
 #include <include/optix/util.h>
 #include <include/core/pathtracer.h>
-#include <src/shape/optix/sphere.cuh>
-#include <src/shape/optix/trianglemesh.cuh>
+#include "../shape/optix/sphere.cuh"
+#include "../shape/optix/trianglemesh.cuh"
 
 extern "C" {
 __constant__ pt::Params params;

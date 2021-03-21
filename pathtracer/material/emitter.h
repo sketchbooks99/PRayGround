@@ -16,7 +16,10 @@ public:
     HOSTDEVICE float3 emittance(SurfaceInteraction& si) const override {
         return m_color * m_strength;
     }
-    HOST MaterialType type() const override { return MaterialType::Emitter; }
+
+#ifndef __CUDACC__
+    MaterialType type() const override { return MaterialType::Emitter; }
+#endif
 
 private:
     HOST void setup_on_device() override;

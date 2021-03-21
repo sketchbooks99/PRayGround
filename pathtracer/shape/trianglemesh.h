@@ -23,9 +23,9 @@ public:
      */
     AABB bound() const override { return AABB(); } 
 private:
-    std::vector<float3> vertices;
-    std::vector<float3> normals;
-    std::vector<int3> indices;
+    std::vector<float3> m_vertices;
+    std::vector<float3> m_normals;
+    std::vector<int3> m_indices;
 
     CUdeviceptr d_vertices { 0 };
     CUdeviceptr d_normals { 0 };

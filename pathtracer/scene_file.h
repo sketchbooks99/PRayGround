@@ -3,13 +3,13 @@
 #include <include/core/primitive.h>
 #include <include/core/scene.h>
 
-#include "src/shape/sphere.h"
-#include "src/shape/trianglemesh.h"
+#include "pathtracer/shape/sphere.h"
+#include "pathtracer/shape/trianglemesh.h"
 
-#include "src/material/conductor.h"
-#include "src/material/dielectric.h"
-#include "src/material/diffuse.h"
-#include "src/material/emitter.h"
+#include "pathtracer/material/conductor.h"
+#include "pathtracer/material/dielectric.h"
+#include "pathtracer/material/diffuse.h"
+#include "pathtracer/material/emitter.h"
 
 pt::Scene my_scene() {
     pt::Scene scene;

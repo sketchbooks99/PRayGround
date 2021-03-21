@@ -960,7 +960,6 @@ static std::string samplePTXFilePath( const char* sampleName, const char* fileNa
 static void getPtxStringFromFile( std::string& ptx, const char* sample_name, const char* filename )
 {
     const std::string sourceFilePath = samplePTXFilePath( sample_name, filename );
-
     // Try to open source PTX file
     if( !readSourceFile( ptx, sourceFilePath ) )
     {

@@ -33,7 +33,7 @@ TriangleMesh::TriangleMesh(
                 x *= axis.x;
                 y *= axis.y;
                 z *= axis.z;
-                vertices.emplace_back(make_float3(x, y, z));
+                m_vertices.emplace_back(make_float3(x, y, z));
             }
             else if(header == "vn") {
                 float x, y, z;
@@ -86,7 +86,7 @@ TriangleMesh::TriangleMesh(
                     throw std::runtime_error("The number of indices is less than 3.\n");
 
                 if (temp_vert_indices.size() == 3) {
-                    indices.emplace_back(make_int3(
+                    m_indices.emplace_back(make_int3(
                         temp_vert_indices[0], temp_vert_indices[1], temp_vert_indices[2]));
                     normal_indices.emplace_back(make_int3(
                         temp_norm_indices[0], temp_norm_indices[1], temp_norm_indices[2]));
@@ -101,11 +101,11 @@ TriangleMesh::TriangleMesh(
                     {
                         // The index value of 0th vertex in quad
                         auto base_idx = i * 4;
-                        indices.emplace_back(make_int3(
+                        m_indices.emplace_back(make_int3(
                             temp_vert_indices[base_idx + 0],
                             temp_vert_indices[base_idx + 1],
                             temp_vert_indices[base_idx + 2]));
-                        indices.emplace_back(make_int3(
+                        m_indices.emplace_back(make_int3(
                             temp_vert_indices[base_idx + 2],
                             temp_vert_indices[base_idx + 3],
                             temp_vert_indices[base_idx + 0]));
@@ -116,43 +116,43 @@ TriangleMesh::TriangleMesh(
         ifs.close();
     }
 
-    for (auto& vertex : vertices) {
+    for (auto& vertex : m_vertices) {
         vertex = vertex * size + position;
     }
 
     // Mesh smoothing
-    normals.resize(vertices.size());
-    auto counts = std::vector<int>(vertices.size(), 0);
-    for(int i=0; i<indices.size(); i++)
+    m_normals.resize(m_vertices.size());
+    auto counts = std::vector<int>(m_vertices.size(), 0);
+    for(size_t i=0; i<m_indices.size(); i++)
     {
-        auto p0 = vertices[indices[i].x];
-        auto p1 = vertices[indices[i].y];
-        auto p2 = vertices[indices[i].z];
+        auto p0 = m_vertices[m_indices[i].x];
+        auto p1 = m_vertices[m_indices[i].y];
+        auto p2 = m_vertices[m_indices[i].z];
         auto N = normalize(cross(p2 - p0, p1 - p0));
 
         if (isSmooth) {
-            auto idx = indices[i].x;
-            normals[idx] += N;
+            auto idx = m_indices[i].x;
+            m_normals[idx] += N;
             counts[idx]++;
-            idx = indices[i].y;
-            normals[idx] += N;
+            idx = m_indices[i].y;
+            m_normals[idx] += N;
             counts[idx]++;
-            idx = indices[i].z;
-            normals[idx] += N;
+            idx = m_indices[i].z;
+            m_normals[idx] += N;
             counts[idx]++;
         }
         else
         {
-            normals[indices[i].x] = N;
-            normals[indices[i].y] = N;
-            normals[indices[i].z] = N;
+            m_normals[m_indices[i].x] = N;
+            m_normals[m_indices[i].y] = N;
+            m_normals[m_indices[i].z] = N;
         }
     }
     if (isSmooth) {
-        for (int i = 0; i < vertices.size(); i++)
+        for (size_t i = 0; i < m_vertices.size(); i++)
         {
-            normals[i] /= counts[i];
-            normals[i] = normalize(normals[i]);
+            m_normals[i] /= counts[i];
+            m_normals[i] = normalize(m_normals[i]);
         }
     }
 }
@@ -162,40 +162,40 @@ TriangleMesh::TriangleMesh(std::vector<float3> vertices,
     std::vector<int3> indices, 
     std::vector<float3> normals, 
     bool isSmooth) 
-    : vertices(vertices), 
-    indices(indices), 
-    normals(normals)
+    : m_vertices(vertices), 
+      m_normals(normals), 
+      m_indices(indices)
 {
-    Assert(vertices.size() == normals.size(), "The size of vertices and normals are not equal.");
+    Assert(m_vertices.size() == m_normals.size(), "The size of m_vertices and m_normals are not equal.");
 
     // Mesh smoothing
-    if (indices.size() > 32)
+    if (m_indices.size() > 32)
     {
-        normals = std::vector<float3>(vertices.size(), make_float3(0.0f));
+        m_normals = std::vector<float3>(vertices.size(), make_float3(0.0f));
         auto counts = std::vector<int>(vertices.size(), 0);
-        for (int i = 0; i < indices.size(); i++)
+        for (size_t i = 0; i < m_indices.size(); i++)
         {
-            auto p0 = vertices[indices[i].x];
-            auto p1 = vertices[indices[i].y];
-            auto p2 = vertices[indices[i].z];
+            auto p0 = m_vertices[m_indices[i].x];
+            auto p1 = m_vertices[m_indices[i].y];
+            auto p2 = m_vertices[m_indices[i].z];
             auto N = normalize(cross(p2 - p0, p1 - p0));
 
-            auto idx = indices[i].x;
-            normals[idx] += N;
+            auto idx = m_indices[i].x;
+            m_normals[idx] += N;
             counts[idx]++;
 
-            idx = indices[i].y;
-            normals[idx] += N;
+            idx = m_indices[i].y;
+            m_normals[idx] += N;
             counts[idx]++;
 
-            idx = indices[i].z;
-            normals[idx] += N;
+            idx = m_indices[i].z;
+            m_normals[idx] += N;
             counts[idx]++;
         }
-        for (int i = 0; i < vertices.size(); i++)
+        for (size_t i = 0; i < m_vertices.size(); i++)
         {
-            normals[i] /= counts[i];
-            normals[i] = normalize(normals[i]);
+            m_normals[i] /= counts[i];
+            m_normals[i] = normalize(m_normals[i]);
         }
     }
 }
@@ -205,15 +205,14 @@ void TriangleMesh::prepare_data() {
     CUDABuffer<float3> d_vertices_buf;
     CUDABuffer<float3> d_normals_buf;
     CUDABuffer<int3> d_indices_buf;
-    d_vertices_buf.alloc_copy(vertices);
-    d_normals_buf.alloc_copy(normals);
-    d_indices_buf.alloc_copy(indices);
+    d_vertices_buf.alloc_copy(m_vertices);
+    d_normals_buf.alloc_copy(m_normals);
+    d_indices_buf.alloc_copy(m_indices);
 
     MeshData data = {
         d_vertices_buf.data(),
         d_normals_buf.data(),
         d_indices_buf.data(),
-        Transform()
     };
 
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_data_ptr), sizeof(MeshData)));
@@ -222,34 +221,32 @@ void TriangleMesh::prepare_data() {
         &data, sizeof(MeshData),
         cudaMemcpyHostToDevice
     ));
+
+    d_vertices = d_vertices_buf.d_ptr();
+    d_normals = d_normals_buf.d_ptr();
+    d_indices = d_indices_buf.d_ptr();
 }   
 
 // ------------------------------------------------------------------
 HOST void TriangleMesh::build_input( OptixBuildInput& bi, uint32_t sbt_idx ) {
-    // Prepare the indices of shader binding table on device.
-    CUdeviceptr d_sbt_indices;
-    std::vector<uint32_t> sbt_indices( indices.size(), sbt_idx );
-    size_t size_sbt_indices_in_bytes = sbt_indices.size() * sizeof(uint32_t);
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_sbt_indices), size_sbt_indices_in_bytes));
-    CUDA_CHECK(cudaMemcpy(
-        reinterpret_cast<void*>(d_sbt_indices),
-        sbt_indices.data(),
-        sbt_indices.size(),
-        cudaMemcpyHostToDevice
-    ));
+    CUDABuffer<uint32_t> d_sbt_indices;
+    std::vector<uint32_t> sbt_indices(m_indices.size(), sbt_idx);
+    d_sbt_indices.alloc_copy(sbt_indices);
 
+    unsigned int* triangle_input_flags = new unsigned int[1];
+    triangle_input_flags[0] = OPTIX_GEOMETRY_FLAG_DISABLE_ANYHIT;
     bi.type = OPTIX_BUILD_INPUT_TYPE_TRIANGLES;
     bi.triangleArray.vertexFormat = OPTIX_VERTEX_FORMAT_FLOAT3;
     bi.triangleArray.vertexStrideInBytes = sizeof(float3);
-    bi.triangleArray.numVertices = static_cast<uint32_t>(vertices.size());
+    bi.triangleArray.numVertices = static_cast<uint32_t>(m_vertices.size());
     bi.triangleArray.vertexBuffers = &d_vertices;
-    bi.triangleArray.flags = (unsigned int*)(OPTIX_GEOMETRY_FLAG_DISABLE_ANYHIT);
+    bi.triangleArray.flags = triangle_input_flags;
     bi.triangleArray.indexFormat = OPTIX_INDICES_FORMAT_UNSIGNED_INT3;
     bi.triangleArray.indexStrideInBytes = sizeof(int3);
-    bi.triangleArray.numIndexTriplets = static_cast<uint32_t>(indices.size());
+    bi.triangleArray.numIndexTriplets = static_cast<uint32_t>(m_indices.size());
     bi.triangleArray.indexBuffer = d_indices;
     bi.triangleArray.numSbtRecords = 1;
-    bi.triangleArray.sbtIndexOffsetBuffer = d_sbt_indices;
+    bi.triangleArray.sbtIndexOffsetBuffer = d_sbt_indices.d_ptr();
     bi.triangleArray.sbtIndexOffsetSizeInBytes = sizeof(uint32_t);
     bi.triangleArray.sbtIndexOffsetStrideInBytes = sizeof(uint32_t);
 }

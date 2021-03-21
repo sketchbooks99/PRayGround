@@ -10,7 +10,7 @@ namespace pt {
 struct SphereData {
     float3 center;
     float radius;
-    Transform transform;
+    // Transform transform;
 };
 
 }

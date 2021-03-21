@@ -130,16 +130,19 @@ private:
  * \note 
  * Call of this funcion :  build_gas(ctx, accel_data, primitive_instances.primitives());
  */ 
-void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data, const std::vector<Primitive>& primitives) {
+void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data, const PrimitiveInstance& ps) {
     std::vector<Primitive> meshes;
     std::vector<Primitive> customs;
 
-    for (auto &p : primitives) {
+    for (auto &p : ps.primitives()) {
         if (p.shapetype() == ShapeType::Mesh) meshes.push_back(p);
         else                                  customs.push_back(p);
     }
 
-    auto build_single_gas = [&ctx](std::vector<Primitive> primitives_subset, AccelData::HandleData& handle) {
+    auto build_single_gas = [&ctx](std::vector<Primitive> primitives_subset, 
+                                   const Transform& transform, 
+                                   AccelData::HandleData& handle) 
+    {
         if (handle.d_buffer)
         {
             CUDA_CHECK(cudaFree(reinterpret_cast<void*>(handle.d_buffer)));
@@ -148,19 +151,34 @@ void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data, const std::
             handle.count = 0;
         }
 
+        Message("build_single_gas : AccelData handle inited");
+
         handle.count = primitives_subset.size();
 
         std::vector<OptixBuildInput> build_inputs;
         for (auto &p : primitives_subset) {
             OptixBuildInput build_input;
+            if (p.shapetype() == ShapeType::Mesh) {
+                CUDABuffer<float> d_pre_transform;
+                float T[12] = {transform.mat[0], transform.mat[1], transform.mat[2], transform.mat[3],
+                               transform.mat[4], transform.mat[5], transform.mat[6], transform.mat[7],
+                               transform.mat[8], transform.mat[9], transform.mat[10], transform.mat[11]};
+                d_pre_transform.alloc_copy(T, sizeof(float)*12);
+                build_input.triangleArray.preTransform = d_pre_transform.d_ptr();
+                build_input.triangleArray.transformFormat = OPTIX_TRANSFORM_FORMAT_MATRIX_FLOAT12;
+            }
             p.prepare_shapedata();
             p.build_input(build_input);
             build_inputs.push_back(build_input);
         }
 
+        Message("build_single_gas : Finished to prepare build inputs");
+
         OptixAccelBuildOptions accel_options = {};
         accel_options.buildFlags = OPTIX_BUILD_FLAG_ALLOW_COMPACTION;
         accel_options.operation = OPTIX_BUILD_OPERATION_BUILD;
+
+        Message()
 
         OptixAccelBufferSizes gas_buffer_sizes;
         OPTIX_CHECK(optixAccelComputeMemoryUsage(
@@ -170,6 +188,8 @@ void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data, const std::
             static_cast<unsigned int>(build_inputs.size()),
             &gas_buffer_sizes
         ));
+
+        Message("build_single_gas : Computed the amount of memory for building AS.");
 
         // temporarily buffer to build AS
         CUdeviceptr d_temp_buffer;
@@ -182,6 +202,8 @@ void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data, const std::
             reinterpret_cast<void**>(&d_buffer_temp_output_gas_and_compacted_size),
             compactedSizeOffset + 8
         ));
+
+        Message("build_single_gas : Prepare the compacted output.");
 
         OptixAccelEmitDesc emitProperty = {};
         emitProperty.type = OPTIX_PROPERTY_TYPE_COMPACTED_SIZE;
@@ -201,6 +223,8 @@ void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data, const std::
             &emitProperty,
             1
         ));
+
+        Message("build_single_gas : Builded Acceleration Structure");
         
         // Free temporarily buffers 
         CUDA_CHECK(cudaFree(reinterpret_cast<void*>(d_temp_buffer)));
@@ -218,10 +242,14 @@ void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data, const std::
         else {
             handle.d_buffer = d_buffer_temp_output_gas_and_compacted_size;
         }
+
+        Message("build_single_gas : Cleanup temporarily buffers.");
     };
     
-    build_single_gas(meshes, accel_data.meshes);
-    build_single_gas(customs, accel_data.customs);
+    Message("Began to build GAS for mesh");
+    build_single_gas(meshes, ps.transform(), accel_data.meshes);
+    Message("Began to build GAS for custom primitives");
+    build_single_gas(customs, ps.transform(), accel_data.customs);
 }
 
 // ---------------------------------------------------------------------

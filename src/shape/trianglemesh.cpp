@@ -243,7 +243,7 @@ HOST void TriangleMesh::build_input( OptixBuildInput& bi, uint32_t sbt_idx ) {
     bi.triangleArray.vertexStrideInBytes = sizeof(float3);
     bi.triangleArray.numVertices = static_cast<uint32_t>(vertices.size());
     bi.triangleArray.vertexBuffers = &d_vertices;
-    bi.triangleArray.flags = (unsigned int*)(OPTIX_GEOMETRY_FLAG_NONE);
+    bi.triangleArray.flags = (unsigned int*)(OPTIX_GEOMETRY_FLAG_DISABLE_ANYHIT);
     bi.triangleArray.indexFormat = OPTIX_INDICES_FORMAT_UNSIGNED_INT3;
     bi.triangleArray.indexStrideInBytes = sizeof(int3);
     bi.triangleArray.numIndexTriplets = static_cast<uint32_t>(indices.size());

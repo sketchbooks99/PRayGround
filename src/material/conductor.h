@@ -7,49 +7,28 @@ namespace pt {
 
 class Conductor;
 
-template void setup_object_on_device<Conductor**>();
-template void delete_object_on_device<Material*>();
-
 class Conductor final : public Material {
 public:
-    HOSTDEVICE Conductor(float3 a, float f) : albedo(a), fuzz(f) {
-        #ifndef __CUDACC__
-        setup_on_device();
-        #endif
-    }
-    HOSTDEVICE ~Conductor() {
-        #ifndef __CUDACC__
-        delete_on_device();
-        #endif
-    }
+    HOSTDEVICE Conductor(float3 a, float f);
+    HOSTDEVICE ~Conductor();
 
-    HOSTDEVICE void sample(SurfaceInteraction& si) const override;
+    HOSTDEVICE void sample(SurfaceInteraction& si) const override {
+        si.wo = reflect(si.wi, si.n);
+        si.attenuation = m_albedo;
+        si.trace_terminate = false;
+    }
+    
     HOSTDEVICE float3 emittance(SurfaceInteraction& si) const override { return make_float3(0.f); }
 
     HOST MaterialType type() const override { return MaterialType::Conductor; }
 
 private:
-    void setup_on_device() override {
-        CUDA_CHECK(cudaMalloc((void**)&d_ptr, sizeof(MaterialPtr)));
-        setup_object_on_device((Conductor**)&d_ptr, albedo, fuzz);
-        CUDA_SYNC_CHECK();
-    }
+    void setup_on_device() override;
+    void delete_on_device() override;
 
-    void delete_on_device() override {
-        delete_object_on_device(d_ptr);
-        CUDA_SYNC_CHECK();
-    }
-
-    float3 albedo;
-    float fuzz;
+    float3 m_albedo;
+    float m_fuzz;
 };
-
-// sampling 
-HOSTDEVICE void Conductor::sample(SurfaceInteraction& si) const {
-    si.wo = reflect(si.wi, si.n);
-    si.attenuation = albedo;
-    si.trace_terminate = false;
-}
 
 }
 

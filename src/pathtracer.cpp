@@ -290,20 +290,25 @@ int main(int argc, char* argv[]) {
         options.logCallbackLevel = 4;
         OPTIX_CHECK(optixDeviceContextCreate(cu_ctx, &options, &optix_context));
 
+        pt::Message("Created device context");
+
         // Build children instance ASs that contain the geometry AS. 
         std::vector<OptixInstance> instances;
         std::vector<pt::AccelData> accels;
         unsigned int sbt_base_offset = 0; 
         unsigned int instance_id = 0;
         for (auto &ps : scene.primitive_instances()) {
-            pt::AccelData accel;
-            pt::build_gas(optix_context, accel, ps.primitives());
+            accels.push_back(pt::AccelData());
+            pt::build_gas(optix_context, accels.back(), ps);
+            pt::Message("Builded GAS");
             /// New OptixInstance are pushed back to \c instances
-            pt::build_ias(optix_context, accel, ps, sbt_base_offset, instance_id, instances);
-            accels.push_back(accel);
-            sbt_base_offset += (accel.meshes.count + accel.customs.count);
+            pt::build_ias(optix_context, accels.back(), ps, sbt_base_offset, instance_id, instances);
+            pt::Message("Builded IAS");
+            sbt_base_offset += (accels.back().meshes.count + accels.back().customs.count);
             instance_id++;
         }
+
+        std::cout << "Builded children instance ASs that contain the geometry AS" << std::endl;
 
         // Create all instances on the device.
         pt::CUDABuffer<OptixInstance> d_instances;

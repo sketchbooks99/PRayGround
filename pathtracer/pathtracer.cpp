@@ -294,17 +294,18 @@ int main(int argc, char* argv[]) {
 
         // Build children instance ASs that contain the geometry AS. 
         std::vector<OptixInstance> instances;
-        std::vector<pt::AccelData> accels;
+        // std::vector<pt::AccelData> accels;
         unsigned int sbt_base_offset = 0; 
         unsigned int instance_id = 0;
         for (auto &ps : scene.primitive_instances()) {
-            accels.push_back(pt::AccelData());
-            pt::build_gas(optix_context, accels.back(), ps);
+            // accels.push_back(pt::AccelData());
+            pt::AccelData accel = {};
+            pt::build_gas(optix_context, accel, ps);
             pt::Message("Builded GAS");
             /// New OptixInstance are pushed back to \c instances
-            pt::build_ias(optix_context, accels.back(), ps, sbt_base_offset, instance_id, instances);
+            pt::build_ias(optix_context, accel, ps, sbt_base_offset, instance_id, instances);
             pt::Message("Builded IAS");
-            sbt_base_offset += (accels.back().meshes.count + accels.back().customs.count);
+            sbt_base_offset += (accel.meshes.count + accel.customs.count);
             instance_id++;
         }
 
@@ -369,7 +370,7 @@ int main(int argc, char* argv[]) {
         pt_module.create(optix_context, pt_pipeline.compile_options());
 
         // Create program groups
-        OptixShaderBindingTable optix_sbt;
+        OptixShaderBindingTable optix_sbt = {};
         std::vector<OptixProgramGroup> program_groups;
 
         // Raygen programs
@@ -387,13 +388,14 @@ int main(int argc, char* argv[]) {
         std::vector<pt::ProgramGroup> miss_programs(RAY_TYPE_COUNT, pt::ProgramGroup(OPTIX_PROGRAM_GROUP_KIND_MISS));
         miss_programs[0].create(optix_context, pt::ProgramEntry((OptixModule)pt_module, MS_FUNC_STR("radiance")));      // miss radiance
         miss_programs[1].create(optix_context, pt::ProgramEntry(nullptr, nullptr));                                     // miss occlusion
-        std::copy(miss_programs.begin(), miss_programs.end(), std::back_inserter(program_groups));                      
+        std::copy(miss_programs.begin(), miss_programs.end(), std::back_inserter(program_groups)); 
+
         // Create sbt for miss programs
         pt::CUDABuffer<pt::MissRecord> d_miss_record;
         pt::MissRecord ms_sbt[RAY_TYPE_COUNT];
         for (int i=0; i<RAY_TYPE_COUNT; i++) {
             OPTIX_CHECK(optixSbtRecordPackHeader((OptixProgramGroup)miss_programs[i], &ms_sbt[i]));
-            ms_sbt[i].data.bg_color = make_float4(0.f);
+            ms_sbt[i].data.bg_color = make_float4(1.0f, 0.0f, 1.0f, 1.0f);
         }
         d_miss_record.alloc_copy(ms_sbt, sizeof(pt::MissRecord)*RAY_TYPE_COUNT);
         pt::Message("main() : Created miss programs");

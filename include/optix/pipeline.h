@@ -8,7 +8,7 @@ namespace pt {
 
 class Pipeline {
 public:
-    explicit Pipeline(const std::string& params_name) {
+    explicit Pipeline(std::string params_name) {
         _init_compile_options();
         m_compile_options.pipelineLaunchParamsVariableName = params_name.c_str();
         _init_link_options();
@@ -126,7 +126,7 @@ private:
     }
     OptixPipelineCompileOptions m_compile_options {};
     OptixPipelineLinkOptions m_link_options {};
-    OptixPipeline m_pipeline;
+    OptixPipeline m_pipeline { 0 };
     uint32_t m_trace_depth { 5 }; 
     uint32_t m_cc_depth { 0 }; 
     uint32_t m_dc_depth { 0 };

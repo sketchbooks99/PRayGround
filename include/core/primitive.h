@@ -85,7 +85,7 @@ private:
     MaterialPtr m_material_ptr;
 
     /** 
-     * @param
+     * \note
      * - 0 : for radiance program
      * - 1 : for occlusion program (optional)
      **/
@@ -112,7 +112,10 @@ public:
     : m_transform(transform), m_primitives(primitives) {}
 
     void add_primitive(const Primitive& p) { m_primitives.push_back(p); }
+
+    // Allow to return primitives as lvalue. 
     std::vector<Primitive> primitives() const { return m_primitives; }
+    std::vector<Primitive>& primitives() { return m_primitives; }
     
     void set_transform(const Transform& t) { m_transform = t; } 
     Transform transform() const { return m_transform; }
@@ -151,7 +154,6 @@ void build_gas(OptixDeviceContext& ctx, AccelData& accel_data, const PrimitiveIn
             handle.count = 0;
         }
 
-        Message("build_single_gas() : AccelData handle inited");
 
         handle.count = primitives_subset.size();
 
@@ -170,13 +172,11 @@ void build_gas(OptixDeviceContext& ctx, AccelData& accel_data, const PrimitiveIn
             primitives_subset[i].build_input(build_inputs[i]);
         }
 
-        Message("build_single_gas() : Finished to prepare build inputs");
 
         OptixAccelBuildOptions accel_options = {};
         accel_options.buildFlags = OPTIX_BUILD_FLAG_ALLOW_COMPACTION;
         accel_options.operation = OPTIX_BUILD_OPERATION_BUILD;
 
-        Message("Build input size: ", build_inputs.size());
 
         OptixAccelBufferSizes gas_buffer_sizes;
         OPTIX_CHECK(optixAccelComputeMemoryUsage(
@@ -186,8 +186,6 @@ void build_gas(OptixDeviceContext& ctx, AccelData& accel_data, const PrimitiveIn
             static_cast<int>(build_inputs.size()),
             &gas_buffer_sizes
         ));
-
-        Message("build_single_gas() : Computed the amount of memory for building AS.");
 
         // temporarily buffer to build AS
         CUdeviceptr d_temp_buffer;
@@ -201,7 +199,6 @@ void build_gas(OptixDeviceContext& ctx, AccelData& accel_data, const PrimitiveIn
             compactedSizeOffset + 8
         ));
 
-        Message("build_single_gas() : Prepare the compacted output.");
 
         OptixAccelEmitDesc emitProperty = {};
         emitProperty.type = OPTIX_PROPERTY_TYPE_COMPACTED_SIZE;
@@ -221,8 +218,6 @@ void build_gas(OptixDeviceContext& ctx, AccelData& accel_data, const PrimitiveIn
             &emitProperty,
             1
         ));
-
-        Message("build_single_gas() : Builded Acceleration Structure");
         
         // Free temporarily buffers 
         CUDA_CHECK(cudaFree(reinterpret_cast<void*>(d_temp_buffer)));
@@ -240,8 +235,6 @@ void build_gas(OptixDeviceContext& ctx, AccelData& accel_data, const PrimitiveIn
         else {
             handle.d_buffer = d_buffer_temp_output_gas_and_compacted_size;
         }
-
-        Message("build_single_gas() : Cleanup temporarily buffers.");
     };
     
     if (meshes.size() > 0) build_single_gas(meshes, ps.transform(), accel_data.meshes);

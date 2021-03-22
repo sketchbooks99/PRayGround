@@ -43,9 +43,9 @@ inline std::ostream& operator<<(std::ostream& out, ShapeType type) {
 
 struct AccelData {
     struct HandleData {
-        OptixTraversableHandle handle;
-        CUdeviceptr d_buffer;
-        unsigned int count;
+        OptixTraversableHandle handle { 0 };
+        CUdeviceptr d_buffer { 0 };
+        unsigned int count { 0 };
     };
     HandleData meshes;
     HandleData customs;

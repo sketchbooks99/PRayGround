@@ -87,8 +87,8 @@ public:
             ));
 
         sbt.hitgroupRecordBase = d_hitgroup_records;
-        sbt.callablesRecordStrideInBytes = static_cast<uint32_t>( hitgroup_record_size );
-        sbt.callablesRecordCount = num_hitgroup_records;
+        sbt.hitgroupRecordStrideInBytes = static_cast<uint32_t>( hitgroup_record_size );
+        sbt.hitgroupRecordCount = num_hitgroup_records;
     }
 
     void add_primitive_instance(const PrimitiveInstance& ps) { m_primitives_instances.push_back(ps); }

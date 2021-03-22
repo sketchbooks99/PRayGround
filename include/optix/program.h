@@ -24,10 +24,10 @@ public:
     }
 
     /** \brief create program groups depends on OptixProgramGroupKind */
-    template <typename Context, typename ...Entries>
-    void create(const Context& ctx, Entries... entries)
-    {
-        const int num_entries = sizeof...(entries); 
+    template <typename ...Entries>
+    void create(const OptixDeviceContext& ctx, Entries... entries)
+    {   
+        const size_t num_entries = sizeof...(entries); 
 
         switch(m_program_kind) {
         case OPTIX_PROGRAM_GROUP_KIND_RAYGEN:
@@ -117,11 +117,6 @@ public:
         char log[2048];
         size_t sizeof_log = sizeof(log);
 
-        if (!ch_entry.second) Message("CH entry is nullptr!");
-        else                  Message(ch_entry.second);
-        if (!ah_entry.second) Message("AH entry is nullptr!");
-        if (!is_entry.second) Message("IS entry is nullptr!");
-
         OptixProgramGroupDesc prog_desc = {};
         prog_desc.kind = m_program_kind;
         prog_desc.hitgroup.moduleCH = ch_entry.first;
@@ -174,9 +169,9 @@ public:
         OPTIX_CHECK(optixSbtRecordPackHeader(m_program, &record));
     }
 private:
-    OptixProgramGroup m_program;
-    OptixProgramGroupKind m_program_kind;
-    OptixProgramGroupOptions m_program_options;
+    OptixProgramGroup m_program { 0 };
+    OptixProgramGroupKind m_program_kind {};
+    OptixProgramGroupOptions m_program_options {};
 }; 
 
 }

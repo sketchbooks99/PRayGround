@@ -124,8 +124,8 @@ private:
         m_link_options.maxTraceDepth = 5;
         m_link_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_FULL;
     }
-    OptixPipelineCompileOptions m_compile_options {};
-    OptixPipelineLinkOptions m_link_options {};
+    OptixPipelineCompileOptions m_compile_options = {};
+    OptixPipelineLinkOptions m_link_options = {};
     OptixPipeline m_pipeline { 0 };
     uint32_t m_trace_depth { 5 }; 
     uint32_t m_cc_depth { 0 }; 

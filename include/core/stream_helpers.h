@@ -15,7 +15,6 @@ std::string to_str(T t) {
 /**
  * \enum OptixProgramGroupKind
  **/
-
 inline std::ostream& operator<<(std::ostream& out, const OptixProgramGroupKind& kind) {
     switch(kind) {
     case OPTIX_PROGRAM_GROUP_KIND_RAYGEN:
@@ -31,6 +30,14 @@ inline std::ostream& operator<<(std::ostream& out, const OptixProgramGroupKind& 
     default:
         return out << "";
     }
+}
+
+/**
+ * \struct OptixModuleCompileOptions
+ */
+
+inline std::ostream& operator<<(std::ostream& out, const OptixModuleCompileOptions& cop) {
+    out << 
 }
 
 }

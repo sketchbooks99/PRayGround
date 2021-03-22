@@ -195,12 +195,12 @@ void launchSubframe( sutil::CUDAOutputBuffer<uchar4> & output_buffer,   // outpu
     OPTIX_CHECK( optixLaunch(
         pipeline, 
         stream,
-        reinterpret_cast<CUdeviceptr>( d_params ),
+        d_params,
         sizeof( pt::Params ),
         &sbt,
         params.width,
         params.height,
-        1
+        5
     ));
     output_buffer.unmap();
     CUDA_SYNC_CHECK();

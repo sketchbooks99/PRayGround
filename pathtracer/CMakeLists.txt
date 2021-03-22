@@ -36,6 +36,30 @@ set_source_files_properties(
 
 OPTIX_add_sample_executable( pathtracer target_name
 
+  # ===== INCLUDE =====
+  ../include/core/aabb.h
+  ../include/core/bsdf.h
+  ../include/core/cudabuffer.h
+  ../include/core/material.h
+  ../include/core/onb.h
+  ../include/core/pathtracer.h
+  ../include/core/primitive.h
+  ../include/core/scene.h
+  ../include/core/shape.h
+  ../include/core/stream_helpers.h
+  ../include/core/util.h
+  ../include/core/transform.h
+  # ../include/core/texture.h
+
+  ../include/optix/helpers.h
+  ../include/optix/macros.h
+  ../include/optix/module.h
+  ../include/optix/pipeline.h
+  ../include/optix/program.h
+  ../include/optix/ray.h
+  ../include/optix/sbt.h
+  ../include/optix/util.h
+
   # ===== HEADER =====
   material/conductor.h 
   material/dielectric.h 

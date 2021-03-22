@@ -8,7 +8,7 @@ namespace pt {
 
 class Pipeline {
 public:
-    explicit Pipeline(std::string params_name) {
+    explicit Pipeline(const std::string& params_name) {
         _init_compile_options();
         m_compile_options.pipelineLaunchParamsVariableName = params_name.c_str();
         _init_link_options();
@@ -19,7 +19,7 @@ public:
         _init_link_options();
     }
     
-    Pipeline(OptixPipelineCompileOptions c_op, OptixPipelineLinkOptions l_op)
+    explicit Pipeline(OptixPipelineCompileOptions c_op, OptixPipelineLinkOptions l_op)
     : m_compile_options(c_op), m_link_options(l_op) { }
 
     void destroy() {
@@ -50,6 +50,9 @@ public:
         // Create pipeline from program groups.
         char log[2048];
         size_t sizeof_log = sizeof(log);
+
+        Message("m_compile_options:", m_compile_options);
+
         OPTIX_CHECK_LOG(optixPipelineCreate(
             ctx,
             &m_compile_options,

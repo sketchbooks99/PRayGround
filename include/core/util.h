@@ -59,7 +59,7 @@ inline void Message() {
 template <typename Head, typename... Args>
 inline void Message(Head head, Args... args) {
     Message_once(head);
-    if (sizeof...(args) > 0) std::cout << ", ";
+    if (sizeof...(args) > 0) std::cout << ' ';
     Message(args...);
 }
 

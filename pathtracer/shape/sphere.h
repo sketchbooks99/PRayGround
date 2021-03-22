@@ -24,6 +24,8 @@ public:
             &data, sizeof(SphereData),
             cudaMemcpyHostToDevice
         ));
+
+        Message("Sphere::prepare_data():", "d_data_ptr =", d_data_ptr);
     }
 
     void build_input( OptixBuildInput& bi, uint32_t sbt_idx ) override

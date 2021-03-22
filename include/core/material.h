@@ -50,7 +50,7 @@ public:
 
 #ifndef __CUDACC__
     virtual MaterialType type() const = 0;
-    MaterialPtr get_dptr() { return d_ptr; }
+    MaterialPtr get_dptr() const { return d_ptr; }
 #endif
 
 protected:

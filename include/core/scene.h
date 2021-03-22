@@ -52,11 +52,12 @@ public:
                     // Bind sbt to radiance program groups. 
                     if (i == 0) 
                     {
-                        HitGroupRecord record;
-                        record.data.shapedata = p.shape()->get_dptr();
-                        record.data.matptr = p.material()->get_dptr();
-                        p.bind_radiance_record(record);
-                        hitgroup_records.push_back(record);
+                        hitgroup_records.push_back(HitGroupRecord());
+                        Message("create_hitgroup_sbt():", "p.shape()->get_dptr() =", p.shape()->get_dptr());
+                        hitgroup_records.back().data.shapedata = p.shape()->get_dptr();
+                        hitgroup_records.back().data.matptr = p.material()->get_dptr();
+                        p.bind_radiance_record(hitgroup_records.back());
+                        hitgroup_records.push_back(hitgroup_records.back());
                         sbt_idx++;
                     } 
                     // Bind sbt to occlusion program groups.

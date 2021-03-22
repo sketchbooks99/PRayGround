@@ -364,7 +364,8 @@ int main(int argc, char* argv[]) {
         d_instances.free();
 
         // Prepare the pipeline
-        pt::Pipeline pt_pipeline("params");
+        std::string params_name = "params";
+        pt::Pipeline pt_pipeline(params_name);
         // Create module 
         pt::Module pt_module("optix/pathtracer.cu");
         pt_module.create(optix_context, pt_pipeline.compile_options());

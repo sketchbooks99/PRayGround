@@ -73,7 +73,7 @@ public:
         if (d_aabb_buffer) CUDA_CHECK(cudaFree(reinterpret_cast<void*>(d_aabb_buffer))); 
     }
 
-    CUdeviceptr get_dptr() { return d_data_ptr; }
+    CUdeviceptr get_dptr() const { return d_data_ptr; }
 protected:
     CUdeviceptr d_data_ptr { 0 };
     CUdeviceptr d_aabb_buffer { 0 };

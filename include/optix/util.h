@@ -14,10 +14,10 @@ namespace pt {
 
 /// @note Currently \c spectrum is RGB representation, not spectrum. 
 struct SurfaceInteraction {
-    /** position of intersection point in world coordinates. */
+    /** Position of intersection point in world coordinates. */
     float3 p;
 
-    /** Surface normal of primitive at intersection point. */
+    /** Surface normal of primitive at an intersection point. */
     float3 n;
 
     /** Incident and outgoing directions at a surface. */
@@ -27,18 +27,18 @@ struct SurfaceInteraction {
     /** Spectrum information of ray. */
     float3 spectrum;
 
-    /** radiance and attenuation term computed by a material attached with surface. */
+    /** Radiance and attenuation computed by a material attached with a surface. */
     float3 radiance;
     float3 attenuation;
     float3 emission;
 
-    /** UV coordinate at intersection point. */
+    /** UV coordinate at an intersection point. */
     float2 uv;
 
     /** Derivatives on texture coordinates. */
     float dpdu, dpdv;
 
-    /** seed for random */
+    /** Seed for random */
     unsigned int seed;
 
     int trace_terminate;

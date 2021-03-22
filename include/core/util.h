@@ -39,10 +39,10 @@ inline void Assert(bool condition, const std::string& msg) {
 
 /** 
  * \note
- * Which code is better for readabitty?
+ * Which code is better for readability?
  * 1. Use recursive call as follows.
  * 2. Use recursive call but doesn't prepare the dummy function as like Message(). 
- *    instead, switch conditions due to the number of args as like follows.
+ *    Instead, switch conditions due to the number of args as like follows.
  *    if constexpr (sizeof...(args) > 0) Message(args...);
  *    if constexpr (sizeof...(args) == 0) std::endl;
  */
@@ -52,15 +52,15 @@ inline void Message_once(T t) {
     std::cout << t;
 }
 
-inline void Message() {
-    std::cout << std::endl;
-}
-
 template <typename Head, typename... Args>
 inline void Message(Head head, Args... args) {
     Message_once(head);
-    if (sizeof...(args) > 0) std::cout << ' ';
-    Message(args...);
+    const size_t num_args = sizeof...(args);
+    if constexpr (num_args > 0) {
+        std::cout << ' ';
+        Message(args...);
+    }
+    if constexpr (num_args == 0) std::cout << std::endl;
 }
 
 /**

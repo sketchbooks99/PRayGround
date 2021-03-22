@@ -14,7 +14,7 @@ public:
      * \brief Create programs associated with primitives.
      */
     void create_hitgroup_programs(const OptixDeviceContext& ctx, const OptixModule& module) {
-        for (auto &ps : m_primitives_instances) { 
+        for (auto &ps : m_primitive_instances) { 
             for (auto &p : ps.primitives()) {
                 p.create_programs(ctx, module);
             }
@@ -23,7 +23,7 @@ public:
 
     std::vector<ProgramGroup> hitgroup_programs() {
         std::vector<ProgramGroup> program_groups;
-        for (auto &ps : m_primitives_instances) {
+        for (auto &ps : m_primitive_instances) {
             for (auto &p : ps.primitives()) {
                 std::vector<ProgramGroup> programs = p.program_groups();
                 /**
@@ -46,7 +46,7 @@ public:
         unsigned int sbt_idx = 0;
         unsigned int num_hitgroup_records = 0;
         std::vector<HitGroupRecord> hitgroup_records;
-        for (auto &ps : m_primitives_instances) {
+        for (auto &ps : m_primitive_instances) {
             for (auto &p : ps.primitives()) {
                 for (int i=0; i<RAY_TYPE_COUNT; i++) {
                     // Bind sbt to radiance program groups. 
@@ -91,8 +91,9 @@ public:
         sbt.hitgroupRecordCount = num_hitgroup_records;
     }
 
-    void add_primitive_instance(const PrimitiveInstance& ps) { m_primitives_instances.push_back(ps); }
-    std::vector<PrimitiveInstance> primitive_instances() const { return m_primitives_instances; }
+    void add_primitive_instance(const PrimitiveInstance& ps) { m_primitive_instances.push_back(ps); }
+    std::vector<PrimitiveInstance> primitive_instances() const { return m_primitive_instances; }
+    std::vector<PrimitiveInstance>& primitive_instance() { return m_primitive_instances; }
 
     void set_width(const unsigned int w) { m_width = w; }
     unsigned int width() const { return m_width; }
@@ -109,7 +110,7 @@ public:
     void set_samples_per_launch(unsigned int spl) { m_samples_per_launch = spl; }
     unsigned int samples_per_launch() const { return m_samples_per_launch; }
 private:
-    std::vector<PrimitiveInstance> m_primitives_instances;  // Primitive instances with same transformation.
+    std::vector<PrimitiveInstance> m_primitive_instances;  // Primitive instances with same transformation.
     unsigned int m_width, m_height;                         // Dimensions of output result.
     float4 m_bgcolor;                                       // Background color
     unsigned int m_depth;                                   // Maximum depth of ray tracing.

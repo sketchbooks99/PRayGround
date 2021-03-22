@@ -49,10 +49,10 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 {
 	const int w = params.width;
 	const int h = params.height;
-	const float3 eye = params.camera.eye;
-	const float3 U = params.camera.U;
-	const float3 V = params.camera.V;
-	const float3 W = params.camera.W;
+	const float3 eye = params.eye;
+	const float3 U = params.U;
+	const float3 V = params.V;
+	const float3 W = params.W;
 	const uint3 idx = optixGetLaunchIndex();
 	const int subframe_index = params.subframe_index;
 

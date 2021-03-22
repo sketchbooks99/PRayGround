@@ -49,7 +49,12 @@ struct Params
 
     unsigned int max_depth;
 
-    CameraData camera;
+    // CameraData camera;
+    float3 eye;
+    float3 U;
+    float3 V; 
+    float3 W; 
+    float aperture;
 
     OptixTraversableHandle handle; // unsigned long long
 };

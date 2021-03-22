@@ -39,9 +39,13 @@ public:
             sizeof(OptixAabb),
             cudaMemcpyHostToDevice));
 
+        unsigned int* input_flags = new unsigned int[1];
+        input_flags[0] = OPTIX_GEOMETRY_FLAG_DISABLE_ANYHIT;
+
         bi.type = OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES;
         bi.customPrimitiveArray.aabbBuffers = &d_aabb_buffer;
-        bi.customPrimitiveArray.flags = (unsigned int*)(OPTIX_GEOMETRY_FLAG_NONE);
+        bi.customPrimitiveArray.numPrimitives = 1;
+        bi.customPrimitiveArray.flags = input_flags;
         bi.customPrimitiveArray.numSbtRecords = 1;
     }
 

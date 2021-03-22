@@ -29,24 +29,24 @@ public:
     explicit operator OptixPipeline() { return m_pipeline; }
 
     /** \brief Compile options. */
-    void set_compile_options( const OptixPipelineCompileOptions& op ) { m_compile_options = op; }
+    void set_compile_options( OptixPipelineCompileOptions op ) { m_compile_options = op; }
     void use_motion_blur( bool is_use ) { m_compile_options.usesMotionBlur = is_use; }
     void set_traversable_graph_flags( unsigned int flags ) { m_compile_options.traversableGraphFlags = flags; }
-    void set_num_payloads( const int num_payloads ) { m_compile_options.numPayloadValues = num_payloads; }
-    void set_num_attributes( const int num_attributes ) { m_compile_options.numAttributeValues = num_attributes; }
-    void set_launch_variable_name( const std::string& params_name ) { m_compile_options.pipelineLaunchParamsVariableName = params_name.c_str(); }
-    void set_exception_flags( const OptixExceptionFlags flags ) { m_compile_options.exceptionFlags = flags; }
+    void set_num_payloads( int num_payloads ) { m_compile_options.numPayloadValues = num_payloads; }
+    void set_num_attributes( int num_attributes ) { m_compile_options.numAttributeValues = num_attributes; }
+    void set_launch_variable_name( std::string params_name ) { m_compile_options.pipelineLaunchParamsVariableName = params_name.c_str(); }
+    void set_exception_flags( OptixExceptionFlags flags ) { m_compile_options.exceptionFlags = flags; }
 
     OptixPipelineCompileOptions compile_options() const { return m_compile_options; }
 
     /** \brief Link options */
-    void set_link_options(const OptixPipelineLinkOptions& op) { m_link_options = op; }
-    void set_link_trace_depth( const unsigned int depth ) { m_link_options.maxTraceDepth = depth; }
-    void set_link_debug_level( const OptixCompileDebugLevel& debug_level ) { m_link_options.debugLevel = debug_level; }
+    void set_link_options( OptixPipelineLinkOptions op) { m_link_options = op; }
+    void set_link_trace_depth( unsigned int depth ) { m_link_options.maxTraceDepth = depth; }
+    void set_link_debug_level( OptixCompileDebugLevel debug_level ) { m_link_options.debugLevel = debug_level; }
     OptixPipelineLinkOptions link_options() const { return m_link_options; }
 
     /** \brief Create pipeline object and calculate the stack sizes of pipeline. */
-    void create(const OptixDeviceContext &ctx, const std::vector<OptixProgramGroup>& prg_groups) {
+    void create(OptixDeviceContext ctx, std::vector<OptixProgramGroup> prg_groups) {
         // Create pipeline from program groups.
         char log[2048];
         size_t sizeof_log = sizeof(log);

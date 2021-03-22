@@ -56,6 +56,11 @@ struct AccelData {
     }
 };
 
+inline std::ostream& operator<<(std::ostream& out, const AccelData& accel) {
+    out << "AccelData::meshes: " << accel.meshes.handle << ", " << accel.meshes.d_buffer << ", " << accel.meshes.count << std::endl;
+    return out << "AccelData::customs: " << accel.customs.handle << ", " << accel.customs.d_buffer << ", " << accel.customs.count << std::endl;
+}
+
 // Abstract class for readability
 class Shape {
 public:

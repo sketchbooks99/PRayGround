@@ -209,10 +209,11 @@ void TriangleMesh::prepare_data() {
     d_normals_buf.alloc_copy(m_normals);
     d_indices_buf.alloc_copy(m_indices);
 
+    // device side pointer of mesh data
     MeshData data = {
         d_vertices_buf.data(),
         d_normals_buf.data(),
-        d_indices_buf.data(),
+        d_indices_buf.data()
     };
 
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_data_ptr), sizeof(MeshData)));
@@ -235,6 +236,7 @@ HOST void TriangleMesh::build_input( OptixBuildInput& bi, uint32_t sbt_idx ) {
 
     unsigned int* triangle_input_flags = new unsigned int[1];
     triangle_input_flags[0] = OPTIX_GEOMETRY_FLAG_DISABLE_ANYHIT;
+    
     bi.type = OPTIX_BUILD_INPUT_TYPE_TRIANGLES;
     bi.triangleArray.vertexFormat = OPTIX_VERTEX_FORMAT_FLOAT3;
     bi.triangleArray.vertexStrideInBytes = sizeof(float3);

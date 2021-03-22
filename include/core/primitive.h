@@ -133,7 +133,7 @@ private:
  * \note 
  * Call of this funcion :  build_gas(ctx, accel_data, primitive_instances.primitives());
  */ 
-void build_gas(OptixDeviceContext& ctx, AccelData& accel_data, const PrimitiveInstance& ps) {
+void build_gas(OptixDeviceContext ctx, AccelData& accel_data, PrimitiveInstance ps) {
     std::vector<Primitive> meshes;
     std::vector<Primitive> customs;
 
@@ -154,7 +154,6 @@ void build_gas(OptixDeviceContext& ctx, AccelData& accel_data, const PrimitiveIn
             handle.count = 0;
         }
 
-
         handle.count = primitives_subset.size();
 
         std::vector<OptixBuildInput> build_inputs(primitives_subset.size());
@@ -172,18 +171,16 @@ void build_gas(OptixDeviceContext& ctx, AccelData& accel_data, const PrimitiveIn
             primitives_subset[i].build_input(build_inputs[i]);
         }
 
-
         OptixAccelBuildOptions accel_options = {};
         accel_options.buildFlags = OPTIX_BUILD_FLAG_ALLOW_COMPACTION;
         accel_options.operation = OPTIX_BUILD_OPERATION_BUILD;
-
 
         OptixAccelBufferSizes gas_buffer_sizes;
         OPTIX_CHECK(optixAccelComputeMemoryUsage(
             ctx,
             &accel_options,
             build_inputs.data(),
-            static_cast<int>(build_inputs.size()),
+            static_cast<unsigned int>(build_inputs.size()),
             &gas_buffer_sizes
         ));
 
@@ -199,24 +196,23 @@ void build_gas(OptixDeviceContext& ctx, AccelData& accel_data, const PrimitiveIn
             compactedSizeOffset + 8
         ));
 
-
         OptixAccelEmitDesc emitProperty = {};
         emitProperty.type = OPTIX_PROPERTY_TYPE_COMPACTED_SIZE;
         emitProperty.result = (CUdeviceptr)((char*)d_buffer_temp_output_gas_and_compacted_size + compactedSizeOffset);
 
         OPTIX_CHECK(optixAccelBuild(
             ctx, 
-            0, 
+            0,                      // CUDA stream
             &accel_options,
             build_inputs.data(),
-            handle.count,
+            build_inputs.size(),    
             d_temp_buffer,
             gas_buffer_sizes.tempSizeInBytes,
             d_buffer_temp_output_gas_and_compacted_size,
             gas_buffer_sizes.outputSizeInBytes,
             &handle.handle,
             &emitProperty,
-            1
+            1                       // num emitted properties
         ));
         
         // Free temporarily buffers 
@@ -228,6 +224,7 @@ void build_gas(OptixDeviceContext& ctx, AccelData& accel_data, const PrimitiveIn
         CUDA_CHECK(cudaMemcpy(&compacted_gas_size, (void*)emitProperty.result, sizeof(size_t), cudaMemcpyDeviceToHost));
 
         if (compacted_gas_size < gas_buffer_sizes.outputSizeInBytes) {
+            Message("build_single_gas():", handle.handle);
             CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&handle.d_buffer), compacted_gas_size));
             OPTIX_CHECK(optixAccelCompact(ctx, 0, handle.handle, handle.d_buffer, compacted_gas_size, &handle.handle));
             CUDA_CHECK(cudaFree((void*)d_buffer_temp_output_gas_and_compacted_size));
@@ -249,13 +246,14 @@ void build_ias(const OptixDeviceContext& ctx,
                const unsigned int instance_id,
                std::vector<OptixInstance>& instances)
 {
-    const unsigned int visibility_mask = 255;
+    const unsigned int visibility_mask = 1;
 
     Transform transform = prim_instance.transform();
     unsigned int sbt_base = sbt_base_offset;
-    unsigned int flags = prim_instance.transform().is_identity() 
-                            ? OPTIX_INSTANCE_FLAG_DISABLE_TRANSFORM 
-                            : OPTIX_INSTANCE_FLAG_NONE;
+    // unsigned int flags = prim_instance.transform().is_identity() 
+    //                         ? OPTIX_INSTANCE_FLAG_DISABLE_TRANSFORM 
+    //                         : OPTIX_INSTANCE_FLAG_NONE;
+    unsigned int flags = OPTIX_INSTANCE_FLAG_NONE;
 
     // Create OptixInstance for the meshes.
     if (accel_data.meshes.handle) {

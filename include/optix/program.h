@@ -25,7 +25,7 @@ public:
 
     /** \brief create program groups depends on OptixProgramGroupKind */
     template <typename ...Entries>
-    void create(const OptixDeviceContext& ctx, Entries... entries)
+    void create( OptixDeviceContext ctx, Entries... entries)
     {   
         const size_t num_entries = sizeof...(entries); 
 
@@ -48,8 +48,8 @@ public:
     }
 
     /** \brief Creation of a single-call program (Raygen, Miss, Exception) */
-    void create_single_program(const OptixDeviceContext& ctx, 
-                const ProgramEntry& entry)
+    void create_single_program( OptixDeviceContext ctx, 
+                                ProgramEntry& entry )
     {
         Assert(m_program_kind == OPTIX_PROGRAM_GROUP_KIND_RAYGEN || 
                m_program_kind == OPTIX_PROGRAM_GROUP_KIND_MISS   || 
@@ -93,23 +93,23 @@ public:
      * \brief Creation of hitgroup programs 
      * \note Only the closest-hit program is used to create hitgroup program. 
      */
-    void create_hitgroup_program(const OptixDeviceContext& ctx, 
-                                 const ProgramEntry& ch_entry) 
+    void create_hitgroup_program( OptixDeviceContext ctx, 
+                                  ProgramEntry ch_entry) 
     {
         create_hitgroup_program(ctx, ch_entry, ProgramEntry(nullptr, nullptr), ProgramEntry(nullptr, nullptr));
     }
     /** \brief Closest-hit and intersection program are used to create hitgroup program. */
-    void create_hitgroup_program(const OptixDeviceContext& ctx,
-                                 const ProgramEntry& ch_entry,
-                                 const ProgramEntry& is_entry) 
+    void create_hitgroup_program( OptixDeviceContext ctx,
+                                  ProgramEntry ch_entry,
+                                  ProgramEntry is_entry) 
     {
         create_hitgroup_program(ctx, ch_entry, ProgramEntry(nullptr, nullptr), is_entry);
     }
     /** \brief All of programs are used to create hitgroup program. */
-    void create_hitgroup_program(const OptixDeviceContext& ctx,
-                                 const ProgramEntry& ch_entry,
-                                 const ProgramEntry& ah_entry,
-                                 const ProgramEntry& is_entry) 
+    void create_hitgroup_program( OptixDeviceContext ctx,
+                                  ProgramEntry ch_entry,
+                                  ProgramEntry ah_entry,
+                                  ProgramEntry is_entry) 
     {
         Assert(m_program_kind == OPTIX_PROGRAM_GROUP_KIND_HITGROUP,
                "The OprixProgramGroupKind " + to_str(m_program_kind) + " is not a hitgroup program.");
@@ -137,9 +137,9 @@ public:
     }
 
     /** Creation of callable programs */
-    void create_callable_program(const OptixDeviceContext& ctx, 
-                                 const ProgramEntry& dc_entry, 
-                                 const ProgramEntry& cc_entry) 
+    void create_callable_program( OptixDeviceContext ctx, 
+                                  ProgramEntry dc_entry, 
+                                  ProgramEntry cc_entry) 
     {
         Assert(m_program_kind == OPTIX_PROGRAM_GROUP_KIND_CALLABLES,
                "The OptixProgramGroupKind " + to_str(m_program_kind) + " is not a callble program.");

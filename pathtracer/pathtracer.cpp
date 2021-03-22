@@ -144,8 +144,8 @@ void handleCameraUpdate( pt::Params& params )
     camera_changed = false;
 
     camera.setAspectRatio( static_cast<float>( params.width ) / static_cast<float>( params.height ) );
-    params.camera.eye = camera.eye();
-    camera.UVWFrame( params.camera.U, params.camera.V, params.camera.W );
+    params.eye = camera.eye();
+    camera.UVWFrame( params.U, params.V, params.W );
 }
 
 void handleResize( sutil::CUDAOutputBuffer<uchar4>& output_buffer, pt::Params& params)
@@ -290,7 +290,7 @@ int main(int argc, char* argv[]) {
         options.logCallbackLevel = 4;
         OPTIX_CHECK(optixDeviceContextCreate(cu_ctx, &options, &optix_context));
 
-        pt::Message("Created device context");
+        pt::Message("main(): Created device context");
 
         // Build children instance ASs that contain the geometry AS. 
         std::vector<OptixInstance> instances;
@@ -301,15 +301,15 @@ int main(int argc, char* argv[]) {
             // accels.push_back(pt::AccelData());
             pt::AccelData accel = {};
             pt::build_gas(optix_context, accel, ps);
-            pt::Message("Builded GAS");
+            pt::Message("main(): Builded GAS");
             /// New OptixInstance are pushed back to \c instances
             pt::build_ias(optix_context, accel, ps, sbt_base_offset, instance_id, instances);
-            pt::Message("Builded IAS");
+            pt::Message("main(): Builded IAS");
             sbt_base_offset += (accel.meshes.count + accel.customs.count);
             instance_id++;
         }
 
-        std::cout << "Builded children instance ASs that contain the geometry AS" << std::endl;
+        std::cout << "main(): Builded children instance ASs that contain the geometry AS" << std::endl;
 
         // Create all instances on the device.
         pt::CUDABuffer<OptixInstance> d_instances;
@@ -337,13 +337,13 @@ int main(int argc, char* argv[]) {
         CUdeviceptr d_temp_buffer;
         CUDA_CHECK(cudaMalloc(
             reinterpret_cast<void**>(&d_temp_buffer), 
-            ias_buffer_sizes.outputSizeInBytes ));
+            ias_buffer_sizes.tempSizeInBytes ));
         CUdeviceptr d_ias_output_buffer; 
         CUDA_CHECK(cudaMalloc(
             reinterpret_cast<void**>(&d_ias_output_buffer), 
             ias_buffer_sizes.outputSizeInBytes ));
         
-        OptixTraversableHandle ias_handle;
+        OptixTraversableHandle ias_handle = 0;
         // Build instance AS contains all GASs to describe the scene.
         OPTIX_CHECK(optixAccelBuild(
             optix_context, 
@@ -425,6 +425,7 @@ int main(int argc, char* argv[]) {
         params.frame_buffer = nullptr;
         params.subframe_index = 0u;
         params.handle = ias_handle;
+        pt::Message("ias_handle", ias_handle);
         CUDA_CHECK(cudaStreamCreate(&stream));
         CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_params), sizeof(pt::Params)));
 

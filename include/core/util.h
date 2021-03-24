@@ -37,16 +37,6 @@ inline void Assert(bool condition, const std::string& msg) {
     if (!condition) Throw(msg);
 }
 
-/** 
- * \note
- * Which code is better for readability?
- * 1. Use recursive call as follows.
- * 2. Use recursive call but doesn't prepare the dummy function as like Message(). 
- *    Instead, switch conditions due to the number of args as like follows.
- *    if constexpr (sizeof...(args) > 0) Message(args...);
- *    if constexpr (sizeof...(args) == 0) std::endl;
- */
-
 template <typename T>
 inline void Message_once(T t) {
     std::cout << t;
@@ -63,14 +53,8 @@ inline void Message(Head head, Args... args) {
     if constexpr (num_args == 0) std::cout << std::endl;
 }
 
-/**
- * \brief 
- * Dummy free function for end of recursive cuda_free() using variadic templates.
- */ 
-inline void cuda_frees() {}
-
 template <typename T>
-inline void cuda_free(T data) {
+inline void cuda_free(T& data) {
     CUDA_CHECK(cudaFree(reinterpret_cast<void*>(data)));
 }
 
@@ -79,9 +63,10 @@ inline void cuda_free(T data) {
  * Recursive free of object.
  */
 template <typename Head, typename... Args>
-inline void cuda_frees(Head head, Args... args) {
+inline void cuda_frees(Head& head, Args... args) {
     cuda_free(head);
-    cuda_frees(args...);
+    if constexpr (sizeof...(args) > 0) 
+        cuda_frees(args...);
 }
 #endif
 

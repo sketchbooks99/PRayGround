@@ -295,18 +295,14 @@ int main(int argc, char* argv[]) {
         // Build children instance ASs that contain the geometry AS. 
         std::vector<OptixInstance> instances;
         // std::vector<pt::AccelData> accels;
-        unsigned int sbt_base_offset = 0; 
+        unsigned int sbt_base_offset = 0;       
         unsigned int instance_id = 0;
         for (auto &ps : scene.primitive_instances()) {
             // accels.push_back(pt::AccelData());
             pt::AccelData accel = {};
             pt::build_gas(optix_context, accel, ps);
-            pt::Message("main(): Builded GAS");
             /// New OptixInstance are pushed back to \c instances
             pt::build_ias(optix_context, accel, ps, sbt_base_offset, instance_id, instances);
-            pt::Message("main(): Builded IAS");
-            sbt_base_offset += (accel.meshes.count + accel.customs.count);
-            instance_id++;
         }
 
         std::cout << "main(): Builded children instance ASs that contain the geometry AS" << std::endl;

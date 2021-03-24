@@ -216,7 +216,7 @@ void build_gas(OptixDeviceContext ctx, AccelData& accel_data, PrimitiveInstance 
         ));
         
         // Free temporarily buffers 
-        CUDA_CHECK(cudaFree(reinterpret_cast<void*>(d_temp_buffer)));
+        cuda_free(d_temp_buffer);
         /// \note Currently, only aabb buffer is freed.
         for (auto& p : primitives_subset) p.free_temp_buffer(); 
 
@@ -224,10 +224,9 @@ void build_gas(OptixDeviceContext ctx, AccelData& accel_data, PrimitiveInstance 
         CUDA_CHECK(cudaMemcpy(&compacted_gas_size, (void*)emitProperty.result, sizeof(size_t), cudaMemcpyDeviceToHost));
 
         if (compacted_gas_size < gas_buffer_sizes.outputSizeInBytes) {
-            Message("build_single_gas():", handle.handle);
             CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&handle.d_buffer), compacted_gas_size));
             OPTIX_CHECK(optixAccelCompact(ctx, 0, handle.handle, handle.d_buffer, compacted_gas_size, &handle.handle));
-            CUDA_CHECK(cudaFree((void*)d_buffer_temp_output_gas_and_compacted_size));
+            cuda_free(d_buffer_temp_output_gas_and_compacted_size);
         }
         else {
             handle.d_buffer = d_buffer_temp_output_gas_and_compacted_size;
@@ -242,14 +241,13 @@ void build_gas(OptixDeviceContext ctx, AccelData& accel_data, PrimitiveInstance 
 void build_ias(const OptixDeviceContext& ctx, 
                const AccelData& accel_data,
                const PrimitiveInstance& prim_instance, 
-               const unsigned int sbt_base_offset,
-               const unsigned int instance_id,
+               unsigned int& sbt_base_offset,
+               unsigned int& instance_id,
                std::vector<OptixInstance>& instances)
 {
     const unsigned int visibility_mask = 1;
 
     Transform transform = prim_instance.transform();
-    unsigned int sbt_base = sbt_base_offset;
     // unsigned int flags = prim_instance.transform().is_identity() 
     //                         ? OPTIX_INSTANCE_FLAG_DISABLE_TRANSFORM 
     //                         : OPTIX_INSTANCE_FLAG_NONE;
@@ -261,22 +259,25 @@ void build_ias(const OptixDeviceContext& ctx,
             {transform.mat[0], transform.mat[1], transform.mat[2], transform.mat[3],
              transform.mat[4], transform.mat[5], transform.mat[6], transform.mat[7],
              transform.mat[8], transform.mat[9], transform.mat[10], transform.mat[11]},
-            instance_id, sbt_base, visibility_mask, flags, 
-            accel_data.meshes.handle, {0, 0} /* pad */
+            instance_id, sbt_base_offset, visibility_mask, flags, 
+            accel_data.meshes.handle, /* pad = */ {0, 0}
         };
-        sbt_base += (unsigned int)accel_data.meshes.count;
+        sbt_base_offset += (unsigned int)accel_data.meshes.count;
+        instance_id++;
         instances.push_back(instance);
     }
 
-    // Create OptixInstance for the custom geometry.
+    // Create OptixInstance for the custom primitives.
     if (accel_data.customs.handle) {
         OptixInstance instance = { 
             {transform.mat[0], transform.mat[1], transform.mat[2], transform.mat[3],
              transform.mat[4], transform.mat[5], transform.mat[6], transform.mat[7],
              transform.mat[8], transform.mat[9], transform.mat[10], transform.mat[11]},
-            instance_id, sbt_base, visibility_mask, flags, 
-            accel_data.customs.handle, {0, 0} /* pad */
+            instance_id, sbt_base_offset, visibility_mask, flags, 
+            accel_data.customs.handle, /* pad = */ {0, 0}
         };
+        sbt_base_offset += (unsigned int)accel_data.customs.count;
+        instance_id++;
         instances.push_back(instance);
     }
 }

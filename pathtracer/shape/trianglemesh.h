@@ -22,6 +22,10 @@ public:
      * (CPU/GPU) depends on an application.
      */
     AABB bound() const override { return AABB(); } 
+
+    std::vector<float3> vertices() const { return m_vertices; } 
+    std::vector<float3> normals() const { return m_normals; }
+    std::vector<int3> indices() const { return m_indices; } 
 private:
     std::vector<float3> m_vertices;
     std::vector<float3> m_normals;

@@ -226,6 +226,144 @@ static void context_log_cb( unsigned int level, const char* tag, const char* mes
     std::cerr << "[" << std::setw( 2 ) << level << "][" << std::setw( 12 ) << tag << "]: " << message << "\n";
 }
 
+void buildMeshAccel(const OptixDeviceContext& ctx, const pt::PrimitiveInstance& ps, pt::AccelData& accel,
+    std::vector<CUdeviceptr>& d_vertices, std::vector<CUdeviceptr>& d_normals, std::vector<CUdeviceptr>& d_indices )
+{
+    std::vector<OptixBuildInput> triangle_inputs(ps.primitives().size());
+    d_vertices.resize(ps.primitives().size());
+    d_indices.resize(ps.primitives().size());
+    d_normals.resize(ps.primitives().size());
+    for (size_t meshID = 0; meshID < ps.primitives().size(); meshID++)
+    {
+        if (ps.primitives()[meshID].shapetype() != pt::ShapeType::Mesh)
+            continue;
+
+        pt::TriangleMesh* mesh = (pt::TriangleMesh*)ps.primitives()[meshID].shape();
+        // alloc and copy vertices data
+        const size_t vertices_size_in_bytes = mesh->vertices().size() * sizeof(float3);
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_vertices[meshID]), vertices_size_in_bytes));
+        CUDA_CHECK(cudaMemcpy(
+            reinterpret_cast<void*>(d_vertices[meshID]),
+            mesh->vertices().data(), vertices_size_in_bytes,
+            cudaMemcpyHostToDevice
+        ));
+
+        // alloc and copy indices data
+        const size_t indices_size_in_bytes = mesh->indices().size() * sizeof(int3);
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_indices[meshID]), indices_size_in_bytes));
+        CUDA_CHECK(cudaMemcpy(
+            reinterpret_cast<void*>(d_indices[meshID]),
+            mesh->indices().data(), indices_size_in_bytes,
+            cudaMemcpyHostToDevice
+        ));
+
+        // alloc and copy normals data
+        if (mesh->normals().empty())
+        {
+            const size_t normals_size_in_bytes = mesh->normals().size() * sizeof(float3);
+            CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_normals[meshID]), normals_size_in_bytes));
+            CUDA_CHECK(cudaMemcpy(
+                reinterpret_cast<void*>(d_normals[meshID]),
+                mesh->normals().data(), normals_size_in_bytes,
+                cudaMemcpyHostToDevice
+            ));
+        }
+
+        // alloc and copy material data
+        CUdeviceptr d_mat_indices = 0;
+        std::vector<uint32_t> mat_indices(mesh->indices().size(), ps.primitives()[meshID].sbt_index());
+        const size_t mat_indices_size_in_bytes = mat_indices.size() * sizeof(uint32_t);
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_mat_indices), mat_indices_size_in_bytes));
+        CUDA_CHECK(cudaMemcpy(
+            reinterpret_cast<void*>(d_mat_indices),
+            mat_indices.data(),
+            mat_indices_size_in_bytes,
+            cudaMemcpyHostToDevice
+        ));
+
+        unsigned int* triangle_input_flags = new unsigned int[1];
+        triangle_input_flags[0] = OPTIX_GEOMETRY_FLAG_DISABLE_ANYHIT;
+
+        triangle_inputs[meshID].type = OPTIX_BUILD_INPUT_TYPE_TRIANGLES;
+        triangle_inputs[meshID].triangleArray.vertexFormat = OPTIX_VERTEX_FORMAT_FLOAT3;
+        triangle_inputs[meshID].triangleArray.vertexStrideInBytes = sizeof(float3);
+        triangle_inputs[meshID].triangleArray.numVertices = static_cast<uint32_t>(mesh->vertices().size());
+        triangle_inputs[meshID].triangleArray.vertexBuffers = &d_vertices[meshID];
+        triangle_inputs[meshID].triangleArray.flags = triangle_input_flags;
+        triangle_inputs[meshID].triangleArray.indexFormat = OPTIX_INDICES_FORMAT_UNSIGNED_INT3;
+        triangle_inputs[meshID].triangleArray.indexStrideInBytes = sizeof(int3);
+        triangle_inputs[meshID].triangleArray.numIndexTriplets = static_cast<uint32_t>(mesh->indices().size());
+        triangle_inputs[meshID].triangleArray.indexBuffer = d_indices[meshID];
+        triangle_inputs[meshID].triangleArray.numSbtRecords = 1;
+        triangle_inputs[meshID].triangleArray.sbtIndexOffsetBuffer = d_mat_indices;
+        triangle_inputs[meshID].triangleArray.sbtIndexOffsetSizeInBytes = sizeof(uint32_t);
+        triangle_inputs[meshID].triangleArray.sbtIndexOffsetStrideInBytes = sizeof(uint32_t);
+    }
+
+    OptixAccelBuildOptions accel_options = {};
+    accel_options.buildFlags = OPTIX_BUILD_FLAG_ALLOW_COMPACTION;
+    accel_options.operation = OPTIX_BUILD_OPERATION_BUILD;
+
+    OptixAccelBufferSizes gas_buffer_sizes;
+    OPTIX_CHECK(optixAccelComputeMemoryUsage(
+        ctx,
+        &accel_options,
+        triangle_inputs.data(),
+        static_cast<int>(triangle_inputs.size()),
+        &gas_buffer_sizes
+    ));
+
+    // temporarily buffer to build AS
+    CUdeviceptr d_temp_buffer;
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_temp_buffer), gas_buffer_sizes.tempSizeInBytes));
+
+    // non-compacted output
+    CUdeviceptr d_buffer_temp_output_gas_and_compacted_size;
+    size_t compactedSizeOffset = roundUp<size_t>(gas_buffer_sizes.outputSizeInBytes, 8ull);
+    CUDA_CHECK(cudaMalloc(
+        reinterpret_cast<void**>(&d_buffer_temp_output_gas_and_compacted_size),
+        compactedSizeOffset + 8
+    ));
+
+    OptixAccelEmitDesc emitProperty = {};
+    emitProperty.type = OPTIX_PROPERTY_TYPE_COMPACTED_SIZE;
+    emitProperty.result = (CUdeviceptr)((char*)d_buffer_temp_output_gas_and_compacted_size + compactedSizeOffset);
+
+    OPTIX_CHECK(optixAccelBuild(
+        ctx,
+        0,
+        &accel_options,
+        triangle_inputs.data(),
+        triangle_inputs.size(),
+        d_temp_buffer,
+        gas_buffer_sizes.tempSizeInBytes,
+        d_buffer_temp_output_gas_and_compacted_size,
+        gas_buffer_sizes.outputSizeInBytes,
+        &accel.meshes.handle,
+        &emitProperty,
+        1
+    ));
+
+    CUDA_CHECK(cudaFree(reinterpret_cast<void*>(d_temp_buffer)));
+
+    size_t compacted_gas_size;
+    CUDA_CHECK(cudaMemcpy(&compacted_gas_size, (void*)emitProperty.result, sizeof(size_t), cudaMemcpyDeviceToHost));
+
+    if (compacted_gas_size < gas_buffer_sizes.outputSizeInBytes)
+    {
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&accel.meshes.d_buffer), compacted_gas_size));
+
+        // use handle as input and output
+        OPTIX_CHECK(optixAccelCompact(ctx, 0, accel.meshes.handle, accel.meshes.d_buffer, compacted_gas_size, &accel.meshes.d_buffer));
+
+        CUDA_CHECK(cudaFree((void*)d_buffer_temp_output_gas_and_compacted_size));
+    }
+    else
+    {
+        accel.meshes.d_buffer = d_buffer_temp_output_gas_and_compacted_size;
+    }
+}
+
 // ========== Main ==========
 int main(int argc, char* argv[]) {
     /// Load scene from \c scene_file.h 

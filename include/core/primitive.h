@@ -73,7 +73,7 @@ public:
     // Getter 
     uint32_t sbt_index() const { return m_sbt_index; }
     MaterialPtr material() const { return m_material_ptr; }
-    ShapePtr shape() const  { return m_shape_ptr; }
+    ShapePtr shape() const { return m_shape_ptr; }
     ShapeType shapetype() const { return m_shape_ptr->type(); }
     MaterialType materialtype() const { return m_material_ptr->type(); }
 

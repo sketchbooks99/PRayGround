@@ -90,7 +90,7 @@ inline std::ostream& operator<<(std::ostream& out, const OptixPipelineCompileOpt
 /**
  * \enum OptixVertexFormat
  */
-inline std::ostream& operator<<(std::ostream& out, const OptixBuildInputType type) {
+inline std::ostream& operator<<(std::ostream& out, const OptixVertexFormat& type) {
     switch (type) {
     case OPTIX_VERTEX_FORMAT_NONE:      return out << "OPTIX_VERTEX_FORMAT_NONE";
     case OPTIX_VERTEX_FORMAT_FLOAT3:    return out << "OPTIX_VERTEX_FORMAT_FLOAT3";
@@ -105,7 +105,7 @@ inline std::ostream& operator<<(std::ostream& out, const OptixBuildInputType typ
 /**
  * \enum OptixBuildInputType
  */
-inline std::ostream& operator<<(std::ostream& out, const OptixBuildInputType type) {
+inline std::ostream& operator<<(std::ostream& out, const OptixBuildInputType& type) {
     switch (type) {
     case OPTIX_BUILD_INPUT_TYPE_TRIANGLES:          return out << "OPTIX_BUILD_INPUT_TYPE_TRIANGLES"; 
     case OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES:  return out << "OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES";
@@ -118,7 +118,7 @@ inline std::ostream& operator<<(std::ostream& out, const OptixBuildInputType typ
 /**
  * \enum OptixIndicesFormat
  */
-inline std::ostream& operator<<(std::ostream& out, const OptixIndicesFormat format) {
+inline std::ostream& operator<<(std::ostream& out, const OptixIndicesFormat& format) {
     switch (format) {
     case OPTIX_INDICES_FORMAT_NONE:             return out << "OPTIX_INDICES_FORMAT_NONE";
     case OPTIX_INDICES_FORMAT_UNSIGNED_SHORT3:  return out << "OPTIX_INDICES_FORMAT_UNSIGNED_SHORT3";
@@ -165,10 +165,12 @@ inline std::ostream& operator<<(std::ostream& out, const OptixBuildInput& bi) {
     case OPTIX_BUILD_INPUT_TYPE_TRIANGLES:
         return out << bi.triangleArray;
     case OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES:
-        return out << bi.custom
+        return out << bi.customPrimitiveArray;
+    /** \note Not implemented */
     case OPTIX_BUILD_INPUT_TYPE_INSTANCES:
     case OPTIX_BUILD_INPUT_TYPE_INSTANCE_POINTERS:
     case OPTIX_BUILD_INPUT_TYPE_CURVES:
+        return out << "Not implemented";
     }
 }
 

@@ -21,6 +21,9 @@ CALLABLE_FUNC void IS_FUNC(sphere)() {
     const pt::HitGroupData* data = reinterpret_cast<pt::HitGroupData*>(optixGetSbtDataPointer());
     const pt::SphereData* sphere_data = reinterpret_cast<pt::SphereData*>(data->shapedata);
 
+    const float radius = 100.0f;
+    const float3 center = make_float3(0,0,0);
+
     optixReportIntersection(0.f, 0, float3_as_ints(make_float3(1, 0, 0)));
 
     const float3 ray_orig = optixGetWorldRayOrigin();
@@ -74,7 +77,6 @@ CALLABLE_FUNC void CH_FUNC(sphere)() {
     si->n = n;
     si->wi = rd;
     data->matptr->sample(*si);
-    pt::SurfaceInteraction* si = get_surfaceinteraction();
     si->radiance = make_float3(1.0f);
 }
 

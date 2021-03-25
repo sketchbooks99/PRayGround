@@ -209,6 +209,11 @@ void TriangleMesh::prepare_data() {
     d_normals_buf.alloc_copy(m_normals);
     d_indices_buf.alloc_copy(m_indices);
 
+    Message("TriangleMesh::prepare_data():");
+    for (auto &v : m_vertices) {
+        Message(v);
+    }
+
     // device side pointer of mesh data
     MeshData data = {
         d_vertices_buf.data(),

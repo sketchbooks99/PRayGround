@@ -12,6 +12,13 @@ std::string to_str(T t) {
     return oss.str();
 }
 
+/** 
+ * \struct float3
+ */
+inline std::ostream& operator<<(std::ostream& out, const float3& v) {
+    return out << v.x << ' ' << v.y << ' ' << v.z;
+}
+
 /**
  * \enum OptixProgramGroupKind
  **/

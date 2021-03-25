@@ -226,6 +226,24 @@ static void context_log_cb( unsigned int level, const char* tag, const char* mes
     std::cerr << "[" << std::setw( 2 ) << level << "][" << std::setw( 12 ) << tag << "]: " << message << "\n";
 }
 
+void initCameraState()
+{
+    camera.setEye(make_float3(278.0f, 273.0f, -900.0f));
+    camera.setLookat(make_float3(278.0f, 273.0f, 330.0f));
+    camera.setUp(make_float3(0.0f, 1.0f, 0.0f));
+    camera.setFovY(35.0f);
+    camera_changed = true;
+
+    trackball.setCamera(&camera);
+    trackball.setMoveSpeed(10.0f);
+    trackball.setReferenceFrame(
+        make_float3(1.0f, 0.0f, 0.0f),
+        make_float3(0.0f, 0.0f, 1.0f),
+        make_float3(0.0f, 1.0f, 0.0f)
+    );
+    trackball.setGimbalLock(true);
+}
+
 void buildMeshAccel(const OptixDeviceContext& ctx, const pt::PrimitiveInstance& ps, pt::AccelData& accel,
     std::vector<CUdeviceptr>& d_vertices, std::vector<CUdeviceptr>& d_normals, std::vector<CUdeviceptr>& d_indices )
 {
@@ -374,9 +392,7 @@ int main(int argc, char* argv[]) {
     params.height = scene.height();
     params.samples_per_launch = scene.samples_per_launch();
     params.max_depth = scene.depth();   
-    // =======================================================================
-    // ↓ SAMPLE CODE 
-    // =======================================================================
+    
     sutil::CUDAOutputBufferType output_buffer_type = sutil::CUDAOutputBufferType::GL_INTEROP;
 
     std::string outfile;
@@ -416,6 +432,8 @@ int main(int argc, char* argv[]) {
 
     try 
     {
+        initCameraState();
+
         // Initialize CUDA
         CUDA_CHECK(cudaFree(0));
 
@@ -432,7 +450,6 @@ int main(int argc, char* argv[]) {
 
         // Build children instance ASs that contain the geometry AS. 
         std::vector<OptixInstance> instances;
-        // std::vector<pt::AccelData> accels;
         unsigned int sbt_base_offset = 0;       
         unsigned int instance_id = 0;
         for (auto &ps : scene.primitive_instances()) {
@@ -496,6 +513,16 @@ int main(int argc, char* argv[]) {
 
         pt::cuda_free(d_temp_buffer);
         d_instances.free();
+
+
+        // ============== For testing only GAS =================
+        // std::vector<CUdeviceptr> d_vertices;
+        // std::vector<CUdeviceptr> d_normals;
+        // std::vector<CUdeviceptr> d_indices;
+
+        // pt::AccelData accel = {};
+        // buildMeshAccel(optix_context, scene.primitive_instances()[0], accel, d_vertices, d_normals, d_indices);
+        // =====================================================
 
         // Prepare the pipeline
         std::string params_name = "params";

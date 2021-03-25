@@ -20,6 +20,14 @@ inline std::ostream& operator<<(std::ostream& out, const float3& v) {
 }
 
 /**
+ * \struct OptixAabb
+ */
+inline std::ostream& operator<<(std::ostream& out, const OptixAabb& aabb) {
+            out << "min: " << aabb.minX << ' ' << aabb.minY << ' ' << aabb.minZ;
+    return  out << ', max: ' << aabb.maxX << ' ' << aabb.maxY << ' ' << aabb.maxZ;
+}
+
+/**
  * \enum OptixProgramGroupKind
  **/
 inline std::ostream& operator<<(std::ostream& out, const OptixProgramGroupKind& kind) {

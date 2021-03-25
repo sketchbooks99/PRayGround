@@ -32,6 +32,7 @@ public:
     {
         // Prepare bounding box information on the device.
         OptixAabb aabb = (OptixAabb)this->bound();
+
         if (d_aabb_buffer) free_aabb_buffer();
 
         CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_aabb_buffer), sizeof(OptixAabb)));

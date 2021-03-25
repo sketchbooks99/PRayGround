@@ -392,7 +392,7 @@ int main(int argc, char* argv[]) {
     params.height = scene.height();
     params.samples_per_launch = scene.samples_per_launch();
     params.max_depth = scene.depth();   
-    
+
     sutil::CUDAOutputBufferType output_buffer_type = sutil::CUDAOutputBufferType::GL_INTEROP;
 
     std::string outfile;
@@ -414,8 +414,8 @@ int main(int argc, char* argv[]) {
             const std::string dims_arg = arg.substr(6);
             int w, h;
             sutil::parseDimensions(dims_arg.c_str(), w, h);
-            scene.set_width(w);
-            scene.set_height(h);
+            params.width = w;
+            params.height = h;
         }
         else if (arg == "--launch-samples" || arg == "-s")
         {
@@ -452,67 +452,69 @@ int main(int argc, char* argv[]) {
         std::vector<OptixInstance> instances;
         unsigned int sbt_base_offset = 0;       
         unsigned int instance_id = 0;
-        for (auto &ps : scene.primitive_instances()) {
-            // accels.push_back(pt::AccelData());
-            pt::AccelData accel = {};
-            pt::build_gas(optix_context, accel, ps);
-            /// New OptixInstance are pushed back to \c instances
-            pt::build_ias(optix_context, accel, ps, sbt_base_offset, instance_id, instances);
-        }
+        // for (auto &ps : scene.primitive_instances()) {
+        //     // accels.push_back(pt::AccelData());
+        //     pt::AccelData accel = {};
+        //     pt::build_gas(optix_context, accel, ps);
+        //     /// New OptixInstance are pushed back to \c instances
+        //     pt::build_ias(optix_context, accel, ps, sbt_base_offset, instance_id, instances);
+        // }
+        pt::AccelData accel = {};
+        pt::build_gas( optix_context, accel, scene.primitive_instances()[0]);
 
-        std::cout << "main(): Builded children instance ASs that contain the geometry AS" << std::endl;
+        // std::cout << "main(): Builded children instance ASs that contain the geometry AS" << std::endl;
 
-        // Create all instances on the device.
-        pt::CUDABuffer<OptixInstance> d_instances;
-        d_instances.alloc_copy(instances);
+        // // Create all instances on the device.
+        // pt::CUDABuffer<OptixInstance> d_instances;
+        // d_instances.alloc_copy(instances);
 
-        // Prepare build input for instances.
-        OptixBuildInput instance_input = {};
-        instance_input.type = OPTIX_BUILD_INPUT_TYPE_INSTANCES;
-        instance_input.instanceArray.instances = d_instances.d_ptr();
-        instance_input.instanceArray.numInstances = (unsigned int) instances.size();
+        // // Prepare build input for instances.
+        // OptixBuildInput instance_input = {};
+        // instance_input.type = OPTIX_BUILD_INPUT_TYPE_INSTANCES;
+        // instance_input.instanceArray.instances = d_instances.d_ptr();
+        // instance_input.instanceArray.numInstances = (unsigned int) instances.size();
 
-        OptixAccelBuildOptions accel_options = {};
-        accel_options.buildFlags = OPTIX_BUILD_FLAG_NONE; 
-        accel_options.operation = OPTIX_BUILD_OPERATION_BUILD;
+        // OptixAccelBuildOptions accel_options = {};
+        // accel_options.buildFlags = OPTIX_BUILD_FLAG_NONE; 
+        // accel_options.operation = OPTIX_BUILD_OPERATION_BUILD;
 
-        OptixAccelBufferSizes ias_buffer_sizes;
-        OPTIX_CHECK(optixAccelComputeMemoryUsage(
-            optix_context, 
-            &accel_options, 
-            &instance_input, 
-            1, 
-            &ias_buffer_sizes ));
+        // OptixAccelBufferSizes ias_buffer_sizes;
+        // OPTIX_CHECK(optixAccelComputeMemoryUsage(
+        //     optix_context, 
+        //     &accel_options, 
+        //     &instance_input, 
+        //     1, 
+        //     &ias_buffer_sizes ));
 
-        // Allocate buffer to build acceleration structure
-        CUdeviceptr d_temp_buffer;
-        CUDA_CHECK(cudaMalloc(
-            reinterpret_cast<void**>(&d_temp_buffer), 
-            ias_buffer_sizes.tempSizeInBytes ));
-        CUdeviceptr d_ias_output_buffer; 
-        CUDA_CHECK(cudaMalloc(
-            reinterpret_cast<void**>(&d_ias_output_buffer), 
-            ias_buffer_sizes.outputSizeInBytes ));
+        // // Allocate buffer to build acceleration structure
+        // CUdeviceptr d_temp_buffer;
+        // CUDA_CHECK(cudaMalloc(
+        //     reinterpret_cast<void**>(&d_temp_buffer), 
+        //     ias_buffer_sizes.tempSizeInBytes ));
+        // CUdeviceptr d_ias_output_buffer; 
+        // CUDA_CHECK(cudaMalloc(
+        //     reinterpret_cast<void**>(&d_ias_output_buffer), 
+        //     ias_buffer_sizes.outputSizeInBytes ));
         
-        OptixTraversableHandle ias_handle = 0;
-        // Build instance AS contains all GASs to describe the scene.
-        OPTIX_CHECK(optixAccelBuild(
-            optix_context, 
-            0,                  // CUDA stream
-            &accel_options, 
-            &instance_input, 
-            1,                  // num build inputs
-            d_temp_buffer, 
-            ias_buffer_sizes.tempSizeInBytes, 
-            d_ias_output_buffer, 
-            ias_buffer_sizes.outputSizeInBytes, 
-            &ias_handle, 
-            nullptr,            // emitted property list
-            0                   // num emitted properties
-        ));
+        // OptixTraversableHandle ias_handle = 0;
+        // // Build instance AS contains all GASs to describe the scene.
+        // OPTIX_CHECK(optixAccelBuild(
+        //     optix_context, 
+        //     0,                  // CUDA stream
+        //     &accel_options, 
+        //     &instance_input, 
+        //     1,                  // num build inputs
+        //     d_temp_buffer, 
+        //     ias_buffer_sizes.tempSizeInBytes, 
+        //     d_ias_output_buffer, 
+        //     ias_buffer_sizes.outputSizeInBytes, 
+        //     &ias_handle, 
+        //     nullptr,            // emitted property list
+        //     0                   // num emitted properties
+        // ));
 
-        pt::cuda_free(d_temp_buffer);
-        d_instances.free();
+        // pt::cuda_free(d_temp_buffer);
+        // d_instances.free();
 
 
         // ============== For testing only GAS =================
@@ -557,7 +559,7 @@ int main(int argc, char* argv[]) {
         pt::MissRecord ms_sbt[RAY_TYPE_COUNT];
         for (int i=0; i<RAY_TYPE_COUNT; i++) {
             OPTIX_CHECK(optixSbtRecordPackHeader((OptixProgramGroup)miss_programs[i], &ms_sbt[i]));
-            ms_sbt[i].data.bg_color = make_float4(1.0f, 0.0f, 1.0f, 1.0f);
+            ms_sbt[i].data.bg_color = make_float4(0.0f, 0.0f, 0.0f, 1.0f);
         }
         d_miss_record.alloc_copy(ms_sbt, sizeof(pt::MissRecord)*RAY_TYPE_COUNT);
         pt::Message("main() : Created miss programs");
@@ -586,8 +588,9 @@ int main(int argc, char* argv[]) {
                 scene.width() * scene.height() * sizeof(float4)));
         params.frame_buffer = nullptr;
         params.subframe_index = 0u;
-        params.handle = ias_handle;
-        pt::Message("ias_handle", ias_handle);
+        // params.handle = ias_handle;
+        // pt::Message("ias_handle", ias_handle);
+        params.handle = accel.meshes.handle;
         CUDA_CHECK(cudaStreamCreate(&stream));
         CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_params), sizeof(pt::Params)));
 

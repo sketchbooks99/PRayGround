@@ -51,8 +51,8 @@ struct AccelData {
     HandleData customs;
 
     ~AccelData() {
-        if (meshes.d_buffer)  CUDA_CHECK( cudaFree( reinterpret_cast<void*>( meshes.d_buffer ) ) );
-        if (customs.d_buffer) CUDA_CHECK( cudaFree( reinterpret_cast<void*>( customs.d_buffer ) ) );
+        if (meshes.d_buffer)  cudaFree( reinterpret_cast<void*>( meshes.d_buffer ) );
+        if (customs.d_buffer) cudaFree( reinterpret_cast<void*>( customs.d_buffer ) );
     }
 };
 
@@ -74,6 +74,7 @@ public:
     }
 
     CUdeviceptr get_dptr() const { return d_data_ptr; }
+    CUdeviceptr& get_dptr() { return d_data_ptr; }
 protected:
     CUdeviceptr d_data_ptr { 0 };
     CUdeviceptr d_aabb_buffer { 0 };

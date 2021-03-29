@@ -238,7 +238,7 @@ void build_gas(OptixDeviceContext ctx, AccelData& accel_data, PrimitiveInstance 
 }
 
 // ---------------------------------------------------------------------
-void build_ias(const OptixDeviceContext& ctx, 
+void build_instance(const OptixDeviceContext& ctx, 
                const AccelData& accel_data,
                const PrimitiveInstance& prim_instance, 
                unsigned int& sbt_base_offset,

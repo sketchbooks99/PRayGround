@@ -209,16 +209,20 @@ void TriangleMesh::prepare_data() {
     d_normals_buf.alloc_copy(m_normals);
     d_indices_buf.alloc_copy(m_indices);
 
-    Message("TriangleMesh::prepare_data():");
-    for (auto &v : m_vertices) {
-        Message(v);
-    }
+    //CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_vertices), sizeof(float3) * m_vertices.size()));
+    //CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_vertices), m_vertices.data(), sizeof(float3) * m_vertices.size(), cudaMemcpyHostToDevice));
+
+    //CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_normals), sizeof(float3) * m_normals.size()));
+    //CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_normals), m_normals.data(), sizeof(float3) * m_normals.size(), cudaMemcpyHostToDevice));
+
+    //CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_indices), sizeof(int3) * m_indices.size()));
+    //CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_indices), m_indices.data(), sizeof(float3) * m_indices.size(), cudaMemcpyHostToDevice));
 
     // device side pointer of mesh data
     MeshData data = {
         d_vertices_buf.data(),
         d_normals_buf.data(),
-        d_indices_buf.data()
+        d_indices_buf.data(),
     };
 
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_data_ptr), sizeof(MeshData)));
@@ -234,7 +238,7 @@ void TriangleMesh::prepare_data() {
 }   
 
 // ------------------------------------------------------------------
-HOST void TriangleMesh::build_input( OptixBuildInput& bi, uint32_t sbt_idx ) {
+void TriangleMesh::build_input( OptixBuildInput& bi, uint32_t sbt_idx ) {
     CUDABuffer<uint32_t> d_sbt_indices;
     std::vector<uint32_t> sbt_indices(m_indices.size(), sbt_idx);
     d_sbt_indices.alloc_copy(sbt_indices);

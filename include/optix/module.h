@@ -53,13 +53,13 @@ public:
         ));
     }
 
-    void set_path( std::string ptx_path) { m_ptx_path = ptx_path; } 
+    void set_path( std::string ptx_path ) { m_ptx_path = ptx_path; } 
     std::string get_path() const { return m_ptx_path; }
 
     /** \note At default, This is set to OPTIX_COMPILE_OPTIMIZATION_DEFAULT */
-    void set_optlevel( OptixCompileOptimizationLevel optlevel) { m_options.optLevel = optlevel; }
+    void set_optlevel( OptixCompileOptimizationLevel optlevel ) { m_options.optLevel = optlevel; }
     /** \note At default, This is set to OPTIX_COMPILE_DEBUG_LINEINFO */
-    void set_debuglevel( OptixCompileDebugLevel debuglevel) { m_options.debugLevel = debuglevel; }
+    void set_debuglevel( OptixCompileDebugLevel debuglevel ) { m_options.debugLevel = debuglevel; }
 
     /** \brief For specifying specializations for pipelineParams as specified in 
      *  OptixPipelineCompileOptions::pipelineLaunchParamsVariableName 

@@ -48,7 +48,6 @@ CALLABLE_FUNC void CH_FUNC(mesh)()
     // si->wi = rd;
     // data->matptr->sample(*si);
     si->radiance = make_float3(1.0f, 1.0f, 1.0f);
-    
 }
 
 #endif

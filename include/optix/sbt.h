@@ -14,7 +14,7 @@ struct MissData {
 
 struct HitGroupData {
     /// Pointer that stores geometries data (e.g. \c pt::MeshData )
-    CUdeviceptr shapedata;
+    void* shapedata;
     MaterialPtr matptr;
 };
 

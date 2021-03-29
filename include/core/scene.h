@@ -54,7 +54,7 @@ public:
                     {
                         hitgroup_records.push_back(HitGroupRecord());
                         Message("create_hitgroup_sbt():", "p.shape()->get_dptr() =", p.shape()->get_dptr());
-                        hitgroup_records.back().data.shapedata = p.shape()->get_dptr();
+                        hitgroup_records.back().data.shapedata = reinterpret_cast<void*>(p.shape()->get_dptr());
                         hitgroup_records.back().data.matptr = p.material()->get_dptr();
                         p.bind_radiance_record(hitgroup_records.back());
                         hitgroup_records.push_back(hitgroup_records.back());
@@ -75,26 +75,28 @@ public:
         }
 
         // Prepare the device side data buffer of HitGroupRecord.
-        CUdeviceptr d_hitgroup_records;
-        CUDA_CHECK(cudaMalloc( 
-            reinterpret_cast<void**>(&d_hitgroup_records), 
-            hitgroup_record_size * num_hitgroup_records 
-            ));
-        CUDA_CHECK(cudaMemcpy(
-            reinterpret_cast<void*>(d_hitgroup_records), 
-            hitgroup_records.data(), 
-            hitgroup_record_size * num_hitgroup_records, 
-            cudaMemcpyHostToDevice 
-            ));
+        // CUdeviceptr d_hitgroup_records;
+        // CUDA_CHECK(cudaMalloc( 
+        //     reinterpret_cast<void**>(&d_hitgroup_records), 
+        //     hitgroup_record_size * num_hitgroup_records 
+        //     ));
+        // CUDA_CHECK(cudaMemcpy(
+        //     reinterpret_cast<void*>(d_hitgroup_records), 
+        //     hitgroup_records.data(), 
+        //     hitgroup_record_size * num_hitgroup_records, 
+        //     cudaMemcpyHostToDevice 
+        //     ));
+        CUDABuffer<HitGroupRecord> d_hitgroup_records;
+        d_hitgroup_records.alloc_copy(hitgroup_records);
 
-        sbt.hitgroupRecordBase = d_hitgroup_records;
+        sbt.hitgroupRecordBase = d_hitgroup_records.d_ptr();
         sbt.hitgroupRecordStrideInBytes = static_cast<uint32_t>( hitgroup_record_size );
         sbt.hitgroupRecordCount = num_hitgroup_records;
     }
 
     void add_primitive_instance(const PrimitiveInstance& ps) { m_primitive_instances.push_back(ps); }
     std::vector<PrimitiveInstance> primitive_instances() const { return m_primitive_instances; }
-    std::vector<PrimitiveInstance>& primitive_instance() { return m_primitive_instances; }
+    std::vector<PrimitiveInstance>& primitive_instances() { return m_primitive_instances; }
 
     void set_width(const unsigned int w) { m_width = w; }
     unsigned int width() const { return m_width; }

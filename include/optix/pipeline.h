@@ -52,13 +52,14 @@ public:
         size_t sizeof_log = sizeof(log);
 
         Message("m_compile_options:", m_compile_options);
+        Message("m_link_options: ", m_link_options);
 
         OPTIX_CHECK_LOG(optixPipelineCreate(
             ctx,
             &m_compile_options,
             &m_link_options,
             prg_groups.data(),
-            prg_groups.size(),
+            static_cast<unsigned int>(prg_groups.size()),
             log, 
             &sizeof_log, 
             &m_pipeline
@@ -84,7 +85,7 @@ public:
             &cc_stacksize
         ));
 
-        const uint32_t max_traversal_depth = 1; // 1 is specific or ordinary?
+        const uint32_t max_traversal_depth = 5; 
         OPTIX_CHECK(optixPipelineSetStackSize(
             m_pipeline,
             dc_stacksize_from_traversal, 
@@ -114,8 +115,8 @@ private:
         // Compile options;
         m_compile_options.usesMotionBlur = false;
         m_compile_options.traversableGraphFlags = OPTIX_TRAVERSABLE_GRAPH_FLAG_ALLOW_ANY;
-        m_compile_options.numPayloadValues = 5;
-        m_compile_options.numAttributeValues = 5;
+        m_compile_options.numPayloadValues = 2;
+        m_compile_options.numAttributeValues = 3;
         m_compile_options.pipelineLaunchParamsVariableName = "";
 #ifdef DEBUG
         m_compile_options.exceptionFlags = OPTIX_EXCEPTION_FLAG_DEBUG | OPTIX_EXCEPTION_FLAG_TRACE_DEPTH | OPTIX_EXCEPTION_FLAG_STACK_OVERFLOW;

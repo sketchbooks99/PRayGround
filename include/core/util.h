@@ -15,10 +15,12 @@
 #include <include/core/stream_helpers.h>
 #endif
 
+#include <include/optix/macros.h>
+
 namespace pt {
 
 template <typename T>
-void swap(T& a, T& b)
+HOSTDEVICE INLINE void swap(T& a, T& b)
 {
 #ifdef __CUDACC__
     T c(a); a = b; b = c;

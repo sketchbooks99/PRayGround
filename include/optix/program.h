@@ -25,7 +25,7 @@ public:
 
     /** \brief create program groups depends on OptixProgramGroupKind */
     template <typename ...Entries>
-    void create( OptixDeviceContext ctx, Entries... entries)
+    void create( const OptixDeviceContext& ctx, Entries... entries)
     {   
         const size_t num_entries = sizeof...(entries); 
 

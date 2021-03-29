@@ -24,7 +24,7 @@ inline std::ostream& operator<<(std::ostream& out, const float3& v) {
  */
 inline std::ostream& operator<<(std::ostream& out, const OptixAabb& aabb) {
             out << "min: " << aabb.minX << ' ' << aabb.minY << ' ' << aabb.minZ;
-    return  out << ', max: ' << aabb.maxX << ' ' << aabb.maxY << ' ' << aabb.maxZ;
+    return  out << ", max: " << aabb.maxX << ' ' << aabb.maxY << ' ' << aabb.maxZ;
 }
 
 /**
@@ -32,16 +32,12 @@ inline std::ostream& operator<<(std::ostream& out, const OptixAabb& aabb) {
  **/
 inline std::ostream& operator<<(std::ostream& out, const OptixProgramGroupKind& kind) {
     switch(kind) {
-    case OPTIX_PROGRAM_GROUP_KIND_RAYGEN:    
-        return out << "OPTIX_PROGRAM_GROUP_KIND_RAYGEN";
-    case OPTIX_PROGRAM_GROUP_KIND_MISS:      
-        return out << "OPTIX_PROGRAM_GROUP_KIND_MISS";
-    case OPTIX_PROGRAM_GROUP_KIND_EXCEPTION: 
-        return out << "OPTIX_PROGRAM_GROUP_KIND_EXCEPTION";
-    case OPTIX_PROGRAM_GROUP_KIND_HITGROUP:  
-        return out << "OPTIX_PROGRAM_GROUP_KIND_HITGROUP";
-    case OPTIX_PROGRAM_GROUP_KIND_CALLABLES: 
-        return out << "OPTIX_PROGRAM_GROUP_KIND_CALLABLES";
+    case OPTIX_PROGRAM_GROUP_KIND_RAYGEN:    return out << "OPTIX_PROGRAM_GROUP_KIND_RAYGEN";
+    case OPTIX_PROGRAM_GROUP_KIND_MISS:      return out << "OPTIX_PROGRAM_GROUP_KIND_MISS";
+    case OPTIX_PROGRAM_GROUP_KIND_EXCEPTION: return out << "OPTIX_PROGRAM_GROUP_KIND_EXCEPTION";
+    case OPTIX_PROGRAM_GROUP_KIND_HITGROUP:  return out << "OPTIX_PROGRAM_GROUP_KIND_HITGROUP";
+    case OPTIX_PROGRAM_GROUP_KIND_CALLABLES: return out << "OPTIX_PROGRAM_GROUP_KIND_CALLABLES";
+    default:                                 return out << "";
     }
 }
 
@@ -50,16 +46,12 @@ inline std::ostream& operator<<(std::ostream& out, const OptixProgramGroupKind& 
  */
 inline std::ostream& operator<<(std::ostream& out, const OptixCompileOptimizationLevel& level) {
     switch (level) {
-    case OPTIX_COMPILE_OPTIMIZATION_DEFAULT: 
-        return out << "OPTIX_COMPILE_OPTIMIZATION_DEFAULT";
-    case OPTIX_COMPILE_OPTIMIZATION_LEVEL_0: 
-        return out << "OPTIX_COMPILE_OPTIMIZATION_LEVEL_0";
-    case OPTIX_COMPILE_OPTIMIZATION_LEVEL_1: 
-        return out << "OPTIX_COMPILE_OPTIMIZATION_LEVEL_1";
-    case OPTIX_COMPILE_OPTIMIZATION_LEVEL_2: 
-        return out << "OPTIX_COMPILE_OPTIMIZATION_LEVEL_2";
-    case OPTIX_COMPILE_OPTIMIZATION_LEVEL_3: 
-        return out << "OPTIX_COMPILE_OPTIMIZATION_LEVEL_3";
+    case OPTIX_COMPILE_OPTIMIZATION_DEFAULT: return out << "OPTIX_COMPILE_OPTIMIZATION_DEFAULT";
+    case OPTIX_COMPILE_OPTIMIZATION_LEVEL_0: return out << "OPTIX_COMPILE_OPTIMIZATION_LEVEL_0";
+    case OPTIX_COMPILE_OPTIMIZATION_LEVEL_1: return out << "OPTIX_COMPILE_OPTIMIZATION_LEVEL_1";
+    case OPTIX_COMPILE_OPTIMIZATION_LEVEL_2: return out << "OPTIX_COMPILE_OPTIMIZATION_LEVEL_2";
+    case OPTIX_COMPILE_OPTIMIZATION_LEVEL_3: return out << "OPTIX_COMPILE_OPTIMIZATION_LEVEL_3";
+    default:                                 return out << "";
     }
 }
 
@@ -68,14 +60,11 @@ inline std::ostream& operator<<(std::ostream& out, const OptixCompileOptimizatio
  */
 inline std::ostream& operator<<(std::ostream& out, const OptixCompileDebugLevel& level) {
     switch (level) {
-    case OPTIX_COMPILE_DEBUG_LEVEL_DEFAULT:  
-        return out << "OPTIX_COMPILE_DEBUG_LEVEL_DEFAULT";
-    case OPTIX_COMPILE_DEBUG_LEVEL_NONE:     
-        return out << "OPTIX_COMPILE_DEBUG_LEVEL_NONE";
-    case OPTIX_COMPILE_DEBUG_LEVEL_LINEINFO: 
-        return out << "OPTIX_COMPILE_DEBUG_LEVEL_LINEINFO";
-    case OPTIX_COMPILE_DEBUG_LEVEL_FULL:     
-        return out << "OPTIX_COMPILE_DEBUG_LEVEL_FULL";
+    case OPTIX_COMPILE_DEBUG_LEVEL_DEFAULT:  return out << "OPTIX_COMPILE_DEBUG_LEVEL_DEFAULT";
+    case OPTIX_COMPILE_DEBUG_LEVEL_NONE:     return out << "OPTIX_COMPILE_DEBUG_LEVEL_NONE";
+    case OPTIX_COMPILE_DEBUG_LEVEL_LINEINFO: return out << "OPTIX_COMPILE_DEBUG_LEVEL_LINEINFO";
+    case OPTIX_COMPILE_DEBUG_LEVEL_FULL:     return out << "OPTIX_COMPILE_DEBUG_LEVEL_FULL";
+    default:                                 return out << "";
     }
 }
 
@@ -103,6 +92,14 @@ inline std::ostream& operator<<(std::ostream& out, const OptixPipelineCompileOpt
 }
 
 /**
+ * \struct
+ */
+inline std::ostream& operator<<(std::ostream& out, const OptixPipelineLinkOptions& lop) {
+            out << "maxTraceDepth: " <<  lop.maxTraceDepth << std::endl;
+    return  out << "debugLevel: " << lop.debugLevel;
+}
+
+/**
  * \enum OptixVertexFormat
  */
 inline std::ostream& operator<<(std::ostream& out, const OptixVertexFormat& type) {
@@ -114,6 +111,7 @@ inline std::ostream& operator<<(std::ostream& out, const OptixVertexFormat& type
     case OPTIX_VERTEX_FORMAT_HALF2:     return out << "OPTIX_VERTEX_FORMAT_HALF2";
     case OPTIX_VERTEX_FORMAT_SNORM16_3: return out << "OPTIX_VERTEX_FORMAT_SNORM16_3";
     case OPTIX_VERTEX_FORMAT_SNORM16_2: return out << "OPTIX_VERTEX_FORMAT_SNORM16_2";
+    default:                            return out << "";
     }
 }
 
@@ -127,6 +125,7 @@ inline std::ostream& operator<<(std::ostream& out, const OptixBuildInputType& ty
     case OPTIX_BUILD_INPUT_TYPE_INSTANCES:          return out << "OPTIX_BUILD_INPUT_TYPE_INSTANCES";
     case OPTIX_BUILD_INPUT_TYPE_INSTANCE_POINTERS:  return out << "OPTIX_BUILD_INPUT_TYPE_POINTERS";
     case OPTIX_BUILD_INPUT_TYPE_CURVES:             return out << "OPTIX_BUILD_INPUT_TYPE_CURVES";
+    default:                                        return out << "";
     }
 }
 
@@ -138,6 +137,7 @@ inline std::ostream& operator<<(std::ostream& out, const OptixIndicesFormat& for
     case OPTIX_INDICES_FORMAT_NONE:             return out << "OPTIX_INDICES_FORMAT_NONE";
     case OPTIX_INDICES_FORMAT_UNSIGNED_SHORT3:  return out << "OPTIX_INDICES_FORMAT_UNSIGNED_SHORT3";
     case OPTIX_INDICES_FORMAT_UNSIGNED_INT3:    return out << "OPTIX_INDICES_FORMAT_UNSIGNED_INT3";
+    default:                                    return out << "";
     }
 }
 
@@ -186,6 +186,8 @@ inline std::ostream& operator<<(std::ostream& out, const OptixBuildInput& bi) {
     case OPTIX_BUILD_INPUT_TYPE_INSTANCE_POINTERS:
     case OPTIX_BUILD_INPUT_TYPE_CURVES:
         return out << "Not implemented";
+    default: 
+        return out << "";
     }
 }
 

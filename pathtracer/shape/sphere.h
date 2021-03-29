@@ -15,7 +15,7 @@ public:
     {
         SphereData data = {
             m_center, 
-            m_radius, 
+            m_radius
         };
 
         CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_data_ptr), sizeof(SphereData)));

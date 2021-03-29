@@ -119,8 +119,8 @@ pt::Scene my_scene() {
     pt::ShapePtr ceiling_light_mesh = new pt::TriangleMesh(ceiling_light_vertices, ceiling_light_indices, ceiling_light_normals);
     primitive_instance.add_primitive(pt::Primitive(ceiling_light_mesh, emitter, 5));
 
-    pt::ShapePtr sphere = new pt::Sphere(make_float3(0.0f, 0.0f, 0.0f), 100.0f);
-    primitive_instance.add_primitive(pt::Primitive(sphere, white_diffuse, 0));
+    // pt::ShapePtr sphere = new pt::Sphere(make_float3(0.0f, 0.0f, 0.0f), 100.0f);
+    // primitive_instance.add_primitive(pt::Primitive(sphere, white_diffuse, 0));
 
     scene.add_primitive_instance(primitive_instance);
 

@@ -222,7 +222,7 @@ void TriangleMesh::prepare_data() {
     MeshData data = {
         d_vertices_buf.data(),
         d_normals_buf.data(),
-        d_indices_buf.data(),
+        d_indices_buf.data()
     };
 
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_data_ptr), sizeof(MeshData)));

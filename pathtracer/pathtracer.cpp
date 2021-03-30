@@ -444,12 +444,12 @@ int main(int argc, char* argv[]) {
 
         // Create device context.
         OptixDeviceContext optix_context;
-        CUcontext cu_ctx = 0;
+        CUcontext cu_context = 0;
         OPTIX_CHECK(optixInit());
         OptixDeviceContextOptions options = {};
         options.logCallbackFunction = &context_log_cb;
         options.logCallbackLevel = 4;
-        OPTIX_CHECK(optixDeviceContextCreate(cu_ctx, &options, &optix_context));
+        OPTIX_CHECK(optixDeviceContextCreate(cu_context, &options, &optix_context));
 
         pt::Message("main(): Created device context");
 
@@ -462,7 +462,10 @@ int main(int argc, char* argv[]) {
             pt::AccelData accel = {};
             pt::build_gas(optix_context, accel, ps);
             /// New OptixInstance are pushed back to \c instances
-            pt::build_instance(optix_context, accel, ps, sbt_base_offset, instance_id, instances);
+            pt::build_instances(optix_context, accel, ps, sbt_base_offset, instance_id, instances);
+        }
+        for (auto& ins : instances) {
+            pt::Message(ins);
         }
 
         pt::Message("main(): Builded children instance ASs that contain the geometry AS");
@@ -471,6 +474,7 @@ int main(int argc, char* argv[]) {
         // pt::CUDABuffer<OptixInstance> d_instances;
         // d_instances.alloc_copy(instances);
         CUdeviceptr d_instances;
+        pt::Message("main(): instances.size():", instances.size());
         CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_instances), sizeof(OptixInstance) * instances.size()));
         CUDA_CHECK(cudaMemcpy(
             reinterpret_cast<void*>(d_instances), instances.data(),

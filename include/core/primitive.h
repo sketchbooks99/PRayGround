@@ -238,14 +238,14 @@ void build_gas(OptixDeviceContext ctx, AccelData& accel_data, PrimitiveInstance 
 }
 
 // ---------------------------------------------------------------------
-void build_instance(const OptixDeviceContext& ctx, 
+void build_instances(const OptixDeviceContext& ctx, 
                const AccelData& accel_data,
                const PrimitiveInstance& prim_instance, 
                unsigned int& sbt_base_offset,
                unsigned int& instance_id,
                std::vector<OptixInstance>& instances)
 {
-    const unsigned int visibility_mask = 1;
+    const unsigned int visibility_mask = 255;
 
     Transform transform = prim_instance.transform();
     // unsigned int flags = prim_instance.transform().is_identity() 
@@ -262,7 +262,7 @@ void build_instance(const OptixDeviceContext& ctx,
             instance_id, sbt_base_offset, visibility_mask, flags, 
             accel_data.meshes.handle, /* pad = */ {0, 0}
         };
-        sbt_base_offset += (unsigned int)accel_data.meshes.count;
+        sbt_base_offset += (unsigned int)accel_data.meshes.count * RAY_TYPE_COUNT;
         instance_id++;
         instances.push_back(instance);
     }
@@ -276,7 +276,7 @@ void build_instance(const OptixDeviceContext& ctx,
             instance_id, sbt_base_offset, visibility_mask, flags, 
             accel_data.customs.handle, /* pad = */ {0, 0}
         };
-        sbt_base_offset += (unsigned int)accel_data.customs.count;
+        sbt_base_offset += (unsigned int)accel_data.customs.count * RAY_TYPE_COUNT;
         instance_id++;
         instances.push_back(instance);
     }

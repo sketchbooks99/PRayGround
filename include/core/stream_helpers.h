@@ -191,6 +191,22 @@ inline std::ostream& operator<<(std::ostream& out, const OptixBuildInput& bi) {
     }
 }
 
+/**
+ * \struct
+ */
+inline std::ostream& operator<<(std::ostream& out, const OptixInstance& ins) {
+    out << "transform: " << std::endl;
+    out << ins.transform[0] << ' ' << ins.transform[1] << ' '<< ins.transform[2] << ' ' << ins.transform[3] << std::endl;
+    out << ins.transform[4] << ' ' << ins.transform[5] << ' '<< ins.transform[6] << ' ' << ins.transform[7] << std::endl;
+    out << ins.transform[8] << ' ' << ins.transform[9] << ' '<< ins.transform[10] << ' ' << ins.transform[11] << std::endl;
+    out << "instanceId: " << ins.instanceId << std::endl;
+    out << "sbtOffset: " << ins.sbtOffset << std::endl;
+    out << "visibilityMask: " << ins.visibilityMask << std::endl;
+    out << "flags: " << ins.flags << std::endl;
+    out << "traversableHandle: " << ins.traversableHandle << std::endl;
+    return out << "pad: " << ins.pad[0] << ' ' << ins.pad[1];
+}
+
 }
 
 

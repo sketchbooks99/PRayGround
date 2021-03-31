@@ -5,8 +5,6 @@
 
 namespace pt {
 
-class Conductor;
-
 class Conductor final : public Material {
 public:
     HOSTDEVICE Conductor(float3 a, float f);

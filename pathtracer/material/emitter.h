@@ -19,6 +19,7 @@ public:
 
 #ifndef __CUDACC__
     MaterialType type() const override { return MaterialType::Emitter; }
+    float3 emitted() const { return m_color; }
 #endif
 
 private:

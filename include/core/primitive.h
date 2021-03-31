@@ -50,7 +50,7 @@ public:
     void prepare_shapedata() { m_shape_ptr->prepare_data(); }
 
     // Configure the OptixBuildInput from shape data.
-    void build_input(OptixBuildInput& bi) { m_shape_ptr->build_input( bi, m_sbt_index ); }
+    void build_input( OptixBuildInput& bi, unsigned int index_offset ) { m_shape_ptr->build_input( bi, m_sbt_index, index_offset); }
 
     /** 
      * \brief 
@@ -133,7 +133,7 @@ private:
  * \note 
  * Call of this funcion :  build_gas(ctx, accel_data, primitive_instances.primitives());
  */ 
-void build_gas(OptixDeviceContext ctx, AccelData& accel_data, PrimitiveInstance ps) {
+void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data, PrimitiveInstance ps) {
     std::vector<Primitive> meshes;
     std::vector<Primitive> customs;
 
@@ -157,6 +157,7 @@ void build_gas(OptixDeviceContext ctx, AccelData& accel_data, PrimitiveInstance 
         handle.count = primitives_subset.size();
 
         std::vector<OptixBuildInput> build_inputs(primitives_subset.size());
+        unsigned int index_offset = 0;
         for (size_t i=0; i<primitives_subset.size(); i++) {
             if (primitives_subset[i].shapetype() == ShapeType::Mesh) {
                 CUDABuffer<float> d_pre_transform;
@@ -168,8 +169,21 @@ void build_gas(OptixDeviceContext ctx, AccelData& accel_data, PrimitiveInstance 
                 build_inputs[i].triangleArray.transformFormat = OPTIX_TRANSFORM_FORMAT_MATRIX_FLOAT12;
             }
             primitives_subset[i].prepare_shapedata();
-            primitives_subset[i].build_input(build_inputs[i]);
+            primitives_subset[i].build_input(build_inputs[i], index_offset);
+
+            switch ( primitives_subset[i].shapetype() ) {
+            case ShapeType::Mesh:
+                index_offset += build_inputs[i].triangleArray.numIndexTriplets;
+                break;
+            case ShapeType::Sphere:
+                index_offset += build_inputs[i].customPrimitiveArray.numPrimitives;
+                break;
+            default:
+                break;
+            }
         }
+
+        for (auto& bi : build_inputs) Message("build_gas():", "OptixBuildInput:", bi);
 
         OptixAccelBuildOptions accel_options = {};
         accel_options.buildFlags = OPTIX_BUILD_FLAG_ALLOW_COMPACTION;
@@ -224,6 +238,7 @@ void build_gas(OptixDeviceContext ctx, AccelData& accel_data, PrimitiveInstance 
         CUDA_CHECK(cudaMemcpy(&compacted_gas_size, (void*)emitProperty.result, sizeof(size_t), cudaMemcpyDeviceToHost));
 
         if (compacted_gas_size < gas_buffer_sizes.outputSizeInBytes) {
+            OptixTraversableHandle temp_handle = 0;;
             CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&handle.d_buffer), compacted_gas_size));
             OPTIX_CHECK(optixAccelCompact(ctx, 0, handle.handle, handle.d_buffer, compacted_gas_size, &handle.handle));
             cuda_free(d_buffer_temp_output_gas_and_compacted_size);

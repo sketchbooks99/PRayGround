@@ -71,6 +71,8 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 		float3 ray_direction = normalize(d.x * U + d.y * V + W);
 		float3 ray_origin = eye;
 
+		printf("rd: %f %f %f, ro: %f %f %f\n", ray_direction.x, ray_direction.y, ray_direction.z, ray_origin.x, ray_origin.y, ray_origin.z);
+
 		/** TODO: 
 		 * Shading evaluation should be performed in this loop, not in `closest_hit`
 		 * to enable us not to indenpendently implement shading program for all primitives. 

@@ -35,6 +35,8 @@
 #include <include/core/scene.h>
 #include <include/core/primitive.h>
 
+#define MESH_GAS_ONLY 1
+
 // Header file describe the scene
 #include "scene_file.h"
 
@@ -457,12 +459,21 @@ int main(int argc, char* argv[]) {
         std::vector<OptixInstance> instances;
         unsigned int sbt_base_offset = 0;       
         unsigned int instance_id = 0;
+
+#ifdef MESH_GAS_ONLY
+        pt::AccelData accel = {};
+#endif
+
         for (auto &ps : scene.primitive_instances()) {
             // accels.push_back(pt::AccelData());
+#ifndef MESH_GAS_ONLY
             pt::AccelData accel = {};
+#endif
             pt::build_gas(optix_context, accel, ps);
+#ifndef MESH_GAS_ONLY
             /// New OptixInstance are pushed back to \c instances
             pt::build_instances(optix_context, accel, ps, sbt_base_offset, instance_id, instances);
+#endif
         }
         for (auto& ins : instances) {
             pt::Message(ins);
@@ -470,22 +481,15 @@ int main(int argc, char* argv[]) {
 
         pt::Message("main(): Builded children instance ASs that contain the geometry AS");
 
+#ifndef MESH_GAS_ONLY
         // Create all instances on the device.
-        // pt::CUDABuffer<OptixInstance> d_instances;
-        // d_instances.alloc_copy(instances);
-        CUdeviceptr d_instances;
-        pt::Message("main(): instances.size():", instances.size());
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_instances), sizeof(OptixInstance) * instances.size()));
-        CUDA_CHECK(cudaMemcpy(
-            reinterpret_cast<void*>(d_instances), instances.data(),
-            sizeof(OptixInstance) * instances.size(), 
-            cudaMemcpyHostToDevice
-        ));
+        pt::CUDABuffer<OptixInstance> d_instances;
+        d_instances.alloc_copy(instances);
 
         // Prepare build input for instances.
         OptixBuildInput instance_input = {};
         instance_input.type = OPTIX_BUILD_INPUT_TYPE_INSTANCES;
-        instance_input.instanceArray.instances = d_instances;
+        instance_input.instanceArray.instances = d_instances.d_ptr();
         instance_input.instanceArray.numInstances = (unsigned int) instances.size();
 
         OptixAccelBuildOptions accel_options = {};
@@ -528,6 +532,7 @@ int main(int argc, char* argv[]) {
         ));
 
         pt::cuda_frees(d_temp_buffer, d_instances);
+#endif
 
         // pt::AccelData accel = {};
         // pt::build_gas(optix_context, accel, scene.primitive_instances()[0]);
@@ -573,6 +578,7 @@ int main(int argc, char* argv[]) {
         // Create sbt for miss programs
         pt::CUDABuffer<pt::MissRecord> d_miss_record;
         pt::MissRecord ms_sbt[RAY_TYPE_COUNT];
+
         for (int i=0; i<RAY_TYPE_COUNT; i++) {
             OPTIX_CHECK(optixSbtRecordPackHeader((OptixProgramGroup)miss_programs[i], &ms_sbt[i]));
             ms_sbt[i].data.bg_color = make_float4(1.0f, 0.0f, 0.0f, 1.0f);
@@ -589,8 +595,7 @@ int main(int argc, char* argv[]) {
         // HitGroup programs
         scene.create_hitgroup_programs(optix_context, (OptixModule)pt_module);
         std::vector<pt::ProgramGroup> hitgroup_program = scene.hitgroup_programs();
-        std::transform(hitgroup_program.begin(), hitgroup_program.end(), std::back_inserter(program_groups), 
-            [](pt::ProgramGroup pg) { return (OptixProgramGroup)pg; });
+        std::copy(hitgroup_program.begin(), hitgroup_program.end(), std::back_inserter(program_groups));
 
         // Create pipeline
         pt_pipeline.create(optix_context, program_groups);
@@ -605,7 +610,12 @@ int main(int argc, char* argv[]) {
                 scene.width() * scene.height() * sizeof(float4)));
         params.frame_buffer = nullptr;
         params.subframe_index = 0u;
+
+#ifdef MESH_GAS_ONLY
+        params.handle = accel.meshes.handle;
+#else 
         params.handle = ias_handle;
+#endif
         // params.handle = accel.meshes.handle;
         CUDA_CHECK(cudaStreamCreate(&stream));
         CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_params), sizeof(pt::Params)));
@@ -714,7 +724,7 @@ int main(int argc, char* argv[]) {
     }
     catch (std::exception& e)
     {
-        std::cerr << "Caugh exception: " << e.what() << "\n";
+        std::cerr << "Caught exception: " << e.what() << "\n";
         return 1;
     }
 

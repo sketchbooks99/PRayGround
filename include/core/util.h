@@ -39,11 +39,13 @@ inline void Assert(bool condition, const std::string& msg) {
     if (!condition) Throw(msg);
 }
 
+/**
+ * @brief Stream out object recursively. 
+ */
 template <typename T>
 inline void Message_once(T t) {
     std::cout << t;
 }
-
 template <typename Head, typename... Args>
 inline void Message(Head head, Args... args) {
     Message_once(head);
@@ -59,7 +61,6 @@ template <typename T>
 inline void cuda_free(T& data) {
     CUDA_CHECK(cudaFree(reinterpret_cast<void*>(data)));
 }
-
 /** 
  * \brief 
  * Recursive free of object.

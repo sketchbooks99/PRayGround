@@ -19,6 +19,52 @@ inline std::ostream& operator<<(std::ostream& out, const float3& v) {
     return out << v.x << ' ' << v.y << ' ' << v.z;
 }
 
+// For OptiX ======================================================================
+/**
+ * \struct OptixResult 
+ */
+inline std::ostream& operator<<(std::ostream& out, const OptixResult& result) {
+    switch( result ) {
+    case OPTIX_SUCCESS:                                 return out << "OPTIX_SUCCESS";
+    case OPTIX_ERROR_INVALID_VALUE:                     return out << "OPTIX_ERROR_INVALID_VALUE";
+    case OPTIX_ERROR_HOST_OUT_OF_MEMORY:                return out << "OPTIX_ERROR_HOST_OUT_OF_MEMORY";
+    case OPTIX_ERROR_INVALID_OPERATION:                 return out << "OPTIX_ERROR_INVALID_OPERATION";
+    case OPTIX_ERROR_FILE_IO_ERROR:                     return out << "OPTIX_ERROR_FILE_IO_ERROR";
+    case OPTIX_ERROR_INVALID_FILE_FORMAT:               return out << "OPTIX_ERROR_INVALID_FILE_FORMAT";
+    case OPTIX_ERROR_DISK_CACHE_INVALID_PATH:           return out << "OPTIX_ERROR_DISK_CACHE_INVALID_PATH";
+    case OPTIX_ERROR_DISK_CACHE_PERMISSION_ERROR:       return out << "OPTIX_ERROR_DISK_CACHE_PERMISSION_ERROR";
+    case OPTIX_ERROR_DISK_CACHE_DATABASE_ERROR:         return out << "OPTIX_ERROR_DISK_CACHE_DATABASE_ERROR";
+    case OPTIX_ERROR_DISK_CACHE_INVALID_DATA:           return out << "OPTIX_ERROR_DISK_CACHE_INVALID_DATA";
+    case OPTIX_ERROR_LAUNCH_FAILURE:                    return out << "OPTIX_ERROR_LAUNCH_FAILURE";
+    case OPTIX_ERROR_INVALID_DEVICE_CONTEXT:            return out << "OPTIX_ERROR_INVALID_DEVICE_CONTEXT";
+    case OPTIX_ERROR_CUDA_NOT_INITIALIZED:              return out << "OPTIX_ERROR_CUDA_NOT_INITIALIZED";
+    case OPTIX_ERROR_VALIDATION_FAILURE:                return out << "OPTIX_ERROR_VALIDATION_FAILURE";
+    case OPTIX_ERROR_INVALID_PTX:                       return out << "OPTIX_ERROR_INVALID_PTX";
+    case OPTIX_ERROR_INVALID_LAUNCH_PARAMETER:          return out << "OPTIX_ERROR_INVALID_LAUNCH_PARAMETER";
+    case OPTIX_ERROR_INVALID_PAYLOAD_ACCESS:            return out << "OPTIX_ERROR_INVALID_PAYLOAD_ACCESS";
+    case OPTIX_ERROR_INVALID_ATTRIBUTE_ACCESS:          return out << "OPTIX_ERROR_INVALID_ATTRIBUTE_ACCESS";
+    case OPTIX_ERROR_INVALID_FUNCTION_USE:              return out << "OPTIX_ERROR_INVALID_FUNCTION_USE";
+    case OPTIX_ERROR_INVALID_FUNCTION_ARGUMENTS:        return out << "OPTIX_ERROR_INVALID_FUNCTION_ARGUMENTS";
+    case OPTIX_ERROR_PIPELINE_OUT_OF_CONSTANT_MEMORY:   return out << "OPTIX_ERROR_PIPELINE_OUT_OF_CONSTANT_MEMORY";
+    case OPTIX_ERROR_PIPELINE_LINK_ERROR:               return out << "OPTIX_ERROR_PIPELINE_LINK_ERROR";
+    case OPTIX_ERROR_INTERNAL_COMPILER_ERROR:           return out << "OPTIX_ERROR_INTERNAL_COMPILER_ERROR";
+    case OPTIX_ERROR_DENOISER_MODEL_NOT_SET:            return out << "OPTIX_ERROR_DENOISER_MODEL_NOT_SET";
+    case OPTIX_ERROR_DENOISER_NOT_INITIALIZED:          return out << "OPTIX_ERROR_DENOISER_NOT_INITIALIZED";
+    case OPTIX_ERROR_ACCEL_NOT_COMPATIBLE:              return out << "OPTIX_ERROR_ACCEL_NOT_COMPATIBLE";
+    case OPTIX_ERROR_NOT_SUPPORTED:                     return out << "OPTIX_ERROR_NOT_SUPPORTED";
+    case OPTIX_ERROR_UNSUPPORTED_ABI_VERSION:           return out << "OPTIX_ERROR_UNSUPPORTED_ABI_VERSION";
+    case OPTIX_ERROR_FUNCTION_TABLE_SIZE_MISMATCH:      return out << "OPTIX_ERROR_FUNCTION_TABLE_SIZE_MISMATCH";
+    case OPTIX_ERROR_INVALID_ENTRY_FUNCTION_OPTIONS:    return out << "OPTIX_ERROR_INVALID_ENTRY_FUNCTION_OPTIONS";
+    case OPTIX_ERROR_LIBRARY_NOT_FOUND:                 return out << "OPTIX_ERROR_LIBRARY_NOT_FOUND";
+    case OPTIX_ERROR_ENTRY_SYMBOL_NOT_FOUND:            return out << "OPTIX_ERROR_ENTRY_SYMBOL_NOT_FOUND";
+    case OPTIX_ERROR_LIBRARY_UNLOAD_FAILURE:            return out << "OPTIX_ERROR_LIBRARY_UNLOAD_FAILURE";
+    case OPTIX_ERROR_CUDA_ERROR:                        return out << "OPTIX_ERROR_CUDA_ERROR";
+    case OPTIX_ERROR_INTERNAL_ERROR:                    return out << "OPTIX_ERROR_INTERNAL_ERROR";
+    case OPTIX_ERROR_UNKNOWN:                           return out << "OPTIX_ERROR_UNKNOWN";
+    default:                                            return out << "";
+    }
+}
+
 /**
  * \struct OptixAabb
  */
@@ -142,7 +188,7 @@ inline std::ostream& operator<<(std::ostream& out, const OptixIndicesFormat& for
 }
 
 /**
- * \struct OPtixBuildInputTriangleArray
+ * \struct OptixBuildInputTriangleArray
  */
 inline std::ostream& operator<<(std::ostream& out, const OptixBuildInputTriangleArray& triangleArray) {
     out << "numVertices: " << triangleArray.numVertices << std::endl;
@@ -154,7 +200,7 @@ inline std::ostream& operator<<(std::ostream& out, const OptixBuildInputTriangle
     out << "numSbtRecords: " << triangleArray.numSbtRecords << std::endl;
     out << "sbtIndexOffsetSizeInBytes: " << triangleArray.sbtIndexOffsetSizeInBytes << std::endl;
     out << "sbtIndexOffsetStrideInBytes: " << triangleArray.sbtIndexOffsetStrideInBytes << std::endl;
-    out << "primitiveIndexOffset: " << triangleArray.primitiveIndexOffset << std::endl;
+    out << "primitiveIndexOffset: " << triangleArray.primitiveIndexOffset;
     return out;
 }
 
@@ -167,7 +213,7 @@ inline std::ostream& operator<<(std::ostream& out, const OptixBuildInputCustomPr
     out << "numSbtRecords: " << customArray.numSbtRecords << std::endl;
     out << "sbtIndexOffsetSizeInBytes: " << customArray.sbtIndexOffsetSizeInBytes << std::endl;
     out << "sbtIndexOffsetStrideInBytes: " << customArray.sbtIndexOffsetStrideInBytes << std::endl;
-    out << "primitiveIndexOffset: " << customArray.primitiveIndexOffset << std::endl;
+    out << "primitiveIndexOffset: " << customArray.primitiveIndexOffset;
     return out;
 }
 
@@ -175,12 +221,12 @@ inline std::ostream& operator<<(std::ostream& out, const OptixBuildInputCustomPr
  * \struct OptixBuildInput
  */
 inline std::ostream& operator<<(std::ostream& out, const OptixBuildInput& bi) {
-    out << bi.type;
+    out << "type: " << bi.type << std::endl;
     switch (bi.type) {
     case OPTIX_BUILD_INPUT_TYPE_TRIANGLES:
-        return out << bi.triangleArray;
+        return out << bi.triangleArray << std::endl;
     case OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES:
-        return out << bi.customPrimitiveArray;
+        return out << bi.customPrimitiveArray << std::endl;
     /** \note Not implemented */
     case OPTIX_BUILD_INPUT_TYPE_INSTANCES:
     case OPTIX_BUILD_INPUT_TYPE_INSTANCE_POINTERS:

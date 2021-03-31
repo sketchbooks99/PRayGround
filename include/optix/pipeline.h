@@ -26,7 +26,8 @@ public:
         OPTIX_CHECK(optixPipelineDestroy(m_pipeline));
     }
 
-    explicit operator OptixPipeline() { return m_pipeline; }
+    explicit operator OptixPipeline() const { return m_pipeline; }
+    explicit operator OptixPipeline&() { return m_pipeline; }
 
     /** \brief Compile options. */
     void set_compile_options( const OptixPipelineCompileOptions& op ) { m_compile_options = op; }
@@ -130,7 +131,7 @@ private:
     }
     OptixPipelineCompileOptions m_compile_options = {};
     OptixPipelineLinkOptions m_link_options = {};
-    OptixPipeline m_pipeline { 0 };
+    OptixPipeline m_pipeline { nullptr };
     uint32_t m_trace_depth { 5 }; 
     uint32_t m_cc_depth { 0 }; 
     uint32_t m_dc_depth { 0 };

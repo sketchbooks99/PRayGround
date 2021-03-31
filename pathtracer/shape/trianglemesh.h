@@ -14,7 +14,7 @@ public:
     ShapeType type() const override { return ShapeType::Mesh; }
 
     void prepare_data() override;
-    void build_input( OptixBuildInput& bi, uint32_t sbt_idx ) override;
+    void build_input( OptixBuildInput& bi, uint32_t sbt_idx, unsigned int index_offset ) override;
     /**
      * @note 
      * Currently, triangle never need AABB at intersection test on the device side.

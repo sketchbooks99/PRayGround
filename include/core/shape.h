@@ -47,8 +47,8 @@ struct AccelData {
         CUdeviceptr d_buffer { 0 };
         unsigned int count { 0 };
     };
-    HandleData meshes;
-    HandleData customs;
+    HandleData meshes {};
+    HandleData customs {};
 
     ~AccelData() {
         if (meshes.d_buffer)  cudaFree( reinterpret_cast<void*>( meshes.d_buffer ) );
@@ -68,7 +68,7 @@ public:
     virtual AABB bound() const = 0;
 
     virtual void prepare_data() = 0;
-    virtual void build_input( OptixBuildInput& bi, uint32_t sbt_idx ) = 0;
+    virtual void build_input( OptixBuildInput& bi, uint32_t sbt_idx, unsigned int index_offset ) = 0;
     void free_aabb_buffer() {
         if (d_aabb_buffer) CUDA_CHECK(cudaFree(reinterpret_cast<void*>(d_aabb_buffer))); 
     }

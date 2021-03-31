@@ -28,7 +28,7 @@ public:
         Message("Sphere::prepare_data():", "d_data_ptr =", d_data_ptr);
     }
 
-    void build_input( OptixBuildInput& bi, uint32_t sbt_idx ) override
+    void build_input( OptixBuildInput& bi, uint32_t sbt_idx, unsigned int index_offset ) override
     {
         // Prepare bounding box information on the device.
         OptixAabb aabb = (OptixAabb)this->bound();
@@ -50,6 +50,7 @@ public:
         bi.customPrimitiveArray.numPrimitives = 1;
         bi.customPrimitiveArray.flags = input_flags;
         bi.customPrimitiveArray.numSbtRecords = 1;
+        bi.customPrimitiveArray.primitiveIndexOffset = index_offset;
     }
 
     AABB bound() const override { 

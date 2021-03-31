@@ -649,6 +649,11 @@ int main(int argc, char* argv[]) {
     OptixTraversableHandle gas_handle = 0;
     CUdeviceptr d_gas_output_buffer = 0;
     std::vector<CUdeviceptr> d_vertices;
+    std::vector<CUdeviceptr> d_indices;
+    std::vector<CUdeviceptr> d_normals;
+    std::vector<CUdeviceptr> d_materials;
+
+    OptixProgramGroup raygen_prog_group;
 
     //
     // Parse command line options

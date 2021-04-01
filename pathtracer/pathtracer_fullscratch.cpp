@@ -742,17 +742,6 @@ int main(int argc, char* argv[]) {
     OptixTraversableHandle gas_handle = 0;
     CUdeviceptr d_gas_output_buffer = 0;
 
-    // 0 ... Raygen program
-    // 1 ... Miss radiance program
-    // 2 ... Miss occlusion program
-    // 3 ... Closest-hit radiance program
-    // 4 ... Closest-hit occlusion program
-    std::vector<OptixProgramGroup> program_groups(5);
-
-    OptixModule ptx_module = 0;
-    OptixPipelineCompileOptions pipeline_compile_options = {};
-    OptixPipeline pipeline = 0;
-
     CUstream stream = 0;
 
     OptixShaderBindingTable sbt = {};
@@ -902,12 +891,46 @@ int main(int argc, char* argv[]) {
         pt::Module pt_module("optix/pathtracer.cu");
         pt_module.create(optix_context, pt_pipeline.compile_options());
 
-        createProgramGroups(
-            optix_context, (OptixModule)pt_module, 
-            program_groups[0],                      // raygen program
-            program_groups[1], program_groups[2],   // miss program
-            program_groups[3], program_groups[4]    // hitgroup programs
-        );
+        /**
+         * \brief Create programs
+         */
+        std::vector<OptixProgramGroup> program_groups;
+        // Raygen program
+        pt::ProgramGroup raygen_program(OPTIX_PROGRAM_GROUP_KIND_RAYGEN);
+        raygen_program.create( optix_context, pt::ProgramEntry( (OptixModule)pt_module, RG_FUNC_STR("raygen") ) );
+        program_groups.push_back( (OptixProgramGroup)raygen_program );
+        // Create and bind sbt for raygen program
+        pt::CUDABuffer<pt::RayGenRecord> d_raygen_record;
+        pt::RayGenRecord rg_record = {};
+        OPTIX_CHECK( optixSbtRecordPackHeader( (OptixProgramGroup)raygen_program, &rg_record ) );
+        d_raygen_record.alloc_copy( &rg_record, sizeof( pt::RayGenRecord ) );
+
+        // Miss program
+        std::vector<pt::ProgramGroup> miss_programs( RAY_TYPE_COUNT, pt::ProgramGroup( OPTIX_PROGRAM_GROUP_KIND_MISS ) );
+        miss_programs[0].create( optix_context, pt::ProgramEntry( (OptixModule)pt_module, MS_FUNC_STR("radiance") ) );
+        miss_programs[1].create( optix_context, pt::ProgramEntry( nullptr, nullptr ) );
+        std::copy( miss_programs.begin(), miss_programs.end(), std::back_inserter( program_groups ) );
+        // Create sbt for miss programs
+        pt::CUDABuffer<pt::MissRecord> d_miss_record;
+        pt::MissRecord ms_records[RAY_TYPE_COUNT];
+        for (int i=0; i<RAY_TYPE_COUNT; i++) {
+            OPTIX_CHECK( optixSbtRecordPackHeader( (OptixProgramGroup)miss_programs[i], &ms_records[i] ) );
+            ms_records[i].data.bg_color = make_float4(0.0f, 0.0f, 0.0f, 1.0f);
+        }
+        d_miss_record.alloc_copy( ms_records, sizeof(pt::MissRecord)*RAY_TYPE_COUNT );
+
+        // // Attach sbts for raygen and miss program
+        // sbt.raygenRecord = d_raygen_record.d_ptr();
+        // sbt.missRecordBase = d_miss_record.d_ptr();
+        // sbt.missRecordStrideInBytes = static_cast<uint32_t>(sizeof(pt::MissRecord));
+        // sbt.missRecordCount = RAY_TYPE_COUNT;
+
+        // HitGroup programs
+        scene.create_hitgroup_programs(optix_context, (OptixModule)pt_module);
+        std::vector<pt::ProgramGroup> hitgroup_programs = scene.hitgroup_programs();
+        std::copy(hitgroup_programs.begin(), hitgroup_programs.end(), std::back_inserter(program_groups));
+
+        scene.create_hitgroup_sbt( (OptixModule)pt_module, sbt );
 
         pt_pipeline.create( optix_context, program_groups );
         createSBT( optix_context, program_groups, scene.primitive_instances()[0].primitives(), d_vertices, d_indices, d_normals, sbt );

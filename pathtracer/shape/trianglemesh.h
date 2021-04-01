@@ -16,7 +16,7 @@ public:
     void prepare_data() override;
     void build_input( OptixBuildInput& bi, uint32_t sbt_idx, unsigned int index_offset ) override;
     /**
-     * @note 
+     * \note 
      * Currently, triangle never need AABB at intersection test on the device side.
      * For future work, I'd like to make this renderer can switch a computing device 
      * (CPU/GPU) depends on an application.
@@ -26,6 +26,14 @@ public:
     std::vector<float3> vertices() const { return m_vertices; } 
     std::vector<float3> normals() const { return m_normals; }
     std::vector<int3> indices() const { return m_indices; } 
+
+    /**
+     * \note This is for checking if device side pointer is correctly allocated.
+     */
+    CUdeviceptr get_dvertices() const { return d_vertices; }
+    CUdeviceptr get_dnormals() const { return d_normals; }
+    CUdeviceptr get_dindices() const { return d_indices; }
+
 private:
     std::vector<float3> m_vertices;
     std::vector<float3> m_normals;

@@ -46,10 +46,8 @@ public:
     
     HOSTDEVICE float3 emittance(SurfaceInteraction& /* si */) const override { return make_float3(0.f); }
 
-#ifndef __CUDACC__
     MaterialType type() const override { return MaterialType::Diffuse; }
     float3 albedo() const { return m_albedo; }
-#endif 
 
 private:
     void setup_on_device() override;

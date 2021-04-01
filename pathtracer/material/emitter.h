@@ -17,10 +17,8 @@ public:
         return m_color * m_strength;
     }
 
-#ifndef __CUDACC__
     MaterialType type() const override { return MaterialType::Emitter; }
     float3 emitted() const { return m_color; }
-#endif
 
 private:
     HOST void setup_on_device() override;

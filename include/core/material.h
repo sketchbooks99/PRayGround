@@ -21,7 +21,7 @@ enum class MaterialType {
 };
 
 #ifndef __CUDACC__
-inline std::ostream& operator<<(std::ostream& out, MaterialType type) {
+inline std::ostream& operator<<(std::ostream& out, const MaterialType& type) {
     switch(type) {
     case MaterialType::Diffuse:
         return out << "MaterialType::Diffuse";
@@ -48,8 +48,9 @@ public:
     /// FUTURE:
     // virtual HOSTDEVICE float pdf(const Ray& r, const SurfaceInteraction& si) const = 0; */
 
-#ifndef __CUDACC__
     virtual MaterialType type() const = 0;
+
+#ifndef __CUDACC__
     MaterialPtr get_dptr() const { return d_ptr; }
     MaterialPtr& get_dptr() { return d_ptr; }
 #endif

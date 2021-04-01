@@ -35,7 +35,7 @@
 #include <include/core/scene.h>
 #include <include/core/primitive.h>
 
-#define MESH_GAS_ONLY 1
+#define SUCCEEDED 1
 
 // Header file describe the scene
 #include "scene_file.h"
@@ -276,7 +276,6 @@ void createContext(
     // Initialize CUDA
     CUDA_CHECK( cudaFree( 0 ) );
 
-    OptixDeviceContext context;
     CUcontext          cu_ctx = 0;  // zero means take the current context
     OPTIX_CHECK( optixInit() );
     OptixDeviceContextOptions options = {};
@@ -290,52 +289,53 @@ void createContext(
  ****************************************************************/
 void buildMeshAccel(
     const OptixDeviceContext& context,
-    const std::vector<pt::TriangleMesh>& meshes, 
+    const std::vector<pt::Primitive>& primitives, 
     std::vector<CUdeviceptr>& d_vertices, 
     std::vector<CUdeviceptr>& d_indices, 
     std::vector<CUdeviceptr>& d_normals, 
     OptixTraversableHandle& gas_handle, 
     CUdeviceptr& d_gas_output_buffer )
 {
-    std::vector<OptixBuildInput> triangle_inputs(meshes.size());
-    d_vertices.resize(meshes.size());
-    d_indices.resize(meshes.size());
-    d_normals.resize(meshes.size());
-    for ( size_t meshID = 0; meshID < meshes.size(); meshID++ )
+    std::vector<OptixBuildInput> triangle_inputs(primitives.size());
+    d_vertices.resize(primitives.size());
+    d_indices.resize(primitives.size());
+    d_normals.resize(primitives.size());
+    for ( size_t meshID = 0; meshID < primitives.size(); meshID++ )
     {
+        auto mesh = ((pt::TriangleMesh*)primitives[meshID].shape());
         // alloc and copy vertices data
-        const size_t vertices_size_in_bytes = meshes[meshID].vertices().size() * sizeof(float3);
+        const size_t vertices_size_in_bytes = mesh->vertices().size() * sizeof(float3);
         CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>(&d_vertices[meshID]), vertices_size_in_bytes ) );
         CUDA_CHECK( cudaMemcpy(
             reinterpret_cast<void*>(d_vertices[meshID]),
-            meshes[meshID].vertices().data(), vertices_size_in_bytes,
+            mesh->vertices().data(), vertices_size_in_bytes,
             cudaMemcpyHostToDevice
         ));
 
         // alloc and copy indices data
-        const size_t indices_size_in_bytes = meshes[meshID].indices().size() * sizeof(int3);
+        const size_t indices_size_in_bytes = mesh->indices().size() * sizeof(int3);
         CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>(&d_indices[meshID]), indices_size_in_bytes ) );
         CUDA_CHECK( cudaMemcpy(
             reinterpret_cast<void*>(d_indices[meshID]),
-            meshes[meshID].indices().data(), indices_size_in_bytes,
+            mesh->indices().data(), indices_size_in_bytes,
             cudaMemcpyHostToDevice
         ));
 
         // alloc and copy normals data
-        if (!meshes[meshID].normals().empty())
+        if (!mesh->normals().empty())
         {
-            const size_t normals_size_in_bytes = meshes[meshID].normals().size() * sizeof(float3);
+            const size_t normals_size_in_bytes = mesh->normals().size() * sizeof(float3);
             CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>(&d_normals[meshID]), normals_size_in_bytes ) );
             CUDA_CHECK( cudaMemcpy(
                 reinterpret_cast<void*>(d_normals[meshID]),
-                meshes[meshID].normals().data(), normals_size_in_bytes,
+                mesh->normals().data(), normals_size_in_bytes,
                 cudaMemcpyHostToDevice
             ));
         }
 
         // alloc and copy material data
         CUdeviceptr d_mat_indices = 0;
-        std::vector<uint32_t> mat_indices( meshes[meshID].indices().size(), meshID );
+        std::vector<uint32_t> mat_indices( mesh->indices().size(), meshID );
         const size_t mat_indices_size_in_bytes = mat_indices.size() * sizeof(uint32_t);
         CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>(&d_mat_indices), mat_indices_size_in_bytes ) );
         CUDA_CHECK( cudaMemcpy(
@@ -351,12 +351,12 @@ void buildMeshAccel(
         triangle_inputs[meshID].type = OPTIX_BUILD_INPUT_TYPE_TRIANGLES;
         triangle_inputs[meshID].triangleArray.vertexFormat = OPTIX_VERTEX_FORMAT_FLOAT3;
         triangle_inputs[meshID].triangleArray.vertexStrideInBytes = sizeof(float3);
-        triangle_inputs[meshID].triangleArray.numVertices = static_cast<uint32_t>(meshes[meshID].vertices().size());
+        triangle_inputs[meshID].triangleArray.numVertices = static_cast<uint32_t>(mesh->vertices().size());
         triangle_inputs[meshID].triangleArray.vertexBuffers = &d_vertices[meshID];
         triangle_inputs[meshID].triangleArray.flags = triangle_input_flags;
         triangle_inputs[meshID].triangleArray.indexFormat = OPTIX_INDICES_FORMAT_UNSIGNED_INT3;
         triangle_inputs[meshID].triangleArray.indexStrideInBytes = sizeof(int3);
-        triangle_inputs[meshID].triangleArray.numIndexTriplets = static_cast<uint32_t>(meshes[meshID].indices().size());
+        triangle_inputs[meshID].triangleArray.numIndexTriplets = static_cast<uint32_t>(mesh->indices().size());
         triangle_inputs[meshID].triangleArray.indexBuffer = d_indices[meshID];
         triangle_inputs[meshID].triangleArray.numSbtRecords = 1;
         triangle_inputs[meshID].triangleArray.sbtIndexOffsetBuffer = d_mat_indices;
@@ -444,8 +444,8 @@ void createModule(
 
     pipeline_compile_options.usesMotionBlur        = false;
     pipeline_compile_options.traversableGraphFlags = OPTIX_TRAVERSABLE_GRAPH_FLAG_ALLOW_SINGLE_GAS;
-    pipeline_compile_options.numPayloadValues      = 2;
-    pipeline_compile_options.numAttributeValues    = 2;
+    pipeline_compile_options.numPayloadValues      = 5;
+    pipeline_compile_options.numAttributeValues    = 5;
 #ifdef DEBUG // Enables debug exceptions during optix launches. This may incur significant performance cost and should only be done during development.
     pipeline_compile_options.exceptionFlags = OPTIX_EXCEPTION_FLAG_DEBUG | OPTIX_EXCEPTION_FLAG_TRACE_DEPTH | OPTIX_EXCEPTION_FLAG_STACK_OVERFLOW;
 #else
@@ -536,7 +536,7 @@ void createProgramGroups(
         OptixProgramGroupDesc hit_prog_group_desc        = {};
         hit_prog_group_desc.kind                         = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
         hit_prog_group_desc.hitgroup.moduleCH            = module;
-        hit_prog_group_desc.hitgroup.entryFunctionNameCH = CH_FUNC_STR("radiance");
+        hit_prog_group_desc.hitgroup.entryFunctionNameCH = CH_FUNC_STR("mesh");
         sizeof_log                                       = sizeof( log );
         OPTIX_CHECK_LOG( optixProgramGroupCreate(
                     context,
@@ -630,7 +630,7 @@ void createPipeline(
 void createSBT( 
     const OptixDeviceContext& context, 
     const std::vector<OptixProgramGroup>& program_groups,
-    const ScenePrimitives& primitives,
+    const std::vector<pt::Primitive> primitives,
     const std::vector<CUdeviceptr>& d_vertices,
     const std::vector<CUdeviceptr>& d_indices, 
     const std::vector<CUdeviceptr>& d_normals,
@@ -670,28 +670,38 @@ void createSBT(
                 ) );
 
     const size_t hitgroup_record_size = sizeof(pt::HitGroupRecord2);
-    std::vector<pt::HitGroupRecord2> hitgroup_records(RAY_TYPE_COUNT * primitives.first.size());
-    for (int meshID = 0; meshID < primitives.first.size(); meshID++) {
+    std::vector<pt::HitGroupRecord2> hitgroup_records(RAY_TYPE_COUNT * primitives.size());
+    CUdeviceptr d_hitgroup_records;
+    CUDA_CHECK( cudaMalloc(
+        reinterpret_cast<void**>(&d_hitgroup_records),
+        hitgroup_record_size * RAY_TYPE_COUNT * primitives.size()
+    ));
+
+    for (size_t meshID = 0; meshID < primitives.size(); meshID++) 
+    {
         {
             const int sbt_idx = meshID * RAY_TYPE_COUNT + 0;
 
+            pt::Message("MaterialType:",primitives[meshID].material()->type());
+
             OPTIX_CHECK( optixSbtRecordPackHeader( program_groups[3], &hitgroup_records[sbt_idx] ) );
-            switch ( primitives.second[meshID]->type() )
+            switch ( primitives[meshID].material()->type() )
             {
             case pt::MaterialType::Diffuse: {
-                hitgroup_records[sbt_idx].data.albedo = ((pt::Diffuse*)primitives.second[meshID])->albedo();
+                hitgroup_records[sbt_idx].data.albedo = make_float3(1.0f);
                 hitgroup_records[sbt_idx].data.emission = make_float3(0.0f);
                 break;
             }
             case pt::MaterialType::Emitter: {
                 hitgroup_records[sbt_idx].data.albedo = make_float3(0.0f);
-                hitgroup_records[sbt_idx].data.emission = ((pt::Emitter*)primitives.second[meshID])->emitted();
+                hitgroup_records[sbt_idx].data.emission = make_float3(1.0f);
+                break;
             }
             }
 
             hitgroup_records[sbt_idx].data.vertices = reinterpret_cast<float3*>(d_vertices[meshID]);
-            hitgroup_records[sbt_idx].data.indices = reinterpret_cast<int3*>(d_indices[meshID]);
             hitgroup_records[sbt_idx].data.normals = reinterpret_cast<float3*>(d_normals[meshID]);
+            hitgroup_records[sbt_idx].data.indices = reinterpret_cast<int3*>(d_indices[meshID]);
         }
 
         {
@@ -700,16 +710,14 @@ void createSBT(
             OPTIX_CHECK( optixSbtRecordPackHeader( program_groups[4], &hitgroup_records[sbt_idx] ) );
         }
     }
+    for ( auto& hr : hitgroup_records ) {
+        pt::Message("albedo:", hr.data.albedo, "emission:", hr.data.emission);
+    }
 
-    CUdeviceptr d_hitgroup_records;
-    CUDA_CHECK( cudaMalloc(
-        reinterpret_cast<void**>(&d_hitgroup_records),
-        hitgroup_record_size * RAY_TYPE_COUNT * primitives.first.size()
-    ));
     CUDA_CHECK( cudaMemcpy(
         reinterpret_cast<void*>(d_hitgroup_records),
         hitgroup_records.data(), 
-        hitgroup_record_size * RAY_TYPE_COUNT * primitives.first.size(),
+        hitgroup_record_size * RAY_TYPE_COUNT * primitives.size(),
         cudaMemcpyHostToDevice
     ));
 
@@ -719,33 +727,32 @@ void createSBT(
     sbt.missRecordCount             = RAY_TYPE_COUNT;
     sbt.hitgroupRecordBase          = d_hitgroup_records;
     sbt.hitgroupRecordStrideInBytes = static_cast<uint32_t>( hitgroup_record_size );
-    sbt.hitgroupRecordCount         = RAY_TYPE_COUNT * primitives.first.size();
+    sbt.hitgroupRecordCount         = RAY_TYPE_COUNT * primitives.size();
 }
 
 // ========== Main ==========
 int main(int argc, char* argv[]) {
     pt::Params params = {};
+
+    pt::Scene scene = my_scene();
+
     CUdeviceptr d_params;
-    params.width                             = 768;
-    params.height                            = 768;
-    params.samples_per_launch                = 4;
-    params.max_depth                         = 5;
+    params.width                             = scene.width();
+    params.height                            = scene.height();
+    params.samples_per_launch                = scene.samples_per_launch();
+    params.max_depth                         = scene.depth();
     sutil::CUDAOutputBufferType output_buffer_type = sutil::CUDAOutputBufferType::GL_INTEROP;
 
     // Prepare the states for launching ray tracer
-    OptixDeviceContext context = 0;
     OptixTraversableHandle gas_handle = 0;
     CUdeviceptr d_gas_output_buffer = 0;
-    std::vector<CUdeviceptr> d_vertices;
-    std::vector<CUdeviceptr> d_indices;
-    std::vector<CUdeviceptr> d_normals;
-    std::vector<CUdeviceptr> d_materials;
 
-    OptixProgramGroup raygen_prog_group = 0;
-    OptixProgramGroup miss_radiance_prog_group = 0;
-    OptixProgramGroup miss_occlusion_prog_group = 0;
-    OptixProgramGroup mesh_radiance_prog_group = 0;
-    OptixProgramGroup mesh_occlusion_prog_group = 0;
+    // 0 ... Raygen program
+    // 1 ... Miss radiance program
+    // 2 ... Miss occlusion program
+    // 3 ... Closest-hit radiance program
+    // 4 ... Closest-hit occlusion program
+    std::vector<OptixProgramGroup> program_groups(5);
 
     OptixModule ptx_module = 0;
     OptixPipelineCompileOptions pipeline_compile_options = {};
@@ -802,24 +809,109 @@ int main(int argc, char* argv[]) {
     {
         initCameraState();
 
-        createContext( context );
-        ScenePrimitives sp = scene_primitives();
-        buildMeshAccel( context, sp.first, d_vertices, d_indices, d_normals, gas_handle, d_gas_output_buffer ); 
-        std::vector<OptixProgramGroup> program_groups(5);
+        CUDA_CHECK(cudaFree(0));
 
-        createModule(context, pipeline_compile_options, ptx_module);
+        OptixDeviceContext optix_context;
+        CUcontext cu_context = 0;
+        OPTIX_CHECK(optixInit());
+        OptixDeviceContextOptions options = {};
+        options.logCallbackFunction = &context_log_cb;
+        options.logCallbackLevel = 4;
+        OPTIX_CHECK(optixDeviceContextCreate(cu_context, &options, &optix_context));
+
+        // buildMeshAccel( optix_context, scene.primitive_instances()[0].primitives(), d_vertices, d_indices, d_normals, gas_handle, d_gas_output_buffer ); 
+
+#ifndef SUCCEEDED
+        std::vector<OptixInstance> instances;
+        unsigned int sbt_base_offset = 0; 
+        unsigned int instance_id = 0;
+        for (auto& ps : scene.primitive_instances()) {
+            pt::AccelData accel = {};
+            pt::build_gas(optix_context, accel, ps);
+            pt::build_instances(optix_context, accel, ps, sbt_base_offset, instance_id, instances);
+        }
+
+        CUdeviceptr d_instances;
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_instances), sizeof(OptixInstance)*instances.size()));
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_instances),
+            instances.data(), instances.size() * sizeof(OptixInstance), 
+            cudaMemcpyHostToDevice));
+
+        // Prepare build input for instances.
+        OptixBuildInput instance_input = {};
+        instance_input.type = OPTIX_BUILD_INPUT_TYPE_INSTANCES;
+        instance_input.instanceArray.instances = d_instances;
+        instance_input.instanceArray.numInstances = (unsigned int) instances.size();
+
+        OptixAccelBuildOptions accel_options = {};
+        accel_options.buildFlags = OPTIX_BUILD_FLAG_NONE; 
+        accel_options.operation = OPTIX_BUILD_OPERATION_BUILD;
+
+        OptixAccelBufferSizes ias_buffer_sizes;
+        OPTIX_CHECK(optixAccelComputeMemoryUsage(
+            optix_context, 
+            &accel_options, 
+            &instance_input, 
+            1,  // num build inputs
+            &ias_buffer_sizes ));
+
+        // Allocate buffer to build acceleration structure
+        CUdeviceptr d_temp_buffer;
+        CUDA_CHECK(cudaMalloc(
+            reinterpret_cast<void**>(&d_temp_buffer), 
+            ias_buffer_sizes.tempSizeInBytes ));
+        CUdeviceptr d_ias_output_buffer; 
+        CUDA_CHECK(cudaMalloc(
+            reinterpret_cast<void**>(&d_ias_output_buffer), 
+            ias_buffer_sizes.outputSizeInBytes ));
+        
+        OptixTraversableHandle ias_handle = 0;
+        // Build instance AS contains all GASs to describe the scene.
+        OPTIX_CHECK(optixAccelBuild(
+            optix_context, 
+            0,                  // CUDA stream
+            &accel_options, 
+            &instance_input, 
+            1,                  // num build inputs
+            d_temp_buffer, 
+            ias_buffer_sizes.tempSizeInBytes, 
+            d_ias_output_buffer, 
+            ias_buffer_sizes.outputSizeInBytes, 
+            &ias_handle, 
+            nullptr,            // emitted property list
+            0                   // num emitted properties
+        ));
+
+        pt::cuda_frees(d_temp_buffer, d_instances);
+#else
+        pt::AccelData accel = {};
+        pt::build_gas(optix_context, accel, scene.primitive_instances()[0]);
+#endif
+
+        std::vector<CUdeviceptr> d_vertices;
+        std::vector<CUdeviceptr> d_normals;
+        std::vector<CUdeviceptr> d_indices;
+
+        for (auto& p : scene.primitive_instances()[0].primitives()) {
+            auto mesh = ((pt::TriangleMesh*)p.shape());
+            d_vertices.emplace_back(mesh->get_dvertices());
+            d_normals.emplace_back(mesh->get_dnormals());
+            d_indices.emplace_back(mesh->get_dindices());
+        }
+
+        createModule(optix_context, pipeline_compile_options, ptx_module);
 
         createProgramGroups(
-            context, ptx_module, 
+            optix_context, ptx_module, 
             program_groups[0],                      // raygen program
             program_groups[1], program_groups[2],   // miss program
             program_groups[3], program_groups[4]    // hitgroup programs
         );
 
-        createPipeline( context, pipeline_compile_options, program_groups, pipeline );
-        createSBT( context, program_groups, sp, d_vertices, d_indices, d_normals, sbt );
+        createPipeline( optix_context, pipeline_compile_options, program_groups, pipeline );
+        createSBT( optix_context, program_groups, scene.primitive_instances()[0].primitives(), d_vertices, d_indices, d_normals, sbt );
 
-        initLaunchParams( gas_handle, stream, params, d_params );
+        initLaunchParams( accel.meshes.handle, stream, params, d_params );
 
         if( outfile.empty() )
         {
@@ -916,7 +1008,7 @@ int main(int argc, char* argv[]) {
         OPTIX_CHECK( optixPipelineDestroy( pipeline ) );
         for ( auto& pg : program_groups ) OPTIX_CHECK( optixProgramGroupDestroy(pg) );
         OPTIX_CHECK( optixModuleDestroy( ptx_module ) );
-        OPTIX_CHECK( optixDeviceContextDestroy( context ) );
+        OPTIX_CHECK( optixDeviceContextDestroy( optix_context ) );
         pt::cuda_frees(sbt.raygenRecord, sbt.missRecordBase, sbt.hitgroupRecordBase, 
                        d_gas_output_buffer, 
                        params.accum_buffer,

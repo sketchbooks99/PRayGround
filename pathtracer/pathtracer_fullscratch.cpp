@@ -285,7 +285,9 @@ void createContext(
     OPTIX_CHECK( optixDeviceContextCreate( cu_ctx, &options, &context ) );
 }
 
-
+/****************************************************************
+ * \brief Create geometry acceleration structure
+ ****************************************************************/
 void buildMeshAccel(
     const OptixDeviceContext& context,
     const std::vector<pt::TriangleMesh>& meshes, 
@@ -426,7 +428,9 @@ void buildMeshAccel(
     }
 }
 
-
+/****************************************************************
+ * \brief Create module
+ ****************************************************************/
 void createModule( 
     const OptixDeviceContext& context,
     OptixPipelineCompileOptions& pipeline_compile_options,
@@ -449,7 +453,7 @@ void createModule(
 #endif
     pipeline_compile_options.pipelineLaunchParamsVariableName = "params";
 
-    const std::string ptx = sutil::getPtxString( OPTIX_SAMPLE_NAME, OPTIX_SAMPLE_DIR, "pathtracer.cu" );
+    const std::string ptx = sutil::getPtxString( OPTIX_SAMPLE_NAME, OPTIX_SAMPLE_DIR, "optix/pathtracer.cu" );
 
     char   log[2048];
     size_t sizeof_log = sizeof( log );
@@ -465,7 +469,9 @@ void createModule(
                 ) );
 }
 
-
+/****************************************************************
+ * \brief Create program gruops
+ ****************************************************************/
 void createProgramGroups( 
     const OptixDeviceContext& context,
     const OptixModule& module,
@@ -559,7 +565,9 @@ void createProgramGroups(
     }
 }
 
-
+/****************************************************************
+ * \brief Create pipeline
+ ****************************************************************/
 void createPipeline( 
     const OptixDeviceContext& context,
     const OptixPipelineCompileOptions& pipeline_compile_options,
@@ -597,7 +605,7 @@ void createPipeline(
     uint32_t direct_callable_stack_size_from_state;
     uint32_t continuation_stack_size;
     OPTIX_CHECK( optixUtilComputeStackSizes(
-                &stack_sizes,
+                &stack_size,
                 max_trace_depth,
                 max_cc_depth,
                 max_dc_depth,
@@ -616,7 +624,9 @@ void createPipeline(
                 ) );
 }
 
-
+/****************************************************************
+ * \brief Create shader binding table
+ ****************************************************************/
 void createSBT( 
     const OptixDeviceContext& context, 
     const std::vector<OptixProgramGroup>& program_groups,
@@ -862,7 +872,7 @@ int main(int argc, char* argv[]) {
 
                     glfwSwapBuffers( window );
 
-                    ++state.params.subframe_index;
+                    ++params.subframe_index;
                 } while( !glfwWindowShouldClose( window ) );
                 CUDA_SYNC_CHECK();
             }
@@ -879,13 +889,13 @@ int main(int argc, char* argv[]) {
 
             sutil::CUDAOutputBuffer<uchar4> output_buffer(
                     output_buffer_type,
-                    state.params.width,
-                    state.params.height
+                    params.width,
+                    params.height
                     );
 
-            handleCameraUpdate( state.params );
-            handleResize( output_buffer, state.params );
-            launchSubframe( output_buffer, state );
+            handleCameraUpdate( params );
+            handleResize( output_buffer, params );
+            launchSubframe( output_buffer, params, d_params, stream, pipeline, sbt );
 
             sutil::ImageBuffer buffer;
             buffer.data         = output_buffer.getHostPointer();
@@ -900,8 +910,18 @@ int main(int argc, char* argv[]) {
                 glfwTerminate();
             }
         }
+        /**
+         * \brief Cleanup optix objects.
+         */
+        OPTIX_CHECK( optixPipelineDestroy( pipeline ) );
+        for ( auto& pg : program_groups ) OPTIX_CHECK( optixProgramGroupDestroy(pg) );
+        OPTIX_CHECK( optixModuleDestroy( ptx_module ) );
+        OPTIX_CHECK( optixDeviceContextDestroy( context ) );
+        pt::cuda_frees(sbt.raygenRecord, sbt.missRecordBase, sbt.hitgroupRecordBase, 
+                       d_gas_output_buffer, 
+                       params.accum_buffer,
+                       d_params);
 
-        cleanupState( state );
     }
     catch( std::exception& e )
     {

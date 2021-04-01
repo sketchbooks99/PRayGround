@@ -109,7 +109,7 @@ ScenePrimitives scene_primitives() {
     ceiling_light_vertices.emplace_back(make_float3(343.0f, 548.6f, 332.0f));
     ceiling_light_indices.emplace_back(make_int3(0, 1, 2));
     ceiling_light_indices.emplace_back(make_int3(3, 4, 5));
-    sp.first.push_back( pt::TriangleMesh( ceiling_light_vertices, ceiling_light_indices ) );
+    sp.first.push_back( pt::TriangleMesh( ceiling_light_vertices, ceiling_light_indices, ceiling_light_normals ) );
     sp.second.push_back( emitter );
 
     return sp;

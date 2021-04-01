@@ -682,8 +682,6 @@ void createSBT(
         {
             const int sbt_idx = meshID * RAY_TYPE_COUNT + 0;
 
-            pt::Message("MaterialType:",primitives[meshID].material()->type());
-
             OPTIX_CHECK( optixSbtRecordPackHeader( program_groups[3], &hitgroup_records[sbt_idx] ) );
             switch ( primitives[meshID].material()->type() )
             {
@@ -709,9 +707,6 @@ void createSBT(
             memset(&hitgroup_records[sbt_idx], 0, hitgroup_record_size);
             OPTIX_CHECK( optixSbtRecordPackHeader( program_groups[4], &hitgroup_records[sbt_idx] ) );
         }
-    }
-    for ( auto& hr : hitgroup_records ) {
-        pt::Message("albedo:", hr.data.albedo, "emission:", hr.data.emission);
     }
 
     CUDA_CHECK( cudaMemcpy(
@@ -914,7 +909,7 @@ int main(int argc, char* argv[]) {
             program_groups[3], program_groups[4]    // hitgroup programs
         );
 
-        createPipeline( optix_context, pt_pipeline.compile_options(), program_groups, pipeline );
+        pt_pipeline.create( optix_context, program_groups );
         createSBT( optix_context, program_groups, scene.primitive_instances()[0].primitives(), d_vertices, d_indices, d_normals, sbt );
 
         initLaunchParams( accel.meshes.handle, stream, params, d_params );
@@ -957,7 +952,7 @@ int main(int argc, char* argv[]) {
                     state_update_time += t1 - t0;
                     t0 = t1;
 
-                    launchSubframe( output_buffer, params, d_params, stream, pipeline, sbt );
+                    launchSubframe( output_buffer, params, d_params, stream, (OptixPipeline)pt_pipeline, sbt );
                     t1 = std::chrono::steady_clock::now();
                     render_time += t1 - t0;
                     t0 = t1;
@@ -993,7 +988,7 @@ int main(int argc, char* argv[]) {
 
             handleCameraUpdate( params );
             handleResize( output_buffer, params );
-            launchSubframe( output_buffer, params, d_params, stream, pipeline, sbt );
+            launchSubframe( output_buffer, params, d_params, stream, (OptixPipeline)pt_pipeline, sbt );
 
             sutil::ImageBuffer buffer;
             buffer.data         = output_buffer.getHostPointer();
@@ -1011,7 +1006,8 @@ int main(int argc, char* argv[]) {
         /**
          * \brief Cleanup optix objects.
          */
-        OPTIX_CHECK( optixPipelineDestroy( pipeline ) );
+        // OPTIX_CHECK( optixPipelineDestroy( pipeline ) );
+        pt_pipeline.destroy();
         for ( auto& pg : program_groups ) OPTIX_CHECK( optixProgramGroupDestroy(pg) );
         // OPTIX_CHECK( optixModuleDestroy( ptx_module ) );
         pt_module.destroy();

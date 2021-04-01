@@ -899,16 +899,22 @@ int main(int argc, char* argv[]) {
             d_indices.emplace_back(mesh->get_dindices());
         }
 
-        createModule(optix_context, pipeline_compile_options, ptx_module);
+        // createModule(optix_context, pipeline_compile_options, ptx_module);
+        // Prepare the pipeline
+        std::string params_name = "params";
+        pt::Pipeline pt_pipeline(params_name);
+        // Create module
+        pt::Module pt_module("optix/pathtracer.cu");
+        pt_module.create(optix_context, pt_pipeline.compile_options());
 
         createProgramGroups(
-            optix_context, ptx_module, 
+            optix_context, (OptixModule)pt_module, 
             program_groups[0],                      // raygen program
             program_groups[1], program_groups[2],   // miss program
             program_groups[3], program_groups[4]    // hitgroup programs
         );
 
-        createPipeline( optix_context, pipeline_compile_options, program_groups, pipeline );
+        createPipeline( optix_context, pt_pipeline.compile_options(), program_groups, pipeline );
         createSBT( optix_context, program_groups, scene.primitive_instances()[0].primitives(), d_vertices, d_indices, d_normals, sbt );
 
         initLaunchParams( accel.meshes.handle, stream, params, d_params );
@@ -1007,7 +1013,8 @@ int main(int argc, char* argv[]) {
          */
         OPTIX_CHECK( optixPipelineDestroy( pipeline ) );
         for ( auto& pg : program_groups ) OPTIX_CHECK( optixProgramGroupDestroy(pg) );
-        OPTIX_CHECK( optixModuleDestroy( ptx_module ) );
+        // OPTIX_CHECK( optixModuleDestroy( ptx_module ) );
+        pt_module.destroy();
         OPTIX_CHECK( optixDeviceContextDestroy( optix_context ) );
         pt::cuda_frees(sbt.raygenRecord, sbt.missRecordBase, sbt.hitgroupRecordBase, 
                        d_gas_output_buffer, 

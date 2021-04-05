@@ -796,8 +796,6 @@ int main(int argc, char* argv[]) {
         options.logCallbackLevel = 4;
         OPTIX_CHECK(optixDeviceContextCreate(cu_context, &options, &optix_context));
 
-        // buildMeshAccel( optix_context, scene.primitive_instances()[0].primitives(), d_vertices, d_indices, d_normals, gas_handle, d_gas_output_buffer ); 
-
 #ifndef SUCCEEDED
         std::vector<OptixInstance> instances;
         unsigned int sbt_base_offset = 0; 
@@ -919,14 +917,13 @@ int main(int argc, char* argv[]) {
         sbt.missRecordCount = RAY_TYPE_COUNT;
 
         // HitGroup programs
-        scene.create_hitgroup_programs(optix_context, (OptixModule)pt_module);
+        scene.create_hitgroup_programs( optix_context, (OptixModule)pt_module );
         std::vector<pt::ProgramGroup> hitgroup_programs = scene.hitgroup_programs();
         std::copy(hitgroup_programs.begin(), hitgroup_programs.end(), std::back_inserter( program_groups ) );
 
         scene.create_hitgroup_sbt( (OptixModule)pt_module, sbt );
 
         pt_pipeline.create( optix_context, program_groups );
-        createSBT( optix_context, program_groups, scene.primitive_instances()[0].primitives(), d_vertices, d_indices, d_normals, sbt );
 
         initLaunchParams( accel.meshes.handle, stream, params, d_params );
 

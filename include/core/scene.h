@@ -60,7 +60,6 @@ public:
                         hitgroup_records.push_back(HitGroupRecord());
                         memset(&hitgroup_records.back(), 0, hitgroup_record_size);
                         p.bind_occlusion_record(&hitgroup_records.back());
-                        hitgroup_records.push_back(hitgroup_records.back());
                         sbt_idx++;
                     }
                 }

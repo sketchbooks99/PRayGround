@@ -61,11 +61,13 @@ public:
     void free_temp_buffer() { if (m_shape_ptr->type() != ShapeType::Mesh) m_shape_ptr->free_aabb_buffer(); }
 
     // Bind programs and HitGroupRecord
-    void bind_radiance_record(const HitGroupRecord& record) {
+    template <typename SBTRecord>
+    void bind_radiance_record(const SBTRecord& record) {
         Assert(!m_program_groups.empty(), "ProgramGroups is not allocated.");
         m_program_groups[0].bind_sbt_and_program(record);
     }
-    void bind_occlusion_record(const HitGroupRecord& record) {
+    template <typename SBTRecord>
+    void bind_occlusion_record(const SBTRecord& record) {
         Assert(m_program_groups.size() > 1, "Occlusion program is not contained in rendering.");
         m_program_groups[1].bind_sbt_and_program(record);
     }

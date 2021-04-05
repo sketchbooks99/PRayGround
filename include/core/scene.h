@@ -26,11 +26,6 @@ public:
         for (auto &ps : m_primitive_instances) {
             for (auto &p : ps.primitives()) {
                 std::vector<ProgramGroup> programs = p.program_groups();
-                /**
-                 * \brief Insert hitgroup programs of primitive at end of vector.
-                 * 
-                 * \note \c ProgramGroup is implicitly casted to \c OptixProgramGroup at here.
-                 */
                 std::copy(programs.begin(), programs.end(), std::back_inserter(program_groups));
             }
         }
@@ -53,20 +48,19 @@ public:
                     if (i == 0) 
                     {
                         hitgroup_records.push_back(HitGroupRecord());
-                        Message("create_hitgroup_sbt():", "p.shape()->get_dptr() =", p.shape()->get_dptr());
                         hitgroup_records.back().data.shapedata = reinterpret_cast<void*>(p.shape()->get_dptr());
                         hitgroup_records.back().data.matptr = p.material()->get_dptr();
                         p.bind_radiance_record(hitgroup_records.back());
-                        hitgroup_records.push_back(hitgroup_records.back());
                         sbt_idx++;
                     } 
                     // Bind sbt to occlusion program groups.
                     else if (i == 1) 
                     {
-                        HitGroupRecord record;
-                        memset(&record, 0, hitgroup_record_size);
-                        p.bind_occlusion_record(record);
-                        hitgroup_records.push_back(record);
+                        // HitGroupRecord2 record;
+                        hitgroup_records.push_back(HitGroupRecord());
+                        memset(&hitgroup_records.back(), 0, hitgroup_record_size);
+                        p.bind_occlusion_record(hitgroup_records.back());
+                        hitgroup_records.push_back(hitgroup_records.back());
                         sbt_idx++;
                     }
                     num_hitgroup_records++;
@@ -74,18 +68,6 @@ public:
             }
         }
 
-        // Prepare the device side data buffer of HitGroupRecord.
-        // CUdeviceptr d_hitgroup_records;
-        // CUDA_CHECK(cudaMalloc( 
-        //     reinterpret_cast<void**>(&d_hitgroup_records), 
-        //     hitgroup_record_size * num_hitgroup_records 
-        //     ));
-        // CUDA_CHECK(cudaMemcpy(
-        //     reinterpret_cast<void*>(d_hitgroup_records), 
-        //     hitgroup_records.data(), 
-        //     hitgroup_record_size * num_hitgroup_records, 
-        //     cudaMemcpyHostToDevice 
-        //     ));
         CUDABuffer<HitGroupRecord> d_hitgroup_records;
         d_hitgroup_records.alloc_copy(hitgroup_records);
 

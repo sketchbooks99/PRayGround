@@ -920,20 +920,20 @@ int main(int argc, char* argv[]) {
         d_miss_record.alloc_copy( ms_records, sizeof(pt::MissRecord)*RAY_TYPE_COUNT );
 
         // // Attach sbts for raygen and miss program
-        // sbt.raygenRecord = d_raygen_record.d_ptr();
-        // sbt.missRecordBase = d_miss_record.d_ptr();
-        // sbt.missRecordStrideInBytes = static_cast<uint32_t>(sizeof(pt::MissRecord));
-        // sbt.missRecordCount = RAY_TYPE_COUNT;
+        sbt.raygenRecord = d_raygen_record.d_ptr();
+        sbt.missRecordBase = d_miss_record.d_ptr();
+        sbt.missRecordStrideInBytes = static_cast<uint32_t>(sizeof(pt::MissRecord));
+        sbt.missRecordCount = RAY_TYPE_COUNT;
 
         // HitGroup programs
         scene.create_hitgroup_programs(optix_context, (OptixModule)pt_module);
         std::vector<pt::ProgramGroup> hitgroup_programs = scene.hitgroup_programs();
-        std::copy(hitgroup_programs.begin(), hitgroup_programs.end(), std::back_inserter(program_groups));
+        std::copy(hitgroup_programs.begin(), hitgroup_programs.end(), std::back_inserter( program_groups ) );
 
         scene.create_hitgroup_sbt( (OptixModule)pt_module, sbt );
 
         pt_pipeline.create( optix_context, program_groups );
-        createSBT( optix_context, program_groups, scene.primitive_instances()[0].primitives(), d_vertices, d_indices, d_normals, sbt );
+        // createSBT( optix_context, program_groups, scene.primitive_instances()[0].primitives(), d_vertices, d_indices, d_normals, sbt );
 
         initLaunchParams( accel.meshes.handle, stream, params, d_params );
 

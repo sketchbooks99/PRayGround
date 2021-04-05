@@ -54,7 +54,7 @@ public:
         _init();
         this->alloc_copy(data_vec);
     }
-    void re_allocate(T* data, size_t size) {
+    void re_alloc_copy(T* data, size_t size) {
         _init();
         alloc_copy(data, size);
     }

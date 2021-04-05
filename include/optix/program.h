@@ -165,8 +165,8 @@ public:
     }
 
     template <typename SBTRecord>
-    void bind_sbt_and_program(SBTRecord record) {
-        OPTIX_CHECK(optixSbtRecordPackHeader(m_program, &record));
+    void bind_sbt_and_program(SBTRecord* record) {
+        OPTIX_CHECK(optixSbtRecordPackHeader(m_program, record));
     }
 private:
     OptixProgramGroup m_program { 0 };

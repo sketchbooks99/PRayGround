@@ -62,12 +62,12 @@ public:
 
     // Bind programs and HitGroupRecord
     template <typename SBTRecord>
-    void bind_radiance_record(const SBTRecord& record) {
+    void bind_radiance_record(SBTRecord* record) {
         Assert(!m_program_groups.empty(), "ProgramGroups is not allocated.");
         m_program_groups[0].bind_sbt_and_program(record);
     }
     template <typename SBTRecord>
-    void bind_occlusion_record(const SBTRecord& record) {
+    void bind_occlusion_record(SBTRecord* record) {
         Assert(m_program_groups.size() > 1, "Occlusion program is not contained in rendering.");
         m_program_groups[1].bind_sbt_and_program(record);
     }

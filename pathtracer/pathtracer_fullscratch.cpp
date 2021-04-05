@@ -669,13 +669,8 @@ void createSBT(
                 cudaMemcpyHostToDevice
                 ) );
 
-    const size_t hitgroup_record_size = sizeof(pt::HitGroupRecord2);
-    std::vector<pt::HitGroupRecord2> hitgroup_records(RAY_TYPE_COUNT * primitives.size());
-    CUdeviceptr d_hitgroup_records;
-    CUDA_CHECK( cudaMalloc(
-        reinterpret_cast<void**>(&d_hitgroup_records),
-        hitgroup_record_size * RAY_TYPE_COUNT * primitives.size()
-    ));
+    const size_t hitgroup_record_size = sizeof(pt::HitGroupRecord);
+    std::vector<pt::HitGroupRecord> hitgroup_records(RAY_TYPE_COUNT * primitives.size());
 
     for (size_t meshID = 0; meshID < primitives.size(); meshID++) 
     {
@@ -683,23 +678,25 @@ void createSBT(
             const int sbt_idx = meshID * RAY_TYPE_COUNT + 0;
 
             OPTIX_CHECK( optixSbtRecordPackHeader( program_groups[3], &hitgroup_records[sbt_idx] ) );
-            switch ( primitives[meshID].material()->type() )
-            {
-            case pt::MaterialType::Diffuse: {
-                hitgroup_records[sbt_idx].data.albedo = make_float3(1.0f);
-                hitgroup_records[sbt_idx].data.emission = make_float3(0.0f);
-                break;
-            }
-            case pt::MaterialType::Emitter: {
-                hitgroup_records[sbt_idx].data.albedo = make_float3(0.0f);
-                hitgroup_records[sbt_idx].data.emission = make_float3(1.0f);
-                break;
-            }
-            }
+            // switch ( primitives[meshID].material()->type() )
+            // {
+            // case pt::MaterialType::Diffuse: {
+            //     hitgroup_records[sbt_idx].data.albedo = make_float3(1.0f);
+            //     hitgroup_records[sbt_idx].data.emission = make_float3(0.0f);
+            //     break;
+            // }
+            // case pt::MaterialType::Emitter: {
+            //     hitgroup_records[sbt_idx].data.albedo = make_float3(0.0f);
+            //     hitgroup_records[sbt_idx].data.emission = make_float3(1.0f);
+            //     break;
+            // }
+            // }
 
-            hitgroup_records[sbt_idx].data.vertices = reinterpret_cast<float3*>(d_vertices[meshID]);
-            hitgroup_records[sbt_idx].data.normals = reinterpret_cast<float3*>(d_normals[meshID]);
-            hitgroup_records[sbt_idx].data.indices = reinterpret_cast<int3*>(d_indices[meshID]);
+            // hitgroup_records[sbt_idx].data.vertices = reinterpret_cast<float3*>(d_vertices[meshID]);
+            // hitgroup_records[sbt_idx].data.normals = reinterpret_cast<float3*>(d_normals[meshID]);
+            // hitgroup_records[sbt_idx].data.indices = reinterpret_cast<int3*>(d_indices[meshID]);
+            hitgroup_records[sbt_idx].data.shapedata = reinterpret_cast<void*>(primitives[meshID].shape()->get_dptr());
+            hitgroup_records[sbt_idx].data.matptr = (primitives[meshID].material()->get_dptr());
         }
 
         {
@@ -709,20 +706,16 @@ void createSBT(
         }
     }
 
-    CUDA_CHECK( cudaMemcpy(
-        reinterpret_cast<void*>(d_hitgroup_records),
-        hitgroup_records.data(), 
-        hitgroup_record_size * RAY_TYPE_COUNT * primitives.size(),
-        cudaMemcpyHostToDevice
-    ));
+    pt::CUDABuffer<pt::HitGroupRecord> d_hitgroup_records;
+    d_hitgroup_records.alloc_copy(hitgroup_records);
 
     sbt.raygenRecord                = d_raygen_record;
     sbt.missRecordBase              = d_miss_records;
     sbt.missRecordStrideInBytes     = static_cast<uint32_t>( miss_record_size );
     sbt.missRecordCount             = RAY_TYPE_COUNT;
-    sbt.hitgroupRecordBase          = d_hitgroup_records;
+    sbt.hitgroupRecordBase          = d_hitgroup_records.d_ptr();
     sbt.hitgroupRecordStrideInBytes = static_cast<uint32_t>( hitgroup_record_size );
-    sbt.hitgroupRecordCount         = RAY_TYPE_COUNT * primitives.size();
+    sbt.hitgroupRecordCount         = hitgroup_records.size();
 }
 
 // ========== Main ==========
@@ -933,7 +926,7 @@ int main(int argc, char* argv[]) {
         scene.create_hitgroup_sbt( (OptixModule)pt_module, sbt );
 
         pt_pipeline.create( optix_context, program_groups );
-        // createSBT( optix_context, program_groups, scene.primitive_instances()[0].primitives(), d_vertices, d_indices, d_normals, sbt );
+        createSBT( optix_context, program_groups, scene.primitive_instances()[0].primitives(), d_vertices, d_indices, d_normals, sbt );
 
         initLaunchParams( accel.meshes.handle, stream, params, d_params );
 

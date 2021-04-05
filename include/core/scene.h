@@ -48,9 +48,9 @@ public:
                     if (i == 0) 
                     {
                         hitgroup_records.push_back(HitGroupRecord());
+                        p.bind_radiance_record(&hitgroup_records.back());
                         hitgroup_records.back().data.shapedata = reinterpret_cast<void*>(p.shape()->get_dptr());
                         hitgroup_records.back().data.matptr = p.material()->get_dptr();
-                        p.bind_radiance_record(hitgroup_records.back());
                         sbt_idx++;
                     } 
                     // Bind sbt to occlusion program groups.
@@ -59,11 +59,10 @@ public:
                         // HitGroupRecord2 record;
                         hitgroup_records.push_back(HitGroupRecord());
                         memset(&hitgroup_records.back(), 0, hitgroup_record_size);
-                        p.bind_occlusion_record(hitgroup_records.back());
+                        p.bind_occlusion_record(&hitgroup_records.back());
                         hitgroup_records.push_back(hitgroup_records.back());
                         sbt_idx++;
                     }
-                    num_hitgroup_records++;
                 }
             }
         }
@@ -73,7 +72,7 @@ public:
 
         sbt.hitgroupRecordBase = d_hitgroup_records.d_ptr();
         sbt.hitgroupRecordStrideInBytes = static_cast<uint32_t>( hitgroup_record_size );
-        sbt.hitgroupRecordCount = num_hitgroup_records;
+        sbt.hitgroupRecordCount = hitgroup_records.size();
     }
 
     void add_primitive_instance(const PrimitiveInstance& ps) { m_primitive_instances.push_back(ps); }

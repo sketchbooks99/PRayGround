@@ -139,6 +139,8 @@ void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data, PrimitiveIn
     std::vector<Primitive> meshes;
     std::vector<Primitive> customs;
 
+    pt::Message("Begin to build gas");
+
     for (auto &p : ps.primitives()) {
         if (p.shapetype() == ShapeType::Mesh) meshes.push_back(p);
         else                                  customs.push_back(p);
@@ -166,6 +168,8 @@ void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data, PrimitiveIn
                 float T[12] = {transform.mat[0], transform.mat[1], transform.mat[2], transform.mat[3],
                                transform.mat[4], transform.mat[5], transform.mat[6], transform.mat[7],
                                transform.mat[8], transform.mat[9], transform.mat[10], transform.mat[11]};
+                Message(T[0], T[1], T[2], T[3], T[4], T[5], T[6], T[7], T[8], T[9], T[10], T[11]);
+                Message("Begin to copy pre transform to device.");
                 d_pre_transform.alloc_copy(T, sizeof(float)*12);
                 build_inputs[i].triangleArray.preTransform = d_pre_transform.d_ptr();
                 build_inputs[i].triangleArray.transformFormat = OPTIX_TRANSFORM_FORMAT_MATRIX_FLOAT12;

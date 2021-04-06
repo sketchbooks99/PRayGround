@@ -9,8 +9,18 @@ namespace pt {
 
 class Diffuse final : public Material {
 public:
-    explicit HOSTDEVICE Diffuse(float3 a);
-    HOSTDEVICE ~Diffuse();
+    explicit HOSTDEVICE Diffuse(float3 a)
+    : m_albedo(a)
+    {
+#ifndef __CUDACC__
+        setup_on_device();
+#endif
+    }
+    HOSTDEVICE ~Diffuse() {
+#ifndef __CUDACC__
+        delete_on_device();
+#endif
+    }
 
     HOSTDEVICE void sample(SurfaceInteraction& si) const override {
         unsigned int seed = si.seed;
@@ -47,8 +57,11 @@ public:
     
     HOSTDEVICE float3 emittance(SurfaceInteraction& /* si */) const override { return make_float3(0.f); }
 
+    HOSTDEVICE float3 albedo() const { return m_albedo; }
+
+#ifndef __CUDACC__
     MaterialType type() const override { return MaterialType::Diffuse; }
-    float3 albedo() const { return m_albedo; }
+#endif
 
 private:
     void setup_on_device() override;

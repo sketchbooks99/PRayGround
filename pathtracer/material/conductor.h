@@ -7,8 +7,18 @@ namespace pt {
 
 class Conductor final : public Material {
 public:
-    HOSTDEVICE Conductor(float3 a, float f);
-    HOSTDEVICE ~Conductor();
+    HOSTDEVICE Conductor(float3 a, float f) 
+    : m_albedo(a), m_fuzz(f)
+    {
+#ifndef __CUDACC__
+        setup_on_device();
+#endif
+    }
+    HOSTDEVICE ~Conductor() {
+#ifndef __CUDACC__
+        delete_on_device();
+#endif
+    }
 
     HOSTDEVICE void sample(SurfaceInteraction& si) const override {
         si.wo = reflect(si.wi, si.n);
@@ -18,7 +28,9 @@ public:
     
     HOSTDEVICE float3 emittance(SurfaceInteraction& si) const override { return make_float3(0.f); }
 
+#ifndef __CUDACC__
     MaterialType type() const override { return MaterialType::Conductor; }
+#endif
     
 private:
     void setup_on_device() override;

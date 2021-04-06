@@ -8,8 +8,18 @@ namespace pt {
 
 class Dielectric final : public Material {
 public:
-    HOSTDEVICE Dielectric(float3 a, float ior);
-    HOSTDEVICE ~Dielectric();
+    HOSTDEVICE Dielectric(float3 a, float ior)
+    : m_albedo(a), m_ior(ior) 
+    {
+#ifndef __CUDACC__
+        setup_on_device();
+#endif
+    }
+    HOSTDEVICE ~Dielectric() {
+#ifndef __CUDACC__
+        delete_on_device();
+#endif
+    }
 
     HOSTDEVICE void sample(SurfaceInteraction& si) const override {
         si.attenuation = m_albedo;
@@ -37,7 +47,9 @@ public:
     
     HOSTDEVICE float3 emittance(SurfaceInteraction& /* si */) const override { return make_float3(0.f); }
 
+#ifndef __CUDACC__
     MaterialType type() const override { return MaterialType::Dielectric; }
+#endif
 
 private:
     void setup_on_device() override;

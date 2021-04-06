@@ -39,6 +39,21 @@ inline void Assert(bool condition, const std::string& msg) {
     if (!condition) Throw(msg);
 }
 
+template <typename T>
+inline void cuda_free(T& data) {
+    CUDA_CHECK(cudaFree(reinterpret_cast<void*>(data)));
+}
+/** 
+ * \brief 
+ * Recursive free of object.
+ */
+template <typename Head, typename... Args>
+inline void cuda_frees(Head& head, Args... args) {
+    cuda_free(head);
+    if constexpr (sizeof...(args) > 0) 
+        cuda_frees(args...);
+}
+
 /**
  * @brief Stream out object recursively. 
  */
@@ -57,20 +72,6 @@ inline void Message(Head head, Args... args) {
     if constexpr (num_args == 0) std::cout << std::endl;
 }
 
-template <typename T>
-inline void cuda_free(T& data) {
-    CUDA_CHECK(cudaFree(reinterpret_cast<void*>(data)));
-}
-/** 
- * \brief 
- * Recursive free of object.
- */
-template <typename Head, typename... Args>
-inline void cuda_frees(Head& head, Args... args) {
-    cuda_free(head);
-    if constexpr (sizeof...(args) > 0) 
-        cuda_frees(args...);
-}
 #endif
 
 }

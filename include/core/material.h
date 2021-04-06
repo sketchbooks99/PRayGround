@@ -48,18 +48,19 @@ public:
     /// FUTURE:
     // virtual HOSTDEVICE float pdf(const Ray& r, const SurfaceInteraction& si) const = 0; */
 
-    virtual MaterialType type() const = 0;
-
 #ifndef __CUDACC__
-    MaterialPtr get_dptr() const { return d_ptr; }
-    MaterialPtr& get_dptr() { return d_ptr; }
+    virtual MaterialType type() const = 0;
+    HOST MaterialPtr get_dptr() const { return d_ptr; }
+    HOST MaterialPtr& get_dptr() { return d_ptr; }
 #endif
 
 protected:
     MaterialPtr d_ptr { 0 }; // device pointer.
+    /**
+     * \brief Allocation and release of device side object.
+     */
     virtual void setup_on_device() = 0;
     virtual void delete_on_device() = 0;
-
 };
 
 }

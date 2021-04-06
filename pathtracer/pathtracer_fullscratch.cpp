@@ -792,6 +792,8 @@ int main(int argc, char* argv[]) {
 
         pt::Scene scene = my_scene();
 
+        pt::Message("main(): Loaded scene");
+
         params.width                             = scene.width();
         params.height                            = scene.height();
         params.samples_per_launch                = scene.samples_per_launch();
@@ -862,18 +864,8 @@ int main(int argc, char* argv[]) {
 #else
         pt::AccelData accel = {};
         pt::build_gas(optix_context, accel, scene.primitive_instances()[0]);
+        pt::Message("main(): Builded GAS");
 #endif
-
-        std::vector<CUdeviceptr> d_vertices;
-        std::vector<CUdeviceptr> d_normals;
-        std::vector<CUdeviceptr> d_indices;
-
-        for (auto& p : scene.primitive_instances()[0].primitives()) {
-            auto mesh = ((pt::TriangleMesh*)p.shape());
-            d_vertices.emplace_back(mesh->get_dvertices());
-            d_normals.emplace_back(mesh->get_dnormals());
-            d_indices.emplace_back(mesh->get_dindices());
-        }
 
         // createModule(optix_context, pipeline_compile_options, ptx_module);
         // Prepare the pipeline
@@ -882,6 +874,7 @@ int main(int argc, char* argv[]) {
         // Create module
         pt::Module pt_module("optix/pathtracer.cu");
         pt_module.create(optix_context, pt_pipeline.compile_options());
+        pt::Message("main(): Createed OptixModule");
 
         /**
          * \brief Create programs
@@ -896,6 +889,8 @@ int main(int argc, char* argv[]) {
         pt::RayGenRecord rg_record = {};
         OPTIX_CHECK( optixSbtRecordPackHeader( (OptixProgramGroup)raygen_program, &rg_record ) );
         d_raygen_record.alloc_copy( &rg_record, sizeof( pt::RayGenRecord ) );
+        
+        pt::Message("Created RayGen program and binded SBT to it.");
 
         // Miss program
         std::vector<pt::ProgramGroup> miss_programs( RAY_TYPE_COUNT, pt::ProgramGroup( OPTIX_PROGRAM_GROUP_KIND_MISS ) );
@@ -911,11 +906,15 @@ int main(int argc, char* argv[]) {
         }
         d_miss_record.alloc_copy( ms_records, sizeof(pt::MissRecord)*RAY_TYPE_COUNT );
 
+        pt::Message("Created Miss program and binded SBT to it.");
+
         // // Attach sbts for raygen and miss program
         sbt.raygenRecord = d_raygen_record.d_ptr();
         sbt.missRecordBase = d_miss_record.d_ptr();
         sbt.missRecordStrideInBytes = static_cast<uint32_t>(sizeof(pt::MissRecord));
         sbt.missRecordCount = RAY_TYPE_COUNT;
+
+        pt::Message("Prepared SBT for RayGen and Miss programs.");
 
         // HitGroup programs
         scene.create_hitgroup_programs( optix_context, (OptixModule)pt_module );
@@ -924,7 +923,10 @@ int main(int argc, char* argv[]) {
 
         scene.create_hitgroup_sbt( (OptixModule)pt_module, sbt );
 
+        pt::Message("Created HitGroup programs and prepared SBT for them.");
+
         pt_pipeline.create( optix_context, program_groups );
+        pt::Message("Created OptixPipeline.");
 
         initLaunchParams( accel.meshes.handle, stream, params, d_params );
 

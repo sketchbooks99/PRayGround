@@ -6,9 +6,19 @@ namespace pt {
 
 class Emitter final : public Material {
 public:
-    explicit HOSTDEVICE Emitter(float3 color, float strength);
+    explicit HOSTDEVICE Emitter(const float3& color, float strength) 
+    : m_color(color), m_strength(strength)
+    {
+#ifndef __CUDACC__
+        setup_on_device();
+#endif
+    }
 
-    HOSTDEVICE ~Emitter();
+    HOSTDEVICE ~Emitter() {
+#ifndef __CUDACC__
+        delete_on_device();
+#endif
+    }
 
     HOSTDEVICE void sample(SurfaceInteraction& si) const override {
         si.trace_terminate = true;
@@ -17,12 +27,15 @@ public:
         return m_color * m_strength;
     }
 
-    MaterialType type() const override { return MaterialType::Emitter; }
-    float3 emitted() const { return m_color; }
+    HOSTDEVICE float3 emitted() const { return m_color; }
+
+#ifndef __CUDACC__
+    HOST MaterialType type() const override { return MaterialType::Emitter; }
+#endif
 
 private:
-    HOST void setup_on_device() override;
-    HOST void delete_on_device() override;
+    void setup_on_device() override;
+    void delete_on_device() override;
 
     float3 m_color;
     float m_strength;

@@ -721,14 +721,8 @@ void createSBT(
 // ========== Main ==========
 int main(int argc, char* argv[]) {
     pt::Params params = {};
-
-    pt::Scene scene = my_scene();
-
     CUdeviceptr d_params;
-    params.width                             = scene.width();
-    params.height                            = scene.height();
-    params.samples_per_launch                = scene.samples_per_launch();
-    params.max_depth                         = scene.depth();
+
     sutil::CUDAOutputBufferType output_buffer_type = sutil::CUDAOutputBufferType::GL_INTEROP;
 
     // Prepare the states for launching ray tracer
@@ -795,6 +789,13 @@ int main(int argc, char* argv[]) {
         options.logCallbackFunction = &context_log_cb;
         options.logCallbackLevel = 4;
         OPTIX_CHECK(optixDeviceContextCreate(cu_context, &options, &optix_context));
+
+        pt::Scene scene = my_scene();
+
+        params.width                             = scene.width();
+        params.height                            = scene.height();
+        params.samples_per_launch                = scene.samples_per_launch();
+        params.max_depth                         = scene.depth();
 
 #ifndef SUCCEEDED
         std::vector<OptixInstance> instances;

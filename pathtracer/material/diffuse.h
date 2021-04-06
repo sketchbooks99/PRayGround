@@ -32,6 +32,7 @@ public:
         const float z1 = rnd(seed);
         const float z2 = rnd(seed);
         si.seed = seed;
+        si.radiance = m_albedo;
 
         // ParallelgramLight light = param.light;
         // // Sample emitter position

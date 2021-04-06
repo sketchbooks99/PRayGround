@@ -31,7 +31,9 @@
 
 #include <optix.h>
 
+#ifndef __CUDACC__
 #include <glad/glad.h>
+#endif
 
 #include <stdexcept>
 #include <sstream>
@@ -43,6 +45,7 @@
 //
 //------------------------------------------------------------------------------
 
+#ifndef __CUDACC__
 #define DO_GL_CHECK
 #ifdef DO_GL_CHECK
 #    define GL_CHECK( call )                                                   \
@@ -82,7 +85,7 @@
 #    define GL_CHECK( call )   do { call; } while(0)
 #    define GL_CHECK_ERRORS( ) do { ;     } while(0)
 #endif
-
+#endif
 
 //------------------------------------------------------------------------------
 //
@@ -90,6 +93,7 @@
 //
 //------------------------------------------------------------------------------
 
+#ifndef __CUDAC__
 #define OPTIX_CHECK( call )                                                    \
     do                                                                         \
     {                                                                          \
@@ -158,6 +162,7 @@
         }                                                                      \
     } while( 0 )
 
+#endif 
 //------------------------------------------------------------------------------
 //
 // CUDA error-checking
@@ -249,20 +254,24 @@ class Exception : public std::runtime_error
          : std::runtime_error( msg )
      { }
 
+#ifndef __CUDACC__
      Exception( OptixResult res, const char* msg )
          : std::runtime_error( createMessage( res, msg ).c_str() )
      { }
+#endif
 
  private:
+#ifndef __CUDACC__
      std::string createMessage( OptixResult res, const char* msg )
      {
          std::ostringstream out;
          out << optixGetErrorName( res ) << ": " << msg;
          return out.str();
      }
+#endif
 };
 
-
+#ifndef __CUDACC__
 inline const char* getGLErrorString( GLenum error )
 {
     switch( error )
@@ -296,6 +305,7 @@ inline void checkGLError()
         throw Exception( oss.str().c_str() );
     }
 }
+#endif
 
 
 } // end namespace sutil

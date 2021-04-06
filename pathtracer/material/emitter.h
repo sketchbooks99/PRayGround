@@ -29,6 +29,8 @@ public:
 
     HOSTDEVICE float3 emitted() const { return m_color; }
 
+    HOSTDEVICE size_t member_size() const override { return sizeof(m_color) + sizeof(m_strength); }
+
 #ifndef __CUDACC__
     HOST MaterialType type() const override { return MaterialType::Emitter; }
 #endif

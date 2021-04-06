@@ -52,9 +52,6 @@ public:
         char log[2048];
         size_t sizeof_log = sizeof(log);
 
-        Message("m_compile_options:", m_compile_options);
-        Message("m_link_options: ", m_link_options);
-
         OPTIX_CHECK_LOG(optixPipelineCreate(
             ctx,
             &m_compile_options,

@@ -72,7 +72,7 @@ OPTIX_add_sample_executable( pathtracer target_name
   # ===== SOURCE =====
   # pathtracer.cpp
   
-  pathtracer_fullscratch.cpp
+  pathtracer.cpp
   shape/trianglemesh.cpp
 
   # ===== CUDA =====

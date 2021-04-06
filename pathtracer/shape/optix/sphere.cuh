@@ -76,7 +76,7 @@ CALLABLE_FUNC void CH_FUNC(sphere)() {
     si->p = ro + tmax*rd;
     si->n = n;
     si->wi = rd;
-    data->matptr->sample(*si);
+    (*data->matptr)->sample(*si);
     si->radiance = make_float3(1.0f);
 }
 

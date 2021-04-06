@@ -8,10 +8,6 @@
 
 namespace pt {
 
-// Forward declaration
-class Material;
-using MaterialPtr = Material*;
-
 enum class MaterialType {
     Diffuse = 1u << 0,
     Conductor = 1u << 1,

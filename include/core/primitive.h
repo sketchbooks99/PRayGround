@@ -21,7 +21,7 @@ namespace pt {
 
 class Primitive {
 public:
-    Primitive(ShapePtr shape_ptr, MaterialPtr material_ptr, uint32_t sbt_index)
+    Primitive(Shape* shape_ptr, Material* material_ptr, uint32_t sbt_index)
     : m_shape_ptr(shape_ptr), m_material_ptr(material_ptr), m_sbt_index(sbt_index) {
         m_program_groups.resize(RAY_TYPE_COUNT);
         for (auto &pg : m_program_groups) {
@@ -74,8 +74,8 @@ public:
 
     // Getter 
     uint32_t sbt_index() const { return m_sbt_index; }
-    MaterialPtr material() const { return m_material_ptr; }
-    ShapePtr shape() const { return m_shape_ptr; }
+    Material* material() const { return m_material_ptr; }
+    Shape* shape() const { return m_shape_ptr; }
     ShapeType shapetype() const { return m_shape_ptr->type(); }
     MaterialType materialtype() const { return m_material_ptr->type(); }
 
@@ -83,8 +83,8 @@ public:
 
 private:
     // Member variables.
-    ShapePtr m_shape_ptr;
-    MaterialPtr m_material_ptr;
+    Shape* m_shape_ptr;
+    Material* m_material_ptr;
 
     /** 
      * \note

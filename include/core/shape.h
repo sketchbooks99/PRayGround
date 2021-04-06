@@ -80,6 +80,4 @@ protected:
     CUdeviceptr d_aabb_buffer { 0 };
 };
 
-using ShapePtr = Shape*;
-
 }

@@ -24,10 +24,10 @@ pt::Scene my_scene() {
     pt::PrimitiveInstance primitive_instance = pt::PrimitiveInstance(pt::Transform());
 
     // Material pointers. They are constructed on the device at the same time.
-    pt::MaterialPtr red_diffuse = new pt::Diffuse(make_float3(0.8f, 0.05f, 0.05f));
-    pt::MaterialPtr green_diffuse = new pt::Diffuse(make_float3(0.05f, 0.8f, 0.05f));
-    pt::MaterialPtr white_diffuse = new pt::Diffuse(make_float3(0.8f, 0.8f, 0.8f));
-    pt::MaterialPtr emitter = new pt::Emitter(make_float3(1.0f), 10.0f);
+    pt::Material* red_diffuse = new pt::Diffuse(make_float3(0.8f, 0.05f, 0.05f));
+    pt::Material* green_diffuse = new pt::Diffuse(make_float3(0.05f, 0.8f, 0.05f));
+    pt::Material* white_diffuse = new pt::Diffuse(make_float3(0.8f, 0.8f, 0.8f));
+    pt::Material* emitter = new pt::Emitter(make_float3(1.0f), 10.0f);
 
     // Floor ------------------------------------
     std::vector<float3> floor_vertices;

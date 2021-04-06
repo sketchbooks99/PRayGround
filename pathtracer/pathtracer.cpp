@@ -35,7 +35,7 @@
 #include <include/core/scene.h>
 #include <include/core/primitive.h>
 
-#define USE_IAS 0
+#define USE_IAS 1
 
 // Header file describe the scene
 #include "scene_file.h"
@@ -725,10 +725,6 @@ int main(int argc, char* argv[]) {
 
     sutil::CUDAOutputBufferType output_buffer_type = sutil::CUDAOutputBufferType::GL_INTEROP;
 
-    // Prepare the states for launching ray tracer
-    OptixTraversableHandle gas_handle = 0;
-    CUdeviceptr d_gas_output_buffer = 0;
-
     CUstream stream = 0;
 
     OptixShaderBindingTable sbt = {};
@@ -801,10 +797,11 @@ int main(int argc, char* argv[]) {
         std::vector<OptixInstance> instances;
         unsigned int sbt_base_offset = 0; 
         unsigned int instance_id = 0;
+        std::vector<pt::AccelData> accels;
         for (auto& ps : scene.primitive_instances()) {
-            pt::AccelData accel = {};
-            pt::build_gas(optix_context, accel, ps);
-            pt::build_instances(optix_context, accel, ps, sbt_base_offset, instance_id, instances);
+            accels.push_back(pt::AccelData());
+            pt::build_gas(optix_context, accels.back(), ps);
+            pt::build_instances(optix_context, accels.back(), ps, sbt_base_offset, instance_id, instances);
         }
 
         CUdeviceptr d_instances;
@@ -1020,7 +1017,6 @@ int main(int argc, char* argv[]) {
         pt_module.destroy();
         OPTIX_CHECK( optixDeviceContextDestroy( optix_context ) );
         pt::cuda_frees(sbt.raygenRecord, sbt.missRecordBase, sbt.hitgroupRecordBase, 
-                       d_gas_output_buffer, 
                        params.accum_buffer,
                        d_params);
 

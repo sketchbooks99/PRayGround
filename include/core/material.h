@@ -47,11 +47,11 @@ public:
     virtual HOSTDEVICE size_t member_size() const = 0;
 
     virtual MaterialType type() const = 0;
-    Material** get_dptr() const { return d_ptr; }
-    Material**& get_dptr() { return d_ptr; }
+    Material* get_dptr() const { return d_ptr; }
+    Material*& get_dptr() { return d_ptr; }
 
 protected:
-    Material** d_ptr { nullptr }; // device pointer.
+    Material* d_ptr { nullptr }; // device pointer.
     /**
      * \brief Allocation and release of device side object.
      */

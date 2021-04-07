@@ -696,7 +696,7 @@ void createSBT(
             // hitgroup_records[sbt_idx].data.normals = reinterpret_cast<float3*>(d_normals[meshID]);
             // hitgroup_records[sbt_idx].data.indices = reinterpret_cast<int3*>(d_indices[meshID]);
             hitgroup_records[sbt_idx].data.shapedata = reinterpret_cast<void*>(primitives[meshID].shape()->get_dptr());
-            hitgroup_records[sbt_idx].data.matptr = reinterpret_cast<void**>(primitives[meshID].material()->get_dptr());
+            hitgroup_records[sbt_idx].data.matptr = primitives[meshID].material()->get_dptr();
         }
 
         {

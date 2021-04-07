@@ -50,7 +50,7 @@ public:
                         hitgroup_records.push_back(HitGroupRecord());
                         p.bind_radiance_record(&hitgroup_records.back());
                         hitgroup_records.back().data.shapedata = reinterpret_cast<void*>(p.shape()->get_dptr());
-                        hitgroup_records.back().data.matptr = reinterpret_cast<void**>(p.material()->get_dptr());
+                        hitgroup_records.back().data.matptr = p.material()->get_dptr();
                         sbt_idx++;
                     } 
                     // Bind sbt to occlusion program groups.

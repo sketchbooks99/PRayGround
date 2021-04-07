@@ -21,8 +21,8 @@ CALLABLE_FUNC void IS_FUNC(sphere)() {
     const pt::HitGroupData* data = reinterpret_cast<pt::HitGroupData*>(optixGetSbtDataPointer());
     const pt::SphereData* sphere_data = reinterpret_cast<pt::SphereData*>(data->shapedata);
 
-    const float radius = 100.0f;
-    const float3 center = make_float3(0,0,0);
+    const float3 center = sphere_data->center;
+    const float radius = sphere_data->radius;
 
     optixReportIntersection(0.f, 0, float3_as_ints(make_float3(1, 0, 0)));
 
@@ -59,7 +59,7 @@ CALLABLE_FUNC void IS_FUNC(sphere)() {
 CALLABLE_FUNC void CH_FUNC(sphere)() {
     const pt::HitGroupData* data = reinterpret_cast<pt::HitGroupData*>(optixGetSbtDataPointer());
     const pt::SphereData* sphere_data = reinterpret_cast<pt::SphereData*>(data->shapedata);
-    const pt::Material** matptr = reinterpret_cast<pt::Material**>(data->matptr);
+    const pt::Material* matptr = data->matptr;
 
     const float3 ro = optixGetWorldRayOrigin();
     const float3 rd = optixGetWorldRayDirection();
@@ -78,8 +78,13 @@ CALLABLE_FUNC void CH_FUNC(sphere)() {
     si->p = ro + tmax*rd;
     si->n = n;
     si->wi = rd;
-    (*matptr)->sample(*si);
-    si->radiance = make_float3(1.0f);
+    /** 
+     * \note This member function wkll causes the error of illegal memory access 
+     * or invalid program counter errordue to a wrong allocation of material pointer
+     * on the device.
+     */
+    // matptr->sample(*si);
+    si->radiance = make_float3(n.x, n.y, 0.5f);
 }
 
 #endif

@@ -61,9 +61,7 @@ public:
 
     HOSTDEVICE size_t member_size() const override { return sizeof(m_albedo); }
 
-#ifndef __CUDACC__
     MaterialType type() const override { return MaterialType::Diffuse; }
-#endif
 
 private:
     void setup_on_device() override;

@@ -54,8 +54,8 @@ __global__ void delete_emitter(pt::Material** d_ptr) {
 }
 
 void pt::Conductor::setup_on_device() {
-    CUDA_CHECK(cudaMalloc((void**)&d_ptr, sizeof(Material**)));
-    setup_conductor<<<1,1>>>(d_ptr, m_albedo, m_fuzz);
+    CUDA_CHECK(cudaMalloc(&d_ptr, sizeof(pt::Material**)));
+    setup_conductor<<<1,1>>>((pt::Material**)d_ptr, m_albedo, m_fuzz);
     CUDA_SYNC_CHECK();
 }
 
@@ -64,8 +64,8 @@ void pt::Conductor::delete_on_device() {
 }
 
 void pt::Dielectric::setup_on_device() {
-    CUDA_CHECK(cudaMalloc((void**)&d_ptr, sizeof(Material**)));
-    setup_dielectric<<<1,1>>>(d_ptr, m_albedo, m_ior);
+    CUDA_CHECK(cudaMalloc(&d_ptr, sizeof(pt::Material**)));
+    setup_dielectric<<<1,1>>>((pt::Material**)d_ptr, m_albedo, m_ior);
     CUDA_SYNC_CHECK();
 }
 
@@ -74,8 +74,8 @@ void pt::Dielectric::delete_on_device() {
 }
 
 void pt::Diffuse::setup_on_device() {
-    CUDA_CHECK(cudaMalloc((void**)&d_ptr, sizeof(Material**)));
-    setup_diffuse<<<1,1>>>(d_ptr, m_albedo);
+    CUDA_CHECK(cudaMalloc(&d_ptr, sizeof(pt::Material**)));
+    setup_diffuse<<<1,1>>>((pt::Material**)d_ptr, m_albedo);
     CUDA_SYNC_CHECK();
 }
 
@@ -84,8 +84,8 @@ void pt::Diffuse::delete_on_device() {
 }
 
 void pt::Emitter::setup_on_device() {
-    CUDA_CHECK(cudaMalloc((void**)&d_ptr, sizeof(Material**)));
-    setup_emitter<<<1,1>>>(d_ptr, m_color, m_strength);
+    CUDA_CHECK(cudaMalloc(&d_ptr, sizeof(pt::Material**)));
+    setup_emitter<<<1,1>>>((pt::Material**)d_ptr, m_color, m_strength);
     CUDA_SYNC_CHECK();
 }
 

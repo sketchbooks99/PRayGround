@@ -49,9 +49,7 @@ public:
 
     HOSTDEVICE size_t member_size() const override { return sizeof(m_albedo) + sizeof(m_ior); }
 
-#ifndef __CUDACC__
     MaterialType type() const override { return MaterialType::Dielectric; }
-#endif
 
 private:
     void setup_on_device() override;

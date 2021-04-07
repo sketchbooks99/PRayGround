@@ -46,11 +46,9 @@ public:
 
     virtual HOSTDEVICE size_t member_size() const = 0;
 
-#ifndef __CUDACC__
     virtual MaterialType type() const = 0;
     Material** get_dptr() const { return d_ptr; }
     Material**& get_dptr() { return d_ptr; }
-#endif
 
 protected:
     Material** d_ptr { nullptr }; // device pointer.

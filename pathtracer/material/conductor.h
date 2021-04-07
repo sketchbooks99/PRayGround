@@ -30,9 +30,7 @@ public:
 
     HOSTDEVICE size_t member_size() const override { return sizeof(m_albedo) + sizeof(m_fuzz); } 
 
-#ifndef __CUDACC__
     MaterialType type() const override { return MaterialType::Conductor; }
-#endif
     
 private:
     void setup_on_device() override;

@@ -23,7 +23,7 @@ CALLABLE_FUNC void CH_FUNC(mesh)()
 {
     const pt::HitGroupData* data = reinterpret_cast<pt::HitGroupData*>(optixGetSbtDataPointer());
     const pt::MeshData* mesh_data = reinterpret_cast<pt::MeshData*>(data->shapedata);
-    const pt::Material** matptr = data->matptr;
+    const pt::Material** matptr = reinterpret_cast<pt::Material**>(data->matptr);
 
     const int prim_idx = optixGetPrimitiveIndex();
     const int3 index = mesh_data->indices[prim_idx];
@@ -47,7 +47,7 @@ CALLABLE_FUNC void CH_FUNC(mesh)()
     si->p = ro + tmax*rd;
     si->n = n;
     si->wi = rd;
-    // (*matptr)->sample(*si);
+    (*matptr)->sample(*si);
     si->radiance = make_float3(fabs(n.x), fabs(n.y), fabs(n.z));
 }
 

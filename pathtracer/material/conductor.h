@@ -47,8 +47,8 @@ private:
 };
 
 #else 
-CALLABLE_FUNC void DC_FUNC(sample_conductor)(SurfaceInteraction* si, const HitGroupData* data) {
-    const ConductorData* conductor = reinterpret_cast<ConductorData*>(data->matdata);
+CALLABLE_FUNC void DC_FUNC(sample_conductor)(SurfaceInteraction* si, void* matdata) {
+    const ConductorData* conductor = reinterpret_cast<ConductorData*>(matdata);
 
     si->wo = reflect(si->wi, si->n);
     si->attenuation = conductor->albedo;

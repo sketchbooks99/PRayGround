@@ -48,9 +48,10 @@ private:
 };
 
 #else 
-CALLABLE_FUNC void DC_FUNC(sample_emitter)(SurfaceInteraction* si, const HitGroupData* data) {
-    const EmitterData* emitter = reinterpret_cast<EmitterData*>(data->matdata);
-    si->emission = emitter->color * emitter->strength;
+CALLABLE_FUNC void DC_FUNC(sample_emitter)(SurfaceInteraction* si, void* matdata) {
+    const EmitterData* emitter = reinterpret_cast<EmitterData*>(matdata);
+    // si->emission = emitter->color;
+    si->radiance = make_float3(1.0f);
     si->trace_terminate = true;
 }
 #endif

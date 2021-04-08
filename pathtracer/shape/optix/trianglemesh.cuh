@@ -21,7 +21,7 @@ struct MeshData {
 
 CALLABLE_FUNC void CH_FUNC(mesh)()
 {
-    const pt::HitGroupData* data = reinterpret_cast<pt::HitGroupData*>(optixGetSbtDataPointer());
+    pt::HitGroupData* data = reinterpret_cast<pt::HitGroupData*>(optixGetSbtDataPointer());
     const pt::MeshData* mesh_data = reinterpret_cast<pt::MeshData*>(data->shapedata);
     
     const int prim_idx = optixGetPrimitiveIndex();
@@ -53,9 +53,9 @@ CALLABLE_FUNC void CH_FUNC(mesh)()
      * ReturnT optixDirectCall( unsigned int sbtIndex, ArgTypes... args );
      */
     
-    // optixDirectCall<void, pt::SurfaceInteraction*, const pt::HitGroupData*>(data->sample_func_idx, si, data);
+    optixDirectCall<void, pt::SurfaceInteraction*, void*>(data->sample_func_idx, si, data->matdata);
     
-    si->radiance = make_float3(fabs(n.x), fabs(n.y), fabs(n.z));
+    // si->radiance = make_float3(fabs(n.x), fabs(n.y), fabs(n.z));
 }
 
 #endif

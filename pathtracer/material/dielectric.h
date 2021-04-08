@@ -67,8 +67,8 @@ private:
 };
 
 #else 
-CALLABLE_FUNC void DC_FUNC(sample_dielectric)(SurfaceInteraction* si, const HitGroupData* data) {
-    const DielectricData* dielectric = reinterpret_cast<DielectricData*>(data->matdata);
+CALLABLE_FUNC void DC_FUNC(sample_dielectric)(SurfaceInteraction* si, void* matdata) {
+    const DielectricData* dielectric = reinterpret_cast<DielectricData*>(matdata);
 
     si->attenuation = dielectric->albedo;
     si->trace_terminate = false;

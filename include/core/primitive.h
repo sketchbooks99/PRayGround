@@ -48,6 +48,7 @@ public:
 
     // Preparing (alloc and copy) shape data to the device. 
     void prepare_shapedata() { m_shape_ptr->prepare_data(); }
+    void prepare_matdata() { m_material_ptr->prepare_data(); }
 
     // Configure the OptixBuildInput from shape data.
     void build_input( OptixBuildInput& bi, unsigned int index_offset ) { m_shape_ptr->build_input( bi, m_sbt_index, index_offset); }
@@ -171,6 +172,7 @@ void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data, PrimitiveIn
                 build_inputs[i].triangleArray.transformFormat = OPTIX_TRANSFORM_FORMAT_MATRIX_FLOAT12;
             }
             primitives_subset[i].prepare_shapedata();
+            primitives_subset[i].prepare_matdata();
             primitives_subset[i].build_input(build_inputs[i], index_offset);
 
             switch ( primitives_subset[i].shapetype() ) {
@@ -312,7 +314,7 @@ void create_material_sample_programs(
         program_groups[i] = ProgramGroup(OPTIX_PROGRAM_GROUP_KIND_CALLABLES);
         program_groups[i].create(
             ctx, 
-            ProgramEntry((OptixModule)module, dc_func_str( mat_sample_map[(MaterialType)i]).c_str() ),
+            ProgramEntry((OptixModule)module, dc_func_str( mat_sample_map[ (MaterialType)i ] ).c_str() ),
             ProgramEntry(nullptr, nullptr)
         );
         program_groups[i].bind_sbt_and_program(&callable_records[i]);

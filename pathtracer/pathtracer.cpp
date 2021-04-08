@@ -409,6 +409,8 @@ int main(int argc, char* argv[]) {
         // Prepare the pipeline
         std::string params_name = "params";
         pt::Pipeline pipeline(params_name);
+        pipeline.set_dc_depth(2);
+        pipeline.set_cc_depth(2);
         // Create module
         pt::Module module("optix/pathtracer.cu");
         module.create(optix_context, pipeline.compile_options());

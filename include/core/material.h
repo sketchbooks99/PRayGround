@@ -6,6 +6,10 @@
 #include <include/core/util.h>
 #include <include/optix/util.h>
 
+#ifndef __CUDACC__
+    #include <map>
+#endif
+
 namespace pt {
 
 /**
@@ -20,10 +24,21 @@ enum class MaterialType {
     Conductor = 1,
     Dielectric = 2,
     Emitter = 3,
-    Disney = 4
+    // Disney = 4,
+    Count = 4
 };
 
 #ifndef __CUDACC__
+/**
+ * \brief Map to connect MaterialType and names of entry functions to sample bsdf properties.
+ */
+static std::map<MaterialType, const char*> mat_sample_map = {
+    { MaterialType::Diffuse, "sample_diffuse" },    
+    { MaterialType::Conductor, "sample_conductor" },    
+    { MaterialType::Dielectric, "sample_dielectric" },    
+    { MaterialType::Emitter, "sample_emitter" }    
+};
+
 inline std::ostream& operator<<(std::ostream& out, const MaterialType& type) {
     switch(type) {
     case MaterialType::Diffuse:
@@ -34,13 +49,14 @@ inline std::ostream& operator<<(std::ostream& out, const MaterialType& type) {
         return out << "MaterialType::Sphere";
     case MaterialType::Emitter:
         return out << "MaterialType::Emitter";
-    case MaterialType::Disney:
-        return out << "MaterialType::Disney";
+    // case MaterialType::Disney:
+    //     return out << "MaterialType::Disney";
     default:
         Throw("This MaterialType is not supported\n");
         return out << "";
     }
 }
+
 #endif
 
 // Abstract class to compute scattering properties.
@@ -56,7 +72,7 @@ public:
     
     CUdeviceptr get_dptr() const { return d_data; }
     CUdeviceptr& get_dptr() { return d_data; }
-private:
+protected:
     CUdeviceptr d_data { 0 };
 };
 

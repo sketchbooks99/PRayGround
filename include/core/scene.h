@@ -13,10 +13,10 @@ public:
     /** 
      * \brief Create programs associated with primitives.
      */
-    void create_hitgroup_programs(const OptixDeviceContext& ctx, const OptixModule& module) {
+    void create_hitgroup_programs(const OptixDeviceContext& ctx, const Module& module) {
         for (auto &ps : m_primitive_instances) { 
             for (auto &p : ps.primitives()) {
-                p.create_programs(ctx, module);
+                p.create_programs(ctx, (OptixModule)module);
             }
         }
     }
@@ -36,7 +36,7 @@ public:
      * \brief Create SBT with HitGroupData. 
      * \note SBTs for raygen and miss program aren't created at here.
      */
-    void create_hitgroup_sbt(const OptixModule& module, OptixShaderBindingTable& sbt) {
+    void create_hitgroup_sbt(OptixShaderBindingTable& sbt) {
         size_t hitgroup_record_size = sizeof(HitGroupRecord);
         unsigned int sbt_idx = 0;
         unsigned int num_hitgroup_records = 0;
@@ -50,7 +50,8 @@ public:
                         hitgroup_records.push_back(HitGroupRecord());
                         p.bind_radiance_record(&hitgroup_records.back());
                         hitgroup_records.back().data.shapedata = reinterpret_cast<void*>(p.shape()->get_dptr());
-                        hitgroup_records.back().data.matptr = p.material()->get_dptr();
+                        hitgroup_records.back().data.matdata = reinterpret_cast<void*>(p.material()->get_dptr());
+                        hitgroup_records.back().data.sample_func_idx = (unsigned int)p.materialtype();
                         sbt_idx++;
                     } 
                     // Bind sbt to occlusion program groups.
@@ -93,7 +94,7 @@ public:
     void set_samples_per_launch(unsigned int spl) { m_samples_per_launch = spl; }
     unsigned int samples_per_launch() const { return m_samples_per_launch; }
 private:
-    std::vector<PrimitiveInstance> m_primitive_instances;  // Primitive instances with same transformation.
+    std::vector<PrimitiveInstance> m_primitive_instances;   // Primitive instances with same transformation.
     unsigned int m_width, m_height;                         // Dimensions of output result.
     float4 m_bgcolor;                                       // Background color
     unsigned int m_depth;                                   // Maximum depth of ray tracing.

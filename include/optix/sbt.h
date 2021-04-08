@@ -6,7 +6,7 @@
 
 namespace pt {
 
-struct RayGenData {};
+struct EmptyData {};
 
 struct MissData {
     float4 bg_color;
@@ -15,15 +15,8 @@ struct MissData {
 struct HitGroupData {
     /// Pointer that stores geometries data (e.g. \c pt::MeshData )
     void* shapedata;
-    Material** matptr;
-};
-
-struct HitGroupData2 {
-    float3* vertices; 
-    float3* normals; 
-    int3* indices;
-    float3 emission; 
-    float3 albedo;
+    void* matdata;
+    unsigned int sample_func_idx;   // Index of direct callables function to sample bsdf properties.
 };
 
 #ifndef __CUDACC__
@@ -34,10 +27,10 @@ struct Record
     T data;
 };
 
-using RayGenRecord = Record<RayGenData>;
+using RayGenRecord = Record<EmptyData>;
 using MissRecord = Record<MissData>;
 using HitGroupRecord = Record<HitGroupData>;
-using HitGroupRecord2 = Record<HitGroupData2>;
+using CallableRecord = Record<EmptyData>;
 
 #endif
 

@@ -29,11 +29,6 @@
 # add_subdirectory(include/core)
 # add_subdirectory(include/optix)
 
-set_source_files_properties(
-  ${CMAKE_CURRENT_SOURCE_DIR}/optix/create_obj.cu 
-  PROPERTIES CUDA_SOURCE_PROPERTY_FORMAT OBJ
-)
-
 OPTIX_add_sample_executable( pathtracer target_name
 
   # ===== INCLUDE =====
@@ -78,7 +73,6 @@ OPTIX_add_sample_executable( pathtracer target_name
   # ===== CUDA =====
   optix/pathtracer.cu
   # optix/bsdf.cuh
-  optix/create_obj.cu
   shape/optix/sphere.cuh
   shape/optix/trianglemesh.cuh
 

@@ -22,8 +22,8 @@ enum class ShapeType {
  *  const char* shape_str = shape_map[ShapeType::Mesh] -> "mesh"
  **/
 static std::map<ShapeType, const char*> shape_map = {
-    {ShapeType::Mesh, "mesh"},
-    {ShapeType::Sphere, "sphere"}
+    { ShapeType::Mesh, "mesh" },
+    { ShapeType::Sphere, "sphere" }
 };
 
 inline std::ostream& operator<<(std::ostream& out, ShapeType type) {

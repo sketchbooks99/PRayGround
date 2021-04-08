@@ -9,9 +9,10 @@ struct EmitterData {
     float strength;
 };
 
+#ifndef __CUDACC__
 class Emitter final : public Material {
 public:
-    Emitter(const float3& color, float strength) 
+    Emitter(const float3& color, float strength = 1.0f) 
     : m_color(color), m_strength(strength) { }
 
     ~Emitter() { }
@@ -25,14 +26,33 @@ public:
 
     float3 emitted() const { return m_color; }
 
-    size_t member_size() const override { return sizeof(m_color) + sizeof(m_strength); }
+    void prepare_data() override {
+        EmitterData data = {
+            m_color, 
+            m_strength
+        };
+
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_data), sizeof(EmitterData)));
+        CUDA_CHECK(cudaMemcpy(
+            reinterpret_cast<void*>(d_data), 
+            &data, sizeof(EmitterData), 
+            cudaMemcpyHostToDevice
+        ));
+    }
 
     MaterialType type() const override { return MaterialType::Emitter; }
 
 private:
-
     float3 m_color;
     float m_strength;
 };
+
+#else 
+CALLABLE_FUNC void DC_FUNC(sample_emitter)(SurfaceInteraction* si, const HitGroupData* data) {
+    const EmitterData* emitter = reinterpret_cast<EmitterData*>(data->matdata);
+    si->emission = emitter->color * emitter->strength;
+    si->trace_terminate = true;
+}
+#endif
 
 }

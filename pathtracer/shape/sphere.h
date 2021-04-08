@@ -18,14 +18,14 @@ public:
             m_radius
         };
 
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_data_ptr), sizeof(SphereData)));
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_data), sizeof(SphereData)));
         CUDA_CHECK(cudaMemcpy(
-            reinterpret_cast<void*>(d_data_ptr),
+            reinterpret_cast<void*>(d_data),
             &data, sizeof(SphereData),
             cudaMemcpyHostToDevice
         ));
 
-        Message("Sphere::prepare_data():", "d_data_ptr =", d_data_ptr);
+        Message("Sphere::prepare_data():", "d_data_ptr =", d_data);
     }
 
     void build_input( OptixBuildInput& bi, uint32_t sbt_idx, unsigned int index_offset ) override

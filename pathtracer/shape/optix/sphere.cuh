@@ -59,7 +59,6 @@ CALLABLE_FUNC void IS_FUNC(sphere)() {
 CALLABLE_FUNC void CH_FUNC(sphere)() {
     const pt::HitGroupData* data = reinterpret_cast<pt::HitGroupData*>(optixGetSbtDataPointer());
     const pt::SphereData* sphere_data = reinterpret_cast<pt::SphereData*>(data->shapedata);
-    const pt::Material** matptr = data->matptr;
 
     const float3 ro = optixGetWorldRayOrigin();
     const float3 rd = optixGetWorldRayDirection();
@@ -83,7 +82,6 @@ CALLABLE_FUNC void CH_FUNC(sphere)() {
      * or invalid program counter errordue to a wrong allocation of material pointer
      * on the device.
      */
-    // (*matptr)->sample(*si);
     si->radiance = make_float3(n.x, n.y, 0.5f);
 }
 

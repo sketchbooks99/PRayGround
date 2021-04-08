@@ -45,7 +45,7 @@ inline std::string ah_func_str(const std::string& name) { return ("__anyhit__" +
 inline std::string ch_func_str(const std::string& name) { return ("__closesthit__" + name).c_str(); }
 inline std::string ms_func_str(const std::string& name) { return ("__miss__" + name).c_str(); }
 inline std::string ex_func_str(const std::string& name) { return ("__exception__" + name).c_str(); }
-inline std::string dc_func_str(const std::string& name) { return ("__direct_callabel__" + name).c_str(); }
+inline std::string dc_func_str(const std::string& name) { return ("__direct_callable__" + name).c_str(); }
 inline std::string cc_func_str(const std::string& name) { return ("__continuation_callable__" + name).c_str(); }
 
 #endif

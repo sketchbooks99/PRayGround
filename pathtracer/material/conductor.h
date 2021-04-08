@@ -10,6 +10,7 @@ struct ConductorData {
     float fuzz;
 };
 
+#ifndef __CUDACC__
 class Conductor final : public Material {
 public:
     Conductor(float3 a, float f) 
@@ -22,9 +23,21 @@ public:
         si.trace_terminate = false;
     }
     
-    float3 emittance( SurfaceInteraction& si ) const override { return make_float3(0.f); }
+    float3 emittance( SurfaceInteraction& si ) const override { return make_float3(0.f); }  
 
-    size_t member_size() const override { return sizeof(m_albedo) + sizeof(m_fuzz); } 
+    void prepare_data() override {
+        ConductorData data = {
+            m_albedo, 
+            m_fuzz
+        };
+
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_data), sizeof(ConductorData)));
+        CUDA_CHECK(cudaMemcpy(
+            reinterpret_cast<void*>(d_data),
+            &data, sizeof(ConductorData), 
+            cudaMemcpyHostToDevice
+        ));
+    }
 
     MaterialType type() const override { return MaterialType::Conductor; }
     
@@ -32,6 +45,17 @@ private:
     float3 m_albedo;
     float m_fuzz;
 };
+
+#else 
+CALLABLE_FUNC void DC_FUNC(sample_conductor)(SurfaceInteraction* si, const HitGroupData* data) {
+    const ConductorData* conductor = reinterpret_cast<ConductorData*>(data->matdata);
+
+    si->wo = reflect(si->wi, si->n);
+    si->attenuation = conductor->albedo;
+    si->trace_terminate = false;
+}
+
+#endif
 
 }
 

@@ -28,7 +28,8 @@ public:
     explicit Module(std::string ptx_path, OptixModuleCompileOptions options)
     : m_ptx_path(ptx_path), m_options(options) {}
 
-    explicit operator OptixModule() { return m_module; }
+    explicit operator OptixModule() const { return m_module; }
+    explicit operator OptixModule&() { return m_module; }
 
     void destroy() {
         OPTIX_CHECK(optixModuleDestroy(m_module));

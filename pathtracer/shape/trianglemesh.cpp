@@ -245,9 +245,9 @@ void TriangleMesh::prepare_data() {
         reinterpret_cast<int3*>(d_indices)
     };
 
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_data_ptr), sizeof(MeshData)));
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_data), sizeof(MeshData)));
     CUDA_CHECK(cudaMemcpy(
-        reinterpret_cast<void*>(d_data_ptr), 
+        reinterpret_cast<void*>(d_data), 
         &data, sizeof(MeshData), 
         cudaMemcpyHostToDevice
     ));

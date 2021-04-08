@@ -297,4 +297,33 @@ void build_instances(const OptixDeviceContext& ctx,
     }
 }
 
+void create_material_sample_programs(
+    const OptixDeviceContext& ctx,
+    const Module& module, 
+    std::vector<ProgramGroup>& program_groups, 
+    OptixShaderBindingTable& sbt
+) {
+    // program_groups.clear(); <- Is it needed?
+    program_groups.resize((int)MaterialType::Count);
+    std::vector<CallableRecord> callable_records((int)MaterialType::Count);
+
+    for (int i = 0; i < (int)MaterialType::Count; i++) {
+        // Material type can be queried by iterator.
+        program_groups[i] = ProgramGroup(OPTIX_PROGRAM_GROUP_KIND_CALLABLES);
+        program_groups[i].create(
+            ctx, 
+            ProgramEntry((OptixModule)module, dc_func_str( mat_sample_map[(MaterialType)i]).c_str() ),
+            ProgramEntry(nullptr, nullptr)
+        );
+        program_groups[i].bind_sbt_and_program(&callable_records[i]);
+    }
+
+    CUDABuffer<CallableRecord> d_callable_records;
+    d_callable_records.alloc_copy(callable_records);
+
+    sbt.callablesRecordBase = d_callable_records.d_ptr();
+    sbt.callablesRecordCount = static_cast<unsigned int>( callable_records.size() );
+    sbt.callablesRecordStrideInBytes = static_cast<unsigned int>( sizeof( CallableRecord ) );
+}
+
 }

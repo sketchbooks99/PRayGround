@@ -23,7 +23,8 @@ CALLABLE_FUNC void CH_FUNC(mesh)()
 {
     const pt::HitGroupData* data = reinterpret_cast<pt::HitGroupData*>(optixGetSbtDataPointer());
     const pt::MeshData* mesh_data = reinterpret_cast<pt::MeshData*>(data->shapedata);
-    const pt::Material* matptr = data->matptr;
+    // const pt::Material** matptr = data->matptr;
+    const pt::Material* matptr = new pt::Diffuse(make_float3(0.8f, 0.05f, 0.05f));
 
     const int prim_idx = optixGetPrimitiveIndex();
     const int3 index = mesh_data->indices[prim_idx];
@@ -53,11 +54,13 @@ CALLABLE_FUNC void CH_FUNC(mesh)()
      * or invalid program counter errordue to a wrong allocation of material pointer
      * on the device.
      */
-    // matptr->sample(*si);s
+    matptr->sample(*si);
     if (matptr == nullptr) 
         si->radiance = make_float3(1.0f);
     else 
         si->radiance = make_float3(fabs(n.x), fabs(n.y), fabs(n.z));
+
+    delete matptr;
 }
 
 #endif

@@ -7,22 +7,17 @@
 
 namespace pt {
 
+struct DiffuseData {
+    float3 albedo;
+};
+
 class Diffuse final : public Material {
 public:
-    explicit HOSTDEVICE Diffuse(float3 a)
-    : m_albedo(a)
-    {
-#ifndef __CUDACC__
-        setup_on_device();
-#endif
-    }
-    HOSTDEVICE ~Diffuse() {
-#ifndef __CUDACC__
-        delete_on_device();
-#endif
-    }
+    explicit Diffuse(float3 a) : m_albedo(a) { }
 
-    HOSTDEVICE void sample(SurfaceInteraction& si) const override {
+    ~Diffuse() { }
+
+    void sample(SurfaceInteraction& si) const override {
         unsigned int seed = si.seed;
         si.trace_terminate = false;
 
@@ -55,18 +50,15 @@ public:
         // const float LnDl = -dot(light.normal, L);
     }
     
-    HOSTDEVICE float3 emittance(SurfaceInteraction& /* si */) const override { return make_float3(0.f); }
+    float3 emittance(SurfaceInteraction& /* si */) const override { return make_float3(0.f); }
 
-    HOSTDEVICE float3 albedo() const { return m_albedo; }
+    float3 albedo() const { return m_albedo; }
 
-    HOSTDEVICE size_t member_size() const override { return sizeof(m_albedo); }
+    size_t member_size() const override { return sizeof(m_albedo); }
 
     MaterialType type() const override { return MaterialType::Diffuse; }
 
 private:
-    void setup_on_device() override;
-    void delete_on_device() override;
-
     float3 m_albedo;
 };
 

@@ -78,11 +78,8 @@ CALLABLE_FUNC void CH_FUNC(sphere)() {
     si->p = ro + tmax*rd;
     si->n = n;
     si->wi = rd;
-    /** 
-     * \note This member function wkll causes the error of illegal memory access 
-     * or invalid program counter errordue to a wrong allocation of material pointer
-     * on the device.
-     */
+
+    // Direct callable function to sample bsdf properties.
     optixDirectCall<void, pt::SurfaceInteraction*, void*>(data->sample_func_idx, si, data->matdata);
 }
 

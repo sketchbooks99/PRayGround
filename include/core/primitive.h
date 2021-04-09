@@ -162,13 +162,13 @@ void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data, PrimitiveIn
     {
         if (handle.d_buffer)
         {
-            // CUDA_CHECK(cudaFree(reinterpret_cast<void*>(handle.d_buffer)));
+            cuda_free(handle.d_buffer);
             handle.handle = 0;
             handle.d_buffer = 0;
             handle.count = 0;
         }
 
-        handle.count = primitives_subset.size();
+        handle.count = static_cast<unsigned int>(primitives_subset.size());
 
         std::vector<OptixBuildInput> build_inputs(primitives_subset.size());
         unsigned int index_offset = 0;

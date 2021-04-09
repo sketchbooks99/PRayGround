@@ -30,32 +30,9 @@ pt::Scene my_scene() {
 
     float3 cornel_center = make_float3(278.0f, 274.4f, 279.6f);
 
-    // pt::PrimitiveInstance sphere_ps(pt::Transform(sutil::Matrix4x4::translate(cornel_center)));
-    pt::PrimitiveInstance sphere_ps = pt::PrimitiveInstance(pt::Transform());
-    sphere_ps.set_sbt_index_base(0);
-    // pt::Shape* sphere = new pt::Sphere(cornel_center + make_float3(0.0f, -90.0f, 0.0f), 80.0f);
-    // sphere_ps.add_primitive(sphere, white_diffuse);
-
-    pt::Shape* metal_sphere = new pt::Sphere(cornel_center + make_float3(-120.0f, 0.0f, 0.0f), 80.0f);
-    sphere_ps.add_primitive(metal_sphere, metal);
-
-    pt::Shape* glass_sphere = new pt::Sphere(cornel_center + make_float3(120.0f, 0.0f, 0.0f), 80.0f);
-    sphere_ps.add_primitive(glass_sphere, glass);
-
-    scene.add_primitive_instance(sphere_ps);
-
-    /**
-     * \note Multiple instances of sphere induced invalid argument error at cudaFree
-     */
-    // pt::PrimitiveInstance sphere2_ps(pt::Transform(sutil::Matrix4x4::translate(cornel_center + make_float3(100.0f, 0.0f, 0.0f))));
-    // sphere2_ps.set_sbt_index_base(sphere_ps.sbt_index());
-    // pt::Shape* sphere2 = new pt::Sphere(make_float3(0.0f), 80.0f);
-    // sphere2_ps.add_primitive(sphere2, red_diffuse);
-    // scene.add_primitive_instance(sphere2_ps);
-
     // Primitive instance for cornel box.
     pt::PrimitiveInstance cornel_ps = pt::PrimitiveInstance(pt::Transform());
-    cornel_ps.set_sbt_index_base(sphere_ps.sbt_index());
+    cornel_ps.set_sbt_index_base(0);
 
     // Floor ------------------------------------
     std::vector<float3> floor_vertices;
@@ -151,6 +128,29 @@ pt::Scene my_scene() {
     // cornel_ps.add_primitive(sphere, white_diffuse);
 
     scene.add_primitive_instance(cornel_ps);
+
+    // pt::PrimitiveInstance sphere_ps(pt::Transform(sutil::Matrix4x4::translate(cornel_center)));
+    pt::PrimitiveInstance sphere_ps = pt::PrimitiveInstance(pt::Transform());
+    sphere_ps.set_sbt_index_base(cornel_ps.sbt_index());
+    // pt::Shape* sphere = new pt::Sphere(cornel_center + make_float3(0.0f, -90.0f, 0.0f), 80.0f);
+    // sphere_ps.add_primitive(sphere, white_diffuse);
+
+    pt::Shape* metal_sphere = new pt::Sphere(cornel_center + make_float3(-120.0f, 0.0f, 0.0f), 80.0f);
+    sphere_ps.add_primitive(metal_sphere, metal);
+
+    pt::Shape* glass_sphere = new pt::Sphere(cornel_center + make_float3(120.0f, 0.0f, 0.0f), 80.0f);
+    sphere_ps.add_primitive(glass_sphere, glass);
+
+    scene.add_primitive_instance(sphere_ps);
+
+    /**
+     * \note Multiple instances of sphere induced invalid argument error at cudaFree
+     */
+    // pt::PrimitiveInstance sphere2_ps(pt::Transform(sutil::Matrix4x4::translate(cornel_center + make_float3(100.0f, 0.0f, 0.0f))));
+    // sphere2_ps.set_sbt_index_base(sphere_ps.sbt_index());
+    // pt::Shape* sphere2 = new pt::Sphere(make_float3(0.0f), 80.0f);
+    // sphere2_ps.add_primitive(sphere2, red_diffuse);
+    // scene.add_primitive_instance(sphere2_ps);
 
     return scene;
 }

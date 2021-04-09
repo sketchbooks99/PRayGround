@@ -121,13 +121,13 @@ pt::Scene my_scene() {
     auto ceiling_light_mesh = new pt::TriangleMesh(ceiling_light_vertices, ceiling_light_indices, ceiling_light_normals);
     cornel_ps.add_primitive(pt::Primitive(ceiling_light_mesh, emitter, 5));
 
-    pt::PrimitiveInstance sphere_ps(pt::Transform(sutil::Matrix4x4::translate(cornel_center)));
+    // pt::PrimitiveInstance sphere_ps(pt::Transform(sutil::Matrix4x4::translate(cornel_center)));
 
-    pt::Shape* sphere = new pt::Sphere(make_float3(0.0f), 100.0f);
-    sphere_ps.add_primitive(pt::Primitive(sphere, white_diffuse, 6));
+    pt::Shape* sphere = new pt::Sphere(cornel_center, 100.0f);
+    cornel_ps.add_primitive(pt::Primitive(sphere, white_diffuse, 6));
 
     scene.add_primitive_instance(cornel_ps);
-    scene.add_primitive_instance(sphere_ps);
+    // scene.add_primitive_instance(sphere_ps);
 
     return scene;
 }

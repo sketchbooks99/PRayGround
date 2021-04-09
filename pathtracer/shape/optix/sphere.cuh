@@ -72,6 +72,7 @@ CALLABLE_FUNC void CH_FUNC(sphere)() {
     );
 
     n = faceforward(n, -rd, n);
+    n = normalize(n);
 
     pt::SurfaceInteraction* si = get_surfaceinteraction();
     si->p = ro + tmax*rd;
@@ -82,7 +83,7 @@ CALLABLE_FUNC void CH_FUNC(sphere)() {
      * or invalid program counter errordue to a wrong allocation of material pointer
      * on the device.
      */
-    si->radiance = make_float3(n.x, n.y, 0.5f);
+    optixDirectCall<void, pt::SurfaceInteraction*, void*>(data->sample_func_idx, si, data->matdata);
 }
 
 #endif

@@ -83,16 +83,33 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 
 		pt::SurfaceInteraction si;
 		si.seed = seed;
-		trace_radiance(
-			params.handle, 
-			ray_origin, 
-			ray_direction, 
-			0.01f, 
-			1e16f, 
-			&si
-		);
+		si.emission = make_float3(0.0f);
+		si.radiance = make_float3(0.0f);
+		si.attenuation = make_float3(1.0f);
+		si.trace_terminate = false;
 
-		result += si.radiance;
+		int depth = 0;
+		for ( ;; ) {
+			trace_radiance(
+				params.handle,
+				ray_origin, 
+				ray_direction, 
+				0.01f, 
+				1e16f, 
+				&si 
+			);
+
+			result += si.emission;
+			result += si.radiance * si.attenuation;
+
+			if ( si.trace_terminate || depth >= params.max_depth )
+				break;
+			
+			ray_origin = si.p;
+			ray_direction = si.wo;
+
+			++depth;
+		}
 	} while (--i);
 
 	const uint3 launch_index = optixGetLaunchIndex();
@@ -116,6 +133,7 @@ CALLABLE_FUNC void MS_FUNC(radiance)()
 	pt::SurfaceInteraction *si = get_surfaceinteraction();
 
 	si->radiance = make_float3(rt_data->bg_color);
+	si->trace_terminate = true;
 }
 
 // -------------------------------------------------------------------------------

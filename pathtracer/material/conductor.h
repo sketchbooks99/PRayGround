@@ -21,6 +21,7 @@ public:
         si.wo = reflect(si.wi, si.n);
         si.attenuation = m_albedo;
         si.trace_terminate = false;
+        si.emission = make_float3(0.0f);
     }
     
     float3 emittance( SurfaceInteraction& si ) const override { return make_float3(0.f); }  
@@ -53,6 +54,7 @@ CALLABLE_FUNC void DC_FUNC(sample_conductor)(SurfaceInteraction* si, void* matda
     si->wo = reflect(si->wi, si->n);
     si->attenuation = conductor->albedo;
     si->trace_terminate = false;
+    si->emission = make_float3(0.0f);
 }
 
 #endif

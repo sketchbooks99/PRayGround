@@ -85,28 +85,25 @@ private:
 CALLABLE_FUNC void DC_FUNC(sample_diffuse)(SurfaceInteraction* si, void* matdata) {
     const DiffuseData* diffuse = reinterpret_cast<DiffuseData*>(matdata);
 
-    // unsigned int seed = si->seed;
-    // si->trace_terminate = false;
+    unsigned int seed = si->seed;
+    si->trace_terminate = false;
 
-    // {
-    //     const float z1 = rnd(seed);
-    //     const float z2 = rnd(seed);
+    {
+        const float z1 = rnd(seed);
+        const float z2 = rnd(seed);
 
-    //     float3 w_in; 
-    //     cosine_sample_hemisphere(z1, z2, w_in);
-    //     Onb onb(si->n);
-    //     onb.inverse_transform(w_in);
-    //     si->wo = w_in;
+        float3 w_in; 
+        cosine_sample_hemisphere(z1, z2, w_in);
+        Onb onb(si->n);
+        onb.inverse_transform(w_in);
+        si->wo = w_in;
+    }
 
-    //     si->attenuation *= diffuse->albedo;
-    // }
-
-    // const float z1 = rnd(seed);
-    // const float z2 = rnd(seed);
-    // si->seed = seed;
-    // si->radiance = diffuse->albedo;
-    // si->radiance = si->n;
-    si->radiance = diffuse->albedo;
+    const float z1 = rnd(seed);
+    const float z2 = rnd(seed);
+    si->seed = seed;
+    si->attenuation = diffuse->albedo;
+    si->emission = make_float3(0.0f);
 }
 
 #endif

@@ -41,6 +41,7 @@ public:
             si.wo = reflect(si.wi, outward_normal);
         else    
             si.wo = refract(si.wi, outward_normal, cosine, ni, nt);
+        si.emission = make_float3(0.0f);
     }
     
     float3 emittance( SurfaceInteraction& /* si */ ) const override { return make_float3(0.f); }
@@ -91,6 +92,7 @@ CALLABLE_FUNC void DC_FUNC(sample_dielectric)(SurfaceInteraction* si, void* matd
         si->wo = reflect(si->wi, outward_normal);
     else    
         si->wo = refract(si->wi, outward_normal, cosine, ni, nt);
+    si->emission = make_float3(0.0f);
 }
 
 #endif

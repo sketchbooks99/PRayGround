@@ -51,6 +51,7 @@ private:
 CALLABLE_FUNC void DC_FUNC(sample_emitter)(SurfaceInteraction* si, void* matdata) {
     const EmitterData* emitter = reinterpret_cast<EmitterData*>(matdata);
     si->emission = emitter->color * emitter->strength;
+    si->attenuation = make_float3(0.0f);
     si->trace_terminate = true;
 }
 #endif

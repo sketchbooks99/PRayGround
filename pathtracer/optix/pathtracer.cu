@@ -42,6 +42,56 @@ extern "C" {
 __constant__ pt::Params params;
 }
 
+INLINE DEVICE bool trace_occlusion(
+    OptixTraversableHandle handle, float3 ro, float3 rd, float tmin, float tmax
+) 
+{
+    unsigned int occluded = 0u;
+    optixTrace(
+        handle, 
+        ro, 
+        rd, 
+        tmin, 
+        tmax,
+        0.0f,
+        OptixVisibilityMask(1),
+        OPTIX_RAY_FLAG_TERMINATE_ON_FIRST_HIT,
+        RAY_TYPE_OCCLUSION,
+        RAY_TYPE_COUNT,
+        RAY_TYPE_OCCLUSION,
+        occluded
+    );
+    return occluded;
+}
+
+INLINE DEVICE void trace_radiance(
+    OptixTraversableHandle handle,
+    float3                 ray_origin,
+    float3                 ray_direction,
+    float                  tmin,
+    float                  tmax,
+    pt::SurfaceInteraction*    si
+) 
+{
+    // TODO: deduce stride from num ray-types passed in params
+
+    unsigned int u0, u1;
+    pack_pointer( si, u0, u1 );
+    optixTrace(
+        handle,
+        ray_origin,
+        ray_direction,
+        tmin,
+        tmax,
+        0.0f,                // rayTime
+        OptixVisibilityMask( 1 ),
+        OPTIX_RAY_FLAG_NONE,
+        RAY_TYPE_RADIANCE,        // SBT offset
+        RAY_TYPE_COUNT,           // SBT stride
+        RAY_TYPE_RADIANCE,        // missSBTIndex
+        u0, u1 );	
+}
+
 // -------------------------------------------------------------------------------
 static __forceinline__ __device__ void setPayloadOcclusion(bool occluded)
 {
@@ -64,6 +114,7 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 
 	float3 result = make_float3(0.0f, 0.0f, 0.0f);
 	int i = params.samples_per_launch;
+
 	do
 	{
 		const float2 subpixel_jitter = make_float2(rnd(seed) - 0.5f, rnd(seed) - 0.5f);
@@ -75,18 +126,14 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 		float3 ray_direction = normalize(d.x * U + d.y * V + W);
 		float3 ray_origin = eye;
 
-		/** TODO: 
-		 * Shading evaluation should be performed in this loop, not in `closest_hit`
-		 * to enable us not to indenpendently implement shading program for all primitives. 
-		 * Is the system can store and propagate information at intersection point 
-		 * through the scene, as like `SurfaceInteraction` in mitsuba2`, needed? */
-
 		pt::SurfaceInteraction si;
 		si.seed = seed;
 		si.emission = make_float3(0.0f);
 		si.radiance = make_float3(0.0f);
 		si.attenuation = make_float3(1.0f);
 		si.trace_terminate = false;
+
+		float3 throughput = make_float3(1.0f);
 
 		int depth = 0;
 		for ( ;; ) {
@@ -98,12 +145,14 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 				1e16f, 
 				&si 
 			);
-
-			result += si.emission;
-			result += si.radiance * si.attenuation;
-
-			if ( si.trace_terminate || depth >= params.max_depth )
+	
+			if ( si.trace_terminate || depth >= params.max_depth ) {
+				result += si.emission * throughput;
 				break;
+			}
+			
+			throughput += si.emission;
+			throughput *= si.attenuation;
 			
 			ray_origin = si.p;
 			ray_direction = si.wo;
@@ -132,7 +181,8 @@ CALLABLE_FUNC void MS_FUNC(radiance)()
 	pt::MissData* rt_data = reinterpret_cast<pt::MissData*>(optixGetSbtDataPointer());
 	pt::SurfaceInteraction *si = get_surfaceinteraction();
 
-	si->radiance = make_float3(rt_data->bg_color);
+	// si->radiance = make_float3(rt_data->bg_color);
+	si->emission = make_float3(rt_data->bg_color);
 	si->trace_terminate = true;
 }
 

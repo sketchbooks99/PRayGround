@@ -11,19 +11,10 @@
 
 namespace pt {
 
-class Ray {
-public:
-    DEVICE Ray(const float3& o, const float3&d, float t) : o(o), d(d), t(t) {}
-    DEVICE Ray(const float3& o, const float3&d, float t, float3 c) 
-    : o(o), d(d), t(t), c(c) {}
+struct Ray {
 
-    DEVICE float3 at(const float time) { return o + d * time; }
-    DEVICE float3 origin() const { return o; }
-    DEVICE float3 direction() const { return d; }
-    DEVICE float time() const { return t; }
-    DEVICE float3 color() const { return c; }
+    float3 at(const float time) { return o + d*time; }
 
-private:
     /* Position of ray origin in world coordinates. */
     float3 o;
 
@@ -31,12 +22,24 @@ private:
     float3 d;
 
     /* Time of ray. It is mainly used for realizing motion blur. */
+    float tmin;
+    float tmax;
     float t;
 
     /* Spectrum information of ray. */
-    float3 c;
+    float3 spectrum;
 };
 
+}
+
+INLINE DEVICE pt::Ray get_ray() {
+    pt::Ray ray;
+    ray.o = optixTransformPointFromWorldToObjectSpace(optixGetWorldRayOrigin());
+    ray.d = optixTransformVectorFromWorldToObjectSpace(optixGetWorldRayDirection());
+    ray.tmin = optixGetRayTmin();
+    ray.tmax = optixGetRayTmax();
+    ray.t = optixGetRayTime();
+    return ray;
 }
 
 #endif

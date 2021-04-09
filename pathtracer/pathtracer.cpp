@@ -153,8 +153,6 @@ void initLaunchParams(
     params.samples_per_launch = samples_per_launch;
     params.subframe_index = 0u;
 
-    params.max_depth = 10;
-
     params.handle         = gas_handle;
 
     CUDA_CHECK( cudaStreamCreate( &stream) );
@@ -352,16 +350,13 @@ int main(int argc, char* argv[]) {
             pt::build_instances(optix_context, accels.back(), ps, sbt_base_offset, instance_id, instances);
         }
 
-        CUdeviceptr d_instances;
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_instances), sizeof(OptixInstance)*instances.size()));
-        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_instances),
-            instances.data(), instances.size() * sizeof(OptixInstance), 
-            cudaMemcpyHostToDevice));
+        pt::CUDABuffer<OptixInstance> d_instances;
+        d_instances.alloc_copy(instances);
 
         // Prepare build input for instances.
         OptixBuildInput instance_input = {};
         instance_input.type = OPTIX_BUILD_INPUT_TYPE_INSTANCES;
-        instance_input.instanceArray.instances = d_instances;
+        instance_input.instanceArray.instances = d_instances.d_ptr();
         instance_input.instanceArray.numInstances = (unsigned int)instances.size();
 
         OptixAccelBuildOptions accel_options = {};
@@ -403,14 +398,15 @@ int main(int argc, char* argv[]) {
             0                   // num emitted properties
         ));
 
-        pt::cuda_frees(d_temp_buffer, d_instances);
+        pt::cuda_frees(d_temp_buffer);
+        d_instances.free();
 
         // createModule(optix_context, pipeline_compile_options, ptx_module);
         // Prepare the pipeline
         std::string params_name = "params";
         pt::Pipeline pipeline(params_name);
-        pipeline.set_dc_depth(2);
-        pipeline.set_cc_depth(2);
+        pipeline.set_dc_depth(2);   // The maximum call depth of direct callable programs.
+        pipeline.set_cc_depth(2);   // The maximum call depth of continuation callable programs.
         // Create module
         pt::Module module("optix/pathtracer.cu");
         module.create(optix_context, pipeline.compile_options());
@@ -426,7 +422,7 @@ int main(int argc, char* argv[]) {
         // Create and bind sbt for raygen program
         pt::CUDABuffer<pt::RayGenRecord> d_raygen_record;
         pt::RayGenRecord rg_record = {};
-        raygen_program.bind_sbt_and_program(&rg_record);
+        raygen_program.bind_record(&rg_record);
         d_raygen_record.alloc_copy( &rg_record, sizeof( pt::RayGenRecord ) );
         
         // Miss program
@@ -438,8 +434,8 @@ int main(int argc, char* argv[]) {
         pt::CUDABuffer<pt::MissRecord> d_miss_record;
         pt::MissRecord ms_records[RAY_TYPE_COUNT];
         for (int i=0; i<RAY_TYPE_COUNT; i++) {
-            miss_programs[i].bind_sbt_and_program(&ms_records[i]);
-            ms_records[i].data.bg_color = make_float4(0.0f, 0.0f, 0.0f, 1.0f);
+            miss_programs[i].bind_record(&ms_records[i]);
+            ms_records[i].data.bg_color = scene.bgcolor();
         }
         d_miss_record.alloc_copy( ms_records, sizeof(pt::MissRecord)*RAY_TYPE_COUNT );
 

@@ -98,9 +98,9 @@ struct Transform {
     }
 
     DEVICE Ray transform_ray(const Ray& r) {
-        float3 ro = point_mul(r.origin());
-        float3 rd = vector_mul(r.direction());
-        return Ray(ro, rd, r.time(), r.color());
+        float3 ro = point_mul(r.o);
+        float3 rd = vector_mul(r.d);
+        return { ro, rd, r.tmin, r.tmax, r.t, r.spectrum };
     }
 #endif
 };

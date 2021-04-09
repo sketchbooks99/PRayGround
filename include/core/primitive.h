@@ -65,12 +65,12 @@ public:
     template <typename SBTRecord>
     void bind_radiance_record(SBTRecord* record) {
         Assert(!m_program_groups.empty(), "ProgramGroups is not allocated.");
-        m_program_groups[0].bind_sbt_and_program(record);
+        m_program_groups[0].bind_record(record);
     }
     template <typename SBTRecord>
     void bind_occlusion_record(SBTRecord* record) {
         Assert(m_program_groups.size() > 1, "Occlusion program is not contained in rendering.");
-        m_program_groups[1].bind_sbt_and_program(record);
+        m_program_groups[1].bind_record(record);
     }
 
     // Getter 
@@ -115,16 +115,25 @@ public:
     : m_transform(transform), m_primitives(primitives) {}
 
     void add_primitive(const Primitive& p) { m_primitives.push_back(p); }
+    void add_primitive(Shape* shape_ptr, Material* mat_ptr) {
+        unsigned int sbt_index = m_sbt_index_base + static_cast<unsigned int>(this->num_primitives());
+        m_primitives.emplace_back(shape_ptr, mat_ptr, sbt_index); 
+    }
 
     // Allow to return primitives as lvalue. 
     std::vector<Primitive> primitives() const { return m_primitives; }
     std::vector<Primitive>& primitives() { return m_primitives; }
+
+    size_t num_primitives() const { return m_primitives.size(); }
+
+    void set_sbt_index_base(const unsigned int base) { m_sbt_index_base = base; }
     
     void set_transform(const Transform& t) { m_transform = t; } 
     Transform transform() const { return m_transform; }
 private:
     Transform m_transform;
     std::vector<Primitive> m_primitives;
+    unsigned int m_sbt_index_base { 0 };
 };
 
 
@@ -177,10 +186,10 @@ void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data, PrimitiveIn
 
             switch ( primitives_subset[i].shapetype() ) {
             case ShapeType::Mesh:
-                index_offset += build_inputs[i].triangleArray.numIndexTriplets;
+                index_offset += build_inputs[i].triangleArray.numIndexTriplets * RAY_TYPE_COUNT;
                 break;
             case ShapeType::Sphere:
-                index_offset += build_inputs[i].customPrimitiveArray.numPrimitives;
+                index_offset += build_inputs[i].customPrimitiveArray.numPrimitives * RAY_TYPE_COUNT;
                 break;
             default:
                 break;
@@ -317,7 +326,7 @@ void create_material_sample_programs(
             ProgramEntry((OptixModule)module, dc_func_str( mat_sample_map[ (MaterialType)i ] ).c_str() ),
             ProgramEntry(nullptr, nullptr)
         );
-        program_groups[i].bind_sbt_and_program(&callable_records[i]);
+        program_groups[i].bind_record(&callable_records[i]);
     }
 
     CUDABuffer<CallableRecord> d_callable_records;

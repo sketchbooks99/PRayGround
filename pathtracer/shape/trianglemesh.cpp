@@ -1,8 +1,6 @@
 #include "trianglemesh.h"
 #include <include/core/cudabuffer.h>
 
-#define USE_CUDABUFFER 0
-
 namespace pt {
 
 /** \note At present, only .obj file format is supported. */
@@ -204,7 +202,6 @@ TriangleMesh::TriangleMesh(std::vector<float3> vertices,
 
 // ------------------------------------------------------------------
 void TriangleMesh::prepare_data() {
-#if USE_CUDABUFFER
     CUDABuffer<float3> d_vertices_buf;
     CUDABuffer<float3> d_normals_buf;
     CUDABuffer<int3> d_indices_buf;
@@ -219,9 +216,9 @@ void TriangleMesh::prepare_data() {
         d_indices_buf.data()
     };
 
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_data_ptr), sizeof(MeshData)));
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_data), sizeof(MeshData)));
     CUDA_CHECK(cudaMemcpy(
-        reinterpret_cast<void*>(d_data_ptr),
+        reinterpret_cast<void*>(d_data),
         &data, sizeof(MeshData),
         cudaMemcpyHostToDevice
     ));
@@ -229,29 +226,6 @@ void TriangleMesh::prepare_data() {
     d_vertices = d_vertices_buf.d_ptr();
     d_normals = d_normals_buf.d_ptr();
     d_indices = d_indices_buf.d_ptr();
-#else
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_vertices), sizeof(float3) * m_vertices.size()));
-    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_vertices), m_vertices.data(), sizeof(float3) * m_vertices.size(), cudaMemcpyHostToDevice));
-
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_normals), sizeof(float3) * m_normals.size()));
-    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_normals), m_normals.data(), sizeof(float3) * m_normals.size(), cudaMemcpyHostToDevice));
-
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_indices), sizeof(int3) * m_indices.size()));
-    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_indices), m_indices.data(), sizeof(float3) * m_indices.size(), cudaMemcpyHostToDevice));
-
-    MeshData data = {
-        reinterpret_cast<float3*>(d_vertices),
-        reinterpret_cast<float3*>(d_normals),
-        reinterpret_cast<int3*>(d_indices)
-    };
-
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_data), sizeof(MeshData)));
-    CUDA_CHECK(cudaMemcpy(
-        reinterpret_cast<void*>(d_data), 
-        &data, sizeof(MeshData), 
-        cudaMemcpyHostToDevice
-    ));
-#endif
 }   
 
 // ------------------------------------------------------------------

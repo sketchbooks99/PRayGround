@@ -16,7 +16,7 @@ struct Onb {
         else {
             m_binormal.x = 0;
             m_binormal.y = -m_normal.z;
-            m_binormal.z = m_normal.z;
+            m_binormal.z = m_normal.y;
         }
 
         m_binormal = normalize(m_binormal);

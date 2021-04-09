@@ -24,16 +24,16 @@ CALLABLE_FUNC void IS_FUNC(sphere)() {
     const float3 center = sphere_data->center;
     const float radius = sphere_data->radius;
 
-    optixReportIntersection(0.f, 0, float3_as_ints(make_float3(1, 0, 0)));
+    const pt::Ray ray = get_ray();
 
-    const float3 ray_orig = optixGetWorldRayOrigin();
-    const float3 ray_dir = optixGetWorldRayDirection();
-    const float tmin = optixGetRayTmin();
-    const float tmax = optixGetRayTmax();
+    // const float3 ray_orig = optixGetWorldRayOrigin();
+    // const float3 ray_dir = optixGetWorldRayDirection();
+    // const float tmin = optixGetRayTmin();
+    // const float tmax = optixGetRayTmax();
 
-    const float3 oc = ray_orig - center;
-    const float a = dot(ray_dir, ray_dir);
-    const float half_b = dot(oc, ray_dir);
+    const float3 oc = ray.o - center;
+    const float a = dot(ray.d, ray.d);
+    const float half_b = dot(oc, ray.d);
     const float c = dot(oc, oc) - radius*radius;
     const float discriminant = half_b*half_b - a*c;
 
@@ -41,15 +41,15 @@ CALLABLE_FUNC void IS_FUNC(sphere)() {
         float sqrtd = sqrtf(discriminant);
         float root1 = (-half_b - sqrtd) / a;
         bool check_second = true;
-        if ( root1 > tmin && root1 < tmax ) {
-            float3 normal = (ray_orig + normalize(ray_dir) * root1 - center) / radius;
+        if ( root1 > ray.tmin && root1 < ray.tmax ) {
+            float3 normal = (ray.o + normalize(ray.d) * root1 - center) / radius;
             optixReportIntersection(root1, 0, float3_as_ints(normal));
         }
 
         if (check_second) {
             float root2 = (-half_b + sqrtd) / a;
-            if ( root2 > tmin && root2 < tmax ) {
-                float3 normal = (ray_orig + normalize(ray_dir) * root2 - center) / radius;
+            if ( root2 > ray.tmin && root2 < ray.tmax ) {
+                float3 normal = (ray.o + normalize(ray.d) * root2 - center) / radius;
                 optixReportIntersection(root2, 0, float3_as_ints(normal));
             }
         }

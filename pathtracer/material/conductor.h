@@ -48,6 +48,7 @@ private:
 };
 
 #else 
+
 CALLABLE_FUNC void DC_FUNC(sample_conductor)(SurfaceInteraction* si, void* matdata) {
     const ConductorData* conductor = reinterpret_cast<ConductorData*>(matdata);
 

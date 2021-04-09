@@ -11,8 +11,6 @@
 #include "pathtracer/material/diffuse.h"
 #include "pathtracer/material/emitter.h"
 
-#define OTHER_INSTANCE 1
-
 pt::Scene my_scene() {
     pt::Scene scene;
     // utility settings    
@@ -22,17 +20,42 @@ pt::Scene my_scene() {
     scene.set_depth(5);
     scene.set_samples_per_launch(4);
 
-    // Primitive instance that manage primitives with a transformation.
-    pt::PrimitiveInstance cornel_ps = pt::PrimitiveInstance(pt::Transform());
-    cornel_ps.set_sbt_index_base(0);
-
     // Material pointers. They are constructed on the device at the same time.
     pt::Material* red_diffuse = new pt::Diffuse(make_float3(0.8f, 0.05f, 0.05f));
     pt::Material* green_diffuse = new pt::Diffuse(make_float3(0.05f, 0.8f, 0.05f));
     pt::Material* white_diffuse = new pt::Diffuse(make_float3(0.8f, 0.8f, 0.8f));
     pt::Material* emitter = new pt::Emitter(make_float3(0.8f, 0.8f, 0.7f), 15.0f);
+    pt::Material* metal = new pt::Conductor(make_float3(0.8f, 0.8f, 0.2f), 0.01f);
+    pt::Material* glass = new pt::Dielectric(make_float3(0.9f), 1.5f);
 
     float3 cornel_center = make_float3(278.0f, 274.4f, 279.6f);
+
+    // pt::PrimitiveInstance sphere_ps(pt::Transform(sutil::Matrix4x4::translate(cornel_center)));
+    pt::PrimitiveInstance sphere_ps = pt::PrimitiveInstance(pt::Transform());
+    sphere_ps.set_sbt_index_base(0);
+    // pt::Shape* sphere = new pt::Sphere(cornel_center + make_float3(0.0f, -90.0f, 0.0f), 80.0f);
+    // sphere_ps.add_primitive(sphere, white_diffuse);
+
+    pt::Shape* metal_sphere = new pt::Sphere(cornel_center + make_float3(-120.0f, 0.0f, 0.0f), 80.0f);
+    sphere_ps.add_primitive(metal_sphere, metal);
+
+    pt::Shape* glass_sphere = new pt::Sphere(cornel_center + make_float3(120.0f, 0.0f, 0.0f), 80.0f);
+    sphere_ps.add_primitive(glass_sphere, glass);
+
+    scene.add_primitive_instance(sphere_ps);
+
+    /**
+     * \note Multiple instances of sphere induced invalid argument error at cudaFree
+     */
+    // pt::PrimitiveInstance sphere2_ps(pt::Transform(sutil::Matrix4x4::translate(cornel_center + make_float3(100.0f, 0.0f, 0.0f))));
+    // sphere2_ps.set_sbt_index_base(sphere_ps.sbt_index());
+    // pt::Shape* sphere2 = new pt::Sphere(make_float3(0.0f), 80.0f);
+    // sphere2_ps.add_primitive(sphere2, red_diffuse);
+    // scene.add_primitive_instance(sphere2_ps);
+
+    // Primitive instance for cornel box.
+    pt::PrimitiveInstance cornel_ps = pt::PrimitiveInstance(pt::Transform());
+    cornel_ps.set_sbt_index_base(sphere_ps.sbt_index());
 
     // Floor ------------------------------------
     std::vector<float3> floor_vertices;
@@ -124,20 +147,10 @@ pt::Scene my_scene() {
     auto ceiling_light_mesh = new pt::TriangleMesh(ceiling_light_vertices, ceiling_light_indices, ceiling_light_normals);
     cornel_ps.add_primitive(ceiling_light_mesh, emitter);
 
-#ifdef OTHER_INSTANCE
-    pt::PrimitiveInstance sphere_ps(pt::Transform(sutil::Matrix4x4::translate(cornel_center)));
-    sphere_ps.set_sbt_index_base(cornel_ps.num_primitives());
-    pt::Shape* sphere = new pt::Sphere(make_float3(0.0f), 100.0f);
-    sphere_ps.add_primitive(sphere, white_diffuse);
-#else
-    pt::Shape* sphere = new pt::Sphere(cornel_center, 100.0f);
-    cornel_ps.add_primitive(sphere, white_diffuse);
-#endif
-    scene.add_primitive_instance(cornel_ps);
+    // pt::Shape* sphere = new pt::Sphere(cornel_center, 100.0f);
+    // cornel_ps.add_primitive(sphere, white_diffuse);
 
-#ifdef OTHER_INSTANCE
-    scene.add_primitive_instance(sphere_ps);
-#endif
+    scene.add_primitive_instance(cornel_ps);
 
     return scene;
 }

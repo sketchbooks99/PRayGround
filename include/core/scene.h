@@ -39,7 +39,6 @@ public:
     void create_hitgroup_sbt(OptixShaderBindingTable& sbt) {
         size_t hitgroup_record_size = sizeof(HitGroupRecord);
         unsigned int sbt_idx = 0;
-        unsigned int num_hitgroup_records = 0;
         std::vector<HitGroupRecord> hitgroup_records;
         for (auto &ps : m_primitive_instances) {
             for (auto &p : ps.primitives()) {
@@ -72,7 +71,7 @@ public:
 
         sbt.hitgroupRecordBase = d_hitgroup_records.d_ptr();
         sbt.hitgroupRecordStrideInBytes = static_cast<uint32_t>( hitgroup_record_size );
-        sbt.hitgroupRecordCount = hitgroup_records.size();
+        sbt.hitgroupRecordCount = static_cast<uint32_t>(hitgroup_records.size());
     }
 
     void add_primitive_instance(const PrimitiveInstance& ps) { m_primitive_instances.push_back(ps); }

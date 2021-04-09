@@ -33,24 +33,10 @@ public:
             Onb onb(si.n);
             onb.inverse_transform(w_in);
             si.wo = w_in;
-
-            si.attenuation *= m_albedo;
         }
 
-        const float z1 = rnd(seed);
-        const float z2 = rnd(seed);
         si.seed = seed;
-        si.radiance = m_albedo;
-
-        // ParallelgramLight light = param.light;
-        // // Sample emitter position
-        // const float3 light_pos = light.corner + light.v1 * z1 + light.v2 * z2;
-
-        // // Calculate properties of light sample (for area based pdf)
-        // const float Ldist = length(light_pos - si.p);
-        // const float3 L = normalize(light_pos - si.p);
-        // const float nDl = dot(si.n, L);
-        // const float LnDl = -dot(light.normal, L);
+        si.attenuation = m_albedo;
     }
     
     float3 emittance(SurfaceInteraction& /* si */) const override { return make_float3(0.f); }
@@ -98,9 +84,6 @@ CALLABLE_FUNC void DC_FUNC(sample_diffuse)(SurfaceInteraction* si, void* matdata
         onb.inverse_transform(w_in);
         si->wo = w_in;
     }
-
-    const float z1 = rnd(seed);
-    const float z2 = rnd(seed);
     si->seed = seed;
     si->attenuation = diffuse->albedo;
     si->emission = make_float3(0.0f);

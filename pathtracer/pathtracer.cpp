@@ -344,17 +344,11 @@ int main(int argc, char* argv[]) {
         std::vector<OptixInstance> instances;
         unsigned int sbt_base_offset = 0; 
         unsigned int instance_id = 0;
-        std::vector<pt::AccelData> accels;
+        std::vector<pt::AccelData*> accels;
         for ( auto ps : scene.primitive_instances() ) {
-            accels.push_back( pt::AccelData() );
-            pt::build_gas( optix_context, accels.back(), ps );
-            pt::build_instances( optix_context, accels.back(), ps, sbt_base_offset, instance_id, instances ); 
-        }
-        
-        pt::Message("main(): accels.size():", accels.size());
-        for (auto& accel : accels) 
-        {
-            pt::Message("main():", accel);
+            accels.push_back( new pt::AccelData() );
+            pt::build_gas( optix_context, *accels.back(), ps );
+            pt::build_instances( optix_context, *accels.back(), ps, sbt_base_offset, instance_id, instances ); 
         }
 
         pt::CUDABuffer<OptixInstance> d_instances;
@@ -569,7 +563,7 @@ int main(int argc, char* argv[]) {
         pt::cuda_frees(sbt.raygenRecord, sbt.missRecordBase, sbt.hitgroupRecordBase, 
                        params.accum_buffer,
                        d_params);
-        for (auto& accel : accels) accel.destroy();
+        // for (auto& accel : accels) accel.destroy();
 
     }
     catch( std::exception& e )

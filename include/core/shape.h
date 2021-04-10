@@ -50,15 +50,10 @@ struct AccelData {
     HandleData meshes {};
     HandleData customs {};
 
-    void destroy() {
-        if (meshes.d_buffer) cuda_free(meshes.d_buffer);
-        if (customs.d_buffer) cuda_free(customs.d_buffer);
+    ~AccelData() {
+        if (meshes.d_buffer)  cudaFree( reinterpret_cast<void*>( meshes.d_buffer ) );
+        if (customs.d_buffer) cudaFree( reinterpret_cast<void*>( customs.d_buffer ) );
     }
-
-    // ~AccelData() {
-    //     if (meshes.d_buffer)  cudaFree( reinterpret_cast<void*>( meshes.d_buffer ) );
-    //     if (customs.d_buffer) cudaFree( reinterpret_cast<void*>( customs.d_buffer ) );
-    // }
 };
 
 inline std::ostream& operator<<(std::ostream& out, const AccelData& accel) {

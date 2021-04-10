@@ -88,8 +88,6 @@ TriangleMesh::TriangleMesh(
                 if (temp_vert_indices.size() == 3) {
                     m_indices.emplace_back(make_int3(
                         temp_vert_indices[0], temp_vert_indices[1], temp_vert_indices[2]));
-                    normal_indices.emplace_back(make_int3(
-                        temp_norm_indices[0], temp_norm_indices[1], temp_norm_indices[2]));
                 }
                 // Get more then 4 inputs.
                 // NOTE: 
@@ -155,6 +153,34 @@ TriangleMesh::TriangleMesh(
             m_normals[i] = normalize(m_normals[i]);
         }
     }
+    // if (isSmooth) 
+    // {
+    //     m_normals.resize(m_vertices.size());
+    //     auto counts = std::vector<int>(m_vertices.size(), 0);
+    //     for (size_t i=0; i<m_indices.size(); i++)
+    //     {
+    //         auto p0 = m_vertices[m_indices[i].x];
+    //         auto p1 = m_vertices[m_indices[i].y];
+    //         auto p2 = m_vertices[m_indices[i].z];
+    //         auto N = normalize(cross(p2 - p0, p1 - p0));
+
+    //         auto idx = m_indices[i].x;
+    //         m_normals[idx] += N;
+    //         counts[idx]++;
+    //         idx = m_indices[i].x;
+    //         m_normals[idx] += N;
+    //         counts[idx]++;
+    //         idx = m_indices[i].y;
+    //         m_normals[idx] += N;
+    //         counts[idx]++;
+    //         idx = m_indices[i].z;
+    //     }
+    //     for (size_t i=0; i<m_vertices.size(); i++) {
+    //         m_normals[i] /= counts[i];
+    //         m_normals[i] = normalize(m_normals[i]);
+    //     }
+    // }
+    
 }
 
 // ------------------------------------------------------------------
@@ -251,7 +277,6 @@ void TriangleMesh::build_input( OptixBuildInput& bi, const uint32_t sbt_idx, uns
     bi.triangleArray.sbtIndexOffsetBuffer = d_sbt_indices.d_ptr();
     bi.triangleArray.sbtIndexOffsetSizeInBytes = sizeof(uint32_t);
     bi.triangleArray.sbtIndexOffsetStrideInBytes = sizeof(uint32_t);
-    bi.triangleArray.primitiveIndexOffset = index_offset;
 }
 
 }

@@ -48,7 +48,7 @@ public:
         bi.customPrimitiveArray.numPrimitives = 1;
         bi.customPrimitiveArray.flags = input_flags;
         bi.customPrimitiveArray.numSbtRecords = 1;
-        bi.customPrimitiveArray.primitiveIndexOffset = index_offset;
+        // bi.customPrimitiveArray.primitiveIndexOffset = index_offset;s
     }
 
     AABB bound() const override { 

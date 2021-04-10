@@ -33,7 +33,7 @@ CALLABLE_FUNC void CH_FUNC(mesh)()
 
     const float tmin = optixGetRayTmin();
     const float tmax = optixGetRayTmax();
-
+;
 	const float3 n0 = normalize(mesh_data->normals[index.x]);
 	const float3 n1 = normalize(mesh_data->normals[index.y]);
 	const float3 n2 = normalize(mesh_data->normals[index.z]);

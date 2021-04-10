@@ -340,14 +340,15 @@ int main(int argc, char* argv[]) {
         params.samples_per_launch                = scene.samples_per_launch();
         params.max_depth                         = scene.depth();
 
+        // Create instances that manage GAS, sbtOffset, and transform of geometries.
         std::vector<OptixInstance> instances;
         unsigned int sbt_base_offset = 0; 
         unsigned int instance_id = 0;
         std::vector<pt::AccelData> accels;
-        for (auto& ps : scene.primitive_instances()) {
-            accels.push_back(pt::AccelData());
-            pt::build_gas(optix_context, accels.back(), ps);
-            pt::build_instances(optix_context, accels.back(), ps, sbt_base_offset, instance_id, instances);
+        for ( auto ps : scene.primitive_instances() ) {
+            accels.push_back( pt::AccelData() ); 
+            pt::build_gas( optix_context, accels.back(), ps );
+            pt::build_instances( optix_context, accels.back(), ps, sbt_base_offset, instance_id, instances ); 
         }
 
         pt::CUDABuffer<OptixInstance> d_instances;

@@ -103,9 +103,9 @@ private:
  * This class store the primitives with same transformation.
  * 
  * \note 
- * Transform stored in this class never be modified from outside, 
- * so transform operations must be performed before constructing 
- * this class.
+ * - Transform stored in this class must not be modified from outside.
+ * - To set the sbt indices in the correct order, divide the array of 
+ *   primitives into meshes and custom primitives.
  */
 class PrimitiveInstance {
 public:
@@ -117,7 +117,7 @@ public:
     void add_primitive(const Primitive& p) { m_primitives.push_back(p); }
     void add_primitive(Shape* shape_ptr, Material* mat_ptr) {
         unsigned int sbt_index = m_sbt_index_base + static_cast<unsigned int>(this->num_primitives());
-        m_primitives.emplace_back(shape_ptr, mat_ptr, sbt_index); 
+        m_primitives.emplace_back(shape_ptr, mat_ptr, sbt_index);
     }
 
     // Allow to return primitives as lvalue. 
@@ -134,7 +134,8 @@ public:
     Transform transform() const { return m_transform; }
 private:
     Transform m_transform;
-    std::vector<Primitive> m_primitives;
+    std::vector<Primitive> m_meshes;
+    std::vector<Primitive> m_custom_primitives;
     unsigned int m_sbt_index_base { 0 };
 };
 
@@ -289,6 +290,7 @@ void build_instances(const OptixDeviceContext& ctx,
             instance_id, sbt_base_offset, visibility_mask, flags, 
             accel_data.meshes.handle, /* pad = */ {0, 0}
         };
+        Message("[Mesh] build_gas():", "sbt_base_offset:", sbt_base_offset, "instance_id:", instance_id);
         sbt_base_offset += (unsigned int)accel_data.meshes.count * RAY_TYPE_COUNT;
         instance_id++;
         instances.push_back(instance);
@@ -303,6 +305,7 @@ void build_instances(const OptixDeviceContext& ctx,
             instance_id, sbt_base_offset, visibility_mask, flags, 
             accel_data.customs.handle, /* pad = */ {0, 0}
         };
+        Message("[Custom] build_gas():", "sbt_base_offset:", sbt_base_offset, "instance_id:", instance_id);
         sbt_base_offset += (unsigned int)accel_data.customs.count * RAY_TYPE_COUNT;
         instance_id++;
         instances.push_back(instance);

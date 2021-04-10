@@ -1,8 +1,8 @@
 #pragma once
 
 #include <optix.h>
-#include <include/optix/helpers.h>
-#include <include/optix/macros.h>
+#include "../optix/helpers.h"
+#include "../optix/macros.h"
 
 enum RayType {
     RAY_TYPE_RADIANCE = 0,

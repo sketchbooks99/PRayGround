@@ -32,28 +32,28 @@
 OPTIX_add_sample_executable( pathtracer target_name
 
   # ===== INCLUDE =====
-  ../include/core/aabb.h
-  ../include/core/bsdf.h
-  ../include/core/cudabuffer.h
-  ../include/core/material.h
-  ../include/core/onb.h
-  ../include/core/pathtracer.h
-  ../include/core/primitive.h
-  ../include/core/scene.h
-  ../include/core/shape.h
-  ../include/core/stream_helpers.h
-  ../include/core/util.h
-  ../include/core/transform.h
+  core/aabb.h
+  core/bsdf.h
+  core/cudabuffer.h
+  core/material.h
+  core/onb.h
+  core/pathtracer.h
+  core/primitive.h
+  core/scene.h
+  core/shape.h
+  core/stream_helpers.h
+  core/util.h
+  core/transform.h
   # ../include/core/texture.h
 
-  ../include/optix/helpers.h
-  ../include/optix/macros.h
-  ../include/optix/module.h
-  ../include/optix/pipeline.h
-  ../include/optix/program.h
-  ../include/optix/ray.h
-  ../include/optix/sbt.h
-  ../include/optix/util.h
+  optix/helpers.h
+  optix/macros.h
+  optix/module.h
+  optix/pipeline.h
+  optix/program.h
+  optix/ray.h
+  optix/sbt.h
+  optix/util.h
 
   # ===== HEADER =====
   material/conductor.h 
@@ -64,15 +64,13 @@ OPTIX_add_sample_executable( pathtracer target_name
   shape/sphere.h
   shape/trianglemesh.h 
 
-  # ===== SOURCE =====
-  # pathtracer.cpp
-  
+  # ===== SOURCE =====  
   pathtracer.cpp
   shape/trianglemesh.cpp
 
   # ===== CUDA =====
-  optix/pathtracer.cu
-  # optix/bsdf.cuh
+  optix/cuda/pathtracer.cu
+  optix/cuda/bsdf.cuh
   shape/optix/sphere.cuh
   shape/optix/trianglemesh.cuh
 

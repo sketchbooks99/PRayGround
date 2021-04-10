@@ -52,29 +52,4 @@ inline __device__ void computeTextureDerivatives( float2&       dpdx,  // textur
     dpdy = make_float2( dot( dPds, rdy ), dot( dPdt, rdy ) );
 }
 
-// Constant texture
-CALLABLE_FUNC float3 DC_FUNC(constant_eval) ( float2 coord ) {
-    const Constant* constant = reinterpret_cast<Constant*>(optixGetSbtDataPointer());
-    return constant->color;
-}
-
-// Checker texture
-CALLABLE_FUNC float3 DC_FUNC(checker_eval) ( float2 coord ) {
-    const Checker* checker = reinterpret_cast<Checker*>(optixGetSbtDataPointer());
-    const float3 color1 = checker->color1;
-    const float3 color2 = checker->color2;
-    const float scale = checker->scale;
-
-    float sines = sin(scale * coord.x) * sin(scale * coord.y);
-    if (sines < 0)
-        return color1;
-    else 
-        return color2;
-}
-
-CALLABLE_FUNC float3 DC_FUNC(image_eval) ( float2 coord ) {
-    const Image* image = reinterpret_cast<Image*>(optixGetSbtDataPointer());
-    
-}
-
 

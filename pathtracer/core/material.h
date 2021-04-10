@@ -3,8 +3,8 @@
 #include <cuda_runtime.h>
 #include <optix.h>
 #include <sutil/vec_math.h>
-#include <include/core/util.h>
-#include <include/optix/util.h>
+#include "../core/util.h"
+#include "../optix/util.h"
 
 #ifndef __CUDACC__
     #include <map>

@@ -1,8 +1,8 @@
 #pragma once 
 
 #include <cuda/random.h>
-#include <include/core/material.h>
-#include <include/core/bsdf.h>
+#include "../core/material.h"
+#include "../core/bsdf.h"
 
 namespace pt {
 

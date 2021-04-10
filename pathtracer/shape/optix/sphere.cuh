@@ -1,9 +1,9 @@
 #pragma once 
 
 #include <sutil/vec_math.h>
-#include <include/core/transform.h>
-#include <include/core/material.h>
-#include <include/optix/sbt.h>
+#include "../../core/transform.h"
+#include "../../core/material.h"
+#include "../../optix/sbt.h"
 
 namespace pt {
 

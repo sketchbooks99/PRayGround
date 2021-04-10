@@ -1,7 +1,7 @@
 #pragma once 
 
 #include <utility> // for std::pair< , >
-#include <include/core/util.h>
+#include "../core/util.h"
 #include <optix.h>
 
 namespace pt { 

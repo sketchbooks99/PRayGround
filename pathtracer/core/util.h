@@ -12,10 +12,10 @@
 #include <sstream>
 #include <random>
 #include <vector>
-#include <include/core/stream_helpers.h>
+#include "../core/stream_helpers.h"
 #endif
 
-#include <include/optix/macros.h>
+#include "../optix/macros.h"
 
 namespace pt {
 

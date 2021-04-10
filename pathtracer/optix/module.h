@@ -1,7 +1,7 @@
 #pragma once 
 
 #include <optix.h>
-#include <include/core/util.h>
+#include "../core/util.h"
 
 namespace pt {
 

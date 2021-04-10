@@ -28,15 +28,15 @@
 
 #include <optix.h>
 #include <cuda/random.h>
-#include <include/optix/util.h>
-#include <include/optix/sbt.h>
-#include <include/core/pathtracer.h>
-#include "../shape/optix/sphere.cuh"
-#include "../shape/optix/trianglemesh.cuh"
-#include "../material/conductor.h"
-#include "../material/dielectric.h"
-#include "../material/diffuse.h"
-#include "../material/emitter.h"
+#include "../../optix/util.h"
+#include "../../optix/sbt.h"
+#include "../../core/pathtracer.h"
+#include "../../shape/optix/sphere.cuh"
+#include "../../shape/optix/trianglemesh.cuh"
+#include "../../material/conductor.h"
+#include "../../material/dielectric.h"
+#include "../../material/diffuse.h"
+#include "../../material/emitter.h"
 
 extern "C" {
 __constant__ pt::Params params;

@@ -1,8 +1,8 @@
 #pragma once
 
-#include <include/core/util.h>
-#include <include/core/aabb.h>
-#include <include/optix/macros.h>
+#include "../core/util.h"
+#include "../core/aabb.h"
+#include "../optix/macros.h"
 #include <sutil/vec_math.h>
 #include <map>
 

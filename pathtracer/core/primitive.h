@@ -11,11 +11,14 @@
  */
 #pragma once
 
-#include <include/core/util.h>
-#include <include/core/shape.h>
-#include <include/core/material.h>
-#include <include/core/transform.h>
-#include <include/optix/program.h>
+#include "../core/util.h"
+#include "../core/shape.h"
+#include "../core/material.h"
+#include "../core/transform.h"
+#include "../core/cudabuffer.h"
+#include "../optix/program.h"
+#include "../optix/sbt.h"
+#include "../optix/module.h"
 #include <algorithm>
 
 namespace pt {

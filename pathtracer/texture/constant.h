@@ -1,36 +1,43 @@
 #pragma once
 
-#include <include/core/texture.h>
+#include "../core/texture.h"
 
 namespace pt {
 
+struct ConstantTextureData {
+    float3 color;
+};
+
+#ifndef __CUDACC__
 class ConstantTexture final : public Texture {
 public:
-    explicit ConstantTexture(const float3& c) : m_color(c) {
-        #ifndef __CUDACC__
-        setup_on_device();
-        #endif
-    }
-    ~ConstantTexture() {
-        #ifndef __CUDACC__
-        delete_on_device();
-        #endif
-    }
+    explicit ConstantTexture(const float3& c) : m_color(c) {}
+    ~ConstantTexture() {}
 
-    HOSTDEVICE float3 eval(const SurfaceInteraction& si) const override { return m_color; }
-    HOST TextureType type() const override { return TextureType::Constant; }
+    float3 eval(const SurfaceInteraction& si) const override { return m_color; }
+
+    void prepare_data() override {
+        ConstantTextureData data = { m_color };
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_data), sizeof(ConstantTextureData)));
+        CUDA_CHECK(cudaMemcpy(
+            reinterpret_cast<void*>(d_data),
+            &data, sizeof(ConstantTextureData),
+            cudaMemcpyHostToDevice
+        ));
+    }
+    
+    TextureType type() const override { return TextureType::Constant; }
 private:
-    HOST setup_on_device() override {
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_ptr), sizeof(TexturePtr));
-        create_object_on_device<<<1,1>>>(reinterpret_cast<CheckerTexture**>(&d_ptr), m_color1, m_color2, m_scale);
-        CUDA_SYNC_CHECK();
-    }
-    HOST delete_on_device() override {
-        delete_object_on_device<<<1,1>>>(reinterpret_cast<CheckerTexture**>(&d_ptr));
-        CUDA_SYNC_CHECK();
-    }
 
     float3 m_color;
 };
+
+#else
+CALLABLE_FUNC void DC_FUNC(eval_constant)(SurfaceInteraction* si, void* texdata) {
+    const ConstantTextureData* constant = reinterpret_cast<ConstantTextureData*>(texdata);
+    return constant->color;
+}
+
+#endif
 
 }

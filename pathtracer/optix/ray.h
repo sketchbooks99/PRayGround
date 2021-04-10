@@ -1,7 +1,7 @@
 #pragma once 
 
 #include <sutil/vec_math.h>
-#include <include/optix/macros.h>
+#include "../optix/macros.h"
 
 /** MEMO: 
  * Must ray store the spectrum information?

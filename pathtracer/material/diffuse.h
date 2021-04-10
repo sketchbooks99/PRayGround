@@ -1,10 +1,10 @@
 #pragma once
 
 #include <cuda/random.h>
-#include <include/core/material.h>
-#include <include/core/bsdf.h>
-#include <include/core/onb.h>
-#include <include/optix/sbt.h>
+#include "../core/material.h"
+#include "../core/bsdf.h"
+#include "../core/onb.h"
+#include "../optix/sbt.h"
 
 namespace pt {
 

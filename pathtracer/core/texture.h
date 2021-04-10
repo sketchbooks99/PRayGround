@@ -1,8 +1,8 @@
 #pragma once 
 
-#include <include/core/util.h>
-#include <include/core/cudabuffer.h>
-#include <include/optix/util.h>
+#include "../core/util.h"
+#include "../core/cudabuffer.h"
+#include "../optix/util.h"
 #include <sutil/vec_math.h>
 
 namespace pt {
@@ -13,7 +13,7 @@ enum class TextureType {
     Image
 };
 
-#if !defined(__CUDACC__)
+#ifndef __CUDACC__
 inline std::ostream& operator<<(std::ostream& out, TextureType type) {
     switch (type) {
     case TextureType::Constant:
@@ -28,18 +28,20 @@ inline std::ostream& operator<<(std::ostream& out, TextureType type) {
 }
 #endif
 
-class Texture;
-using TexturePtr = Texture*;
-
 class Texture {
 public:
-    virtual HOSTDEVICE float3 eval(const SurfaceInteraction& si) const = 0;
-    virtual HOST TextureType type() const = 0;
-    HOST CUdeviceptr get_dptr() { return d_ptr; }
+    // Texture evaluation
+    virtual float3 eval(const SurfaceInteraction& si) const = 0;
+
+    virtual TextureType type() const = 0;
+
+    // Preparing texture data on the device.
+    virtual void prepare_data() = 0;
+
+    // Get data pointer on the device.
+    CUdeviceptr get_dptr() { return d_data; }
 protected:
-    CUdeviceptr d_ptr { 0 };
-    virtual HOST void setup_on_device() = 0;
-    virtual HOST void delete_on_device() = 0;
+    CUdeviceptr d_data { 0 };
 };
 
 // class ConstantTexture final : public Texture {

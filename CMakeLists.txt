@@ -267,8 +267,6 @@ set(SAMPLES_SUPPORT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../support")
 set(SAMPLES_RELATIVE_INCLUDE_DIRS "\\
   \"cuda\", \\
   \"sutil\", \\
-  \"include\", \\
-  \"src/shape/optix\", \\
   \".\", ")
 
 # NVRTC absolute include paths to the headers used to build the samples

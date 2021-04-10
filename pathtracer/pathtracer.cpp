@@ -22,18 +22,18 @@
 #include <GLFW/glfw3.h>
 
 // include optix utilities
-#include <include/optix/module.h>
-#include <include/optix/pipeline.h>
-#include <include/optix/sbt.h>
-#include <include/optix/program.h>
-#include <include/optix/macros.h>
+#include "optix/module.h"
+#include "optix/pipeline.h"
+#include "optix/sbt.h"
+#include "optix/program.h"
+#include "optix/macros.h"
 
 // include application utilities
-#include <include/core/util.h>
-#include <include/core/cudabuffer.h>
-#include <include/core/pathtracer.h>
-#include <include/core/scene.h>
-#include <include/core/primitive.h>
+#include "core/util.h"
+#include "core/cudabuffer.h"
+#include "core/pathtracer.h"
+#include "core/scene.h"
+#include "core/primitive.h"
 
 // Header file describe the scene
 #include "scene_file.h"
@@ -399,7 +399,7 @@ int main(int argc, char* argv[]) {
             0                   // num emitted properties
         ));
 
-        pt::cuda_frees(d_temp_buffer);
+        pt::cuda_free(d_temp_buffer);
         d_instances.free();
 
         // createModule(optix_context, pipeline_compile_options, ptx_module);
@@ -409,7 +409,7 @@ int main(int argc, char* argv[]) {
         pipeline.set_dc_depth(2);   // The maximum call depth of direct callable programs.
         pipeline.set_cc_depth(2);   // The maximum call depth of continuation callable programs.
         // Create module
-        pt::Module module("optix/pathtracer.cu");
+        pt::Module module("optix/cuda/pathtracer.cu");
         module.create(optix_context, pipeline.compile_options());
 
         /**
@@ -423,7 +423,7 @@ int main(int argc, char* argv[]) {
         // Create and bind sbt for raygen program
         pt::CUDABuffer<pt::RayGenRecord> d_raygen_record;
         pt::RayGenRecord rg_record = {};
-        raygen_program.bind_record(&rg_record);
+        raygen_program.bind_record( &rg_record );
         d_raygen_record.alloc_copy( &rg_record, sizeof( pt::RayGenRecord ) );
         
         // Miss program
@@ -435,15 +435,15 @@ int main(int argc, char* argv[]) {
         pt::CUDABuffer<pt::MissRecord> d_miss_record;
         pt::MissRecord ms_records[RAY_TYPE_COUNT];
         for (int i=0; i<RAY_TYPE_COUNT; i++) {
-            miss_programs[i].bind_record(&ms_records[i]);
-            ms_records[i].data.bg_color = scene.bgcolor();
+            miss_programs[i].bind_record( &ms_records[i] );
+            ms_records[i].data.bg_color = scene.bgcolor();  
         }
-        d_miss_record.alloc_copy( ms_records, sizeof(pt::MissRecord)*RAY_TYPE_COUNT );
+        d_miss_record.alloc_copy( ms_records, sizeof(pt::MissRecord) * RAY_TYPE_COUNT );
 
-        // // Attach sbts for raygen and miss program
+        // Attach sbts for raygen and miss program
         sbt.raygenRecord = d_raygen_record.d_ptr();
         sbt.missRecordBase = d_miss_record.d_ptr();
-        sbt.missRecordStrideInBytes = static_cast<uint32_t>(sizeof(pt::MissRecord));
+        sbt.missRecordStrideInBytes = static_cast<uint32_t>( sizeof( pt::MissRecord ) );
         sbt.missRecordCount = RAY_TYPE_COUNT;
 
         // HitGroup programs
@@ -554,16 +554,13 @@ int main(int argc, char* argv[]) {
         /**
          * \brief Cleanup optix objects.
          */
-        // OPTIX_CHECK( optixPipelineDestroy( pipeline ) );
         pipeline.destroy();
         for ( auto& pg : program_groups ) OPTIX_CHECK( optixProgramGroupDestroy(pg) );
-        // OPTIX_CHECK( optixModuleDestroy( ptx_module ) );
         module.destroy();
         OPTIX_CHECK( optixDeviceContextDestroy( optix_context ) );
         pt::cuda_frees(sbt.raygenRecord, sbt.missRecordBase, sbt.hitgroupRecordBase, 
                        params.accum_buffer,
                        d_params);
-        // for (auto& accel : accels) accel.destroy();
 
     }
     catch( std::exception& e )

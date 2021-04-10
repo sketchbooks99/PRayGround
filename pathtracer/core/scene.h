@@ -1,8 +1,8 @@
 #pragma once
 
-#include <include/core/primitive.h>
+#include "../core/primitive.h"
 #include <sutil/Camera.h>
-#include <include/core/pathtracer.h>
+#include "../core/pathtracer.h"
 
 namespace pt {
 

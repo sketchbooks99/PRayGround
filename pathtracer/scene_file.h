@@ -1,15 +1,15 @@
 #pragma once
 
-#include <include/core/primitive.h>
-#include <include/core/scene.h>
+#include "core/primitive.h"
+#include "core/scene.h"
 
-#include "pathtracer/shape/sphere.h"
-#include "pathtracer/shape/trianglemesh.h"
+#include "shape/sphere.h"
+#include "shape/trianglemesh.h"
 
-#include "pathtracer/material/conductor.h"
-#include "pathtracer/material/dielectric.h"
-#include "pathtracer/material/diffuse.h"
-#include "pathtracer/material/emitter.h"
+#include "material/conductor.h"
+#include "material/dielectric.h"
+#include "material/diffuse.h"
+#include "material/emitter.h"
 
 pt::Scene my_scene() {
     pt::Scene scene;
@@ -125,12 +125,6 @@ pt::Scene my_scene() {
     cornel_ps.add_primitive(ceiling_light_mesh, emitter);
 
     scene.add_primitive_instance(cornel_ps);
-
-    // pt::Shape* sphere = new pt::Sphere(cornel_center, 100.0f);
-    // cornel_ps.add_primitive(sphere, white_diffuse);
-
-    // pt::PrimitiveInstance sphere_ps = pt::PrimitiveInstance(pt::Transform());
-    // sphere_ps.set_sbt_index_base(cornel_ps.sbt_index());
 
     auto bunny_ps = pt::PrimitiveInstance(pt::Transform());
     bunny_ps.set_sbt_index_base(cornel_ps.sbt_index());

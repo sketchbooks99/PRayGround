@@ -1,5 +1,5 @@
 #include "trianglemesh.h"
-#include <include/core/cudabuffer.h>
+#include "../core/cudabuffer.h"
 
 namespace pt {
 

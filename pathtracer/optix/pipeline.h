@@ -1,8 +1,8 @@
 #pragma once
 
 #include <optix.h>
-#include <include/core/util.h>
-#include <include/optix/program.h>
+#include "../core/util.h"
+#include "../optix/program.h"
 
 namespace pt {
 

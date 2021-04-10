@@ -147,27 +147,7 @@ pt::Scene my_scene() {
     cornel_ps.add_primitive(bunny_right, metal);
 
     cornel_ps.sort();
-
-    // scene.add_primitive_instance(sphere_ps);
     scene.add_primitive_instance(cornel_ps);
-
-
-    /**
-     * \note Multiple primitive instances induced illegal memory access error.
-     */
-    // pt::PrimitiveInstance sphere_ps = pt::PrimitiveInstance(pt::Transform());
-    // sphere_ps.set_sbt_index_base(cornel_ps.sbt_index());
-
-    // pt::Shape* sphere = new pt::Sphere(make_float3(cornel_center.x, 120.0f, cornel_center.z - 120.0f), 70.0f);
-    // sphere_ps.add_primitive(sphere, white_diffuse);
-
-    // pt::Shape* metal_sphere = new pt::Sphere(make_float3(cornel_center.x - 150.0f, 120.0f, cornel_center.z - 120.0f), 70.0f);
-    // sphere_ps.add_primitive(metal_sphere, metal);
-
-    // pt::Shape* glass_sphere = new pt::Sphere(make_float3(cornel_center.x + 150.0f, 120.0f, cornel_center.z - 120.0f), 70.0f);
-    // sphere_ps.add_primitive(glass_sphere, glass);
-
-    // scene.add_primitive_instance(sphere_ps);
 
     return scene;
 }

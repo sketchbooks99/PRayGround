@@ -238,7 +238,7 @@ inline std::ostream& operator<<(std::ostream& out, const OptixBuildInput& bi) {
 }
 
 /**
- * \struct
+ * \struct OptixInstance
  */
 inline std::ostream& operator<<(std::ostream& out, const OptixInstance& ins) {
     out << "transform: " << std::endl;

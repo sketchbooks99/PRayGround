@@ -172,7 +172,7 @@ private:
  * \note 
  * Call of this funcion :  build_gas(ctx, accel_data, primitive_instances.primitives());
  */ 
-void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data, PrimitiveInstance ps) {
+void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data, const PrimitiveInstance& ps) {
     std::vector<Primitive> meshes;
     std::vector<Primitive> customs;
 

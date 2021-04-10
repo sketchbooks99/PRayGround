@@ -16,17 +16,20 @@
 #include <include/core/material.h>
 #include <include/core/transform.h>
 #include <include/optix/program.h>
+#include <algorithm>
 
 namespace pt {
 
 class Primitive {
 public:
+    Primitive(Shape* shape_ptr, Material* material_ptr)
+    : m_shape_ptr(shape_ptr), m_material_ptr(material_ptr) {
+        _init_program_groups();
+    }
+
     Primitive(Shape* shape_ptr, Material* material_ptr, uint32_t sbt_index)
     : m_shape_ptr(shape_ptr), m_material_ptr(material_ptr), m_sbt_index(sbt_index) {
-        m_program_groups.resize(RAY_TYPE_COUNT);
-        for (auto &pg : m_program_groups) {
-            pg = ProgramGroup(OPTIX_PROGRAM_GROUP_KIND_HITGROUP);
-        }
+        _init_program_groups();
     }
 
     // Create programs based on shape type. 
@@ -73,6 +76,9 @@ public:
         m_program_groups[1].bind_record(record);
     }
 
+    // Setter
+    void set_sbt_index(const uint32_t idx) { m_sbt_index = idx; } 
+
     // Getter 
     uint32_t sbt_index() const { return m_sbt_index; }
     Material* material() const { return m_material_ptr; }
@@ -83,6 +89,13 @@ public:
     std::vector<ProgramGroup> program_groups() { return m_program_groups; }
 
 private:
+    void _init_program_groups() {
+        m_program_groups.resize(RAY_TYPE_COUNT);
+        for (auto &pg : m_program_groups) {
+            pg = ProgramGroup(OPTIX_PROGRAM_GROUP_KIND_HITGROUP);
+        }
+    }
+
     // Member variables.
     Shape* m_shape_ptr;
     Material* m_material_ptr;
@@ -104,8 +117,8 @@ private:
  * 
  * \note 
  * - Transform stored in this class must not be modified from outside.
- * - To set the sbt indices in the correct order, divide the array of 
- *   primitives into meshes and custom primitives.
+ * - I decided to store primitives with the order of meshes -> custom primitves, 
+ *   to set the sbt indices in the correct order.
  */
 class PrimitiveInstance {
 public:
@@ -116,8 +129,20 @@ public:
 
     void add_primitive(const Primitive& p) { m_primitives.push_back(p); }
     void add_primitive(Shape* shape_ptr, Material* mat_ptr) {
-        unsigned int sbt_index = m_sbt_index_base + static_cast<unsigned int>(this->num_primitives());
-        m_primitives.emplace_back(shape_ptr, mat_ptr, sbt_index);
+        m_primitives.emplace_back(shape_ptr, mat_ptr);
+    }
+
+    /**
+     * \brief Sort primitives with the order of meshes -> custom primitives.
+     */
+    void sort() {
+        std::sort(m_primitives.begin(), m_primitives.end(), 
+            [](const Primitive& p1, const Primitive& p2){ return (int)p1.shapetype() < (int)p2.shapetype(); });
+        uint32_t sbt_index = 0;
+        for (auto &p : m_primitives) {
+            p.set_sbt_index(this->sbt_index_base() + sbt_index);
+            sbt_index++;
+        }
     }
 
     // Allow to return primitives as lvalue. 
@@ -134,8 +159,7 @@ public:
     Transform transform() const { return m_transform; }
 private:
     Transform m_transform;
-    std::vector<Primitive> m_meshes;
-    std::vector<Primitive> m_custom_primitives;
+    std::vector<Primitive> m_primitives;
     unsigned int m_sbt_index_base { 0 };
 };
 

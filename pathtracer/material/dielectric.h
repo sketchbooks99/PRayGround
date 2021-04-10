@@ -29,7 +29,7 @@ public:
         bool into = cosine < 0;
         float3 outward_normal = into ? si.n : -si.n;
 
-        if (!into) swap(ni, nt);
+        if (!into) std::swap(ni, nt);
 
         cosine = fabs(cosine);
         float sine = sqrtf(1.0 - cosine*cosine);

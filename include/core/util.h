@@ -19,16 +19,6 @@
 
 namespace pt {
 
-template <typename T>
-HOSTDEVICE INLINE void swap(T& a, T& b)
-{
-#ifdef __CUDACC__
-    T c(a); a = b; b = c;
-#else   
-    std::swap(a, b);
-#endif
-}
-
 /** Error handling at the host side. */
 #ifndef __CUDACC__
 inline void Throw(const std::string& msg) {

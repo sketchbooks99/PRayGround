@@ -124,30 +124,37 @@ pt::Scene my_scene() {
     auto ceiling_light_mesh = new pt::TriangleMesh(ceiling_light_vertices, ceiling_light_indices, ceiling_light_normals);
     cornel_ps.add_primitive(ceiling_light_mesh, emitter);
 
+    scene.add_primitive_instance(cornel_ps);
+
     // pt::Shape* sphere = new pt::Sphere(cornel_center, 100.0f);
     // cornel_ps.add_primitive(sphere, white_diffuse);
 
     // pt::PrimitiveInstance sphere_ps = pt::PrimitiveInstance(pt::Transform());
     // sphere_ps.set_sbt_index_base(cornel_ps.sbt_index());
 
-    pt::Shape* sphere = new pt::Sphere(make_float3(cornel_center.x, 120.0f, cornel_center.z - 120.0f), 70.0f);
-    cornel_ps.add_primitive(sphere, white_diffuse);
-
-    pt::Shape* metal_sphere = new pt::Sphere(make_float3(cornel_center.x - 150.0f, 120.0f, cornel_center.z - 120.0f), 70.0f);
-    cornel_ps.add_primitive(metal_sphere, metal);
-
-    pt::Shape* glass_sphere = new pt::Sphere(make_float3(cornel_center.x + 150.0f, 120.0f, cornel_center.z - 120.0f), 70.0f);
-    cornel_ps.add_primitive(glass_sphere, glass);
+    auto bunny_ps = pt::PrimitiveInstance(pt::Transform());
+    bunny_ps.set_sbt_index_base(cornel_ps.sbt_index());
 
     pt::Shape* bunny_left = new pt::TriangleMesh("../../data/model/bunny.obj", cornel_center - make_float3(-150.0, 220.0f, -100.0f), 1000.0f, make_float3(1.0f, 1.0f, -1.0f));
     pt::Shape* bunny_center = new pt::TriangleMesh("../../data/model/bunny.obj", cornel_center - make_float3(0.0, 220.0f, -100.0f), 1000.0f, make_float3(1.0f, 1.0f, -1.0f));
     pt::Shape* bunny_right = new pt::TriangleMesh("../../data/model/bunny.obj", cornel_center - make_float3(150.0f, 220.0f, -100.0f), 1000.0f, make_float3(1.0f, 1.0f, -1.0f));
-    cornel_ps.add_primitive(bunny_left, glass);
-    cornel_ps.add_primitive(bunny_center, white_diffuse);
-    cornel_ps.add_primitive(bunny_right, metal);
+    bunny_ps.add_primitive(bunny_left, glass);
+    bunny_ps.add_primitive(bunny_center, white_diffuse);
+    bunny_ps.add_primitive(bunny_right, metal);
+    scene.add_primitive_instance(bunny_ps);
 
-    cornel_ps.sort();
-    scene.add_primitive_instance(cornel_ps);
+    auto sphere_ps = pt::PrimitiveInstance(pt::Transform());
+    sphere_ps.set_sbt_index_base(bunny_ps.sbt_index());
+
+    pt::Shape* sphere = new pt::Sphere(make_float3(cornel_center.x, 120.0f, cornel_center.z - 120.0f), 70.0f);
+    sphere_ps.add_primitive(sphere, white_diffuse);
+
+    pt::Shape* metal_sphere = new pt::Sphere(make_float3(cornel_center.x - 150.0f, 120.0f, cornel_center.z - 120.0f), 70.0f);
+    sphere_ps.add_primitive(metal_sphere, metal);
+
+    pt::Shape* glass_sphere = new pt::Sphere(make_float3(cornel_center.x + 150.0f, 120.0f, cornel_center.z - 120.0f), 70.0f);
+    sphere_ps.add_primitive(glass_sphere, glass);
+    scene.add_primitive_instance(sphere_ps);
 
     return scene;
 }

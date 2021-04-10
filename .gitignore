@@ -6,4 +6,5 @@ build/
 *.vcxproj*
 *.sln
 
+*.out
 

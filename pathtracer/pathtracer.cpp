@@ -150,7 +150,6 @@ void initLaunchParams(
     ));
     params.frame_buffer = nullptr; // Will be set when output buffer is mapped
 
-    params.samples_per_launch = samples_per_launch;
     params.subframe_index = 0u;
 
     params.handle         = gas_handle;
@@ -321,10 +320,13 @@ int main(int argc, char* argv[]) {
 
     try
     {
+        // Initialize camera state.
         initCameraState();
 
+        // Initialize cuda 
         CUDA_CHECK(cudaFree(0));
 
+        // Create device context.
         OptixDeviceContext optix_context;
         CUcontext cu_context = 0;
         OPTIX_CHECK(optixInit());
@@ -333,6 +335,7 @@ int main(int argc, char* argv[]) {
         options.logCallbackLevel = 4;
         OPTIX_CHECK(optixDeviceContextCreate(cu_context, &options, &optix_context));
 
+        // Load the scene
         pt::Scene scene = my_scene();
 
         params.width                             = scene.width();
@@ -420,7 +423,7 @@ int main(int argc, char* argv[]) {
         pt::ProgramGroup raygen_program(OPTIX_PROGRAM_GROUP_KIND_RAYGEN);
         raygen_program.create( optix_context, pt::ProgramEntry( (OptixModule)module, RG_FUNC_STR("raygen") ) );
         program_groups.push_back( (OptixProgramGroup)raygen_program );
-        // Create and bind sbt for raygen program
+        // Create and bind sbt to raygen program
         pt::CUDABuffer<pt::RayGenRecord> d_raygen_record;
         pt::RayGenRecord rg_record = {};
         raygen_program.bind_record( &rg_record );
@@ -440,7 +443,7 @@ int main(int argc, char* argv[]) {
         }
         d_miss_record.alloc_copy( ms_records, sizeof(pt::MissRecord) * RAY_TYPE_COUNT );
 
-        // Attach sbts for raygen and miss program
+        // Bind sbts to raygen and miss program
         sbt.raygenRecord = d_raygen_record.d_ptr();
         sbt.missRecordBase = d_miss_record.d_ptr();
         sbt.missRecordStrideInBytes = static_cast<uint32_t>( sizeof( pt::MissRecord ) );
@@ -451,6 +454,7 @@ int main(int argc, char* argv[]) {
         std::vector<pt::ProgramGroup> hitgroup_programs = scene.hitgroup_programs();
         std::copy( hitgroup_programs.begin(), hitgroup_programs.end(), std::back_inserter( program_groups ) );
 
+        // Create sbts and bind it to hitgroup programs.
         scene.create_hitgroup_sbt( sbt );
 
         // Callable programs for sampling bsdf properties.
@@ -458,8 +462,9 @@ int main(int argc, char* argv[]) {
         create_material_sample_programs( optix_context, module, material_sample_programs, sbt );
         std::copy( material_sample_programs.begin(), material_sample_programs.end(), std::back_inserter( program_groups ) );
 
+        // Create pipeline
         pipeline.create( optix_context, program_groups );
-
+        // Initialize pipeline launch parameters.
         initLaunchParams( ias_handle, stream, params, d_params );
 
         if( outfile.empty() )
@@ -555,8 +560,8 @@ int main(int argc, char* argv[]) {
          * \brief Cleanup optix objects.
          */
         pipeline.destroy();
-        for ( auto& pg : program_groups ) OPTIX_CHECK( optixProgramGroupDestroy(pg) );
         module.destroy();
+        for ( auto& pg : program_groups ) OPTIX_CHECK( optixProgramGroupDestroy(pg) );
         OPTIX_CHECK( optixDeviceContextDestroy( optix_context ) );
         pt::cuda_frees(sbt.raygenRecord, sbt.missRecordBase, sbt.hitgroupRecordBase, 
                        params.accum_buffer,

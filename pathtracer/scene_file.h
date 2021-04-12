@@ -11,6 +11,19 @@
 #include "material/diffuse.h"
 #include "material/emitter.h"
 
+/**
+ * \note 
+ * If a PrimitiveInstance store meshes and custom primitives (i.e. Sphere, Cylinder...), 
+ * please sort primitives array to render geometries correctly as like follow code.
+ * 
+ * auto ps = pt::PrimitiveInstance(pt::Transform());
+ * ps.set_sbt_index_base(0);
+ * ps.add_primitive(sphere, white_lambert);
+ * ps.add_primitive(mesh, metal);
+ * ps.sort();
+ * scene.add_primitive_instance(ps);
+ */
+
 pt::Scene my_scene() {
     pt::Scene scene;
     // utility settings    
@@ -18,9 +31,9 @@ pt::Scene my_scene() {
     scene.set_width(768);
     scene.set_height(768);
     scene.set_depth(5);
-    scene.set_samples_per_launch(4);
+    scene.set_samples_per_launch(1);
 
-    // Material pointers. They are constructed on the device at the same time.
+    // Material pointers. 
     pt::Material* red_diffuse = new pt::Diffuse(make_float3(0.8f, 0.05f, 0.05f));
     pt::Material* green_diffuse = new pt::Diffuse(make_float3(0.05f, 0.8f, 0.05f));
     pt::Material* white_diffuse = new pt::Diffuse(make_float3(0.8f, 0.8f, 0.8f));
@@ -123,7 +136,6 @@ pt::Scene my_scene() {
     ceiling_light_indices.emplace_back(make_int3(3, 4, 5));
     auto ceiling_light_mesh = new pt::TriangleMesh(ceiling_light_vertices, ceiling_light_indices, ceiling_light_normals);
     cornel_ps.add_primitive(ceiling_light_mesh, emitter);
-
     scene.add_primitive_instance(cornel_ps);
 
     auto bunny_ps = pt::PrimitiveInstance(pt::Transform());

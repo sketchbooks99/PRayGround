@@ -18,6 +18,9 @@
     - レジスタに収まりきらないものはローカルメモリに溢れ出る。
 
 ## デバイス側にクラスのコピーオブジェクトを生成する。
+:warning: 単純なCUDAコードでは以下のコードは動作しますが、OptiXではvirtual functionsがサポートされていないため、メモリアクセス違反等を発生させアプリがクラッシュする場合があります。
+以下のような仕組みを実現したい場合は、`Continuation/Direct callables`を使うようにしましょう。
+
 `ref` : https://codereview.stackexchange.com/questions/193367/cuda-c-host-device-polymorphic-class-implementation
 
 ```c++

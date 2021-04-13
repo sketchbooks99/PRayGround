@@ -13,10 +13,18 @@
 namespace pt {
 
 /**
- * \note Material class is used only in host side, 
- * because OptiX 7~ doesn't support virtual functions.
- * Material of Primitive should store the index of 
- * direct callable functions on a device.
+ * \note 
+ * [EN] 
+ * Material class is used only in host side, because OptiX 7~ doesn't support virtual functions.
+ * So, computation of bsdf are performed using direct/continuation callables, and indices of them
+ * are the indices of MaterialType.
+ * ex) The index of Diffuse function = (int)MaterialType::Diffuse = 0
+ * 
+ * [JP]
+ * Optix 7~ は仮想関数をサポートしていないため、Materialクラスはホスト側でのみ使用されます。
+ * BSDFの計算はcontinuation/direct callablesにを用いて行われ、それら関数のインデックスは
+ * MaterialTypeのインデックスになります。
+ * 例) Diffuse関数のインデックス = (int)MaterialType::Diffuse = 0
  */
 
 enum class MaterialType {
@@ -30,7 +38,7 @@ enum class MaterialType {
 
 #ifndef __CUDACC__
 /**
- * \brief Map to connect MaterialType and names of entry functions to sample bsdf properties.
+ * \brief A map connects MaterialType to names of entry functions that describe bsdf properties.
  */
 static std::map<MaterialType, const char*> mat_sample_map = {
     { MaterialType::Diffuse, "sample_diffuse" },    

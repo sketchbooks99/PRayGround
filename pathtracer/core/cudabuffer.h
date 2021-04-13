@@ -6,8 +6,8 @@
 namespace pt {
 
 /**  
- * The class to easily manage data on device from host.
- * This is used in only host code.  
+ * \brief
+ * The class to easily manage data on the device from host.
  */
 
 template <typename T>
@@ -21,7 +21,7 @@ public:
         alloc_copy(data, size);
     }
 
-    // Enable cast to CUdeviceptr. 
+    // Cast operator from CUDABuffer<T> to CUdeviceptr.
     operator CUdeviceptr() { return m_ptr; }
 
     void alloc(size_t size) {
@@ -30,7 +30,7 @@ public:
         CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&m_ptr), m_size));
     }
 
-    /// \brief Allocation of data on the device.
+    // To allocate memory and to copy data from the host to the device.
     void alloc_copy(std::vector<T> data_vec) {
         alloc_copy(data_vec.data(), sizeof(T) * data_vec.size());
     }
@@ -59,15 +59,14 @@ public:
         alloc_copy(data, size);
     }
 
-    /// \brief Free data from the device.
+    // Free data from the device.
     void free() {
-        // Assert(is_alloc, "This buffer still isn't allocated on device.");
         if (is_allocated())
-            CUDA_CHECK(cudaFree(reinterpret_cast<void*>(m_ptr)));
+            cuda_free(m_ptr);
         _init();
     }
 
-    /// \brief Get state of the buffer.
+    // Get states of the buffer.
     bool is_allocated() { return (bool)m_ptr; }
     CUdeviceptr d_ptr() const { return m_ptr; }
     CUdeviceptr& d_ptr() { return m_ptr; }

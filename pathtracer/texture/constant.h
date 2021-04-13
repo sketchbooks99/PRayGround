@@ -28,12 +28,11 @@ public:
     
     TextureType type() const override { return TextureType::Constant; }
 private:
-
     float3 m_color;
 };
 
 #else
-CALLABLE_FUNC void DC_FUNC(eval_constant)(SurfaceInteraction* si, void* texdata) {
+CALLABLE_FUNC float3 DC_FUNC(eval_constant)(SurfaceInteraction* si, void* texdata) {
     const ConstantTextureData* constant = reinterpret_cast<ConstantTextureData*>(texdata);
     return constant->color;
 }

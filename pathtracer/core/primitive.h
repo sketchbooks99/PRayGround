@@ -14,6 +14,7 @@
 #include "../core/util.h"
 #include "../core/shape.h"
 #include "../core/material.h"
+#include "../core/texture.h"
 #include "../core/transform.h"
 #include "../core/cudabuffer.h"
 #include "../optix/program.h"
@@ -126,6 +127,7 @@ private:
 class PrimitiveInstance {
 public:
     PrimitiveInstance() : m_transform(Transform()) {}
+    explicit PrimitiveInstance(const sutil::Matrix4x4& mat) : m_transform(mat) {}
     explicit PrimitiveInstance(const Transform& transform) : m_transform(transform) {}
     explicit PrimitiveInstance(const Transform& transform, const std::vector<Primitive>& primitives)
     : m_transform(transform), m_primitives(primitives) {}
@@ -167,14 +169,13 @@ private:
 };
 
 
-// ---------------------------------------------------------------------
-/** 
- * \brief 
- * Building geometry AS from primitives that share the same transformation.
+/**
+ * @brief 
  * 
- * \note 
- * Call of this funcion :  build_gas(ctx, accel_data, primitive_instances.primitives());
- */ 
+ * @param ctx 
+ * @param accel_data 
+ * @param ps 
+ */
 void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data, const PrimitiveInstance& ps) {
     std::vector<Primitive> meshes;
     std::vector<Primitive> customs;
@@ -201,15 +202,6 @@ void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data, const Primi
         std::vector<OptixBuildInput> build_inputs(primitives_subset.size());
         unsigned int index_offset = 0;
         for (size_t i=0; i<primitives_subset.size(); i++) {
-            if (primitives_subset[i].shapetype() == ShapeType::Mesh) {
-                CUDABuffer<float> d_pre_transform;
-                float T[12] = {transform.mat[0], transform.mat[1], transform.mat[2], transform.mat[3],
-                               transform.mat[4], transform.mat[5], transform.mat[6], transform.mat[7],
-                               transform.mat[8], transform.mat[9], transform.mat[10], transform.mat[11]};
-                d_pre_transform.alloc_copy(T, sizeof(float)*12);
-                build_inputs[i].triangleArray.preTransform = d_pre_transform.d_ptr();
-                build_inputs[i].triangleArray.transformFormat = OPTIX_TRANSFORM_FORMAT_MATRIX_FLOAT12;
-            }
             primitives_subset[i].prepare_shapedata();
             primitives_subset[i].prepare_matdata();
             primitives_subset[i].build_input(build_inputs[i], index_offset);
@@ -292,7 +284,16 @@ void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data, const Primi
     if (customs.size() > 0) build_single_gas(customs, ps.transform(), accel_data.customs);
 }
 
-// ---------------------------------------------------------------------
+/**
+ * @brief 
+ * 
+ * @param ctx 
+ * @param accel_data 
+ * @param primitive_instance 
+ * @param sbt_base_offset 
+ * @param instance_id 
+ * @param instances 
+ */
 void build_instances(const OptixDeviceContext& ctx, 
                const AccelData& accel_data,
                const PrimitiveInstance& primitive_instance, 
@@ -339,33 +340,63 @@ void build_instances(const OptixDeviceContext& ctx,
     }
 }
 
+/**
+ * @brief Create a material sample programs object
+ * 
+ * @param ctx 
+ * @param module 
+ * @param program_groups 
+ * @param sbt 
+ */
 void create_material_sample_programs(
     const OptixDeviceContext& ctx,
     const Module& module, 
     std::vector<ProgramGroup>& program_groups, 
-    OptixShaderBindingTable& sbt
+    std::vector<CallableRecord>& callable_records
 ) {
     // program_groups.clear(); <- Is it needed?
-    program_groups.resize((int)MaterialType::Count);
-    std::vector<CallableRecord> callable_records((int)MaterialType::Count);
 
-    for (int i = 0; i < (int)MaterialType::Count; i++) {
+    for (int i = 0; i < (int)MaterialType::Count; i++) 
+    {
         // Material type can be queried by iterator.
-        program_groups[i] = ProgramGroup(OPTIX_PROGRAM_GROUP_KIND_CALLABLES);
-        program_groups[i].create(
+        program_groups.push_back(ProgramGroup(OPTIX_PROGRAM_GROUP_KIND_CALLABLES));
+        callable_records.push_back(CallableRecord());
+        program_groups.back().create(
             ctx, 
-            ProgramEntry((OptixModule)module, dc_func_str( mat_sample_map[ (MaterialType)i ] ).c_str() ),
-            ProgramEntry(nullptr, nullptr)
+            // ProgramEntry((OptixModule)module, dc_func_str( mat_sample_map[ (MaterialType)i ] ).c_str() ),
+            // ProgramEntry(nullptr, nullptr)
+            ProgramEntry( nullptr, nullptr ), 
+            ProgramEntry( (OptixModule)module, cc_func_str( mat_sample_map[ (MaterialType)i ]).c_str() )
         );
-        program_groups[i].bind_record(&callable_records[i]);
+        program_groups.back().bind_record(&callable_records.back());
     }
 
-    CUDABuffer<CallableRecord> d_callable_records;
-    d_callable_records.alloc_copy(callable_records);
+    // CUDABuffer<CallableRecord> d_callable_records;
+    // d_callable_records.alloc_copy(callable_records);
 
-    sbt.callablesRecordBase = d_callable_records.d_ptr();
-    sbt.callablesRecordCount = static_cast<unsigned int>( callable_records.size() );
-    sbt.callablesRecordStrideInBytes = static_cast<unsigned int>( sizeof( CallableRecord ) );
+    // sbt.callablesRecordBase = d_callable_records.d_ptr();
+    // sbt.callablesRecordCount = static_cast<unsigned int>( callable_records.size() );
+    // sbt.callablesRecordStrideInBytes = static_cast<unsigned int>( sizeof( CallableRecord ) );
+}
+
+void create_texture_eval_programs(
+    const OptixDeviceContext& ctx, 
+    const Module& module, 
+    std::vector<ProgramGroup>& program_groups,
+    std::vector<CallableRecord>& callable_records
+)
+{
+    for (int i = 0; i < (int)TextureType::Count; i++)
+    {
+        program_groups.push_back(ProgramGroup(OPTIX_PROGRAM_GROUP_KIND_CALLABLES));
+        callable_records.push_back(CallableRecord());
+        program_groups.back().create(
+            ctx, 
+            ProgramEntry( (OptixModule)module, dc_func_str( tex_eval_map[ (TextureType)i ] ).c_str() ),
+            ProgramEntry( nullptr, nullptr )
+        );
+        program_groups.back().bind_record(&callable_records.back());
+    }
 }
 
 }

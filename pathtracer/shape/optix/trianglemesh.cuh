@@ -46,6 +46,7 @@ CALLABLE_FUNC void CH_FUNC(mesh)()
     si->p = ro + tmax*rd;
     si->n = n;
     si->wi = rd;
+    si->uv = make_float2(u, v);
 
     /**
      * \brief Direct callable function
@@ -53,7 +54,7 @@ CALLABLE_FUNC void CH_FUNC(mesh)()
      * ReturnT optixDirectCall( unsigned int sbtIndex, ArgTypes... args );
      */
     
-    optixDirectCall<void, pt::SurfaceInteraction*, void*>(data->sample_func_idx, si, data->matdata);
+    optixContinuationCall<void, pt::SurfaceInteraction*, void*>(data->sample_func_idx, si, data->matdata);
     
     // si->radiance = make_float3(fabs(n.x), fabs(n.y), fabs(n.z));
 }

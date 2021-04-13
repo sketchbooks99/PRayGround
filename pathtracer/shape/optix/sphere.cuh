@@ -80,7 +80,7 @@ CALLABLE_FUNC void CH_FUNC(sphere)() {
     si->wi = rd;
 
     // Direct callable function to sample bsdf properties.
-    optixDirectCall<void, pt::SurfaceInteraction*, void*>(data->sample_func_idx, si, data->matdata);
+    optixContinuationCall<void, pt::SurfaceInteraction*, void*>(data->sample_func_idx, si, data->matdata);
 }
 
 #endif

@@ -458,9 +458,17 @@ int main(int argc, char* argv[]) {
         scene.create_hitgroup_sbt( sbt );
 
         // Callable programs for sampling bsdf properties.
-        std::vector<pt::ProgramGroup> material_sample_programs;
-        create_material_sample_programs( optix_context, module, material_sample_programs, sbt );
-        std::copy( material_sample_programs.begin(), material_sample_programs.end(), std::back_inserter( program_groups ) );
+        std::vector<pt::ProgramGroup> callable_programs;
+        std::vector<pt::CallableRecord> callable_records;
+        create_material_sample_programs( optix_context, module, callable_programs, callable_records );
+        create_texture_eval_programs( optix_context, module, callable_programs, callable_records );
+        pt::CUDABuffer<pt::CallableRecord> d_callable_records;
+        d_callable_records.alloc_copy(callable_records);
+        sbt.callablesRecordBase = d_callable_records.d_ptr();
+        sbt.callablesRecordCount = static_cast<unsigned int>( callable_records.size() );
+        sbt.callablesRecordStrideInBytes = static_cast<unsigned int>( sizeof(pt::CallableRecord ) ); 
+
+        std::copy( callable_programs.begin(), callable_programs.end(), std::back_inserter( program_groups ) );
 
         // Create pipeline
         pipeline.create( optix_context, program_groups );

@@ -37,6 +37,7 @@
 #include "../../material/dielectric.h"
 #include "../../material/diffuse.h"
 #include "../../material/emitter.h"
+#include "../../texture/checker.h"
 
 extern "C" {
 __constant__ pt::Params params;

@@ -20,8 +20,8 @@ HOSTDEVICE INLINE void cosine_sample_hemisphere(const float u1, const float u2, 
 /** 
  * \ref: http://www.pbr-book.org/3ed-2018/Reflection_Models/Specular_Reflection_and_Transmission.html
  * 
- * \note cos_i should be positive and checking if ray goes into 
- * dielectric surface (is cos_i negative?) is never performed in this function. 
+ * \note cos_i must be positive, and this function does not verify
+ * whether the ray goes into a surface (is cos_i negative?) or not. 
  **/
 HOSTDEVICE INLINE float fr(float cos_i, float ni, float nt) {
     const float sin_i = sqrtf(fmaxf(0.0f, 1.0f-cos_i*cos_i));
@@ -36,7 +36,7 @@ HOSTDEVICE INLINE float fr(float cos_i, float ni, float nt) {
     return 0.5f * (r_parl*r_parl + r_perp*r_perp);
 }
 
-/** Compute fresnel reflactance from cosine and index of refraction */
+/** Compute fresnel reflectance from cosine and index of refraction using Schlick approximation. */
 HOSTDEVICE INLINE float fr(float cos_i, float ior) {
     float r0 = (1.0f-ior) / (1.0f+ior);
     r0 = r0 * r0;

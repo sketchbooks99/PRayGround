@@ -13,9 +13,12 @@ public:
     float3 min() const { return m_min; }
     float3 max() const { return m_max; }
 
+    // [EN] Cast operator from AABB to OptixAabb
+    // [JP] AABBからOptixAabbへのキャスト演算子です。
     explicit operator OptixAabb() { return {m_min.x, m_min.y, m_min.z, m_max.x, m_max.y, m_max.z}; }
 
-    // Compute surface area of aabb.
+    // [EN] Compute surface area of AABB.
+    // [JP] AABBの表面積を計算します。
     float surface_area() {
         float dx = m_max.x - m_min.x;
         float dy = m_max.y - m_max.y;

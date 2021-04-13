@@ -33,10 +33,13 @@ CALLABLE_FUNC void CH_FUNC(mesh)()
 
     const float tmin = optixGetRayTmin();
     const float tmax = optixGetRayTmax();
-;
-	const float3 n0 = normalize(mesh_data->normals[index.x]);
-	const float3 n1 = normalize(mesh_data->normals[index.y]);
-	const float3 n2 = normalize(mesh_data->normals[index.z]);
+
+	float3 n0 = normalize(mesh_data->normals[index.x]);
+	float3 n1 = normalize(mesh_data->normals[index.y]);
+	float3 n2 = normalize(mesh_data->normals[index.z]);
+    n0 = optixTransformVectorFromWorldToObjectSpace(n0);
+    n1 = optixTransformVectorFromWorldToObjectSpace(n1);
+    n2 = optixTransformVectorFromWorldToObjectSpace(n2);
 
     // Linear interpolation of normal by barycentric coordinates.
     float3 n = normalize( (1.0f-u-v)*n0 + u*n1 + v*n2 );
@@ -48,15 +51,9 @@ CALLABLE_FUNC void CH_FUNC(mesh)()
     si->wi = rd;
     si->uv = make_float2(u, v);
 
-    /**
-     * \brief Direct callable function
-     * template <typename ReturnT, typename... Args>
-     * ReturnT optixDirectCall( unsigned int sbtIndex, ArgTypes... args );
-     */
-    
+    // Sampling material properties.
     optixContinuationCall<void, pt::SurfaceInteraction*, void*>(data->sample_func_idx, si, data->matdata);
     
-    // si->radiance = make_float3(fabs(n.x), fabs(n.y), fabs(n.z));
 }
 
 #endif

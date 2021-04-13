@@ -26,11 +26,6 @@ CALLABLE_FUNC void IS_FUNC(sphere)() {
 
     const pt::Ray ray = get_ray();
 
-    // const float3 ray_orig = optixGetWorldRayOrigin();
-    // const float3 ray_dir = optixGetWorldRayDirection();
-    // const float tmin = optixGetRayTmin();
-    // const float tmax = optixGetRayTmax();
-
     const float3 oc = ray.o - center;
     const float a = dot(ray.d, ray.d);
     const float half_b = dot(oc, ray.d);
@@ -79,7 +74,7 @@ CALLABLE_FUNC void CH_FUNC(sphere)() {
     si->n = n;
     si->wi = rd;
 
-    // Direct callable function to sample bsdf properties.
+    // Sampling material properties.
     optixContinuationCall<void, pt::SurfaceInteraction*, void*>(data->sample_func_idx, si, data->matdata);
 }
 

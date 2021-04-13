@@ -6,8 +6,13 @@
 
 namespace pt {
 
-HOSTDEVICE INLINE void cosine_sample_hemisphere(const float u1, const float u2, float3& p)
+HOSTDEVICE INLINE float3 random_sample_hemisphere() {
+    return make_float3(0.0f, 1.0f, 0.0f);
+}
+
+HOSTDEVICE INLINE float3 cosine_sample_hemisphere(const float u1, const float u2)
 {
+    float3 p;
     const float r = sqrtf(u1);
     const float phi = 2.0f * M_PIf * u2;
     p.x = r * cosf(phi);
@@ -15,6 +20,7 @@ HOSTDEVICE INLINE void cosine_sample_hemisphere(const float u1, const float u2, 
 
     // Project up to hemisphere
     p.z = sqrtf(fmaxf(0.0f, 1.0f - p.x * p.x - p.y * p.y));
+    return p;
 }
 
 /** 

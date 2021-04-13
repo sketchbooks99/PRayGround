@@ -6,8 +6,7 @@ namespace pt {
 /** \note At present, only .obj file format is supported. */
 // ------------------------------------------------------------------
 TriangleMesh::TriangleMesh(
-    const std::string& filename, 
-    float3 position, float size, float3 axis, bool isSmooth)
+    const std::string& filename, bool isSmooth)
 {
     std::vector<float3> tmp_normals;
     std::vector<int3> normal_indices;
@@ -30,17 +29,11 @@ TriangleMesh::TriangleMesh(
             {
                 float x, y, z;
                 iss >> x >> y >> z;
-                x *= axis.x;
-                y *= axis.y;
-                z *= axis.z;
                 m_vertices.emplace_back(make_float3(x, y, z));
             }
             else if(header == "vn") {
                 float x, y, z;
                 iss >> x >> y >> z;
-                x *= axis.x;
-                y *= axis.y;
-                z *= axis.z;
                 tmp_normals.emplace_back(make_float3(x, y, z));
             }
             else if (header == "f")
@@ -114,9 +107,9 @@ TriangleMesh::TriangleMesh(
         ifs.close();
     }
 
-    for (auto& vertex : m_vertices) {
-        vertex = vertex * size + position;
-    }
+    // for (auto& vertex : m_vertices) {
+    //     vertex = vertex * size + position;
+    // }
 
     // Mesh smoothing
     m_normals.resize(m_vertices.size());
@@ -153,34 +146,6 @@ TriangleMesh::TriangleMesh(
             m_normals[i] = normalize(m_normals[i]);
         }
     }
-    // if (isSmooth) 
-    // {
-    //     m_normals.resize(m_vertices.size());
-    //     auto counts = std::vector<int>(m_vertices.size(), 0);
-    //     for (size_t i=0; i<m_indices.size(); i++)
-    //     {
-    //         auto p0 = m_vertices[m_indices[i].x];
-    //         auto p1 = m_vertices[m_indices[i].y];
-    //         auto p2 = m_vertices[m_indices[i].z];
-    //         auto N = normalize(cross(p2 - p0, p1 - p0));
-
-    //         auto idx = m_indices[i].x;
-    //         m_normals[idx] += N;
-    //         counts[idx]++;
-    //         idx = m_indices[i].x;
-    //         m_normals[idx] += N;
-    //         counts[idx]++;
-    //         idx = m_indices[i].y;
-    //         m_normals[idx] += N;
-    //         counts[idx]++;
-    //         idx = m_indices[i].z;
-    //     }
-    //     for (size_t i=0; i<m_vertices.size(); i++) {
-    //         m_normals[i] /= counts[i];
-    //         m_normals[i] = normalize(m_normals[i]);
-    //     }
-    // }
-    
 }
 
 // ------------------------------------------------------------------

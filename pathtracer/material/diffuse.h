@@ -32,8 +32,7 @@ public:
             const float z1 = rnd(seed);
             const float z2 = rnd(seed);
 
-            float3 w_in; 
-            cosine_sample_hemisphere(z1, z2, w_in);
+            float3 w_in = cosine_sample_hemisphere(z1, z2);
             Onb onb(si.n);
             onb.inverse_transform(w_in);
             si.wo = w_in;
@@ -84,8 +83,7 @@ CALLABLE_FUNC void CC_FUNC(sample_diffuse)(SurfaceInteraction* si, void* matdata
         const float z1 = rnd(seed);
         const float z2 = rnd(seed);
 
-        float3 w_in; 
-        cosine_sample_hemisphere(z1, z2, w_in);
+        float3 w_in = cosine_sample_hemisphere(z1, z2);
         Onb onb(si->n);
         onb.inverse_transform(w_in);
         si->wo = w_in;

@@ -1,0 +1,3 @@
+[submodule "pathtracer/ext/happly"]
+	path = pathtracer/ext/happly
+	url = https://github.com/nmwsharp/happly.git

@@ -318,7 +318,6 @@ void build_instances(const OptixDeviceContext& ctx,
             instance_id, sbt_base_offset, visibility_mask, flags, 
             accel_data.meshes.handle, /* pad = */ {0, 0}
         };
-        Message("[Mesh] build_gas():", "sbt_base_offset:", sbt_base_offset, "instance_id:", instance_id);
         sbt_base_offset += (unsigned int)accel_data.meshes.count * RAY_TYPE_COUNT;
         instance_id++;
         instances.push_back(instance);
@@ -333,7 +332,6 @@ void build_instances(const OptixDeviceContext& ctx,
             instance_id, sbt_base_offset, visibility_mask, flags, 
             accel_data.customs.handle, /* pad = */ {0, 0}
         };
-        Message("[Custom] build_gas():", "sbt_base_offset:", sbt_base_offset, "instance_id:", instance_id);
         sbt_base_offset += (unsigned int)accel_data.customs.count * RAY_TYPE_COUNT;
         instance_id++;
         instances.push_back(instance);
@@ -363,20 +361,11 @@ void create_material_sample_programs(
         callable_records.push_back(CallableRecord());
         program_groups.back().create(
             ctx, 
-            // ProgramEntry((OptixModule)module, dc_func_str( mat_sample_map[ (MaterialType)i ] ).c_str() ),
-            // ProgramEntry(nullptr, nullptr)
             ProgramEntry( nullptr, nullptr ), 
             ProgramEntry( (OptixModule)module, cc_func_str( mat_sample_map[ (MaterialType)i ]).c_str() )
         );
         program_groups.back().bind_record(&callable_records.back());
     }
-
-    // CUDABuffer<CallableRecord> d_callable_records;
-    // d_callable_records.alloc_copy(callable_records);
-
-    // sbt.callablesRecordBase = d_callable_records.d_ptr();
-    // sbt.callablesRecordCount = static_cast<unsigned int>( callable_records.size() );
-    // sbt.callablesRecordStrideInBytes = static_cast<unsigned int>( sizeof( CallableRecord ) );
 }
 
 void create_texture_eval_programs(

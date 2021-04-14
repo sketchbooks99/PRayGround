@@ -175,6 +175,7 @@ TriangleMesh* createQuadMesh(
     for (int u=0; u<2; u++) {
         int u_axis = ((int)axis + 1) % 3;
         int v_axis = ((int)axis + 2) % 3;
+        if (axis == Axis::Y) std::swap(u_axis, v_axis);
         for (int v=0; v<2; v++) {
             std::array<float, 3> vertex { 0.0f, 0.0f, 0.0f };
             vertex[u_axis] = u_min + (float)u * (u_max - u_min);

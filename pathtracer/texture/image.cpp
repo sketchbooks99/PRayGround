@@ -30,7 +30,7 @@ void ImageTexture::prepare_data() {
     res_desc.resType = cudaResourceTypeArray;
     res_desc.res.array.array = d_array;
 
-    cudaTextureObject_t texture;
+    cudaTextureObject_t texture = 0;
     CUDA_CHECK( cudaCreateTextureObject( &texture, &res_desc, tex_desc, nullptr ) );
 
     ImageTextureData img_texture_data = { texture };
@@ -56,7 +56,7 @@ void ImageTexture::_init_texture_desc() {
     tex_desc[0].minMipmapLevelClamp = 0;
     tex_desc[0].mipmapFilterMode = cudaFilterModePoint;
     tex_desc[0].borderColor[0] = 1.0f;
-    tex_desc[0].sRGB = 0;
+    tex_desc[0].sRGB = 1;
 }
 
 #endif

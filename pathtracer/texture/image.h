@@ -5,7 +5,7 @@
 namespace pt {
 
 struct ImageTextureData {
-    cudaTextureObject_t texture = 0;
+    cudaTextureObject_t texture;
 };
 
 enum ImageFormat {

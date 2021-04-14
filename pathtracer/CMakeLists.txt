@@ -26,17 +26,6 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-if( CUDA_VERSION VERSION_LESS "11.1" )
-  return()
-endif()
-
-set( LIB_DIR, "../lib" )
-
-include_directories(
-  ${LIB_DIR}/optixPaging/include 
-  ${LIB_DIR}/DemandLoading/include
-)
-
 OPTIX_add_sample_executable( pathtracer target_name
 
   # ===== SOURCE =====  

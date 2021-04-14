@@ -31,7 +31,7 @@ private:
 
     void _init_texture_desc();
 
-    cudaTextureDesc* tex_desc { nullptr };
+    cudaTextureDesc tex_desc {};
     cudaArray_t d_array { nullptr };
 };
 

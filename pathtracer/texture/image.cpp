@@ -24,6 +24,7 @@ void ImageTexture::prepare_data() {
     int32_t pitch = width * STBI_rgb_alpha * sizeof( unsigned char );
     cudaChannelFormatDesc channel_desc = cudaCreateChannelDesc<uchar4>();
     CUDA_CHECK( cudaMallocArray( &d_array, &channel_desc, width, height ) );
+    CUDA_CHECK( cudaMemcpy2DToArray( d_array, 0, 0, (unsigned char*)data, pitch, pitch, height, cudaMemcpyHostToDevice ) );
 
     // Create texture object.
     cudaResourceDesc res_desc = {};
@@ -31,7 +32,7 @@ void ImageTexture::prepare_data() {
     res_desc.res.array.array = d_array;
 
     cudaTextureObject_t texture = 0;
-    CUDA_CHECK( cudaCreateTextureObject( &texture, &res_desc, tex_desc, nullptr ) );
+    CUDA_CHECK( cudaCreateTextureObject( &texture, &res_desc, &tex_desc, nullptr ) );
 
     ImageTextureData img_texture_data = { texture };
 
@@ -44,19 +45,17 @@ void ImageTexture::prepare_data() {
 }
 
 void ImageTexture::_init_texture_desc() {
-    if (tex_desc) delete tex_desc;
-    tex_desc = new cudaTextureDesc[1];
-    tex_desc[0].addressMode[0] = cudaAddressModeWrap;
-    tex_desc[0].addressMode[1] = cudaAddressModeWrap;
-    tex_desc[0].filterMode = cudaFilterModeLinear;
-    tex_desc[0].readMode = cudaReadModeNormalizedFloat;
-    tex_desc[0].normalizedCoords = 1;
-    tex_desc[0].maxAnisotropy = 1;
-    tex_desc[0].maxMipmapLevelClamp = 99;
-    tex_desc[0].minMipmapLevelClamp = 0;
-    tex_desc[0].mipmapFilterMode = cudaFilterModePoint;
-    tex_desc[0].borderColor[0] = 1.0f;
-    tex_desc[0].sRGB = 1;
+    tex_desc.addressMode[0] = cudaAddressModeClamp;
+    tex_desc.addressMode[1] = cudaAddressModeClamp;
+    tex_desc.filterMode = cudaFilterModeLinear;
+    tex_desc.readMode = cudaReadModeNormalizedFloat;
+    tex_desc.normalizedCoords = 1;
+    tex_desc.maxAnisotropy = 1;
+    tex_desc.maxMipmapLevelClamp = 99;
+    tex_desc.minMipmapLevelClamp = 0;
+    tex_desc.mipmapFilterMode = cudaFilterModePoint;
+    tex_desc.borderColor[0] = 1.0f;
+    tex_desc.sRGB = 1;
 }
 
 #endif

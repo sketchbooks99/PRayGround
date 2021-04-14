@@ -1,6 +1,7 @@
 #pragma once
 
 #include <optix.h>
+#include <cuda_runtime.h>
 #include "../optix/helpers.h"
 #include "../optix/macros.h"
 

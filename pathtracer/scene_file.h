@@ -13,7 +13,7 @@
 
 #include "texture/constant.h"
 #include "texture/checker.h"
-#include "texture/image.h"
+// #include "texture/image.h"
 
 /**
  * \note 
@@ -43,13 +43,11 @@ pt::Scene my_scene() {
     auto checker2 = new pt::CheckerTexture(
         make_float3(0.8f), make_float3(0.8f, 0.05, 0.05f), 10.0f
     );
-    // auto image = new pt::ImageTexture(make_float3(0.8f));
 
     // Material pointers. 
     auto red_diffuse = new pt::Diffuse(make_float3(0.8f, 0.05f, 0.05f));
     auto green_diffuse = new pt::Diffuse(make_float3(0.05f, 0.8f, 0.05f));
     auto white_diffuse = new pt::Diffuse(make_float3(0.8f, 0.8f, 0.8f));
-    // auto white_diffuse = new pt::Diffuse(image);
     auto emitter = new pt::Emitter(make_float3(0.8f, 0.8f, 0.7f), 15.0f);
     auto metal = new pt::Conductor(make_float3(0.8f, 0.8f, 0.2f), 0.01f);
     auto glass = new pt::Dielectric(make_float3(0.9f), 1.5f);

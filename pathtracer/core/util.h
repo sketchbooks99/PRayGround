@@ -2,8 +2,8 @@
 
 #ifndef __CUDACC__
 #include <sutil/Exception.h>
-#include <cuda_runtime.h>
 #include <string>
+#include <cuda_runtime.h>
 #include <stdexcept>
 #include <array>
 #include <cstring>

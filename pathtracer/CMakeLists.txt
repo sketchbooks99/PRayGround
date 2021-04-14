@@ -26,44 +26,18 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-# add_subdirectory(include/core)
-# add_subdirectory(include/optix)
+if( CUDA_VERSION VERSION_LESS "11.1" )
+  return()
+endif()
+
+set( LIB_DIR, "../lib" )
+
+include_directories(
+  ${LIB_DIR}/optixPaging/include 
+  ${LIB_DIR}/DemandLoading/include
+)
 
 OPTIX_add_sample_executable( pathtracer target_name
-
-  # ===== INCLUDE =====
-  core/aabb.h
-  core/bsdf.h
-  core/cudabuffer.h
-  core/material.h
-  core/onb.h
-  core/pathtracer.h
-  core/primitive.h
-  core/scene.h
-  core/shape.h
-  core/stream_helpers.h
-  core/util.h
-  core/transform.h
-  core/load3d.h
-  # ../include/core/texture.h
-
-  optix/helpers.h
-  optix/macros.h
-  optix/module.h
-  optix/pipeline.h
-  optix/program.h
-  optix/ray.h
-  optix/sbt.h
-  optix/util.h
-
-  # ===== HEADER =====
-  material/conductor.h 
-  material/dielectric.h 
-  material/diffuse.h
-  material/emitter.h
-
-  shape/sphere.h
-  shape/trianglemesh.h 
 
   # ===== SOURCE =====  
   pathtracer.cpp
@@ -71,9 +45,6 @@ OPTIX_add_sample_executable( pathtracer target_name
 
   # ===== CUDA =====
   optix/cuda/pathtracer.cu
-  optix/cuda/bsdf.cuh
-  shape/optix/sphere.cuh
-  shape/optix/trianglemesh.cuh
 
   # OPTIONS -rdc true
   )

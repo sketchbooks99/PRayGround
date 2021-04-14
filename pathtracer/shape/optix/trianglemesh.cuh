@@ -10,8 +10,9 @@ namespace pt {
 
 struct MeshData {
     float3* vertices;
-    float3* normals;
     int3* indices;
+    float3* normals;
+    float2* texcoords;
     // Transform transform;
 };
 
@@ -31,6 +32,11 @@ CALLABLE_FUNC void CH_FUNC(mesh)()
     const float u = optixGetTriangleBarycentrics().x;
     const float v = optixGetTriangleBarycentrics().y;
 
+    const float2 texcoord0 = mesh_data->texcoords[index.x];
+    const float2 texcoord1 = mesh_data->texcoords[index.y];
+    const float2 texcoord2 = mesh_data->texcoords[index.z];
+    const float2 texcoords = (1-u-v)*texcoord0 + u*texcoord1 + v*texcoord2;
+
     const float tmin = optixGetRayTmin();
     const float tmax = optixGetRayTmax();
 
@@ -49,11 +55,11 @@ CALLABLE_FUNC void CH_FUNC(mesh)()
     si->p = ro + tmax*rd;
     si->n = n;
     si->wi = rd;
-    si->uv = make_float2(u, v);
+    si->uv = texcoords;
 
     // Sampling material properties.
     optixContinuationCall<void, pt::SurfaceInteraction*, void*>(data->sample_func_idx, si, data->matdata);
-    
+    // si->attenuation = make_float3(texcoords.x, texcoords.y, 0.5f);
 }
 
 #endif

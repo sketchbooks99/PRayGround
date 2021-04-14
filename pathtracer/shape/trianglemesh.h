@@ -6,7 +6,7 @@
 namespace pt {
 
 /**
- * @todo Implementation of uv coordinates.
+ * @todo Implementation of uv texcoords.
  */
 
 class TriangleMesh : public Shape {
@@ -17,7 +17,7 @@ public:
         std::vector<float3> vertices, 
         std::vector<int3> faces, 
         std::vector<float3> normals, 
-        std::vector<float2> coodinates,
+        std::vector<float2> texcoords,
         bool isSmooth=true);
 
     ShapeType type() const override { return ShapeType::Mesh; }
@@ -33,28 +33,32 @@ public:
     AABB bound() const override { return AABB(); } 
 
     std::vector<float3> vertices() const { return m_vertices; } 
-    std::vector<float3> normals() const { return m_normals; }
     std::vector<int3> indices() const { return m_indices; } 
-    std::vector<float2> coordinates() const { return m_coordinates; }
+    std::vector<float3> normals() const { return m_normals; }
+    std::vector<float2> texcoords() const { return m_texcoords; }
 
     /**
      * \note This is for checking if device side pointer is correctly allocated.
      */
     CUdeviceptr get_dvertices() const { return d_vertices; }
-    CUdeviceptr get_dnormals() const { return d_normals; }
     CUdeviceptr get_dindices() const { return d_indices; }
-    CUdeviceptr get_dcoordinates() const { return d_coordinates; }
+    CUdeviceptr get_dnormals() const { return d_normals; }
+    CUdeviceptr get_dtexcoords() const { return d_texcoords; }
 
 private:
     std::vector<float3> m_vertices;
-    std::vector<float3> m_normals;
     std::vector<int3> m_indices;
-    std::vector<float2> m_coordinates;
+    std::vector<float3> m_normals;
+    std::vector<float2> m_texcoords;
 
     CUdeviceptr d_vertices { 0 };
-    CUdeviceptr d_normals { 0 };
     CUdeviceptr d_indices { 0 };
-    CUdeviceptr d_coordinates { 0 };
+    CUdeviceptr d_normals { 0 };
+    CUdeviceptr d_texcoords { 0 };
 };
+
+TriangleMesh* createQuadMesh(const float u_min, const float u_max, 
+                                const float v_min, const float v_max, 
+                                const float k, Axis axis);
 
 }

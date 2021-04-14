@@ -119,6 +119,23 @@ void load_ply(
     std::vector<float2>& coordinates
 ) 
 {
+    happly::PLYData plyIn(filename);
+    try {
+        plyIn.validate();
+    } catch (const std::exception& e) {
+        std::cerr << e.what() << std::endl;
+        Throw("The error occured while loading the PLY file.");
+    }
+
+    // Get vertices.
+    std::vector<std::array<double, 3>> ply_vertices = plyIn.getVertexPositions();
+    std::transform(ply_vertices.begin(), ply_vertices.end(), std::back_inserter(vertices), 
+        [](const std::array<double, 3>& v) { return make_float3(v[0], v[1], v[2]); } );
+
+    // Get face indices.
+    std::vector<std::vector<size_t>> ply_faces = plyIn.getFaceIndices();
+    std::transform(ply_faces.begin(), ply_faces.end(), std::back_inserter(indices), 
+        [](const std::vector<size_t>& f) { return make_int3(f[0], f[1], f[2]); } );
 
 }
 

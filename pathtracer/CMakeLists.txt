@@ -44,6 +44,7 @@ OPTIX_add_sample_executable( pathtracer target_name
   core/stream_helpers.h
   core/util.h
   core/transform.h
+  core/load3d.h
   # ../include/core/texture.h
 
   optix/helpers.h

@@ -8,7 +8,6 @@
 namespace pt {
 
 struct DielectricData {
-    // float3 albedo;
     void* texdata;
     float ior;
     unsigned int tex_func_idx;

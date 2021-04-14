@@ -6,7 +6,6 @@
 namespace pt {
 
 struct EmitterData {
-    // float3 color;
     void* texdata;
     float strength;
     unsigned int tex_func_idx;

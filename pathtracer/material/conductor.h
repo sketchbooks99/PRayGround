@@ -7,7 +7,6 @@
 namespace pt {
 
 struct ConductorData {
-    // float3 albedo; 
     void* texdata;
     float fuzz;
     unsigned int tex_func_idx;

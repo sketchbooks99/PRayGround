@@ -47,7 +47,7 @@ pt::Scene my_scene() {
     pt::Material* emitter = new pt::Emitter(make_float3(0.8f, 0.8f, 0.7f), 15.0f);
     pt::Material* metal = new pt::Conductor(make_float3(0.8f, 0.8f, 0.2f), 0.01f);
     pt::Material* glass = new pt::Dielectric(make_float3(0.9f), 1.5f);
-    pt::Material* floor_diffuse = new pt::Diffuse(checker);
+    pt::Material* floor_checker = new pt::Diffuse(checker);
 
     float3 cornel_center = make_float3(278.0f, 274.4f, 279.6f);
 
@@ -55,82 +55,23 @@ pt::Scene my_scene() {
     pt::PrimitiveInstance cornel_ps = pt::PrimitiveInstance(pt::Transform());
     cornel_ps.set_sbt_index_base(0);
 
-    // Floor ------------------------------------
-    std::vector<float3> floor_vertices;
-    std::vector<float3> floor_normals(4, make_float3(0.0f, 1.0f, 0.0f));
-    std::vector<int3> floor_indices;
-    floor_vertices.emplace_back(make_float3(  0.0f, 0.0f,   0.0f));
-    floor_vertices.emplace_back(make_float3(  0.0f, 0.0f, 559.2f));
-    floor_vertices.emplace_back(make_float3(556.0f, 0.0f, 559.2f));
-    floor_vertices.emplace_back(make_float3(556.0f, 0.0f,   0.0f));
-    floor_indices.emplace_back(make_int3(0, 1, 2));
-    floor_indices.emplace_back(make_int3(0, 2, 3));
-    auto floor_mesh = new pt::TriangleMesh(floor_vertices, floor_indices, floor_normals);
-    cornel_ps.add_primitive(floor_mesh, floor_diffuse);
-
-    // Ceiling ------------------------------------
-    std::vector<float3> ceiling_vertices;
-    std::vector<float3> ceiling_normals(4, make_float3(0.0f, -1.0f, 0.0f));
-    std::vector<int3> ceiling_indices;
-    ceiling_vertices.emplace_back(make_float3(  0.0f, 548.8f,   0.0f));
-    ceiling_vertices.emplace_back(make_float3(556.0f, 548.8f,   0.0f));
-    ceiling_vertices.emplace_back(make_float3(556.0f, 548.8f, 559.2f));
-    ceiling_vertices.emplace_back(make_float3(  0.0f, 548.8f, 559.2f));
-    ceiling_indices.emplace_back(make_int3(0, 1, 2));
-    ceiling_indices.emplace_back(make_int3(0, 2, 3));
-    auto ceiling_mesh = new pt::TriangleMesh(ceiling_vertices, ceiling_indices, ceiling_normals);
+    // Floor 
+    auto floor_mesh = pt::createQuadMesh(0.0f, 556.0f, 0.0f, 559.2f, 0.0f, pt::Axis::Y);
+    cornel_ps.add_primitive(floor_mesh, floor_checker);
+    // Ceiling 
+    auto ceiling_mesh = pt::createQuadMesh(0.0f, 556.0f, 0.0f, 559.2f, 548.8f, pt::Axis::Y);
     cornel_ps.add_primitive(ceiling_mesh, white_diffuse);
-
-    // Back wall ------------------------------------
-    std::vector<float3> back_wall_vertices;
-    std::vector<float3> back_wall_normals(4, make_float3(0.0f, 0.0f, -1.0f));
-    std::vector<int3> back_wall_indices;
-    back_wall_vertices.emplace_back(make_float3(  0.0f,   0.0f, 559.2f));
-    back_wall_vertices.emplace_back(make_float3(  0.0f, 548.8f, 559.2f));
-    back_wall_vertices.emplace_back(make_float3(556.0f, 548.8f, 559.2f));
-    back_wall_vertices.emplace_back(make_float3(556.0f,   0.0f, 559.2f));
-    back_wall_indices.emplace_back(make_int3(0, 1, 2));
-    back_wall_indices.emplace_back(make_int3(0, 2, 3));
-    auto back_wall_mesh = new pt::TriangleMesh(back_wall_vertices, back_wall_indices, back_wall_normals);
+    // Back wall 
+    auto back_wall_mesh = createQuadMesh(0.0f, 556.0f, 0.0f, 548.8f, 559.2f, pt::Axis::Z);
     cornel_ps.add_primitive(back_wall_mesh, white_diffuse);
-
-    // Right wall ------------------------------------
-    std::vector<float3> right_wall_vertices;
-    std::vector<float3> right_wall_normals(4, make_float3(1.0f, 0.0f, 0.0f));
-    std::vector<int3> right_wall_indices;
-    right_wall_vertices.emplace_back(make_float3(0.0f,   0.0f,   0.0f));
-    right_wall_vertices.emplace_back(make_float3(0.0f, 548.8f,   0.0f));
-    right_wall_vertices.emplace_back(make_float3(0.0f, 548.8f, 559.2f));
-    right_wall_vertices.emplace_back(make_float3(0.0f,   0.0f, 559.2f));
-    right_wall_indices.emplace_back(make_int3(0, 1, 2));
-    right_wall_indices.emplace_back(make_int3(0, 2, 3));
-    auto right_wall_mesh = new pt::TriangleMesh(right_wall_vertices, right_wall_indices, right_wall_normals);
+    // Right wall 
+    auto right_wall_mesh = createQuadMesh(0.0f, 548.8f, 0.0f, 559.2f, 0.0f, pt::Axis::X);
     cornel_ps.add_primitive(right_wall_mesh, red_diffuse);
-
-    // Left wall ------------------------------------
-    std::vector<float3> left_wall_vertices;
-    std::vector<float3> left_wall_normals(4, make_float3(-1.0f, 0.0f, 0.0f));
-    std::vector<int3> left_wall_indices;
-    left_wall_vertices.emplace_back(make_float3(556.0f,   0.0f,   0.0f));
-    left_wall_vertices.emplace_back(make_float3(556.0f,   0.0f, 559.2f));
-    left_wall_vertices.emplace_back(make_float3(556.0f, 548.8f, 559.2f));
-    left_wall_vertices.emplace_back(make_float3(556.0f, 548.8f,   0.0f));
-    left_wall_indices.emplace_back(make_int3(0, 1, 2));
-    left_wall_indices.emplace_back(make_int3(0, 2, 3));
-    auto left_wall_mesh = new pt::TriangleMesh(left_wall_vertices, left_wall_indices, left_wall_normals);
+    // Left wall 
+    auto left_wall_mesh = createQuadMesh(0.0f, 548.8f, 0.0f, 559.2f, 556.0f, pt::Axis::X);
     cornel_ps.add_primitive(left_wall_mesh, green_diffuse);
-
-    // Ceiling light ------------------------------------
-    std::vector<float3> ceiling_light_vertices;
-    std::vector<float3> ceiling_light_normals(4, make_float3(0.0f, -1.0f, 0.0f));
-    std::vector<int3> ceiling_light_indices;
-    ceiling_light_vertices.emplace_back(make_float3(343.0f, 548.6f, 227.0f));
-    ceiling_light_vertices.emplace_back(make_float3(213.0f, 548.6f, 227.0f));
-    ceiling_light_vertices.emplace_back(make_float3(213.0f, 548.6f, 332.0f));
-    ceiling_light_vertices.emplace_back(make_float3(343.0f, 548.6f, 332.0f));
-    ceiling_light_indices.emplace_back(make_int3(0, 1, 2));
-    ceiling_light_indices.emplace_back(make_int3(0, 2, 3));
-    auto ceiling_light_mesh = new pt::TriangleMesh(ceiling_light_vertices, ceiling_light_indices, ceiling_light_normals);
+    // Ceiling light
+    auto ceiling_light_mesh = createQuadMesh(213.0f, 343.0f, 227.0f, 332.0f, 548.6f, pt::Axis::Y);
     cornel_ps.add_primitive(ceiling_light_mesh, emitter);
     scene.add_primitive_instance(cornel_ps);
 

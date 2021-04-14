@@ -19,6 +19,12 @@
 
 namespace pt {
 
+enum class Axis {
+    X = 0, 
+    Y = 1, 
+    Z = 2
+};
+
 /** Error handling at the host side. */
 #ifndef __CUDACC__
 inline void Throw(const std::string& msg) {

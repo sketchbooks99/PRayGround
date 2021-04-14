@@ -10,7 +10,6 @@
 namespace pt {
 
 struct DiffuseData {
-    // float3 albedo;
     void* texdata;
     unsigned int tex_func_idx;
 };

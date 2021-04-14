@@ -17,6 +17,15 @@ struct SphereData {
 
 #ifdef __CUDACC__
 
+INLINE DEVICE float2 get_uv(float3 p) {
+    float3 temp = p;
+    float phi = atan2(temp.z, temp.x);
+    float theta = asin(temp.y);
+    float u = 1.0f - (phi + M_PIf) / (2.0f * M_PIf);
+    float v = (theta + M_PIf/2.0f) / M_PIf;
+    return make_float2(u, v);
+}
+
 CALLABLE_FUNC void IS_FUNC(sphere)() {
     const pt::HitGroupData* data = reinterpret_cast<pt::HitGroupData*>(optixGetSbtDataPointer());
     const pt::SphereData* sphere_data = reinterpret_cast<pt::SphereData*>(data->shapedata);
@@ -24,7 +33,7 @@ CALLABLE_FUNC void IS_FUNC(sphere)() {
     const float3 center = sphere_data->center;
     const float radius = sphere_data->radius;
 
-    const pt::Ray ray = get_ray();
+    pt::Ray ray = get_ray();
 
     const float3 oc = ray.o - center;
     const float a = dot(ray.d, ray.d);
@@ -37,14 +46,14 @@ CALLABLE_FUNC void IS_FUNC(sphere)() {
         float root1 = (-half_b - sqrtd) / a;
         bool check_second = true;
         if ( root1 > ray.tmin && root1 < ray.tmax ) {
-            float3 normal = (ray.o + normalize(ray.d) * root1 - center) / radius;
+            float3 normal = normalize((ray.o + normalize(ray.d) * root1 - center) / radius);
             optixReportIntersection(root1, 0, float3_as_ints(normal));
         }
 
         if (check_second) {
             float root2 = (-half_b + sqrtd) / a;
             if ( root2 > ray.tmin && root2 < ray.tmax ) {
-                float3 normal = (ray.o + normalize(ray.d) * root2 - center) / radius;
+                float3 normal = normalize((ray.o + normalize(ray.d) * root2 - center) / radius);
                 optixReportIntersection(root2, 0, float3_as_ints(normal));
             }
         }
@@ -55,10 +64,7 @@ CALLABLE_FUNC void CH_FUNC(sphere)() {
     const pt::HitGroupData* data = reinterpret_cast<pt::HitGroupData*>(optixGetSbtDataPointer());
     const pt::SphereData* sphere_data = reinterpret_cast<pt::SphereData*>(data->shapedata);
 
-    const float3 ro = optixGetWorldRayOrigin();
-    const float3 rd = optixGetWorldRayDirection();
-    const float tmin = optixGetRayTmin();
-    const float tmax = optixGetRayTmax();
+    pt::Ray ray = get_ray();
 
     float3 n = make_float3(
         int_as_float( optixGetAttribute_0() ),
@@ -66,13 +72,14 @@ CALLABLE_FUNC void CH_FUNC(sphere)() {
         int_as_float( optixGetAttribute_2() )
     );
 
-    n = faceforward(n, -rd, n);
+    n = faceforward(n, -ray.d, n);
     n = normalize(n);
 
     pt::SurfaceInteraction* si = get_surfaceinteraction();
-    si->p = ro + tmax*rd;
+    si->p = ray.at(ray.tmax);
     si->n = n;
-    si->wi = rd;
+    si->wi = ray.d;
+    si->uv = get_uv(si->n);
 
     // Sampling material properties.
     optixContinuationCall<void, pt::SurfaceInteraction*, void*>(data->sample_func_idx, si, data->matdata);

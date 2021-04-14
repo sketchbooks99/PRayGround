@@ -5,7 +5,7 @@
 
 namespace pt {
 
-class Sphere : public Shape {
+class Sphere final : public Shape {
 public:
     explicit Sphere(float3 c, float r) : m_center(c), m_radius(r) {}
 

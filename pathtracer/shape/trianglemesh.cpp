@@ -4,7 +4,7 @@
 
 namespace pt {
 
-/** \note At present, only .obj file format is supported. */
+/** @note At present, only .obj file format is supported. */
 // ------------------------------------------------------------------
 TriangleMesh::TriangleMesh(
     const std::string& filename, bool isSmooth)
@@ -169,6 +169,7 @@ TriangleMesh* createQuadMesh(
     const float v_min, const float v_max, 
     const float k, Axis axis) 
 {
+    // Calculate vertices and texcoords
     std::vector<std::array<float, 3>> temp_vertices;
     std::vector<float2> texcoords;
     for (int u=0; u<2; u++) {
@@ -183,15 +184,22 @@ TriangleMesh* createQuadMesh(
             temp_vertices.push_back(vertex);      
         }
     }
+
+    // Transform vertices data from std::array<float, 3> to float3
     std::vector<float3> vertices;
+    std::transform(temp_vertices.begin(), temp_vertices.end(), std::back_inserter(vertices), 
+        [](const std::array<float, 3>& v) { return make_float3(v[0], v[1], v[2]); } );
+
+    // Face indices
     std::vector<int3> indices;
     indices.push_back(make_int3(0, 1, 2));
     indices.push_back(make_int3(2, 1, 3));
-    std::transform(temp_vertices.begin(), temp_vertices.end(), std::back_inserter(vertices), 
-        [](const std::array<float, 3>& v) { return make_float3(v[0], v[1], v[2]); } );
+    
+    // Normals
     float n[3] = {0.0f, 0.0f, 0.0f};
     n[(int)axis] = 1.0f;
     std::vector<float3> normals(4, make_float3(n[0], n[1], n[2]));
+
     return new TriangleMesh(vertices, indices, normals, texcoords, false);
 }
 

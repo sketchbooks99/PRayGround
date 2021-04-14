@@ -38,6 +38,7 @@
 #include "../../material/diffuse.h"
 #include "../../material/emitter.h"
 #include "../../texture/checker.h"
+#include "../../texture/image.h"
 
 extern "C" {
 __constant__ pt::Params params;

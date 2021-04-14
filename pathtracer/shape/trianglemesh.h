@@ -9,10 +9,10 @@ namespace pt {
  * @todo Implementation of uv texcoords.
  */
 
-class TriangleMesh : public Shape {
+class TriangleMesh final : public Shape {
 public:
     TriangleMesh() {}
-    TriangleMesh(const std::string& filename, bool isSmooth=true);
+    explicit TriangleMesh(const std::string& filename, bool isSmooth=true);
     TriangleMesh(
         std::vector<float3> vertices, 
         std::vector<int3> faces, 
@@ -25,7 +25,7 @@ public:
     void prepare_data() override;
     void build_input( OptixBuildInput& bi, uint32_t sbt_idx, unsigned int index_offset ) override;
     /**
-     * \note 
+     * @note 
      * Currently, triangle never need AABB at intersection test on the device side.
      * However, for future work, I'd like to make this renderer be able to
      * switch computing devices (CPU or GPU) according to the need of an application.
@@ -38,7 +38,7 @@ public:
     std::vector<float2> texcoords() const { return m_texcoords; }
 
     /**
-     * \note This is for checking if device side pointer is correctly allocated.
+     * @note This is for checking if device side pointer is correctly allocated.
      */
     CUdeviceptr get_dvertices() const { return d_vertices; }
     CUdeviceptr get_dindices() const { return d_indices; }
@@ -57,6 +57,17 @@ private:
     CUdeviceptr d_texcoords { 0 };
 };
 
+/**
+ * @brief Create a quad mesh
+ * 
+ * @param u_min 
+ * @param u_max 
+ * @param v_min 
+ * @param v_max 
+ * @param k 
+ * @param axis 
+ * @return TriangleMesh* 
+ */
 TriangleMesh* createQuadMesh(const float u_min, const float u_max, 
                                 const float v_min, const float v_max, 
                                 const float k, Axis axis);

@@ -49,7 +49,7 @@ struct SurfaceInteraction {
 
 #ifdef __CUDACC__
 template <typename T>
-DEVICE INLINE void swap(T& a, T& b)
+INLINE DEVICE void swap(T& a, T& b)
 {
     T c(a); a = b; b = c;
 }

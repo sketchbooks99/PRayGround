@@ -13,7 +13,7 @@ namespace pt {
 
 struct Ray {
 
-    float3 at(const float time) { return o + d*time; }
+    float3 at(float time) { return o + d*time; }
 
     /* Position of ray origin in world coordinates. */
     float3 o;

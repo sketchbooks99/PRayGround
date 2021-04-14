@@ -14,8 +14,8 @@ namespace pt {
 enum class TextureType {
     Constant = 0,
     Checker = 1, 
-    // Image = 2,
-    Count = 2
+    Image = 2,
+    Count = 3
 };
 
 #ifndef __CUDACC__
@@ -24,8 +24,8 @@ enum class TextureType {
  */
 static std::map<TextureType, const char*> tex_eval_map = {
     { TextureType::Constant, "eval_constant" }, 
-    { TextureType::Checker, "eval_checker" } 
-    // { TextureType::Image, "eval_image" }, 
+    { TextureType::Checker, "eval_checker" },
+    { TextureType::Image, "eval_image" }
 };
 
 inline std::ostream& operator<<(std::ostream& out, TextureType type) {

@@ -6,7 +6,7 @@
 #include "../optix/ray.h"
 #include "../optix/macros.h"
 
-namespace pt {
+namespace oprt {
 
 struct Transform {
     sutil::Matrix4x4 mat, matInv;

@@ -7,7 +7,7 @@
     #include "../ext/stb/stb_image.h"
 #endif
 
-namespace pt {
+namespace oprt {
 
 struct ImageTextureData {
     cudaTextureObject_t texture;
@@ -66,9 +66,9 @@ public:
 
         Message("ImageTexture::prepare_data(): sizeof(ImageTextureData)",sizeof(ImageTextureData));
 
-        CUDA_CHECK( cudaMalloc( &d_data, sizeof(ImageTextureData) ) );
+        CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>(&d_data), sizeof(ImageTextureData) ) );
         CUDA_CHECK( cudaMemcpy(
-            d_data, 
+            reinterpret_cast<void*>(d_data), 
             &image_texture_data, sizeof(ImageTextureData), 
             cudaMemcpyHostToDevice
         ));

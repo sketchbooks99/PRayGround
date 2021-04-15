@@ -9,7 +9,7 @@
     #include <map>
 #endif
 
-namespace pt {
+namespace oprt {
 
 enum class TextureType {
     Constant = 0,
@@ -53,10 +53,10 @@ public:
     virtual void prepare_data() = 0;
 
     // Get data pointer on the device.
-    void* get_dptr() const { return d_data; }
+    CUdeviceptr get_dptr() const { return d_data; }
 protected:
     // CUdeviceptr d_data { 0 };
-    void* d_data;
+    CUdeviceptr d_data;
 };
 
 }

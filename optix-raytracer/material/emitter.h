@@ -3,7 +3,7 @@
 #include "../core/material.h"
 #include "../texture/constant.h"
 
-namespace pt {
+namespace oprt {
 
 struct EmitterData {
     void* texdata;
@@ -21,19 +21,11 @@ public:
 
     ~Emitter() { }
 
-    void sample(SurfaceInteraction& si) const override {
-        si.trace_terminate = true;
-    }
-    float3 emittance(SurfaceInteraction& si) const override {
-        return m_texture->eval(si) * m_strength;
-    }
-
     void prepare_data() override {
         m_texture->prepare_data();
 
         EmitterData data = {
-            // reinterpret_cast<void*>(m_texture->get_dptr()), 
-            m_texture->get_dptr(),
+            reinterpret_cast<void*>(m_texture->get_dptr()), 
             m_strength,
             static_cast<unsigned int>(m_texture->type()) + static_cast<unsigned int>(MaterialType::Count)
         };
@@ -56,8 +48,6 @@ private:
 #else 
 CALLABLE_FUNC void CC_FUNC(sample_emitter)(SurfaceInteraction* si, void* matdata) {
     const EmitterData* emitter = reinterpret_cast<EmitterData*>(matdata);
-    // si->emission = emitter->color * emitter->strength;
-    // si->emission = make_float3(1.0f) * emitter->strength;
     si->emission = optixDirectCall<float3, SurfaceInteraction*, void*>(
         emitter->tex_func_idx, si, emitter->texdata) * emitter->strength;
     si->attenuation = make_float3(0.0f);

@@ -4,7 +4,7 @@
 #include "../core/material.h"
 #include "../core/util.h"
 
-namespace pt {
+namespace oprt {
 
 struct EmptyData {};
 
@@ -13,7 +13,7 @@ struct MissData {
 };
 
 struct HitGroupData {
-    /// Pointer that stores geometries data (e.g. \c pt::MeshData )
+    /// Pointer that stores geometries data (e.g. \c oprt::MeshData )
     void* shapedata;
     void* matdata;
     unsigned int sample_func_idx;   // Index of direct callables function to sample bsdf properties.

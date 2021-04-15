@@ -7,7 +7,7 @@
 #include "../optix/sbt.h"
 #include "../texture/constant.h"
 
-namespace pt {
+namespace oprt {
 
 struct DiffuseData {
     void* texdata;
@@ -23,32 +23,11 @@ public:
 
     ~Diffuse() { }
 
-    void sample(SurfaceInteraction& si) const override {
-        unsigned int seed = si.seed;
-        si.trace_terminate = false;
-
-        {
-            const float z1 = rnd(seed);
-            const float z2 = rnd(seed);
-
-            float3 w_in = cosine_sample_hemisphere(z1, z2);
-            Onb onb(si.n);
-            onb.inverse_transform(w_in);
-            si.wo = w_in;
-        }
-
-        si.seed = seed;
-        si.attenuation = m_texture->eval(si);
-    }
-    
-    float3 emittance(SurfaceInteraction& /* si */) const override { return make_float3(0.f); }
-
     void prepare_data() override {
         m_texture->prepare_data();
 
         DiffuseData data {
-            // reinterpret_cast<void*>(m_texture->get_dptr()),
-            m_texture->get_dptr(),
+            reinterpret_cast<void*>(m_texture->get_dptr()),
             static_cast<unsigned int>(m_texture->type()) + static_cast<unsigned int>(MaterialType::Count)
         };
 

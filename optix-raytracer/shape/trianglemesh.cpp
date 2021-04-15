@@ -2,7 +2,7 @@
 #include "../core/cudabuffer.h"
 #include "../core/load3d.h"
 
-namespace pt {
+namespace oprt {
 
 /** @note At present, only .obj file format is supported. */
 // ------------------------------------------------------------------

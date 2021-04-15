@@ -4,7 +4,7 @@
 #include <sutil/Camera.h>
 #include "../core/optix-raytracer.h"
 
-namespace pt {
+namespace oprt {
 
 class Scene {
 public:

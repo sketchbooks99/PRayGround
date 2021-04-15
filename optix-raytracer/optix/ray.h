@@ -9,7 +9,7 @@
 
 #ifdef __CUDACC__
 
-namespace pt {
+namespace oprt {
 
 struct Ray {
 
@@ -32,8 +32,8 @@ struct Ray {
 
 }
 
-INLINE DEVICE pt::Ray get_ray() {
-    pt::Ray ray;
+INLINE DEVICE oprt::Ray get_ray() {
+    oprt::Ray ray;
     ray.o = optixTransformPointFromWorldToObjectSpace(optixGetWorldRayOrigin());
     ray.d = optixTransformVectorFromWorldToObjectSpace(optixGetWorldRayDirection());
     ray.tmin = optixGetRayTmin();

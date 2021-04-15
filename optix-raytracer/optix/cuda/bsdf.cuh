@@ -8,7 +8,7 @@
 #include <sutil/vec_math.h>
 #include <include/optix/helpers.h>
 
-using namespace pt;
+using namespace oprt;
 
 extern "C" {
 __constant__ Params params;

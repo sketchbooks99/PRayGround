@@ -22,7 +22,7 @@
 #include "../optix/module.h"
 #include <algorithm>
 
-namespace pt {
+namespace oprt {
 
 class Primitive {
 public:

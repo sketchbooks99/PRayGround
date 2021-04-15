@@ -17,7 +17,7 @@
 
 #include "../optix/macros.h"
 
-namespace pt {
+namespace oprt {
 
 enum class Axis {
     X = 0, 

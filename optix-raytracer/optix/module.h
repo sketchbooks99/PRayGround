@@ -3,7 +3,7 @@
 #include <optix.h>
 #include "../core/util.h"
 
-namespace pt {
+namespace oprt {
 
 /**
  * \brief Module object to easily manage OptixModule and its options. 

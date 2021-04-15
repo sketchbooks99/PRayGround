@@ -4,7 +4,7 @@
 #include "../core/util.h"
 #include "../optix/program.h"
 
-namespace pt {
+namespace oprt {
 
 class Pipeline {
 public:

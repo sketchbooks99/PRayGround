@@ -39,12 +39,13 @@
 #include "../../material/dielectric.h"
 #include "../../material/diffuse.h"
 #include "../../material/emitter.h"
+#include "../../material/mmaps.h"
 
 #include "../../texture/checker.h"
 #include "../../texture/image.h"
 
 extern "C" {
-__constant__ pt::Params params;
+__constant__ oprt::Params params;
 }
 
 INLINE DEVICE bool trace_occlusion(
@@ -75,7 +76,7 @@ INLINE DEVICE void trace_radiance(
     float3                 ray_direction,
     float                  tmin,
     float                  tmax,
-    pt::SurfaceInteraction*    si
+    oprt::SurfaceInteraction*    si
 ) 
 {
     // TODO: deduce stride from num ray-types passed in params
@@ -131,7 +132,7 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 		float3 ray_direction = normalize(d.x * U + d.y * V + W);
 		float3 ray_origin = eye;
 
-		pt::SurfaceInteraction si;
+		oprt::SurfaceInteraction si;
 		si.seed = seed;
 		si.emission = make_float3(0.0f);
 		si.attenuation = make_float3(1.0f);
@@ -182,8 +183,8 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 // -------------------------------------------------------------------------------
 CALLABLE_FUNC void MS_FUNC(radiance)()
 {
-	pt::MissData* rt_data = reinterpret_cast<pt::MissData*>(optixGetSbtDataPointer());
-	pt::SurfaceInteraction *si = get_surfaceinteraction();
+	oprt::MissData* rt_data = reinterpret_cast<oprt::MissData*>(optixGetSbtDataPointer());
+	oprt::SurfaceInteraction *si = get_surfaceinteraction();
 
 	// si->radiance = make_float3(rt_data->bg_color);
 	si->emission = make_float3(rt_data->bg_color);

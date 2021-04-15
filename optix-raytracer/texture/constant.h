@@ -2,7 +2,7 @@
 
 #include "../core/texture.h"
 
-namespace pt {
+namespace oprt {
 
 struct ConstantTextureData {
     float3 color;
@@ -18,16 +18,10 @@ public:
 
     void prepare_data() override {
         ConstantTextureData data = { m_color };
-        // CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_data), sizeof(ConstantTextureData)));
-        // CUDA_CHECK(cudaMemcpy(
-        //     reinterpret_cast<void*>(d_data),
-        //     &data, sizeof(ConstantTextureData),
-        //     cudaMemcpyHostToDevice
-        // ));
 
-        CUDA_CHECK(cudaMalloc(&d_data, sizeof(ConstantTextureData)));
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_data), sizeof(ConstantTextureData)));
         CUDA_CHECK(cudaMemcpy(
-            d_data,
+            reinterpret_cast<void*>(d_data),
             &data, sizeof(ConstantTextureData),
             cudaMemcpyHostToDevice
         ));

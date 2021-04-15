@@ -3,7 +3,7 @@
 #include "../core/shape.h"
 #include "optix/trianglemesh.cuh"
 
-namespace pt {
+namespace oprt {
 
 /**
  * @todo Implementation of uv texcoords.

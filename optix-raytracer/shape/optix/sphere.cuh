@@ -5,7 +5,7 @@
 #include "../../core/material.h"
 #include "../../optix/sbt.h"
 
-namespace pt {
+namespace oprt {
 
 struct SphereData {
     float3 center;
@@ -27,13 +27,13 @@ INLINE DEVICE float2 get_uv(float3 p) {
 }
 
 CALLABLE_FUNC void IS_FUNC(sphere)() {
-    const pt::HitGroupData* data = reinterpret_cast<pt::HitGroupData*>(optixGetSbtDataPointer());
-    const pt::SphereData* sphere_data = reinterpret_cast<pt::SphereData*>(data->shapedata);
+    const oprt::HitGroupData* data = reinterpret_cast<oprt::HitGroupData*>(optixGetSbtDataPointer());
+    const oprt::SphereData* sphere_data = reinterpret_cast<oprt::SphereData*>(data->shapedata);
 
     const float3 center = sphere_data->center;
     const float radius = sphere_data->radius;
 
-    pt::Ray ray = get_ray();
+    oprt::Ray ray = get_ray();
 
     const float3 oc = ray.o - center;
     const float a = dot(ray.d, ray.d);
@@ -61,10 +61,10 @@ CALLABLE_FUNC void IS_FUNC(sphere)() {
 }
 
 CALLABLE_FUNC void CH_FUNC(sphere)() {
-    const pt::HitGroupData* data = reinterpret_cast<pt::HitGroupData*>(optixGetSbtDataPointer());
-    const pt::SphereData* sphere_data = reinterpret_cast<pt::SphereData*>(data->shapedata);
+    const oprt::HitGroupData* data = reinterpret_cast<oprt::HitGroupData*>(optixGetSbtDataPointer());
+    const oprt::SphereData* sphere_data = reinterpret_cast<oprt::SphereData*>(data->shapedata);
 
-    pt::Ray ray = get_ray();
+    oprt::Ray ray = get_ray();
 
     float3 n = make_float3(
         int_as_float( optixGetAttribute_0() ),
@@ -75,14 +75,14 @@ CALLABLE_FUNC void CH_FUNC(sphere)() {
     n = faceforward(n, -ray.d, n);
     n = normalize(n);
 
-    pt::SurfaceInteraction* si = get_surfaceinteraction();
+    oprt::SurfaceInteraction* si = get_surfaceinteraction();
     si->p = ray.at(ray.tmax);
     si->n = n;
     si->wi = ray.d;
     si->uv = get_uv(si->n);
 
     // Sampling material properties.
-    optixContinuationCall<void, pt::SurfaceInteraction*, void*>(data->sample_func_idx, si, data->matdata);
+    optixContinuationCall<void, oprt::SurfaceInteraction*, void*>(data->sample_func_idx, si, data->matdata);
 }
 
 #endif

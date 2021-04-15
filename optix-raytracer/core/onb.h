@@ -2,7 +2,7 @@
 
 #include "../core/util.h"
 
-namespace pt {
+namespace oprt {
 
 struct Onb {
     INLINE HOSTDEVICE Onb(const float3& normal) {

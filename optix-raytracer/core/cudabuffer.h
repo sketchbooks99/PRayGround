@@ -3,7 +3,7 @@
 #include <sutil/Exception.h>
 #include "../optix/util.h"
 
-namespace pt {
+namespace oprt {
 
 /**  
  * \brief

@@ -3,7 +3,7 @@
 #include "../core/shape.h"
 #include "optix/sphere.cuh"
 
-namespace pt {
+namespace oprt {
 
 class Sphere final : public Shape {
 public:

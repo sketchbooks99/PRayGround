@@ -10,7 +10,7 @@
     #include <map>
 #endif
 
-namespace pt {
+namespace oprt {
 
 /**
  * \note 
@@ -32,8 +32,8 @@ enum class MaterialType {
     Conductor = 1,
     Dielectric = 2,
     Emitter = 3,
-    // Disney = 4,
-    Count = 4
+    MMAPs = 4,
+    Count = 5
 };
 
 #ifndef __CUDACC__
@@ -44,7 +44,8 @@ static std::map<MaterialType, const char*> mat_sample_map = {
     { MaterialType::Diffuse, "sample_diffuse" },    
     { MaterialType::Conductor, "sample_conductor" },    
     { MaterialType::Dielectric, "sample_dielectric" },    
-    { MaterialType::Emitter, "sample_emitter" }    
+    { MaterialType::Emitter, "sample_emitter" },
+    { MaterialType::MMAPs, "sample_mmaps"}
 };
 
 inline std::ostream& operator<<(std::ostream& out, const MaterialType& type) {
@@ -70,11 +71,6 @@ inline std::ostream& operator<<(std::ostream& out, const MaterialType& type) {
 // Abstract class to compute scattering properties.
 class Material {
 public:
-    virtual void sample(SurfaceInteraction& si) const = 0;
-    virtual float3 emittance(SurfaceInteraction& si) const = 0;
-    /// FUTURE:
-    // virtual HOSTDEVICE float pdf(const Ray& r, const SurfaceInteraction& si) const = 0; */
-
     virtual void prepare_data() = 0;
     virtual MaterialType type() const = 0;
     

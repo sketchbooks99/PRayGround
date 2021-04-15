@@ -11,7 +11,7 @@ enum RayType {
     RAY_TYPE_COUNT = 2
 };
 
-namespace pt {
+namespace oprt {
 
 /// @note Currently \c spectrum is RGB representation, not spectrum. 
 struct SurfaceInteraction {
@@ -69,10 +69,10 @@ INLINE DEVICE void pack_pointer(void* ptr, unsigned int& i0, unsigned int& i1)
     i1 = uptr & 0x00000000ffffffff;
 }
 
-INLINE DEVICE pt::SurfaceInteraction* get_surfaceinteraction()
+INLINE DEVICE oprt::SurfaceInteraction* get_surfaceinteraction()
 {
     const unsigned int u0 = optixGetPayload_0();
     const unsigned int u1 = optixGetPayload_1();
-    return reinterpret_cast<pt::SurfaceInteraction*>( unpack_pointer(u0, u1) ); 
+    return reinterpret_cast<oprt::SurfaceInteraction*>( unpack_pointer(u0, u1) ); 
 }
 #endif

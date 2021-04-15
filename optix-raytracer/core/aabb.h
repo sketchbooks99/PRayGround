@@ -4,7 +4,7 @@
 #include <sutil/vec_math.h>
 #include <optix.h>
 
-namespace pt {
+namespace oprt {
 
 class AABB {
 public:

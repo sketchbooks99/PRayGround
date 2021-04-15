@@ -1,7 +1,7 @@
 #pragma once
 #include "../core/texture.h"
 
-namespace pt {
+namespace oprt {
 
 struct CheckerTextureData {
     float3 color1;
@@ -28,16 +28,9 @@ public:
             m_scale
         };
 
-        // CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_data), sizeof(CheckerTextureData)));
-        // CUDA_CHECK(cudaMemcpy(
-        //     reinterpret_cast<void*>(d_data),
-        //     &data, sizeof(CheckerTextureData),
-        //     cudaMemcpyHostToDevice
-        // ));
-
-        CUDA_CHECK(cudaMalloc(&d_data, sizeof(CheckerTextureData)));
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_data), sizeof(CheckerTextureData)));
         CUDA_CHECK(cudaMemcpy(
-            d_data,
+            reinterpret_cast<void*>(d_data),
             &data, sizeof(CheckerTextureData),
             cudaMemcpyHostToDevice
         ));

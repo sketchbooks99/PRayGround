@@ -4,7 +4,7 @@
 #include "../core/bsdf.h"
 #include "../texture/constant.h"
 
-namespace pt {
+namespace oprt {
 
 struct ConductorData {
     void* texdata;
@@ -21,21 +21,11 @@ public:
     : m_texture(texture), m_fuzz(f) {}
     ~Conductor() {}
 
-    void sample( SurfaceInteraction& si ) const override {
-        si.wo = reflect(si.wi, si.n);
-        si.attenuation = m_texture->eval(si);
-        si.trace_terminate = false;
-        si.emission = make_float3(0.0f);
-    }
-    
-    float3 emittance( SurfaceInteraction& si ) const override { return make_float3(0.f); }  
-
     void prepare_data() override {
         m_texture->prepare_data();
 
         ConductorData data = {
-            // reinterpret_cast<void*>(m_texture->get_dptr()), 
-            m_texture->get_dptr(),
+            reinterpret_cast<void*>(m_texture->get_dptr()), 
             m_fuzz,
             static_cast<unsigned int>(m_texture->type()) + static_cast<unsigned int>(MaterialType::Count) 
         };

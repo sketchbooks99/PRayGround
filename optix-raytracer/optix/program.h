@@ -4,7 +4,7 @@
 #include "../core/util.h"
 #include <optix.h>
 
-namespace pt { 
+namespace oprt { 
 
 /** OptixModule and the name of entry function */
 using ProgramEntry = std::pair<OptixModule, const char*>;

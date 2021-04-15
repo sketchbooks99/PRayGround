@@ -69,7 +69,7 @@ static void mouseButtonCallback( GLFWwindow* window, int button, int action, int
 
 static void cursorPosCallback( GLFWwindow* window, double xpos, double ypos )
 {
-    pt::Params* params = static_cast<pt::Params*>( glfwGetWindowUserPointer( window ));
+    oprt::Params* params = static_cast<oprt::Params*>( glfwGetWindowUserPointer( window ));
 
     if(mouse_button == GLFW_MOUSE_BUTTON_LEFT ) {
         trackball.setViewMode( sutil::Trackball::LookAtFixed );
@@ -91,7 +91,7 @@ static void windowSizeCallback( GLFWwindow* window, int32_t res_x, int32_t res_y
     
     sutil::ensureMinimumSize( res_x, res_y );
 
-    pt::Params* params = static_cast<pt::Params*>( glfwGetWindowUserPointer( window ));
+    oprt::Params* params = static_cast<oprt::Params*>( glfwGetWindowUserPointer( window ));
     params->width = res_x;
     params->height = res_y;
     camera_changed = true;
@@ -140,7 +140,7 @@ void printUsageAndExit( const char* argv0 )
 void initLaunchParams( 
     const OptixTraversableHandle& gas_handle,
     CUstream& stream,
-    pt::Params& params,
+    oprt::Params& params,
     CUdeviceptr& d_params
 )
 {
@@ -155,10 +155,10 @@ void initLaunchParams(
     params.handle         = gas_handle;
 
     CUDA_CHECK( cudaStreamCreate( &stream) );
-    CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &d_params ), sizeof( pt::Params ) ) );
+    CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &d_params ), sizeof( oprt::Params ) ) );
 }
 
-void handleCameraUpdate( pt::Params& params )
+void handleCameraUpdate( oprt::Params& params )
 {
     if( !camera_changed )
         return;
@@ -169,7 +169,7 @@ void handleCameraUpdate( pt::Params& params )
     camera.UVWFrame( params.U, params.V, params.W );
 }
 
-void handleResize( sutil::CUDAOutputBuffer<uchar4>& output_buffer, pt::Params& params)
+void handleResize( sutil::CUDAOutputBuffer<uchar4>& output_buffer, oprt::Params& params)
 {
     if( !resize_dirty )
         return;
@@ -185,7 +185,7 @@ void handleResize( sutil::CUDAOutputBuffer<uchar4>& output_buffer, pt::Params& p
     ));
 }
 
-void updateState( sutil::CUDAOutputBuffer<uchar4>& output_buffer, pt::Params& params )
+void updateState( sutil::CUDAOutputBuffer<uchar4>& output_buffer, oprt::Params& params )
 {
     // Update params on device
     if( camera_changed || resize_dirty )
@@ -196,10 +196,10 @@ void updateState( sutil::CUDAOutputBuffer<uchar4>& output_buffer, pt::Params& pa
 }
 
 void launchSubframe( sutil::CUDAOutputBuffer<uchar4>& output_buffer,   // output buffer
-                     pt::Params& params,                                // Launch parameters of OptiX
+                     oprt::Params& params,                                // Launch parameters of OptiX
                      const CUdeviceptr& d_params,                       // Device side pointer of launch params
                      const CUstream& stream,                            // CUDA stream
-                     const pt::Pipeline& pipeline,                     // Pipeline of OptiX
+                     const oprt::Pipeline& pipeline,                     // Pipeline of OptiX
                      OptixShaderBindingTable& sbt                 // Shader binding table 
 ) {
     // Launch
@@ -207,7 +207,7 @@ void launchSubframe( sutil::CUDAOutputBuffer<uchar4>& output_buffer,   // output
     params.frame_buffer  = result_buffer_data;
     CUDA_CHECK( cudaMemcpyAsync(
         reinterpret_cast<void*>( d_params ),
-        &params, sizeof( pt::Params ),
+        &params, sizeof( oprt::Params ),
         cudaMemcpyHostToDevice, stream
     ));
 
@@ -216,7 +216,7 @@ void launchSubframe( sutil::CUDAOutputBuffer<uchar4>& output_buffer,   // output
         (OptixPipeline)pipeline, 
         stream,
         d_params,
-        sizeof( pt::Params ),
+        sizeof( oprt::Params ),
         &sbt,
         params.width,
         params.height,
@@ -266,7 +266,7 @@ void initCameraState()
 
 // ========== Main ==========
 int main(int argc, char* argv[]) {
-    pt::Params params = {};
+    oprt::Params params = {};
     CUdeviceptr d_params;
 
     sutil::CUDAOutputBufferType output_buffer_type = sutil::CUDAOutputBufferType::GL_INTEROP;
@@ -336,7 +336,7 @@ int main(int argc, char* argv[]) {
         OPTIX_CHECK(optixDeviceContextCreate(cu_context, &options, &optix_context));
 
         // Load the scene
-        pt::Scene scene = my_scene();
+        oprt::Scene scene = my_scene();
 
         params.width                             = scene.width();
         params.height                            = scene.height();
@@ -347,14 +347,14 @@ int main(int argc, char* argv[]) {
         std::vector<OptixInstance> instances;
         unsigned int sbt_base_offset = 0; 
         unsigned int instance_id = 0;
-        std::vector<pt::AccelData*> accels;
+        std::vector<oprt::AccelData*> accels;
         for ( auto ps : scene.primitive_instances() ) {
-            accels.push_back( new pt::AccelData() );
-            pt::build_gas( optix_context, *accels.back(), ps );
-            pt::build_instances( optix_context, *accels.back(), ps, sbt_base_offset, instance_id, instances ); 
+            accels.push_back( new oprt::AccelData() );
+            oprt::build_gas( optix_context, *accels.back(), ps );
+            oprt::build_instances( optix_context, *accels.back(), ps, sbt_base_offset, instance_id, instances ); 
         }
 
-        pt::CUDABuffer<OptixInstance> d_instances;
+        oprt::CUDABuffer<OptixInstance> d_instances;
         d_instances.alloc_copy(instances);
 
         // Prepare build input for instances.
@@ -402,19 +402,19 @@ int main(int argc, char* argv[]) {
             0                   // num emitted properties
         ));
 
-        pt::cuda_free(d_temp_buffer);
+        oprt::cuda_free(d_temp_buffer);
         d_instances.free();
 
         // createModule(optix_context, pipeline_compile_options, ptx_module);
         // Prepare the pipeline
         std::string params_name = "params";
-        pt::Pipeline pipeline(params_name);
+        oprt::Pipeline pipeline(params_name);
         pipeline.set_dc_depth(2);   // The maximum call depth of direct callable programs.
         pipeline.set_cc_depth(2);   // The maximum call depth of continuation callable programs.
         pipeline.set_num_payloads(5);
         pipeline.set_num_attributes(5);
         // Create module
-        pt::Module module("optix/cuda/optix-raytracer.cu");
+        oprt::Module module("optix/cuda/optix-raytracer.cu");
         module.create(optix_context, pipeline.compile_options());
 
         /**
@@ -422,53 +422,53 @@ int main(int argc, char* argv[]) {
          */
         std::vector<OptixProgramGroup> program_groups;
         // Raygen program
-        pt::ProgramGroup raygen_program(OPTIX_PROGRAM_GROUP_KIND_RAYGEN);
-        raygen_program.create( optix_context, pt::ProgramEntry( (OptixModule)module, RG_FUNC_STR("raygen") ) );
+        oprt::ProgramGroup raygen_program(OPTIX_PROGRAM_GROUP_KIND_RAYGEN);
+        raygen_program.create( optix_context, oprt::ProgramEntry( (OptixModule)module, RG_FUNC_STR("raygen") ) );
         program_groups.push_back( (OptixProgramGroup)raygen_program );
         // Create and bind sbt to raygen program
-        pt::CUDABuffer<pt::RayGenRecord> d_raygen_record;
-        pt::RayGenRecord rg_record = {};
+        oprt::CUDABuffer<oprt::RayGenRecord> d_raygen_record;
+        oprt::RayGenRecord rg_record = {};
         raygen_program.bind_record( &rg_record );
-        d_raygen_record.alloc_copy( &rg_record, sizeof( pt::RayGenRecord ) );
+        d_raygen_record.alloc_copy( &rg_record, sizeof( oprt::RayGenRecord ) );
         
         // Miss program
-        std::vector<pt::ProgramGroup> miss_programs( RAY_TYPE_COUNT, pt::ProgramGroup( OPTIX_PROGRAM_GROUP_KIND_MISS ) );
-        miss_programs[0].create( optix_context, pt::ProgramEntry( (OptixModule)module, MS_FUNC_STR("radiance") ) );
-        miss_programs[1].create( optix_context, pt::ProgramEntry( nullptr, nullptr ) );
+        std::vector<oprt::ProgramGroup> miss_programs( RAY_TYPE_COUNT, oprt::ProgramGroup( OPTIX_PROGRAM_GROUP_KIND_MISS ) );
+        miss_programs[0].create( optix_context, oprt::ProgramEntry( (OptixModule)module, MS_FUNC_STR("radiance") ) );
+        miss_programs[1].create( optix_context, oprt::ProgramEntry( nullptr, nullptr ) );
         std::copy( miss_programs.begin(), miss_programs.end(), std::back_inserter( program_groups ) );
         // Create sbt for miss programs
-        pt::CUDABuffer<pt::MissRecord> d_miss_record;
-        pt::MissRecord ms_records[RAY_TYPE_COUNT];
+        oprt::CUDABuffer<oprt::MissRecord> d_miss_record;
+        oprt::MissRecord ms_records[RAY_TYPE_COUNT];
         for (int i=0; i<RAY_TYPE_COUNT; i++) {
             miss_programs[i].bind_record( &ms_records[i] );
             ms_records[i].data.bg_color = scene.bgcolor();  
         }
-        d_miss_record.alloc_copy( ms_records, sizeof(pt::MissRecord) * RAY_TYPE_COUNT );
+        d_miss_record.alloc_copy( ms_records, sizeof(oprt::MissRecord) * RAY_TYPE_COUNT );
 
         // Bind sbts to raygen and miss program
         sbt.raygenRecord = d_raygen_record.d_ptr();
         sbt.missRecordBase = d_miss_record.d_ptr();
-        sbt.missRecordStrideInBytes = static_cast<uint32_t>( sizeof( pt::MissRecord ) );
+        sbt.missRecordStrideInBytes = static_cast<uint32_t>( sizeof( oprt::MissRecord ) );
         sbt.missRecordCount = RAY_TYPE_COUNT;
 
         // HitGroup programs
         scene.create_hitgroup_programs( optix_context, module );
-        std::vector<pt::ProgramGroup> hitgroup_programs = scene.hitgroup_programs();
+        std::vector<oprt::ProgramGroup> hitgroup_programs = scene.hitgroup_programs();
         std::copy( hitgroup_programs.begin(), hitgroup_programs.end(), std::back_inserter( program_groups ) );
 
         // Create sbts and bind it to hitgroup programs.
         scene.create_hitgroup_sbt( sbt );
 
         // Callable programs for sampling bsdf properties.
-        std::vector<pt::ProgramGroup> callable_programs;
-        std::vector<pt::CallableRecord> callable_records;
+        std::vector<oprt::ProgramGroup> callable_programs;
+        std::vector<oprt::CallableRecord> callable_records;
         create_material_sample_programs( optix_context, module, callable_programs, callable_records );
         create_texture_eval_programs( optix_context, module, callable_programs, callable_records );
-        pt::CUDABuffer<pt::CallableRecord> d_callable_records;
+        oprt::CUDABuffer<oprt::CallableRecord> d_callable_records;
         d_callable_records.alloc_copy(callable_records);
         sbt.callablesRecordBase = d_callable_records.d_ptr();
         sbt.callablesRecordCount = static_cast<unsigned int>( callable_records.size() );
-        sbt.callablesRecordStrideInBytes = static_cast<unsigned int>( sizeof(pt::CallableRecord ) ); 
+        sbt.callablesRecordStrideInBytes = static_cast<unsigned int>( sizeof(oprt::CallableRecord ) ); 
 
         std::copy( callable_programs.begin(), callable_programs.end(), std::back_inserter( program_groups ) );
 
@@ -553,7 +553,7 @@ int main(int argc, char* argv[]) {
             handleResize( output_buffer, params );
 
             int num_launches = scene.num_samples() / scene.samples_per_launch();
-            pt::Assert(scene.num_samples()%scene.samples_per_launch() == 0, 
+            oprt::Assert(scene.num_samples()%scene.samples_per_launch() == 0, 
                 "The number of total samples must be a multiple of the number of sampler per launch.");
 
             auto start_time = std::chrono::steady_clock::now();
@@ -587,7 +587,7 @@ int main(int argc, char* argv[]) {
         module.destroy();
         for ( auto& pg : program_groups ) OPTIX_CHECK( optixProgramGroupDestroy(pg) );
         OPTIX_CHECK( optixDeviceContextDestroy( optix_context ) );
-        pt::cuda_frees(sbt.raygenRecord, sbt.missRecordBase, sbt.hitgroupRecordBase, 
+        oprt::cuda_frees(sbt.raygenRecord, sbt.missRecordBase, sbt.hitgroupRecordBase, 
                        params.accum_buffer,
                        d_params);
 

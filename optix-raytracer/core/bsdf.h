@@ -4,7 +4,7 @@
 #include "../core/util.h"
 #include "../optix/util.h"
 
-namespace pt {
+namespace oprt {
 
 HOSTDEVICE INLINE float3 random_sample_hemisphere() {
     return make_float3(0.0f, 1.0f, 0.0f);
@@ -89,6 +89,11 @@ HOSTDEVICE INLINE float3 refract(const float3& wi, const float3& n, float cos_i,
     float ni_nt = ni / nt;
     float D = sqrtf(nt_ni*nt_ni - (1.0f-cos_i*cos_i)) - cos_i;
     return ni_nt * (wi - D * n);
+}
+
+HOSTDEVICE INLINE float3 retro_transmit(const float3& i, const float3& n)
+{
+    return -i + 2.0f * n * dot(n, i);
 }
 
 }

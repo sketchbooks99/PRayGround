@@ -6,7 +6,7 @@
 #include <sutil/vec_math.h>
 #include <map>
 
-namespace pt {
+namespace oprt {
 
 enum class ShapeType {
     None,       // None type

@@ -27,7 +27,7 @@
 //
 #pragma once 
 
-namespace pt {
+namespace oprt {
 
 struct CameraData {
     float3 eye;

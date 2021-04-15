@@ -3,7 +3,7 @@
 #include <optix.h>
 #include <iostream>
 
-namespace pt {
+namespace oprt {
 
 template <typename T>
 std::string to_str(T t) {

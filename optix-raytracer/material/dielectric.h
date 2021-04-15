@@ -5,7 +5,7 @@
 #include "../core/bsdf.h"
 #include "../texture/constant.h"
 
-namespace pt {
+namespace oprt {
 
 struct DielectricData {
     void* texdata;
@@ -23,39 +23,11 @@ public:
     : m_texture(texture), m_ior(ior) {}
     ~Dielectric() { }
 
-    void sample( SurfaceInteraction& si ) const override {
-        si.attenuation = m_texture->eval(si);
-        si.trace_terminate = false;
-        
-        float ni = 1.0f; // air
-        float nt = m_ior;  // ior specified 
-        float cosine = dot(si.wi, si.n);
-        bool into = cosine < 0;
-        float3 outward_normal = into ? si.n : -si.n;
-
-        if (!into) std::swap(ni, nt);
-
-        cosine = fabs(cosine);
-        float sine = sqrtf(1.0 - cosine*cosine);
-        bool cannot_refract = (ni / nt) * sine > 1.0f;
-
-        float reflect_prob = fr(cosine, ni, nt);
-
-        if (cannot_refract || reflect_prob > rnd(si.seed))
-            si.wo = reflect(si.wi, outward_normal);
-        else    
-            si.wo = refract(si.wi, outward_normal, cosine, ni, nt);
-        si.emission = make_float3(0.0f);
-    }
-    
-    float3 emittance( SurfaceInteraction& /* si */ ) const override { return make_float3(0.f); }
-
     void prepare_data() override {
         m_texture->prepare_data();
 
         DielectricData data = {
-            // reinterpret_cast<void*>(m_texture->get_dptr()), 
-            m_texture->get_dptr(),
+            reinterpret_cast<void*>(m_texture->get_dptr()), 
             m_ior, 
             static_cast<unsigned int>(m_texture->type()) + static_cast<unsigned int>(MaterialType::Count) 
         };

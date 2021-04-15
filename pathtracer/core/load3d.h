@@ -17,6 +17,7 @@ void load_obj(
     std::vector<float3> tmp_normals;
     std::vector<int3> normal_indices;
     std::ifstream ifs(filename, std::ios::in);
+    Assert(ifs.is_open(), "The OBJ file '"+filename+"' is not found.");
     while (!ifs.eof())
     {
         std::string line;
@@ -48,7 +49,7 @@ void load_obj(
 
             // Future work -----------------------------------
             // std::vector<int> temp_tex_indices;
-            // ------------------------------------------------ 
+            // ----------------------------------------------- 
             for (std::string buffer; iss >> buffer;)
             {
                 int vert_idx, tex_idx, norm_idx;
@@ -136,7 +137,6 @@ void load_ply(
     std::vector<std::vector<size_t>> ply_faces = plyIn.getFaceIndices();
     std::transform(ply_faces.begin(), ply_faces.end(), std::back_inserter(indices), 
         [](const std::vector<size_t>& f) { return make_int3(f[0], f[1], f[2]); } );
-
 }
 
 }

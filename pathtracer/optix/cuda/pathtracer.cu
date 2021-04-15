@@ -31,12 +31,15 @@
 #include "../../optix/util.h"
 #include "../../optix/sbt.h"
 #include "../../core/pathtracer.h"
+
 #include "../../shape/optix/sphere.cuh"
 #include "../../shape/optix/trianglemesh.cuh"
+
 #include "../../material/conductor.h"
 #include "../../material/dielectric.h"
 #include "../../material/diffuse.h"
 #include "../../material/emitter.h"
+
 #include "../../texture/checker.h"
 #include "../../texture/image.h"
 

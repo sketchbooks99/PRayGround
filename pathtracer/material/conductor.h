@@ -34,7 +34,8 @@ public:
         m_texture->prepare_data();
 
         ConductorData data = {
-            reinterpret_cast<void*>(m_texture->get_dptr()), 
+            // reinterpret_cast<void*>(m_texture->get_dptr()), 
+            m_texture->get_dptr(),
             m_fuzz,
             static_cast<unsigned int>(m_texture->type()) + static_cast<unsigned int>(MaterialType::Count) 
         };
@@ -50,7 +51,6 @@ public:
     MaterialType type() const override { return MaterialType::Conductor; }
     
 private:
-    // float3 m_albedo;
     Texture* m_texture;
     float m_fuzz;
 };
@@ -61,8 +61,6 @@ CALLABLE_FUNC void CC_FUNC(sample_conductor)(SurfaceInteraction* si, void* matda
     const ConductorData* conductor = reinterpret_cast<ConductorData*>(matdata);
 
     si->wo = reflect(si->wi, si->n);
-    // si->attenuation = conductor->albedo;
-    // si->attenuation = make_float3(0.8f, 0.8f, 0.2f);
     si->attenuation = optixDirectCall<float3, SurfaceInteraction*, void*>(conductor->tex_func_idx, si, conductor->texdata);
     si->trace_terminate = false;
     si->emission = make_float3(0.0f);

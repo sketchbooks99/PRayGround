@@ -28,9 +28,16 @@ public:
             m_scale
         };
 
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_data), sizeof(CheckerTextureData)));
+        // CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_data), sizeof(CheckerTextureData)));
+        // CUDA_CHECK(cudaMemcpy(
+        //     reinterpret_cast<void*>(d_data),
+        //     &data, sizeof(CheckerTextureData),
+        //     cudaMemcpyHostToDevice
+        // ));
+
+        CUDA_CHECK(cudaMalloc(&d_data, sizeof(CheckerTextureData)));
         CUDA_CHECK(cudaMemcpy(
-            reinterpret_cast<void*>(d_data),
+            d_data,
             &data, sizeof(CheckerTextureData),
             cudaMemcpyHostToDevice
         ));

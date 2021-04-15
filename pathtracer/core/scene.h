@@ -90,14 +90,18 @@ public:
     void set_depth(unsigned int d) { m_depth = d; }
     unsigned int depth() const { return m_depth; }
 
-    void set_samples_per_launch(unsigned int spl) { m_samples_per_launch = spl; }
+    void set_samples_per_launch(unsigned int samples_per_launch) { m_samples_per_launch = samples_per_launch; }
     unsigned int samples_per_launch() const { return m_samples_per_launch; }
+
+    void set_num_samples(unsigned int num_samples) { m_num_samples = num_samples; }
+    unsigned int num_samples() const { return m_num_samples; }
 private:
     std::vector<PrimitiveInstance> m_primitive_instances;   // Primitive instances with same transformation.
     unsigned int m_width, m_height;                         // Dimensions of output result.
     float4 m_bgcolor;                                       // Background color
     unsigned int m_depth;                                   // Maximum depth of ray tracing.
     unsigned int m_samples_per_launch;                      // Specify the number of samples per call of optixLaunch.
+    unsigned int m_num_samples;
 };
 
 }

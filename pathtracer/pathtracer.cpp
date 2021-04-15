@@ -411,6 +411,8 @@ int main(int argc, char* argv[]) {
         pt::Pipeline pipeline(params_name);
         pipeline.set_dc_depth(2);   // The maximum call depth of direct callable programs.
         pipeline.set_cc_depth(2);   // The maximum call depth of continuation callable programs.
+        pipeline.set_num_payloads(5);
+        pipeline.set_num_attributes(5);
         // Create module
         pt::Module module("optix/cuda/pathtracer.cu");
         module.create(optix_context, pipeline.compile_options());
@@ -549,7 +551,21 @@ int main(int argc, char* argv[]) {
 
             handleCameraUpdate( params );
             handleResize( output_buffer, params );
-            launchSubframe( output_buffer, params, d_params, stream, pipeline, sbt );
+
+            int num_launches = scene.num_samples() / scene.samples_per_launch();
+            pt::Assert(scene.num_samples()%scene.samples_per_launch() == 0, 
+                "The number of total samples must be a multiple of the number of sampler per launch.");
+
+            auto start_time = std::chrono::steady_clock::now();
+            for (int i=0; i<num_launches; i++) {
+                launchSubframe( output_buffer, params, d_params, stream, pipeline, sbt );
+                params.subframe_index = i;
+            }
+            auto render_time = std::chrono::steady_clock::now() - start_time;
+            std::chrono::minutes m = std::chrono::duration_cast<std::chrono::minutes>(render_time);
+            std::chrono::seconds s = std::chrono::duration_cast<std::chrono::seconds>(render_time);
+            std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds>(render_time);
+            printf("Render time: %dm %ds %dms\n", (int)m.count(), (int)s.count(), (int)ms.count());
 
             sutil::ImageBuffer buffer;
             buffer.data         = output_buffer.getHostPointer();

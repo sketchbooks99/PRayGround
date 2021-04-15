@@ -1,0 +1,6 @@
+[submodule "optix-raytracer/ext/happly"]
+	path = optix-raytracer/ext/happly
+	url = https://github.com/nmwsharp/happly.git
+[submodule "optix-raytracer/ext/stb"]
+	path = optix-raytracer/ext/stb
+	url = https://github.com/nothings/stb.git

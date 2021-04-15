@@ -36,8 +36,8 @@ oprt::Scene my_scene() {
     scene.set_width(768);
     scene.set_height(768);
     scene.set_depth(5);
-    scene.set_samples_per_launch(1);
-    scene.set_num_samples(4096);
+    scene.set_samples_per_launch(4);
+    scene.set_num_samples(10000);
 
     // テクスチャの準備
     auto checker1 = new oprt::CheckerTexture(

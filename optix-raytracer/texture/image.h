@@ -64,8 +64,6 @@ public:
             d_texture
         };
 
-        Message("ImageTexture::prepare_data(): sizeof(ImageTextureData)",sizeof(ImageTextureData));
-
         CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>(&d_data), sizeof(ImageTextureData) ) );
         CUDA_CHECK( cudaMemcpy(
             reinterpret_cast<void*>(d_data), 

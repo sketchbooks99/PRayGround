@@ -31,7 +31,7 @@
 // include application utilities
 #include "core/util.h"
 #include "core/cudabuffer.h"
-#include "core/pathtracer.h"
+#include "core/optix-raytracer.h"
 #include "core/scene.h"
 #include "core/primitive.h"
 
@@ -414,7 +414,7 @@ int main(int argc, char* argv[]) {
         pipeline.set_num_payloads(5);
         pipeline.set_num_attributes(5);
         // Create module
-        pt::Module module("optix/cuda/pathtracer.cu");
+        pt::Module module("optix/cuda/optix-raytracer.cu");
         module.create(optix_context, pipeline.compile_options());
 
         /**

@@ -41,9 +41,6 @@ pt::Scene my_scene() {
     auto checker1 = new pt::CheckerTexture(
         make_float3(0.3f), make_float3(0.9f), 10.0f
     );
-    auto checker2 = new pt::CheckerTexture(
-        make_float3(0.8f), make_float3(0.8f, 0.05, 0.05f), 10.0f
-    );
     auto earth_image = new pt::ImageTexture("../../data/image/earth.jpg");
 
     // Material pointers. 

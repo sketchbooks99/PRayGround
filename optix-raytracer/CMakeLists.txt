@@ -26,15 +26,14 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-OPTIX_add_sample_executable( pathtracer target_name
+OPTIX_add_sample_executable( optix-raytracer target_name
 
   # ===== SOURCE =====  
-  pathtracer.cpp
+  optix-raytracer.cpp
   shape/trianglemesh.cpp
-  # texture/image.cpp
 
   # ===== CUDA =====
-  optix/cuda/pathtracer.cu
+  optix/cuda/optix-raytracer.cu
 
   # OPTIONS -rdc true
   )

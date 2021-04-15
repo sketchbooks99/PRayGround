@@ -1,6 +1,0 @@
-[submodule "pathtracer/ext/happly"]
-	path = pathtracer/ext/happly
-	url = https://github.com/nmwsharp/happly.git
-[submodule "pathtracer/ext/stb"]
-	path = pathtracer/ext/stb
-	url = https://github.com/nothings/stb.git

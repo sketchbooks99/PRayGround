@@ -30,7 +30,7 @@
 #include <cuda/random.h>
 #include "../../optix/util.h"
 #include "../../optix/sbt.h"
-#include "../../core/pathtracer.h"
+#include "../../core/optix-raytracer.h"
 
 #include "../../shape/optix/sphere.cuh"
 #include "../../shape/optix/trianglemesh.cuh"
@@ -134,11 +134,10 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 		pt::SurfaceInteraction si;
 		si.seed = seed;
 		si.emission = make_float3(0.0f);
-		si.radiance = make_float3(0.0f);
 		si.attenuation = make_float3(1.0f);
 		si.trace_terminate = false;
 
-		float3 throughput = make_float3(1.0f);
+		float3 radiance = make_float3(1.0f);
 
 		int depth = 0;
 		for ( ;; ) {
@@ -152,12 +151,12 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 			);
 	
 			if ( si.trace_terminate || depth >= params.max_depth ) {
-				result += si.emission * throughput;
+				result += si.emission * radiance;
 				break;
 			}
 			
-			throughput += si.emission;
-			throughput *= si.attenuation;
+			radiance += si.emission;
+			radiance *= si.attenuation;
 			
 			ray_origin = si.p;
 			ray_direction = si.wo;

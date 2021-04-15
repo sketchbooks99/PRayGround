@@ -2,7 +2,7 @@
 
 #include "../core/primitive.h"
 #include <sutil/Camera.h>
-#include "../core/pathtracer.h"
+#include "../core/optix-raytracer.h"
 
 namespace pt {
 

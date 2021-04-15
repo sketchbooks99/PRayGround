@@ -32,8 +32,7 @@ enum class MaterialType {
     Conductor = 1,
     Dielectric = 2,
     Emitter = 3,
-    MMAPs = 4,
-    Count = 5
+    Count = 4
 };
 
 #ifndef __CUDACC__
@@ -44,8 +43,7 @@ static std::map<MaterialType, const char*> mat_sample_map = {
     { MaterialType::Diffuse, "sample_diffuse" },    
     { MaterialType::Conductor, "sample_conductor" },    
     { MaterialType::Dielectric, "sample_dielectric" },    
-    { MaterialType::Emitter, "sample_emitter" },
-    { MaterialType::MMAPs, "sample_mmaps"}
+    { MaterialType::Emitter, "sample_emitter" }
 };
 
 inline std::ostream& operator<<(std::ostream& out, const MaterialType& type) {

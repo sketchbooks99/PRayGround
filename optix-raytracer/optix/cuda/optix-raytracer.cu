@@ -39,7 +39,6 @@
 #include "../../material/dielectric.h"
 #include "../../material/diffuse.h"
 #include "../../material/emitter.h"
-#include "../../material/mmaps.h"
 
 #include "../../texture/checker.h"
 #include "../../texture/image.h"

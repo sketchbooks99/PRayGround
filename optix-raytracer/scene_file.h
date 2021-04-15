@@ -10,7 +10,6 @@
 #include "material/dielectric.h"
 #include "material/diffuse.h"
 #include "material/emitter.h"
-#include "material/mmaps.h"
 
 #include "texture/constant.h"
 #include "texture/checker.h"
@@ -56,7 +55,6 @@ oprt::Scene my_scene() {
     auto floor_checker = new oprt::Diffuse(checker1);
     auto earth_diffuse = new oprt::Diffuse(earth_image);
     auto teapot_diffuse = new oprt::Diffuse(make_float3(1.0f, 0.8f, 0.3f));
-    auto mmaps = new oprt::MMAPs(make_float3(1.0f));
 
     // コーネルボックスの中心位置
     float3 cornel_center = make_float3(278.0f, 274.4f, 279.6f);
@@ -125,15 +123,6 @@ oprt::Scene my_scene() {
     auto glass_sphere = new oprt::Sphere(cornel_center + make_float3(-150.0f, 0.0f, 80.0f), 80.0f);
     sphere_ps.add_primitive(glass_sphere, glass);
     scene.add_primitive_instance(sphere_ps);
-
-    // MMAPs
-    auto mmaps_matrix = sutil::Matrix4x4::translate(cornel_center)
-                      * sutil::Matrix4x4::rotate(-M_PIf/4, make_float3(1.0f, 0.0f, 0.0f));
-    auto mmaps_ps = oprt::PrimitiveInstance(mmaps_matrix);
-    mmaps_ps.set_sbt_index_base(sphere_ps.sbt_index());
-    auto mmaps_geom = oprt::createQuadMesh(-100, 100, -100, 100, 0, oprt::Axis::Y);
-    mmaps_ps.add_primitive(mmaps_geom, mmaps);
-    scene.add_primitive_instance(mmaps_ps);
 
     return scene;
 }

@@ -33,7 +33,7 @@ CALLABLE_FUNC void IS_FUNC(sphere)() {
     const float3 center = sphere_data->center;
     const float radius = sphere_data->radius;
 
-    oprt::Ray ray = get_ray();
+    oprt::Ray ray = get_local_ray();
 
     const float3 oc = ray.o - center;
     const float a = dot(ray.d, ray.d);
@@ -64,22 +64,21 @@ CALLABLE_FUNC void CH_FUNC(sphere)() {
     const oprt::HitGroupData* data = reinterpret_cast<oprt::HitGroupData*>(optixGetSbtDataPointer());
     const oprt::SphereData* sphere_data = reinterpret_cast<oprt::SphereData*>(data->shapedata);
 
-    oprt::Ray ray = get_ray();
+    oprt::Ray ray = get_world_ray();
 
-    float3 n = make_float3(
+    float3 local_n = make_float3(
         int_as_float( optixGetAttribute_0() ),
         int_as_float( optixGetAttribute_1() ),
         int_as_float( optixGetAttribute_2() )
     );
-
-    n = faceforward(n, -ray.d, n);
-    n = normalize(n);
+    float3 world_n = optixTransformVectorFromObjectToWorldSpace(local_n);
+    world_n = normalize(faceforward(world_n, -ray.d, world_n));
 
     oprt::SurfaceInteraction* si = get_surfaceinteraction();
     si->p = ray.at(ray.tmax);
-    si->n = n;
+    si->n = world_n;
     si->wi = ray.d;
-    si->uv = get_uv(si->n);
+    si->uv = get_uv(local_n);
 
     // Sampling material properties.
     optixContinuationCall<void, oprt::SurfaceInteraction*, void*>(data->sample_func_idx, si, data->matdata);

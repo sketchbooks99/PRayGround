@@ -112,17 +112,23 @@ oprt::Scene my_scene() {
     teapot_ps.add_primitive(teapot, teapot_diffuse);
     scene.add_primitive_instance(teapot_ps);
 
-    auto sphere_ps = oprt::PrimitiveInstance(oprt::Transform());
-    sphere_ps.set_sbt_index_base(teapot_ps.sbt_index());
-
+    auto earth_sphere_matrix = sutil::Matrix4x4::translate(cornel_center + make_float3(120.0f, 80.0f, 100.0f))
+                             * sutil::Matrix4x4::rotate(M_PIf, make_float3(1.0f, 0.0f, 0.0f));
+    auto earth_sphere_ps = oprt::PrimitiveInstance(earth_sphere_matrix);
+    earth_sphere_ps.set_sbt_index_base(teapot_ps.sbt_index());
     // Sphere 1
-    auto sphere = new oprt::Sphere(cornel_center + make_float3(120.0f, 80.0f, 100.0), 90.0f);
-    sphere_ps.add_primitive(sphere, earth_diffuse);
+    auto earth_sphere = new oprt::Sphere(make_float3(0.0f), 90.0f);
+    earth_sphere_ps.add_primitive(earth_sphere, earth_diffuse);
+    scene.add_primitive_instance(earth_sphere_ps);
 
     // Sphere 2
-    auto glass_sphere = new oprt::Sphere(cornel_center + make_float3(-150.0f, 0.0f, 80.0f), 80.0f);
-    sphere_ps.add_primitive(glass_sphere, glass);
-    scene.add_primitive_instance(sphere_ps);
+    auto glass_sphere_matrix = sutil::Matrix4x4::translate(cornel_center + make_float3(-150.0f, 0.0f, 80.0f))
+                             * sutil::Matrix4x4::rotate(M_PIf, make_float3(1.0f, 0.0f, 0.0f));
+    auto glass_sphere_ps = oprt::PrimitiveInstance(glass_sphere_matrix);
+    glass_sphere_ps.set_sbt_index_base(earth_sphere_ps.sbt_index());
+    auto glass_sphere = new oprt::Sphere(make_float3(0.0f), 80.0f);
+    glass_sphere_ps.add_primitive(glass_sphere, glass);
+    scene.add_primitive_instance(glass_sphere_ps);
 
     return scene;
 }

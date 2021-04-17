@@ -33,10 +33,10 @@ oprt::Scene my_scene() {
 
     // シーンの一般的な設定    
     scene.set_bgcolor(make_float4(0.0f));
-    scene.set_width(768);
-    scene.set_height(768);
+    scene.set_width(1024);
+    scene.set_height(1024);
     scene.set_depth(5);
-    scene.set_samples_per_launch(4);
+    scene.set_samples_per_launch(1);
     scene.set_num_samples(10000);
 
     // テクスチャの準備
@@ -108,7 +108,6 @@ oprt::Scene my_scene() {
 
     // Teapot
     auto teapot_matrix = sutil::Matrix4x4::translate(cornel_center + make_float3(-150.0f, -260.0f, -120.0f)) 
-                    //    * sutil::Matrix4x4::rotate(M_PIf, make_float3(0.0f, 1.0f, 0.0f))
                        * sutil::Matrix4x4::scale(make_float3(40.0f));
     auto teapot_ps = oprt::PrimitiveInstance(teapot_matrix);
     teapot_ps.set_sbt_index_base(bunny2_ps.sbt_index());
@@ -116,11 +115,11 @@ oprt::Scene my_scene() {
     teapot_ps.add_primitive(teapot, teapot_diffuse);
     scene.add_primitive_instance(teapot_ps);
 
+    // Sphere 1
     auto earth_sphere_matrix = sutil::Matrix4x4::translate(cornel_center + make_float3(120.0f, 80.0f, 100.0f))
                              * sutil::Matrix4x4::rotate(M_PIf, make_float3(1.0f, 0.0f, 0.0f));
     auto earth_sphere_ps = oprt::PrimitiveInstance(earth_sphere_matrix);
     earth_sphere_ps.set_sbt_index_base(teapot_ps.sbt_index());
-    // Sphere 1
     auto earth_sphere = new oprt::Sphere(make_float3(0.0f), 90.0f);
     earth_sphere_ps.add_primitive(earth_sphere, earth_diffuse);
     scene.add_primitive_instance(earth_sphere_ps);

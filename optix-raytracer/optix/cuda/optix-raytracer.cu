@@ -98,7 +98,7 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 			);
 			
 			if ( !si.radiance_evaled )
-				result += si.emission;
+				result += si.emission * si.attenuation;
 			
 			result += si.radiance * si.attenuation;
 	

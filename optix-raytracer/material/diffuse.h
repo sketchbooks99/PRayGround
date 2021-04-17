@@ -72,6 +72,7 @@ CALLABLE_FUNC void CC_FUNC(sample_diffuse)(SurfaceInteraction* si, void* matdata
     si->attenuation *= optixDirectCall<float3, SurfaceInteraction*, void*>(diffuse->tex_func_idx, si, diffuse->texdata);
     si->emission = make_float3(0.0f);
 
+    // Next event estimation
     float3 light_emission = make_float3(0.8f, 0.8f, 0.7f) * 10.0f;
     const float z1 = rnd(seed);
     const float z2 = rnd(seed);

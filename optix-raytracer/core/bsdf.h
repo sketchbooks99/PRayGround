@@ -1,13 +1,18 @@
 #pragma once
 
+#include <cuda/random.h>
 #include <sutil/vec_math.h>
 #include "../core/util.h"
 #include "../optix/util.h"
 
 namespace oprt {
 
-HOSTDEVICE INLINE float3 random_sample_hemisphere() {
-    return make_float3(0.0f, 1.0f, 0.0f);
+HOSTDEVICE INLINE float3 random_sample_hemisphere(unsigned int seed) {
+    // return make_float3(0.0f, 1.0f, 0.0f);
+    float a = rnd(seed) * 2.0f * M_PIf;
+    float z = rnd(seed);
+    auto r = sqrtf(fmaxf(0.0f, 1.0f - z * z));
+    return make_float3(r * cosf(a), r * sinf(a), z);
 }
 
 HOSTDEVICE INLINE float3 cosine_sample_hemisphere(const float u1, const float u2)

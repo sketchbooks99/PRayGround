@@ -1,8 +1,10 @@
 #pragma once
 
 #include <optix.h>
+#include <sutil/vec_math.h>
 
-#include <include/core/util.h>
+// #include "../core/util.h"
+
 
 /**!
  Texture should be return evaluated color 

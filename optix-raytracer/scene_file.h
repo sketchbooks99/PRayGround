@@ -93,7 +93,7 @@ oprt::Scene my_scene() {
     auto armadillo_ps = oprt::PrimitiveInstance(armadillo_matrix);
     armadillo_ps.set_sbt_index_base(cornel_ps.sbt_index());
     auto armadillo = new oprt::TriangleMesh("../../model/Armadillo.ply");
-    armadillo_ps.add_primitive(armadillo, white_diffuse);
+    armadillo_ps.add_primitive(armadillo, metal);
     scene.add_primitive_instance(armadillo_ps);
 
     // Center bunny with lambert material
@@ -131,7 +131,7 @@ oprt::Scene my_scene() {
     auto glass_sphere_ps = oprt::PrimitiveInstance(glass_sphere_matrix);
     glass_sphere_ps.set_sbt_index_base(earth_sphere_ps.sbt_index());
     auto glass_sphere = new oprt::Sphere(make_float3(0.0f), 80.0f);
-    glass_sphere_ps.add_primitive(glass_sphere, sphere_checker);
+    glass_sphere_ps.add_primitive(glass_sphere, glass);
     scene.add_primitive_instance(glass_sphere_ps);
 
     return scene;

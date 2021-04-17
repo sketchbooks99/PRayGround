@@ -24,9 +24,10 @@ class ImageTexture final : public Texture {
 public:
     explicit ImageTexture(const std::string& filename)
     {
+        stbi_set_flip_vertically_on_load(1);
         uint8_t* d = stbi_load( filename.c_str(), &width, &height, &channels, STBI_rgb_alpha );
         Assert(d, "Failed to load image file'"+filename+"'");
-        data = new unsigned char[width*height*STBI_rgb_alpha];
+        data = new uchar4[width*height];
         format = UNSIGNED_BYTE4;
         memcpy(data, d, width*height*STBI_rgb_alpha);
 
@@ -90,7 +91,7 @@ private:
 
     int width, height;
     int channels;
-    unsigned char* data;
+    uchar4* data;
     ImageFormat format;
 
     cudaTextureDesc tex_desc {};

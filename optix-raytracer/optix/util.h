@@ -2,8 +2,9 @@
 
 #include <optix.h>
 #include <cuda_runtime.h>
-#include "../optix/helpers.h"
-#include "../optix/macros.h"
+#include "helpers.h"
+#include "macros.h"
+#include "../core/optix-raytracer.h"
 
 enum RayType {
     RAY_TYPE_RADIANCE = 0,
@@ -49,6 +50,11 @@ struct SurfaceInteraction {
 }
 
 #ifdef __CUDACC__
+
+extern "C" {
+__constant__ oprt::Params params;
+}
+
 template <typename T>
 INLINE DEVICE void swap(T& a, T& b)
 {
@@ -75,4 +81,55 @@ INLINE DEVICE oprt::SurfaceInteraction* get_surfaceinteraction()
     const unsigned int u1 = optixGetPayload_1();
     return reinterpret_cast<oprt::SurfaceInteraction*>( unpack_pointer(u0, u1) ); 
 }
+
+INLINE DEVICE bool trace_occlusion(
+    OptixTraversableHandle handle, float3 ro, float3 rd, float tmin, float tmax
+) 
+{
+    unsigned int occluded = 0u;
+    optixTrace(
+        handle, 
+        ro, 
+        rd, 
+        tmin, 
+        tmax,
+        0.0f,
+        OptixVisibilityMask(1),
+        OPTIX_RAY_FLAG_TERMINATE_ON_FIRST_HIT,
+        RAY_TYPE_OCCLUSION,
+        RAY_TYPE_COUNT,
+        RAY_TYPE_OCCLUSION,
+        occluded
+    );
+    return occluded;
+}
+
+INLINE DEVICE void trace_radiance(
+    OptixTraversableHandle handle,
+    float3                 ray_origin,
+    float3                 ray_direction,
+    float                  tmin,
+    float                  tmax,
+    oprt::SurfaceInteraction*    si
+) 
+{
+    // TODO: deduce stride from num ray-types passed in params
+
+    unsigned int u0, u1;
+    pack_pointer( si, u0, u1 );
+    optixTrace(
+        handle,
+        ray_origin,
+        ray_direction,
+        tmin,
+        tmax,
+        0.0f,                // rayTime
+        OptixVisibilityMask( 1 ),
+        OPTIX_RAY_FLAG_NONE,
+        RAY_TYPE_RADIANCE,        // SBT offset
+        RAY_TYPE_COUNT,           // SBT stride
+        RAY_TYPE_RADIANCE,        // missSBTIndex
+        u0, u1 );	
+}
+
 #endif

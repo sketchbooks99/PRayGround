@@ -30,7 +30,6 @@
 #include <cuda/random.h>
 #include "../../optix/util.h"
 #include "../../optix/sbt.h"
-#include "../../core/optix-raytracer.h"
 
 #include "../../shape/optix/sphere.cuh"
 #include "../../shape/optix/trianglemesh.cuh"
@@ -42,60 +41,6 @@
 
 #include "../../texture/checker.h"
 #include "../../texture/image.h"
-
-extern "C" {
-__constant__ oprt::Params params;
-}
-
-INLINE DEVICE bool trace_occlusion(
-    OptixTraversableHandle handle, float3 ro, float3 rd, float tmin, float tmax
-) 
-{
-    unsigned int occluded = 0u;
-    optixTrace(
-        handle, 
-        ro, 
-        rd, 
-        tmin, 
-        tmax,
-        0.0f,
-        OptixVisibilityMask(1),
-        OPTIX_RAY_FLAG_TERMINATE_ON_FIRST_HIT,
-        RAY_TYPE_OCCLUSION,
-        RAY_TYPE_COUNT,
-        RAY_TYPE_OCCLUSION,
-        occluded
-    );
-    return occluded;
-}
-
-INLINE DEVICE void trace_radiance(
-    OptixTraversableHandle handle,
-    float3                 ray_origin,
-    float3                 ray_direction,
-    float                  tmin,
-    float                  tmax,
-    oprt::SurfaceInteraction*    si
-) 
-{
-    // TODO: deduce stride from num ray-types passed in params
-
-    unsigned int u0, u1;
-    pack_pointer( si, u0, u1 );
-    optixTrace(
-        handle,
-        ray_origin,
-        ray_direction,
-        tmin,
-        tmax,
-        0.0f,                // rayTime
-        OptixVisibilityMask( 1 ),
-        OPTIX_RAY_FLAG_NONE,
-        RAY_TYPE_RADIANCE,        // SBT offset
-        RAY_TYPE_COUNT,           // SBT stride
-        RAY_TYPE_RADIANCE,        // missSBTIndex
-        u0, u1 );	
-}
 
 // -------------------------------------------------------------------------------
 static __forceinline__ __device__ void setPayloadOcclusion(bool occluded)
@@ -134,10 +79,11 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 		oprt::SurfaceInteraction si;
 		si.seed = seed;
 		si.emission = make_float3(0.0f);
+		si.radiance = make_float3(0.0f);
 		si.attenuation = make_float3(1.0f);
 		si.trace_terminate = false;
 
-		float3 radiance = make_float3(1.0f);
+		// float3 radiance = make_float3(1.0f);
 
 		int depth = 0;
 		for ( ;; ) {
@@ -149,14 +95,14 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 				1e16f, 
 				&si 
 			);
+
+			result += si.emission;
+			result += si.radiance * si.attenuation;
 	
 			if ( si.trace_terminate || depth >= params.max_depth ) {
-				result += si.emission * radiance;
 				break;
 			}
 			
-			radiance += si.emission;
-			radiance *= si.attenuation;
 			
 			ray_origin = si.p;
 			ray_direction = si.wo;

@@ -51,9 +51,10 @@ CALLABLE_FUNC void CC_FUNC(sample_conductor)(SurfaceInteraction* si, void* matda
     const ConductorData* conductor = reinterpret_cast<ConductorData*>(matdata);
 
     si->wo = reflect(si->wi, si->n);
-    si->attenuation = optixDirectCall<float3, SurfaceInteraction*, void*>(conductor->tex_func_idx, si, conductor->texdata);
+    si->attenuation *= optixDirectCall<float3, SurfaceInteraction*, void*>(conductor->tex_func_idx, si, conductor->texdata);
     si->trace_terminate = false;
     si->emission = make_float3(0.0f);
+    si->radiance = make_float3(0.0f);
 }
 
 #endif

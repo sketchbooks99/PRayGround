@@ -52,6 +52,7 @@ CALLABLE_FUNC void CC_FUNC(sample_emitter)(SurfaceInteraction* si, void* matdata
         emitter->tex_func_idx, si, emitter->texdata) * emitter->strength;
     si->attenuation = make_float3(0.0f);
     si->trace_terminate = true;
+    si->radiance = make_float3(0.0f);
 }
 #endif
 

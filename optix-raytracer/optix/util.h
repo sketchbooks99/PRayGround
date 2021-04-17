@@ -45,6 +45,7 @@ struct SurfaceInteraction {
     unsigned int seed;
 
     int trace_terminate;
+    int radiance_evaled;
 };
 
 }
@@ -126,9 +127,9 @@ INLINE DEVICE void trace_radiance(
         0.0f,                // rayTime
         OptixVisibilityMask( 1 ),
         OPTIX_RAY_FLAG_NONE,
-        RAY_TYPE_RADIANCE,        // SBT offset
-        RAY_TYPE_COUNT,           // SBT stride
-        RAY_TYPE_RADIANCE,        // missSBTIndex
+        RAY_TYPE_RADIANCE,        
+        RAY_TYPE_COUNT,           
+        RAY_TYPE_RADIANCE,        
         u0, u1 );	
 }
 

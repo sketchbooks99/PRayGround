@@ -77,6 +77,7 @@ CALLABLE_FUNC void CC_FUNC(sample_dielectric)(SurfaceInteraction* si, void* matd
     else    
         si->wo = refract(si->wi, outward_normal, cosine, ni, nt);
     si->emission = make_float3(0.0f);
+    si->radiance_evaled = false;
 }
 
 #endif

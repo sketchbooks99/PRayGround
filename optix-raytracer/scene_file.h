@@ -43,6 +43,9 @@ oprt::Scene my_scene() {
     auto checker1 = new oprt::CheckerTexture(
         make_float3(0.3f), make_float3(0.9f), 10.0f
     );
+    auto checker2 = new oprt::CheckerTexture(
+        make_float3(0.8f, 0.05f, 0.05f), make_float3(0.8f)
+    );
     auto earth_image = new oprt::ImageTexture("../../data/image/earth.jpg");
 
     // マテリアルの準備 
@@ -53,6 +56,7 @@ oprt::Scene my_scene() {
     auto metal = new oprt::Conductor(make_float3(0.8f, 0.8f, 0.2f), 0.01f);
     auto glass = new oprt::Dielectric(make_float3(0.9f), 1.5f);
     auto floor_checker = new oprt::Diffuse(checker1);
+    auto sphere_checker = new oprt::Diffuse(checker2);
     auto earth_diffuse = new oprt::Diffuse(earth_image);
     auto teapot_diffuse = new oprt::Diffuse(make_float3(1.0f, 0.8f, 0.3f));
 
@@ -89,7 +93,7 @@ oprt::Scene my_scene() {
     auto armadillo_ps = oprt::PrimitiveInstance(armadillo_matrix);
     armadillo_ps.set_sbt_index_base(cornel_ps.sbt_index());
     auto armadillo = new oprt::TriangleMesh("../../model/Armadillo.ply");
-    armadillo_ps.add_primitive(armadillo, metal);
+    armadillo_ps.add_primitive(armadillo, white_diffuse);
     scene.add_primitive_instance(armadillo_ps);
 
     // Center bunny with lambert material
@@ -127,7 +131,7 @@ oprt::Scene my_scene() {
     auto glass_sphere_ps = oprt::PrimitiveInstance(glass_sphere_matrix);
     glass_sphere_ps.set_sbt_index_base(earth_sphere_ps.sbt_index());
     auto glass_sphere = new oprt::Sphere(make_float3(0.0f), 80.0f);
-    glass_sphere_ps.add_primitive(glass_sphere, glass);
+    glass_sphere_ps.add_primitive(glass_sphere, sphere_checker);
     scene.add_primitive_instance(glass_sphere_ps);
 
     return scene;

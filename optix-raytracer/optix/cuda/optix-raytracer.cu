@@ -82,6 +82,7 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 		si.radiance = make_float3(0.0f);
 		si.attenuation = make_float3(1.0f);
 		si.trace_terminate = false;
+		si.radiance_evaled = false;
 
 		// float3 radiance = make_float3(1.0f);
 
@@ -95,14 +96,15 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 				1e16f, 
 				&si 
 			);
-
-			result += si.emission;
+			
+			if ( !si.radiance_evaled )
+				result += si.emission;
+			
 			result += si.radiance * si.attenuation;
 	
 			if ( si.trace_terminate || depth >= params.max_depth ) {
 				break;
 			}
-			
 			
 			ray_origin = si.p;
 			ray_direction = si.wo;

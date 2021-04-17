@@ -103,6 +103,7 @@ CALLABLE_FUNC void CC_FUNC(sample_diffuse)(SurfaceInteraction* si, void* matdata
         }
     }
     si->radiance += light_emission * weight;
+    si->radiance_evaled = true;
 }
 
 #endif

@@ -55,6 +55,7 @@ CALLABLE_FUNC void CC_FUNC(sample_conductor)(SurfaceInteraction* si, void* matda
     si->trace_terminate = false;
     si->emission = make_float3(0.0f);
     si->radiance = make_float3(0.0f);
+    si->radiance_evaled = false;
 }
 
 #endif

@@ -26,6 +26,9 @@ public:
         ));
     }
 
+    /**
+     * @note \c index_offset is not needed.
+     */
     void build_input( OptixBuildInput& bi, uint32_t sbt_idx, unsigned int index_offset ) override
     {
         // Prepare bounding box information on the device.
@@ -48,7 +51,6 @@ public:
         bi.customPrimitiveArray.numPrimitives = 1;
         bi.customPrimitiveArray.flags = input_flags;
         bi.customPrimitiveArray.numSbtRecords = 1;
-        // bi.customPrimitiveArray.primitiveIndexOffset = index_offset;s
     }
 
     AABB bound() const override { 

@@ -140,7 +140,7 @@ void TriangleMesh::prepare_data() {
 }   
 
 // ------------------------------------------------------------------
-void TriangleMesh::build_input( OptixBuildInput& bi, const uint32_t sbt_idx, unsigned int index_offset ) {
+void TriangleMesh::build_input( OptixBuildInput& bi, const uint32_t sbt_idx ) {
     CUDABuffer<uint32_t> d_sbt_indices;
     std::vector<uint32_t> sbt_indices(m_indices.size(), sbt_idx);
     d_sbt_indices.alloc_copy(sbt_indices);

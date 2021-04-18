@@ -29,7 +29,7 @@ public:
     /**
      * @note \c index_offset is not needed.
      */
-    void build_input( OptixBuildInput& bi, uint32_t sbt_idx, unsigned int index_offset ) override
+    void build_input( OptixBuildInput& bi, uint32_t sbt_idx ) override
     {
         CUDABuffer<uint32_t> d_sbt_indices;
         uint32_t* sbt_indices = new uint32_t[1];

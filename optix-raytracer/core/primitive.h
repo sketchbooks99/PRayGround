@@ -63,7 +63,7 @@ public:
     void prepare_matdata() { m_material_ptr->prepare_data(); }
 
     // Configure the OptixBuildInput from shape data.
-    void build_input( OptixBuildInput& bi, unsigned int index_offset ) { m_shape_ptr->build_input( bi, m_sbt_index, index_offset); }
+    void build_input( OptixBuildInput& bi ) { m_shape_ptr->build_input( bi, m_sbt_index ); }
 
     /** 
      * \brief 
@@ -139,11 +139,11 @@ public:
 
     void add_primitive(const Primitive& p) { 
         m_primitives.push_back(p); 
-        m_primitives.back().set_sbt_index(this->sbt_index_base() + (this->num_primitives() - 1)*RAY_TYPE_COUNT);
+        m_primitives.back().set_sbt_index(this->sbt_index_base() + (this->num_primitives() - 1));
     }
     void add_primitive(Shape* shape_ptr, Material* mat_ptr) {
         m_primitives.emplace_back(shape_ptr, mat_ptr);
-        m_primitives.back().set_sbt_index(this->sbt_index_base() + (this->num_primitives() - 1)*RAY_TYPE_COUNT);
+        m_primitives.back().set_sbt_index(this->sbt_index_base() + (this->num_primitives() - 1) );
     }
 
     /**
@@ -155,7 +155,7 @@ public:
         uint32_t sbt_index = 0;
         for (auto &p : m_primitives) {
             p.set_sbt_index(this->sbt_index_base() + sbt_index);
-            sbt_index += RAY_TYPE_COUNT;
+            sbt_index++;
         }
     }
 
@@ -167,7 +167,7 @@ public:
 
     void set_sbt_index_base(const unsigned int base) { m_sbt_index_base = base; }
     unsigned int sbt_index_base() const { return m_sbt_index_base; }
-    unsigned int sbt_index() const { return m_sbt_index_base + (unsigned int)m_primitives.size() * RAY_TYPE_COUNT; }
+    unsigned int sbt_index() const { return m_sbt_index_base + (unsigned int)m_primitives.size(); }
     
     void set_transform(const Transform& t) { m_transform = t; } 
     Transform transform() const { return m_transform; }
@@ -177,14 +177,6 @@ private:
     unsigned int m_sbt_index_base { 0 };
 };
 
-
-/**
- * @brief 
- * 
- * @param ctx 
- * @param accel_data 
- * @param ps 
- */
 void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data, const PrimitiveInstance& ps) {
     std::vector<Primitive> meshes;
     std::vector<Primitive> customs;
@@ -213,7 +205,7 @@ void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data, const Primi
         for (size_t i=0; i<primitives_subset.size(); i++) {
             primitives_subset[i].prepare_shapedata();
             primitives_subset[i].prepare_matdata();
-            primitives_subset[i].build_input(build_inputs[i], index_offset);
+            primitives_subset[i].build_input(build_inputs[i]);
 
             switch ( primitives_subset[i].shapetype() ) {
             case ShapeType::Mesh:

@@ -70,7 +70,7 @@ public:
     virtual AABB bound() const = 0;
 
     virtual void prepare_data() = 0;
-    virtual void build_input( OptixBuildInput& bi, uint32_t sbt_idx, unsigned int index_offset ) = 0;
+    virtual void build_input( OptixBuildInput& bi, uint32_t sbt_idx ) = 0;
     void free_aabb_buffer() {
         if (d_aabb_buffer) CUDA_CHECK(cudaFree(reinterpret_cast<void*>(d_aabb_buffer))); 
     }

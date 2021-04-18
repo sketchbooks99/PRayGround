@@ -51,16 +51,13 @@ public:
                         hitgroup_records.back().data.shapedata = reinterpret_cast<void*>(p.shape()->get_dptr());
                         hitgroup_records.back().data.matdata = reinterpret_cast<void*>(p.material()->get_dptr());
                         hitgroup_records.back().data.sample_func_idx = (unsigned int)p.materialtype();
-                        sbt_idx++;
                     } 
                     // Bind sbt to occlusion program groups.
                     else if (i == 1) 
                     {
-                        // HitGroupRecord2 record;
                         hitgroup_records.push_back(HitGroupRecord());
-                        memset(&hitgroup_records.back(), 0, hitgroup_record_size);
                         p.bind_occlusion_record(&hitgroup_records.back());
-                        sbt_idx++;
+                        hitgroup_records.back().data.shapedata = reinterpret_cast<void*>(p.shape()->get_dptr());
                     }
                 }
             }

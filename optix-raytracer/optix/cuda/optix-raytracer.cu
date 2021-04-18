@@ -43,12 +43,6 @@
 #include "../../texture/image.h"
 
 // -------------------------------------------------------------------------------
-static __forceinline__ __device__ void setPayloadOcclusion(bool occluded)
-{
-	optixSetPayload_0(static_cast<unsigned int>(occluded));
-}
-
-// -------------------------------------------------------------------------------
 CALLABLE_FUNC void RG_FUNC(raygen)()
 {
 	const int w = params.width;
@@ -136,10 +130,4 @@ CALLABLE_FUNC void MS_FUNC(radiance)()
 	// si->radiance = make_float3(rt_data->bg_color);
 	si->emission = make_float3(rt_data->bg_color);
 	si->trace_terminate = true;
-}
-
-// -------------------------------------------------------------------------------
-CALLABLE_FUNC void CH_FUNC(occlusion) ()
-{
-	setPayloadOcclusion(true);
 }

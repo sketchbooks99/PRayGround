@@ -83,6 +83,12 @@ INLINE DEVICE oprt::SurfaceInteraction* get_surfaceinteraction()
     return reinterpret_cast<oprt::SurfaceInteraction*>( unpack_pointer(u0, u1) ); 
 }
 
+// -------------------------------------------------------------------------------
+static INLINE DEVICE void setPayloadOcclusion(bool occluded)
+{
+	optixSetPayload_0(static_cast<unsigned int>(occluded));
+}
+
 INLINE DEVICE bool trace_occlusion(
     OptixTraversableHandle handle, float3 ro, float3 rd, float tmin, float tmax
 ) 

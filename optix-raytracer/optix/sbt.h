@@ -16,7 +16,9 @@ struct HitGroupData {
     /// Pointer that stores geometries data (e.g. \c oprt::MeshData )
     void* shapedata;
     void* matdata;
-    unsigned int sample_func_idx;   // Index of direct callables function to sample bsdf properties.
+
+    // Index of direct callables function to sample bsdf properties.
+    unsigned int sample_func_idx;
 };
 
 #ifndef __CUDACC__

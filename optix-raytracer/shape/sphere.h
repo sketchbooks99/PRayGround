@@ -31,6 +31,11 @@ public:
      */
     void build_input( OptixBuildInput& bi, uint32_t sbt_idx, unsigned int index_offset ) override
     {
+        CUDABuffer<uint32_t> d_sbt_indices;
+        uint32_t* sbt_indices = new uint32_t[1];
+        sbt_indices[0] = sbt_idx;
+        d_sbt_indices.alloc_copy(sbt_indices, sizeof(uint32_t));
+
         // Prepare bounding box information on the device.
         OptixAabb aabb = (OptixAabb)this->bound();
 
@@ -51,6 +56,9 @@ public:
         bi.customPrimitiveArray.numPrimitives = 1;
         bi.customPrimitiveArray.flags = input_flags;
         bi.customPrimitiveArray.numSbtRecords = 1;
+        bi.customPrimitiveArray.sbtIndexOffsetBuffer = d_sbt_indices.d_ptr();
+        bi.customPrimitiveArray.sbtIndexOffsetSizeInBytes = sizeof(uint32_t);
+        bi.customPrimitiveArray.sbtIndexOffsetStrideInBytes = sizeof(uint32_t);
     }
 
     AABB bound() const override { 

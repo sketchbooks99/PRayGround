@@ -422,8 +422,7 @@ int main(int argc, char* argv[]) {
          */
         std::vector<OptixProgramGroup> program_groups;
         // Raygen program
-        oprt::ProgramGroup raygen_program(OPTIX_PROGRAM_GROUP_KIND_RAYGEN);
-        raygen_program.create( optix_context, oprt::ProgramEntry( (OptixModule)module, RG_FUNC_STR("raygen") ) );
+        auto raygen_program = oprt::createRayGenProgram( optix_context, (OptixModule)module, RG_FUNC_STR("raygen") );
         program_groups.push_back( (OptixProgramGroup)raygen_program );
         // Create and bind sbt to raygen program
         oprt::CUDABuffer<oprt::RayGenRecord> d_raygen_record;
@@ -432,9 +431,9 @@ int main(int argc, char* argv[]) {
         d_raygen_record.alloc_copy( &rg_record, sizeof( oprt::RayGenRecord ) );
         
         // Miss program
-        std::vector<oprt::ProgramGroup> miss_programs( RAY_TYPE_COUNT, oprt::ProgramGroup( OPTIX_PROGRAM_GROUP_KIND_MISS ) );
-        miss_programs[0].create( optix_context, oprt::ProgramEntry( (OptixModule)module, MS_FUNC_STR("radiance") ) );
-        miss_programs[1].create( optix_context, oprt::ProgramEntry( nullptr, nullptr ) );
+        std::vector<oprt::ProgramGroup> miss_programs( RAY_TYPE_COUNT );
+        miss_programs[0] = oprt::createMissProgram( optix_context, (OptixModule)module, MS_FUNC_STR("radiance") );
+        miss_programs[1] = oprt::createMissProgram( optix_context, nullptr, nullptr );
         std::copy( miss_programs.begin(), miss_programs.end(), std::back_inserter( program_groups ) );
         // Create sbt for miss programs
         oprt::CUDABuffer<oprt::MissRecord> d_miss_record;

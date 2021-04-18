@@ -174,4 +174,16 @@ private:
     OptixProgramGroupOptions m_program_options {};
 }; 
 
+ProgramGroup createRayGenProgram(const OptixDeviceContext& ctx, const OptixModule& module, const char* entry_name) {
+    ProgramGroup raygen_program(OPTIX_PROGRAM_GROUP_KIND_RAYGEN);
+    raygen_program.create( ctx, ProgramEntry( module, entry_name ) );
+    return raygen_program;
+}
+
+ProgramGroup createMissProgram(const OptixDeviceContext& ctx, const OptixModule& module, const char* entry_name) {
+    ProgramGroup miss_program(OPTIX_PROGRAM_GROUP_KIND_MISS);
+    miss_program.create( ctx, ProgramEntry( module, entry_name ) );
+    return miss_program;
+}
+
 }

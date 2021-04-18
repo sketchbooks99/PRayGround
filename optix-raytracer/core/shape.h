@@ -9,10 +9,9 @@
 namespace oprt {
 
 enum class ShapeType {
-    None,       // None type
-    Mesh,       // Mesh with triangle 
-    Sphere,     // Sphere 
-    Plane       // Plane (rectangle)
+    Mesh = 0,       // Mesh with triangle 
+    Sphere = 1,     // Sphere 
+    Plane = 2       // Plane (rectangle)
 };
 
 /** 
@@ -26,10 +25,13 @@ static std::map<ShapeType, const char*> shape_map = {
     { ShapeType::Sphere, "sphere" }
 };
 
+static std::map<ShapeType, const char*> shape_occlusion_map = {
+    { ShapeType::Mesh, "mesh_occlusion"},
+    { ShapeType::Sphere, "sphere_occlusion"}
+};
+
 inline std::ostream& operator<<(std::ostream& out, ShapeType type) {
     switch(type) {
-    case ShapeType::None:
-        return out << "ShapeType::None";
     case ShapeType::Mesh:
         return out << "ShapeType::Mesh";
     case ShapeType::Sphere:

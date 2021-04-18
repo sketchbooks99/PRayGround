@@ -41,15 +41,20 @@ public:
         Assert(!m_program_groups.empty(), "ProgramGroup is not allocated.");
         if (shapetype() == ShapeType::Mesh) {
             // Program for mesh is only a closest-hit program. 
-            m_program_groups[0].create(ctx, ProgramEntry(module, ch_func_str( shape_map[shapetype()]).c_str() ) );
-            if (m_program_groups.size() > 1)
-                m_program_groups[1].create(ctx, ProgramEntry(module, CH_FUNC_STR("occlusion") ) );
+            m_program_groups[0].create( ctx, ProgramEntry( module, ch_func_str( shape_map[shapetype()]).c_str() ) );
+            if (m_program_groups.size() > 1) {
+                m_program_groups[1].create( ctx, ProgramEntry( module, ch_func_str( shape_occlusion_map[shapetype()]).c_str() ) );
+            }
         } else {
             // Programs for custom primitives must include closeset-hit and intersection programs.
-            m_program_groups[0].create(ctx, ProgramEntry(module, ch_func_str( shape_map[shapetype()]).c_str() ), 
-                                            ProgramEntry(module, is_func_str( shape_map[shapetype()]).c_str() ) );
-            if (m_program_groups.size() > 1)
-                m_program_groups[1].create(ctx, ProgramEntry(module, CH_FUNC_STR("occlusion") ) );
+            m_program_groups[0].create( ctx, ProgramEntry( module, ch_func_str( shape_map[shapetype()]).c_str() ), 
+                                             ProgramEntry( module, is_func_str( shape_map[shapetype()]).c_str() ) );
+            if (m_program_groups.size() > 1) {
+                m_program_groups[1].create( ctx, ProgramEntry( module, ch_func_str( shape_occlusion_map[shapetype()]).c_str() ),
+                                                 ProgramEntry( module, is_func_str( shape_map[shapetype()]).c_str() ) );
+                
+            }
+        
         }
     }
 
@@ -132,9 +137,13 @@ public:
     explicit PrimitiveInstance(const Transform& transform, const std::vector<Primitive>& primitives)
     : m_transform(transform), m_primitives(primitives) {}
 
-    void add_primitive(const Primitive& p) { m_primitives.push_back(p); }
+    void add_primitive(const Primitive& p) { 
+        m_primitives.push_back(p); 
+        m_primitives.back().set_sbt_index(this->sbt_index_base() + (this->num_primitives() - 1)*RAY_TYPE_COUNT);
+    }
     void add_primitive(Shape* shape_ptr, Material* mat_ptr) {
         m_primitives.emplace_back(shape_ptr, mat_ptr);
+        m_primitives.back().set_sbt_index(this->sbt_index_base() + (this->num_primitives() - 1)*RAY_TYPE_COUNT);
     }
 
     /**
@@ -146,7 +155,7 @@ public:
         uint32_t sbt_index = 0;
         for (auto &p : m_primitives) {
             p.set_sbt_index(this->sbt_index_base() + sbt_index);
-            sbt_index++;
+            sbt_index += RAY_TYPE_COUNT;
         }
     }
 
@@ -158,7 +167,7 @@ public:
 
     void set_sbt_index_base(const unsigned int base) { m_sbt_index_base = base; }
     unsigned int sbt_index_base() const { return m_sbt_index_base; }
-    unsigned int sbt_index() const { return m_sbt_index_base + (unsigned int)m_primitives.size(); }
+    unsigned int sbt_index() const { return m_sbt_index_base + (unsigned int)m_primitives.size() * RAY_TYPE_COUNT; }
     
     void set_transform(const Transform& t) { m_transform = t; } 
     Transform transform() const { return m_transform; }

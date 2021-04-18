@@ -56,4 +56,10 @@ CALLABLE_FUNC void CH_FUNC(mesh)()
     optixContinuationCall<void, oprt::SurfaceInteraction*, void*>(data->sample_func_idx, si, data->matdata);
 }
 
+// -------------------------------------------------------------------------------
+CALLABLE_FUNC void CH_FUNC(mesh_occlusion)()
+{
+	setPayloadOcclusion(true);
+}
+
 #endif

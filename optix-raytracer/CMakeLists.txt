@@ -29,8 +29,13 @@
 OPTIX_add_sample_executable( optix-raytracer target_name
 
   # ===== SOURCE =====  
-  optix-raytracer.cpp
+  core/primitive.cpp 
+
+  optix/program.cpp
+
   shape/trianglemesh.cpp
+  
+  optix-raytracer.cpp
 
   # ===== CUDA =====
   optix/cuda/optix-raytracer.cu

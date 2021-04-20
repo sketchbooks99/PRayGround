@@ -36,7 +36,7 @@
 #include "core/primitive.h"
 
 // Header file describe the scene
-#include "scene_file.h"
+#include "scene_config.h"
 
 bool resize_dirty = false;
 bool minimized = false;

@@ -1,6 +1,7 @@
 #pragma once 
 
 #include <optix.h>
+#include <sutil/sutil.h>
 #include "../core/util.h"
 
 namespace oprt {

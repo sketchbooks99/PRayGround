@@ -44,7 +44,7 @@ CALLABLE_FUNC void CH_FUNC(mesh)()
     // Linear interpolation of normal by barycentric coordinates.
     float3 local_n = (1.0f-u-v)*n0 + u*n1 + v*n2;
     float3 world_n = optixTransformVectorFromObjectToWorldSpace(local_n);
-    world_n = normalize(faceforward(world_n, -ray.d, world_n));
+    world_n = normalize(world_n);
 
     oprt::SurfaceInteraction* si = get_surfaceinteraction();
     si->p = ray.at(ray.tmax);

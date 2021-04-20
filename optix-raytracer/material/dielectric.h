@@ -52,8 +52,6 @@ private:
 CALLABLE_FUNC void CC_FUNC(sample_dielectric)(SurfaceInteraction* si, void* matdata) {
     const DielectricData* dielectric = reinterpret_cast<DielectricData*>(matdata);
 
-    // si->attenuation = dielectric->albedo;
-    // si->attenuation = make_float3(1.0f);
     si->attenuation *= optixDirectCall<float3, SurfaceInteraction*, void*>(dielectric->tex_func_idx, si, dielectric->texdata);
     si->trace_terminate = false;
     si->radiance = make_float3(0.0f);

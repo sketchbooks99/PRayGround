@@ -72,7 +72,7 @@ CALLABLE_FUNC void CH_FUNC(sphere)() {
         int_as_float( optixGetAttribute_2() )
     );
     float3 world_n = optixTransformVectorFromObjectToWorldSpace(local_n);
-    world_n = normalize(faceforward(world_n, -ray.d, world_n));
+    world_n = normalize(world_n);
 
     oprt::SurfaceInteraction* si = get_surfaceinteraction();
     si->p = ray.at(ray.tmax);

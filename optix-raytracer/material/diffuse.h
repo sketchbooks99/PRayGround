@@ -11,6 +11,7 @@ namespace oprt {
 
 struct DiffuseData {
     void* texdata;
+    bool twosided;
     unsigned int tex_func_idx;
 };
 
@@ -18,8 +19,10 @@ struct DiffuseData {
 
 class Diffuse final : public Material {
 public:
-    explicit Diffuse(float3 a) : m_texture(new ConstantTexture(a)) { }
-    explicit Diffuse(Texture* texture) : m_texture(texture) {}
+    explicit Diffuse(float3 a, bool twosided=true)
+    : m_texture(new ConstantTexture(a)), m_twosided(twosided) { }
+    explicit Diffuse(Texture* texture, bool twosided=true)
+    : m_texture(texture), m_twosided(twosided) {}
 
     ~Diffuse() { }
 
@@ -28,6 +31,7 @@ public:
 
         DiffuseData data {
             reinterpret_cast<void*>(m_texture->get_dptr()),
+            m_twosided,
             static_cast<unsigned int>(m_texture->type()) + static_cast<unsigned int>(MaterialType::Count)
         };
 
@@ -44,6 +48,7 @@ public:
 private:
     // float3 m_albedo;
     Texture* m_texture;
+    bool m_twosided;
 };
 
 #else
@@ -55,6 +60,9 @@ private:
 
 CALLABLE_FUNC void CC_FUNC(sample_diffuse)(SurfaceInteraction* si, void* matdata) {
     const DiffuseData* diffuse = reinterpret_cast<DiffuseData*>(matdata);
+
+    if (diffuse->twosided)
+        si->n = faceforward(si->n, -si->wi, si->n);
 
     unsigned int seed = si->seed;
     si->trace_terminate = false;

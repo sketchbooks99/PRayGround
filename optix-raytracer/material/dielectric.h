@@ -69,12 +69,14 @@ CALLABLE_FUNC void CC_FUNC(sample_dielectric)(SurfaceInteraction* si, void* matd
     bool cannot_refract = (ni / nt) * sine > 1.0f;
 
     float reflect_prob = fr(cosine, ni, nt);
+    unsigned int seed = si->seed;
 
-    if (cannot_refract || reflect_prob > rnd(si->seed))
+    if (cannot_refract || reflect_prob > rnd(seed))
         si->wo = reflect(si->wi, outward_normal);
     else    
         si->wo = refract(si->wi, outward_normal, cosine, ni, nt);
     si->emission = make_float3(0.0f);
+    si->seed = seed;
     si->radiance_evaled = false;
 }
 

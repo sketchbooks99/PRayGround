@@ -55,6 +55,7 @@ CALLABLE_FUNC void CC_FUNC(sample_dielectric)(SurfaceInteraction* si, void* matd
     si->attenuation *= optixDirectCall<float3, SurfaceInteraction*, void*>(dielectric->tex_func_idx, si, dielectric->texdata);
     si->trace_terminate = false;
     si->radiance = make_float3(0.0f);
+
     
     float ni = 1.0f; // air
     float nt = dielectric->ior;  // ior specified 

@@ -43,7 +43,6 @@ bool minimized = false;
 
 // Camera state
 bool camera_changed = true;
-sutil::Camera camera;
 sutil::Trackball trackball;
 
 // Mouse state 
@@ -158,7 +157,7 @@ void initLaunchParams(
     CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &d_params ), sizeof( oprt::Params ) ) );
 }
 
-void handleCameraUpdate( oprt::Params& params )
+void handleCameraUpdate( oprt::Params& params, sutil::Camera& camera )
 {
     if( !camera_changed )
         return;
@@ -185,13 +184,13 @@ void handleResize( sutil::CUDAOutputBuffer<uchar4>& output_buffer, oprt::Params&
     ));
 }
 
-void updateState( sutil::CUDAOutputBuffer<uchar4>& output_buffer, oprt::Params& params )
+void updateState( sutil::CUDAOutputBuffer<uchar4>& output_buffer, oprt::Params& params, sutil::Camera& camera )
 {
     // Update params on device
     if( camera_changed || resize_dirty )
         params.subframe_index = 0;
 
-    handleCameraUpdate( params );
+    handleCameraUpdate( params, camera );
     handleResize( output_buffer, params );
 }
 
@@ -246,12 +245,8 @@ static void context_log_cb( unsigned int level, const char* tag, const char* mes
     std::cerr << "[" << std::setw( 2 ) << level << "][" << std::setw( 12 ) << tag << "]: " << message << "\n";
 }
 
-void initCameraState()
+void initCameraState(sutil::Camera& camera)
 {
-    camera.setEye(make_float3(278.0f, 273.0f, -900.0f));
-    camera.setLookat(make_float3(278.0f, 273.0f, 330.0f));
-    camera.setUp(make_float3(0.0f, 1.0f, 0.0f));
-    camera.setFovY(35.0f);
     camera_changed = true;
 
     trackball.setCamera(&camera);
@@ -320,8 +315,6 @@ int main(int argc, char* argv[]) {
 
     try
     {
-        // Initialize camera state.
-        initCameraState();
 
         // Initialize cuda 
         CUDA_CHECK(cudaFree(0));
@@ -342,6 +335,10 @@ int main(int argc, char* argv[]) {
         params.height                            = scene.height();
         params.samples_per_launch                = scene.samples_per_launch();
         params.max_depth                         = scene.depth();
+
+        // Initialize camera state.
+        auto camera = scene.camera();
+        initCameraState(camera);
 
         // Create instances that manage GAS, sbtOffset, and transform of geometries.
         std::vector<OptixInstance> instances;
@@ -509,7 +506,7 @@ int main(int argc, char* argv[]) {
                     auto t0 = std::chrono::steady_clock::now();
                     glfwPollEvents();
 
-                    updateState( output_buffer, params );
+                    updateState( output_buffer, params, camera );
                     auto t1 = std::chrono::steady_clock::now();
                     state_update_time += t1 - t0;
                     t0 = t1;
@@ -548,7 +545,7 @@ int main(int argc, char* argv[]) {
                     params.height
                     );
 
-            handleCameraUpdate( params );
+            handleCameraUpdate( params, camera );
             handleResize( output_buffer, params );
 
             int num_launches = scene.num_samples() / scene.samples_per_launch();

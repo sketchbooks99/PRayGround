@@ -39,6 +39,13 @@ oprt::Scene my_scene() {
     scene.set_samples_per_launch(1);
     scene.set_num_samples(10000);
 
+    sutil::Camera camera;
+    camera.setEye(make_float3(278.0f, 273.0f, -900.0f));
+    camera.setLookat(make_float3(278.0f, 273.0f, 330.0f));
+    camera.setUp(make_float3(0.0f, 1.0f, 0.0f));
+    camera.setFovY(35.0f);
+    scene.set_camera(camera);
+
     // テクスチャの準備
     auto checker1 = new oprt::CheckerTexture(
         make_float3(0.3f), make_float3(0.9f), 10.0f

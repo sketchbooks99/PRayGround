@@ -92,13 +92,17 @@ public:
 
     void set_num_samples(unsigned int num_samples) { m_num_samples = num_samples; }
     unsigned int num_samples() const { return m_num_samples; }
+
+    void set_camera(const sutil::Camera& camera) { m_camera = camera; }
+    sutil::Camera camera() const { return m_camera; }
 private:
     std::vector<PrimitiveInstance> m_primitive_instances;   // Primitive instances with same transformation.
     unsigned int m_width, m_height;                         // Dimensions of output result.
     float4 m_bgcolor;                                       // Background color
     unsigned int m_depth;                                   // Maximum depth of ray tracing.
     unsigned int m_samples_per_launch;                      // Specify the number of samples per call of optixLaunch.
-    unsigned int m_num_samples;
+    unsigned int m_num_samples;                             
+    sutil::Camera m_camera;
 };
 
 }

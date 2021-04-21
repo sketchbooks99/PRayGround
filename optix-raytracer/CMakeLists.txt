@@ -30,6 +30,7 @@ OPTIX_add_sample_executable( optix-raytracer target_name
 
   # ===== SOURCE =====  
   core/primitive.cpp 
+  core/scene.cpp
 
   optix/program.cpp
 

@@ -1,5 +1,4 @@
 #include "program.h"
-#include <optix_stubs.h>
 
 namespace oprt {
 

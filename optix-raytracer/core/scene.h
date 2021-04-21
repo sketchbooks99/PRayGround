@@ -11,65 +11,20 @@ public:
     Scene() {}
 
     /** 
-     * \brief Create programs associated with primitives.
+     * @brief Create programs associated with primitives.
      */
-    void create_hitgroup_programs(const OptixDeviceContext& ctx, const Module& module) {
-        for (auto &ps : m_primitive_instances) { 
-            for (auto &p : ps.primitives()) {
-                p.create_programs(ctx, (OptixModule)module);
-            }
-        }
-    }
+    void create_hitgroup_programs(const OptixDeviceContext& ctx, const Module& module);
 
-    std::vector<ProgramGroup> hitgroup_programs() {
-        std::vector<ProgramGroup> program_groups;
-        for (auto &ps : m_primitive_instances) {
-            for (auto &p : ps.primitives()) {
-                std::vector<ProgramGroup> programs = p.program_groups();
-                std::copy(programs.begin(), programs.end(), std::back_inserter(program_groups));
-            }
-        }
-        return program_groups;
-    }
+    /**
+     * @brief Return all hitgroup programs contained in Scene
+     */
+    std::vector<ProgramGroup> hitgroup_programs();
 
     /** 
-     * \brief Create SBT with HitGroupData. 
-     * \note SBTs for raygen and miss program aren't created at here.
+     * @brief Create SBT with HitGroupData. 
+     * @note SBTs for raygen and miss program aren't created at here.
      */
-    void create_hitgroup_sbt(OptixShaderBindingTable& sbt) {
-        size_t hitgroup_record_size = sizeof(HitGroupRecord);
-        unsigned int sbt_idx = 0;
-        std::vector<HitGroupRecord> hitgroup_records;
-        for (auto &ps : m_primitive_instances) {
-            for (auto &p : ps.primitives()) {
-                for (int i=0; i<RAY_TYPE_COUNT; i++) {
-                    // Bind sbt to radiance program groups. 
-                    if (i == 0) 
-                    {
-                        hitgroup_records.push_back(HitGroupRecord());
-                        p.bind_radiance_record(&hitgroup_records.back());
-                        hitgroup_records.back().data.shapedata = reinterpret_cast<void*>(p.shape()->get_dptr());
-                        hitgroup_records.back().data.matdata = reinterpret_cast<void*>(p.material()->get_dptr());
-                        hitgroup_records.back().data.sample_func_idx = (unsigned int)p.materialtype();
-                    } 
-                    // Bind sbt to occlusion program groups.
-                    else if (i == 1) 
-                    {
-                        hitgroup_records.push_back(HitGroupRecord());
-                        p.bind_occlusion_record(&hitgroup_records.back());
-                        hitgroup_records.back().data.shapedata = reinterpret_cast<void*>(p.shape()->get_dptr());
-                    }
-                }
-            }
-        }
-
-        CUDABuffer<HitGroupRecord> d_hitgroup_records;
-        d_hitgroup_records.alloc_copy(hitgroup_records);
-
-        sbt.hitgroupRecordBase = d_hitgroup_records.d_ptr();
-        sbt.hitgroupRecordStrideInBytes = static_cast<uint32_t>( hitgroup_record_size );
-        sbt.hitgroupRecordCount = static_cast<uint32_t>(hitgroup_records.size());
-    }
+    void create_hitgroup_sbt(OptixShaderBindingTable& sbt);
 
     void add_primitive_instance(const PrimitiveInstance& ps) { m_primitive_instances.push_back(ps); }
     std::vector<PrimitiveInstance> primitive_instances() const { return m_primitive_instances; }
@@ -101,8 +56,8 @@ private:
     float4 m_bgcolor;                                       // Background color
     unsigned int m_depth;                                   // Maximum depth of ray tracing.
     unsigned int m_samples_per_launch;                      // Specify the number of samples per call of optixLaunch.
-    unsigned int m_num_samples;                             
-    sutil::Camera m_camera;
+    unsigned int m_num_samples;                             // The number of samples per pixel for non-interactive mode.
+    sutil::Camera m_camera;                                 // Camera
 };
 
 }

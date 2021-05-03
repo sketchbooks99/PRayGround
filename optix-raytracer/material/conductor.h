@@ -48,7 +48,7 @@ private:
     bool m_twosided;
 };
 
-#else 
+// #else 
 
 CALLABLE_FUNC void CC_FUNC(sample_conductor)(SurfaceInteraction* si, void* matdata) {
     const ConductorData* conductor = reinterpret_cast<ConductorData*>(matdata);

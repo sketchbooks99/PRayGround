@@ -2,7 +2,7 @@
 
 #include <optix.h>
 #include "../core/util.h"
-#include "../optix/program.h"
+#include "program.h"
 
 namespace oprt {
 

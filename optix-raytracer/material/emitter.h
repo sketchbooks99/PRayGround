@@ -49,6 +49,7 @@ private:
 };
 
 #else 
+
 CALLABLE_FUNC void CC_FUNC(sample_emitter)(SurfaceInteraction* si, void* matdata) {
     const EmitterData* emitter = reinterpret_cast<EmitterData*>(matdata);
 
@@ -60,6 +61,7 @@ CALLABLE_FUNC void CC_FUNC(sample_emitter)(SurfaceInteraction* si, void* matdata
         emitter->tex_func_idx, si, emitter->texdata) * emitter->strength;
     si->trace_terminate = true;
 }
+
 #endif
 
 }

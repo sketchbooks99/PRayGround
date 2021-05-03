@@ -60,7 +60,6 @@ oprt::Scene my_scene() {
     auto green_diffuse = new oprt::Diffuse(make_float3(0.05f, 0.8f, 0.05f));
     auto white_diffuse = new oprt::Diffuse(make_float3(0.8f, 0.8f, 0.8f));
     auto emitter = new oprt::Emitter(make_float3(0.8f, 0.8f, 0.7f), 25.0f);
-    auto metal = new oprt::Conductor(make_float3(0.8f, 0.8f, 0.2f), 0.01f);
     auto glass = new oprt::Dielectric(make_float3(0.9f), 1.5f);
     auto floor_checker = new oprt::Diffuse(checker1);
     auto sphere_checker = new oprt::Diffuse(checker2);
@@ -96,10 +95,11 @@ oprt::Scene my_scene() {
 
     // Armadillo
     auto armadillo_matrix = sutil::Matrix4x4::translate(cornel_center + make_float3(150.0f, -210.0f, -130.0f)) 
-                       * sutil::Matrix4x4::scale(make_float3(1.2f));
+                          * sutil::Matrix4x4::scale(make_float3(1.2f));
     auto armadillo_ps = oprt::PrimitiveInstance(armadillo_matrix);
     armadillo_ps.set_sbt_index_base(cornel_ps.sbt_index());
     auto armadillo = new oprt::TriangleMesh("../../model/Armadillo.ply");
+    auto metal = new oprt::Conductor(make_float3(0.8f, 0.8f, 0.2f), 0.01f);
     armadillo_ps.add_primitive(armadillo, metal);
     scene.add_primitive_instance(armadillo_ps);
 

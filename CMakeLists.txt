@@ -379,7 +379,7 @@ add_subdirectory(optix-raytracer)
 # Our sutil library.  The rules to build it are found in the subdirectory.
 add_subdirectory(sutil)
 # Our other libraries.
-add_subdirectory(lib/optixPaging)
+# add_subdirectory(lib/optixPaging)
 # Third-party support libraries.
 add_subdirectory(support)
 

@@ -35,7 +35,7 @@ public:
         _init_texture_desc();
     }
 
-    ~ImageTexture() {
+    ~ImageTexture() noexcept(false) {
         if (d_texture != 0) 
             CUDA_CHECK( cudaDestroyTextureObject( d_texture ) );
         if (d_array != 0)

@@ -35,9 +35,9 @@ public:
             static_cast<unsigned int>(m_texture->type()) + static_cast<unsigned int>(MaterialType::Count)
         };
 
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_data), sizeof(DiffuseData)));
+        CUDA_CHECK(cudaMalloc(&d_data, sizeof(DiffuseData)));
         CUDA_CHECK(cudaMemcpy(
-            reinterpret_cast<void*>(d_data),
+            d_data,
             &data, sizeof(DiffuseData), 
             cudaMemcpyHostToDevice
         ));

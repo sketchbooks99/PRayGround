@@ -51,9 +51,6 @@ oprt::Scene my_scene() {
     auto checker1 = new oprt::CheckerTexture(
         make_float3(0.3f), make_float3(0.9f), 10.0f
     );
-    auto checker2 = new oprt::CheckerTexture(
-        make_float3(0.8f, 0.05f, 0.05f), make_float3(0.8f)
-    );
     auto earth_image = new oprt::ImageTexture("image/earth.jpg");
 
     // マテリアルの準備 
@@ -63,7 +60,6 @@ oprt::Scene my_scene() {
     auto emitter = new oprt::Emitter(make_float3(0.8f, 0.8f, 0.7f), 25.0f);
     auto glass = new oprt::Dielectric(make_float3(0.9f), 1.5f);
     auto floor_checker = new oprt::Diffuse(checker1);
-    auto sphere_checker = new oprt::Diffuse(checker2);
     auto earth_diffuse = new oprt::Diffuse(earth_image);
     auto teapot_diffuse = new oprt::Diffuse(make_float3(1.0f, 0.8f, 0.3f));
 
@@ -99,7 +95,7 @@ oprt::Scene my_scene() {
                           * sutil::Matrix4x4::scale(make_float3(1.2f));
     auto armadillo_ps = oprt::PrimitiveInstance(armadillo_matrix);
     armadillo_ps.set_sbt_index_base(cornel_ps.sbt_index());
-    auto armadillo = new oprt::TriangleMesh("../../model/Armadillo.ply");
+    auto armadillo = new oprt::TriangleMesh("model/Armadillo.ply");
     auto metal = new oprt::Conductor(make_float3(0.8f, 0.8f, 0.2f), 0.01f);
     armadillo_ps.add_primitive(armadillo, metal);
     scene.add_primitive_instance(armadillo_ps);
@@ -110,7 +106,7 @@ oprt::Scene my_scene() {
                        * sutil::Matrix4x4::scale(make_float3(1200.0f));
     auto bunny2_ps = oprt::PrimitiveInstance(bunny2_matrix);
     bunny2_ps.set_sbt_index_base(armadillo_ps.sbt_index());
-    auto bunny2 = new oprt::TriangleMesh("../../model/bunny.obj");
+    auto bunny2 = new oprt::TriangleMesh("model/bunny.obj");
     bunny2_ps.add_primitive(bunny2, white_diffuse);
     scene.add_primitive_instance(bunny2_ps);
 
@@ -119,7 +115,7 @@ oprt::Scene my_scene() {
                        * sutil::Matrix4x4::scale(make_float3(40.0f));
     auto teapot_ps = oprt::PrimitiveInstance(teapot_matrix);
     teapot_ps.set_sbt_index_base(bunny2_ps.sbt_index());
-    auto teapot = new oprt::TriangleMesh("../../model/teapot_normal_merged.obj");
+    auto teapot = new oprt::TriangleMesh("model/teapot_normal_merged.obj");
     teapot_ps.add_primitive(teapot, teapot_diffuse);
     scene.add_primitive_instance(teapot_ps);
 

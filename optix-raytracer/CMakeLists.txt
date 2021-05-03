@@ -36,6 +36,8 @@ OPTIX_add_sample_executable( optix-raytracer target_name
   optix/program.cpp
 
   shape/trianglemesh.cpp
+
+  texture/image.cpp
   
   optix-raytracer.cpp
 

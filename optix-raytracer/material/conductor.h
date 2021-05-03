@@ -32,9 +32,9 @@ public:
             static_cast<unsigned int>(m_texture->type()) + static_cast<unsigned int>(MaterialType::Count) 
         };
 
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_data), sizeof(ConductorData)));
+        CUDA_CHECK(cudaMalloc(&d_data, sizeof(ConductorData)));
         CUDA_CHECK(cudaMemcpy(
-            reinterpret_cast<void*>(d_data),
+            d_data,
             &data, sizeof(ConductorData), 
             cudaMemcpyHostToDevice
         ));
@@ -48,7 +48,7 @@ private:
     bool m_twosided;
 };
 
-// #else 
+#else 
 
 CALLABLE_FUNC void CC_FUNC(sample_conductor)(SurfaceInteraction* si, void* matdata) {
     const ConductorData* conductor = reinterpret_cast<ConductorData*>(matdata);

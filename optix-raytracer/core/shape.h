@@ -32,14 +32,10 @@ static std::map<ShapeType, const char*> shape_occlusion_map = {
 
 inline std::ostream& operator<<(std::ostream& out, ShapeType type) {
     switch(type) {
-    case ShapeType::Mesh:
-        return out << "ShapeType::Mesh";
-    case ShapeType::Sphere:
-        return out << "ShapeType::Sphere";
-    case ShapeType::Plane:
-        return out << "ShapeType::Plane";
-    default:
-        return out << "";
+    case ShapeType::Mesh:   return out << "ShapeType::Mesh";
+    case ShapeType::Sphere: return out << "ShapeType::Sphere";
+    case ShapeType::Plane:  return out << "ShapeType::Plane";
+    default:                return out << "";
     }
 }
 
@@ -72,13 +68,12 @@ public:
     virtual void prepare_data() = 0;
     virtual void build_input( OptixBuildInput& bi, uint32_t sbt_idx ) = 0;
     void free_aabb_buffer() {
-        if (d_aabb_buffer) CUDA_CHECK(cudaFree(reinterpret_cast<void*>(d_aabb_buffer))); 
+        if (d_aabb_buffer) cuda_free( d_aabb_buffer ); 
     }
 
-    CUdeviceptr get_dptr() const { return d_data; }
-    CUdeviceptr& get_dptr() { return d_data; }
+    void* get_dptr() const { return d_data; }
 protected:
-    CUdeviceptr d_data { 0 };
+    void* d_data { 0 };
     CUdeviceptr d_aabb_buffer { 0 };
 };
 

@@ -72,10 +72,9 @@ public:
     virtual void prepare_data() = 0;
     virtual MaterialType type() const = 0;
     
-    CUdeviceptr get_dptr() const { return d_data; }
-    CUdeviceptr& get_dptr() { return d_data; }
+    void* get_dptr() const { return d_data; }
 protected:
-    CUdeviceptr d_data { 0 };
+    void* d_data { 0 };
 };
 
 }

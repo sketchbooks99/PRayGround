@@ -26,7 +26,7 @@ public:
         m_texture->prepare_data();
 
         ConductorData data = {
-            reinterpret_cast<void*>(m_texture->get_dptr()), 
+            m_texture->get_dptr(), 
             m_fuzz,
             m_twosided,
             static_cast<unsigned int>(m_texture->type()) + static_cast<unsigned int>(MaterialType::Count) 

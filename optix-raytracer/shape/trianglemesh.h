@@ -12,13 +12,13 @@ namespace oprt {
 class TriangleMesh final : public Shape {
 public:
     TriangleMesh() {}
-    explicit TriangleMesh(const std::string& filename, bool isSmooth=true);
+    explicit TriangleMesh(const std::string& filename, bool is_smooth=true);
     TriangleMesh(
         std::vector<float3> vertices, 
-        std::vector<int3> faces, 
+        std::vector<int3> indices, 
         std::vector<float3> normals, 
         std::vector<float2> texcoords,
-        bool isSmooth=true);
+        bool is_smooth=true);
 
     ShapeType type() const override { return ShapeType::Mesh; }
 
@@ -27,7 +27,7 @@ public:
     /**
      * @note 
      * Currently, triangle never need AABB at intersection test on the device side.
-     * However, for future work, I'd like to make this renderer be able to
+     * However, in the future, I'd like to make this renderer be able to
      * switch computing devices (CPU or GPU) according to the need of an application.
      */
     AABB bound() const override { return AABB(); } 
@@ -37,9 +37,7 @@ public:
     std::vector<float3> normals() const { return m_normals; }
     std::vector<float2> texcoords() const { return m_texcoords; }
 
-    /**
-     * @note This is for checking if device side pointer is correctly allocated.
-     */
+    // Getters of device side pointers.
     CUdeviceptr get_dvertices() const { return d_vertices; }
     CUdeviceptr get_dindices() const { return d_indices; }
     CUdeviceptr get_dnormals() const { return d_normals; }
@@ -59,17 +57,22 @@ private:
 
 /**
  * @brief Create a quad mesh
- * 
- * @param u_min 
- * @param u_max 
- * @param v_min 
- * @param v_max 
- * @param k 
- * @param axis 
- * @return TriangleMesh* 
  */
 TriangleMesh* createQuadMesh(const float u_min, const float u_max, 
-                                const float v_min, const float v_max, 
-                                const float k, Axis axis);
+                             const float v_min, const float v_max, 
+                             const float k, Axis axis);
+
+/**
+ * @brief Create mesh
+ */
+TriangleMesh* createTriangleMesh(const std::string& filename, bool is_smooth=true);
+
+TriangleMesh* createTriangleMesh(
+    const std::vector<float3>& vertices,
+    const std::vector<int3>& indices, 
+    const std::vector<float3>& normals,
+    const std::vector<float2>& texcoords,
+    bool is_smooth = true
+);
 
 }

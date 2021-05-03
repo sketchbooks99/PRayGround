@@ -6,10 +6,10 @@ namespace oprt {
 // -------------------------------------------------------------------------------s
 std::filesystem::path find_datapath( const std::filesystem::path& relative_path )
 {
-    std::array<const char*, 2> parent_dirs = 
+    std::array<std::string, 2> parent_dirs = 
     {
-        sutil::sampleFilePath(nullptr, nullptr),
-        sutil::sampleDataFilePath(nullptr)
+        OPTIX_RAYTRACER_DIR,
+        path_join(OPTIX_RAYTRACER_DIR, "data").string()
     };
 
     for (auto &parent : parent_dirs)

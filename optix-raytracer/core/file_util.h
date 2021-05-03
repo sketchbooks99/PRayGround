@@ -23,7 +23,7 @@ inline std::filesystem::path path_join(
 
 /**
  * @brief 
- * Search if the file specified by the relative path exists
+ * Check if the file specified by the relative path exists
  * in the data/ or the root directory of OptiX-Raytracer.
  * If the file exists, return the absolute path to the file, 
  * but if not, throw the runtime error that file is not found.

@@ -19,7 +19,7 @@ struct DiffuseData {
 
 class Diffuse final : public Material {
 public:
-    explicit Diffuse(float3 a, bool twosided=true)
+    explicit Diffuse(const float3& a, bool twosided=true)
     : m_texture(new ConstantTexture(a)), m_twosided(twosided) { }
     explicit Diffuse(Texture* texture, bool twosided=true)
     : m_texture(texture), m_twosided(twosided) {}
@@ -46,7 +46,6 @@ public:
     MaterialType type() const override { return MaterialType::Diffuse; }
 
 private:
-    // float3 m_albedo;
     Texture* m_texture;
     bool m_twosided;
 };

@@ -15,6 +15,8 @@
 #include "texture/checker.h"
 #include "texture/image.h"
 
+#include <filesystem>
+
 /**
  * \note 
  * If a PrimitiveInstance store meshes and custom primitives (i.e. Sphere, Cylinder...), 

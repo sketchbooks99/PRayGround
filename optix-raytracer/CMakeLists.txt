@@ -45,7 +45,13 @@ OPTIX_add_sample_executable( optix-raytracer target_name
   optix/cuda/optix-raytracer.cu
 
   # OPTIONS -rdc true
-  )
+)
+
+target_compile_definitions( 
+  ${target_name} 
+  PRIVATE 
+  OPTIX_RAYTRACER_DIR="${PROJECT_SOURCE_DIR}"
+)
 
 target_link_libraries( ${target_name}
   ${CUDA_LIBRARIES}

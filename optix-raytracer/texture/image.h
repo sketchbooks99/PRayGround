@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../core/texture.h"
+#include "../core/file_util.h"
 
 #ifndef __CUDACC__
     #define STB_IMAGE_IMPLEMENTATION
@@ -23,8 +24,9 @@ enum ImageFormat {
 class ImageTexture final : public Texture {
 public:
     explicit ImageTexture(const std::string& filename)
-    {
-        uint8_t* d = stbi_load( filename.c_str(), &width, &height, &channels, STBI_rgb_alpha );
+    {   
+        std::string filepath = find_datapath(filename).string();
+        uint8_t* d = stbi_load( filepath.c_str(), &width, &height, &channels, STBI_rgb_alpha );
         Assert(d, "Failed to load image file'"+filename+"'");
         data = new uchar4[width*height];
         format = UNSIGNED_BYTE4;
@@ -64,9 +66,9 @@ public:
             d_texture
         };
 
-        CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>(&d_data), sizeof(ImageTextureData) ) );
+        CUDA_CHECK( cudaMalloc( &d_data, sizeof(ImageTextureData) ) );
         CUDA_CHECK( cudaMemcpy(
-            reinterpret_cast<void*>(d_data), 
+            d_data, 
             &image_texture_data, sizeof(ImageTextureData), 
             cudaMemcpyHostToDevice
         ));

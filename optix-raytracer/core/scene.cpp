@@ -36,8 +36,8 @@ void Scene::create_hitgroup_sbt(OptixShaderBindingTable& sbt) {
                 {
                     hitgroup_records.push_back(HitGroupRecord());
                     p.bind_radiance_record(&hitgroup_records.back());
-                    hitgroup_records.back().data.shapedata = reinterpret_cast<void*>(p.shape()->get_dptr());
-                    hitgroup_records.back().data.matdata = reinterpret_cast<void*>(p.material()->get_dptr());
+                    hitgroup_records.back().data.shapedata = p.shape()->get_dptr();
+                    hitgroup_records.back().data.matdata = p.material()->get_dptr();
                     hitgroup_records.back().data.sample_func_idx = (unsigned int)p.materialtype();
                 } 
                 // Bind sbt to occlusion program groups.
@@ -45,7 +45,7 @@ void Scene::create_hitgroup_sbt(OptixShaderBindingTable& sbt) {
                 {
                     hitgroup_records.push_back(HitGroupRecord());
                     p.bind_occlusion_record(&hitgroup_records.back());
-                    hitgroup_records.back().data.shapedata = reinterpret_cast<void*>(p.shape()->get_dptr());
+                    hitgroup_records.back().data.shapedata = p.shape()->get_dptr();
                 }
             }
         }

@@ -1,21 +1,25 @@
 #include "trianglemesh.h"
 #include "../core/cudabuffer.h"
 #include "../core/load3d.h"
+#include "../core/file_util.h"
+#include <sutil/sutil.h>
 
 namespace oprt {
 
 /** @note At present, only .obj file format is supported. */
 // ------------------------------------------------------------------
 TriangleMesh::TriangleMesh(
-    const std::string& filename, bool isSmooth)
+    const std::string& filename, bool is_smooth)
 {
     if (filename.substr(filename.length() - 4) == ".obj") {
-        Message("Loading OBJ file '"+filename+"' ...");
-        load_obj(filename, m_vertices, m_normals, m_indices, m_texcoords);
+        std::string filepath = find_datapath(filename).string();
+        Message("Loading OBJ file '" + filepath + "' ...");
+        load_obj(filepath, m_vertices, m_normals, m_indices, m_texcoords);
     }
     else if (filename.substr(filename.length() - 4) == ".ply") {
-        Message("Loading PLY file '"+filename+"' ...");
-        load_ply(filename, m_vertices, m_normals, m_indices, m_texcoords);
+        std::string filepath = find_datapath(filename).string();
+        Message("Loading PLY file '" + filepath + "' ...");
+        load_ply(filepath, m_vertices, m_normals, m_indices, m_texcoords);
     }
 
     // Calculate normals if they are empty.
@@ -30,7 +34,7 @@ TriangleMesh::TriangleMesh(
             auto p2 = m_vertices[m_indices[i].z];
             auto N = normalize(cross(p2 - p0, p1 - p0));
 
-            if (isSmooth) {
+            if (is_smooth) {
                 auto idx = m_indices[i].x;
                 m_normals[idx] += N;
                 counts[idx]++;
@@ -48,7 +52,7 @@ TriangleMesh::TriangleMesh(
                 m_normals[m_indices[i].z] = N;
             }
         }
-        if (isSmooth) {
+        if (is_smooth) {
             for (size_t i = 0; i < m_vertices.size(); i++)
             {
                 m_normals[i] /= counts[i];
@@ -67,7 +71,7 @@ TriangleMesh::TriangleMesh(std::vector<float3> vertices,
     std::vector<int3> indices, 
     std::vector<float3> normals, 
     std::vector<float2> texcoords,
-    bool isSmooth) 
+    bool is_smooth) 
     : m_vertices(vertices), 
       m_indices(indices), 
       m_normals(normals),
@@ -126,9 +130,9 @@ void TriangleMesh::prepare_data() {
         d_texcoords_buf.data()
     };
 
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_data), sizeof(MeshData)));
+    CUDA_CHECK(cudaMalloc(&d_data, sizeof(MeshData)));
     CUDA_CHECK(cudaMemcpy(
-        reinterpret_cast<void*>(d_data),
+        d_data,
         &data, sizeof(MeshData),
         cudaMemcpyHostToDevice
     ));
@@ -164,19 +168,31 @@ void TriangleMesh::build_input( OptixBuildInput& bi, const uint32_t sbt_idx ) {
     bi.triangleArray.sbtIndexOffsetStrideInBytes = sizeof(uint32_t);
 }
 
+// ------------------------------------------------------------------
 TriangleMesh* createQuadMesh(
     const float u_min, const float u_max,
     const float v_min, const float v_max, 
     const float k, Axis axis) 
 {
-    // Calculate vertices and texcoords
+    // Prepare vertices and texcoords
     std::vector<std::array<float, 3>> temp_vertices;
     std::vector<float2> texcoords;
-    for (int u=0; u<2; u++) {
+
+    for (int u=0; u<2; u++) 
+    {
+        /**
+         * @note
+         * - Axis::X ... u_axis = Y, v_axis = Z
+         * - Axis::Y ... u_axis = X, v_axis = Z
+         * - Axis::Z ... u_axis = X, v_axis = Y
+         */
         int u_axis = ((int)axis + 1) % 3;
         int v_axis = ((int)axis + 2) % 3;
-        if (axis == Axis::Y) std::swap(u_axis, v_axis);
-        for (int v=0; v<2; v++) {
+        if (axis == Axis::Y) 
+            std::swap(u_axis, v_axis);
+
+        for (int v=0; v<2; v++) 
+        {
             std::array<float, 3> vertex { 0.0f, 0.0f, 0.0f };
             vertex[u_axis] = u_min + (float)u * (u_max - u_min);
             vertex[v_axis] = v_min + (float)v * (v_max - v_min);
@@ -201,7 +217,26 @@ TriangleMesh* createQuadMesh(
     n[(int)axis] = 1.0f;
     std::vector<float3> normals(4, make_float3(n[0], n[1], n[2]));
 
-    return new TriangleMesh(vertices, indices, normals, texcoords, false);
+    return createTriangleMesh(vertices, indices, normals, texcoords, false);
 }
+
+// ------------------------------------------------------------------
+TriangleMesh* createTriangleMesh(const std::string& filename, bool is_smooth)
+{
+    return new TriangleMesh(filename, is_smooth);
+}
+
+// ------------------------------------------------------------------
+TriangleMesh* createTriangleMesh(
+    const std::vector<float3>& vertices,
+    const std::vector<int3>& indices, 
+    const std::vector<float3>& normals,
+    const std::vector<float2>& texcoords,
+    bool is_smooth
+)
+{
+    return new TriangleMesh(vertices, indices, normals, texcoords, is_smooth);
+}
+
 
 }

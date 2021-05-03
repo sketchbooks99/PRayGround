@@ -18,9 +18,9 @@ public:
             m_radius
         };
 
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_data), sizeof(SphereData)));
-        CUDA_CHECK(cudaMemcpy(
-            reinterpret_cast<void*>(d_data),
+        CUDA_CHECK( cudaMalloc( &d_data, sizeof(SphereData) ) );
+        CUDA_CHECK( cudaMemcpy(
+            d_data,
             &data, sizeof(SphereData),
             cudaMemcpyHostToDevice
         ));

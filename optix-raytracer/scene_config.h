@@ -39,6 +39,7 @@ oprt::Scene my_scene() {
     scene.set_samples_per_launch(1);
     scene.set_num_samples(10000);
 
+    // カメラの設定
     sutil::Camera camera;
     camera.setEye(make_float3(278.0f, 273.0f, -900.0f));
     camera.setLookat(make_float3(278.0f, 273.0f, 330.0f));
@@ -53,7 +54,7 @@ oprt::Scene my_scene() {
     auto checker2 = new oprt::CheckerTexture(
         make_float3(0.8f, 0.05f, 0.05f), make_float3(0.8f)
     );
-    auto earth_image = new oprt::ImageTexture("../../data/image/earth.jpg");
+    auto earth_image = new oprt::ImageTexture("image/earth.jpg");
 
     // マテリアルの準備 
     auto red_diffuse = new oprt::Diffuse(make_float3(0.8f, 0.05f, 0.05f));

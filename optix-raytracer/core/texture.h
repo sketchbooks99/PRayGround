@@ -30,14 +30,10 @@ static std::map<TextureType, const char*> tex_eval_map = {
 
 inline std::ostream& operator<<(std::ostream& out, TextureType type) {
     switch (type) {
-    case TextureType::Constant:
-        return out << "TextureType::Constant";
-    case TextureType::Checker:
-        return out << "TextureType::Checker";
-    case TextureType::Image:
-        return out << "TextureType::Image";
-    default:
-        return out << "";
+    case TextureType::Constant: return out << "TextureType::Constant";
+    case TextureType::Checker:  return out << "TextureType::Checker";
+    case TextureType::Image:    return out << "TextureType::Image";
+    default:                    return out << "";
     }
 }
 #endif
@@ -53,10 +49,10 @@ public:
     virtual void prepare_data() = 0;
 
     // Get data pointer on the device.
-    CUdeviceptr get_dptr() const { return d_data; }
+    void* get_dptr() const { return d_data; }
 protected:
     // CUdeviceptr d_data { 0 };
-    CUdeviceptr d_data;
+    void* d_data;
 };
 
 }

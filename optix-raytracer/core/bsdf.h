@@ -63,19 +63,48 @@ HOSTDEVICE INLINE float ft_schlick(float cos_i, float f90) {
 }
 
 /** 
- * \ref: https://qiita.com/_Pheema_/items/f1ffb2e38cc766e6e668
+ * @ref: https://learnopengl.com/PBR/Theory
  * 
- * @param
- * - n : normal
- * - h : half vector
- * - rough : roughness of the surface. [0,1]
+ * @brief Trowbridge-Reitz GGX function for NDF
+ * 
+ * @param n : normal
+ * @param h : half vector
+ * @param a : roughness of the surface. [0,1]
  **/ 
-HOSTDEVICE INLINE float ggx(const float3& n, const float3& h, float rough) {
-    float d = dot(n, h);
-    float dd = d*d;
-    float a = (1.0f - (1.0f-rough*rough)*dd);
-    float denom = M_PIf * a*a;
-    return rough*rough / denom;
+HOSTDEVICE INLINE float trowbridge_reitz_ggx(const float3& n, const float3& h, float a) {
+    const float a2 = a*a;
+    const float NdotH = fmaxf(dot(n, h), 0.0f);
+    const float denom = NdotH*NdotH * (a2-1.0f)+1.0f;
+    return a2 / (M_PIf * denom * denom);
+}
+
+/**
+ * @brief Geometry function of combining GGX and Schlick-Beckmann approximation
+ * 
+ * @param n : normal
+ * @param v : view vector
+ * @param k : remapping of roughness that depends on lighting context (direct or IBL).
+ */
+HOSTDEVICE INLINE float geometry_schlick_ggx(float NdotV, float k)
+{
+    return NdotV / (NdotV * (1-k) + k);
+}
+
+/**
+ * @brief Geometry function that takes account view direction (obstruction) and light direction (shadowing).
+ * 
+ * @param n : normal
+ * @param v : view vector
+ * @param l : light vector
+ * @param k : remapping of roughness that depends on lighting context (direct or IBL).
+ */
+HOSTDEVICE INLINE float geometry_smith(const float3& n, const float3& v, const float3& l, float k)
+{
+    const float NdotV = fmaxf(dot(n, v), 0.0f);
+    const float NdotL = fmaxf(dot(n, l), 0.0f);
+    const float ggxV = geometry_schlick_ggx(NdotV, k);
+    const float ggxL = geometry_schlick_ggx(NdotL, k);
+    return ggxV * ggxL;
 }
 
 HOSTDEVICE INLINE float3 refract(const float3& v, const float3& n, float ior) {

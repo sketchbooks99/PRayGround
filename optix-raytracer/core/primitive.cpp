@@ -191,13 +191,23 @@ void create_material_sample_programs(
 
     for (int i = 0; i < (int)MaterialType::Count; i++) 
     {
-        // Material type can be queried by iterator.
+        // Add program to sample and to evaluate bsdf.
         program_groups.push_back(ProgramGroup(OPTIX_PROGRAM_GROUP_KIND_CALLABLES));
         callable_records.push_back(CallableRecord());
         program_groups.back().create(
             ctx, 
-            ProgramEntry( nullptr, nullptr ), 
-            ProgramEntry( (OptixModule)module, cc_func_str( mat_sample_map[ (MaterialType)i ]).c_str() )
+            ProgramEntry( (OptixModule)module, dc_func_str( sample_func_map[ (MaterialType)i ]).c_str() ), 
+            ProgramEntry( (OptixModule)module, cc_func_str( bsdf_func_map[ (MaterialType)i ]).c_str() )
+        );
+        program_groups.back().bind_record(&callable_records.back());
+        
+        // Add program to evaluate pdf.
+        program_groups.push_back(ProgramGroup(OPTIX_PROGRAM_GROUP_KIND_CALLABLES));
+        callable_records.push_back(CallableRecord());
+        program_groups.back().create(
+            ctx, 
+            ProgramEntry( (OptixModule)module, dc_func_str( pdf_func_map[ (MaterialType)i ]).c_str() ),
+            ProgramEntry( nullptr, nullptr )
         );
         program_groups.back().bind_record(&callable_records.back());
     }

@@ -70,11 +70,13 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 		float3 ray_direction = normalize(d.x * U + d.y * V + W);
 		float3 ray_origin = eye;
 
+		float3 attenuation = make_float3(1.0f);
+
 		oprt::SurfaceInteraction si;
 		si.seed = seed;
 		si.emission = make_float3(0.0f);
-		si.radiance = make_float3(0.0f);
-		si.attenuation = make_float3(1.0f);
+		// si.radiance = make_float3(0.0f);
+		// si.attenuation = make_float3(1.0f);
 		si.trace_terminate = false;
 		si.radiance_evaled = false;
 
@@ -91,14 +93,33 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 				&si 
 			);
 			
-			if ( !si.radiance_evaled )
-				result += si.emission * si.attenuation;
+			// Sampling scattered direction
+			optixDirectCall<void, oprt::SurfaceInteraction*, void*>(
+				si.mat_property.bsdf_sample_idx, 
+				&si,  
+				si.mat_property.matdata
+			);
+
+			// Evaluate bsdf 
+			float3 bsdf_val = optixContinuationCall<float3, oprt::SurfaceInteraction*, void*>(
+				si.mat_property.bsdf_sample_idx, 
+				&si,  
+				si.mat_property.matdata
+			);
 			
-			result += si.radiance * si.attenuation;
-	
+			// Evaluate pdf
+			float pdf_val = optixDirectCall<float, oprt::SurfaceInteraction*, void*>(
+				si.mat_property.pdf_idx, 
+				&si,  
+				si.mat_property.matdata
+			);
+
 			if ( si.trace_terminate || depth >= params.max_depth ) {
+				result += si.emission * attenuation;
 				break;
 			}
+
+			attenuation *= (bsdf_val / pdf_val);
 			
 			ray_origin = si.p;
 			ray_direction = si.wo;

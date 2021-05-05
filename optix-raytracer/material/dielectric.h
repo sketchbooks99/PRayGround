@@ -29,7 +29,7 @@ public:
         DielectricData data = {
             m_texture->get_dptr(), 
             m_ior, 
-            static_cast<unsigned int>(m_texture->type()) + static_cast<unsigned int>(MaterialType::Count) 
+            static_cast<unsigned int>(m_texture->type()) + static_cast<unsigned int>(MaterialType::Count) * 2
         };
 
         CUDA_CHECK(cudaMalloc(&d_data, sizeof(DielectricData)));
@@ -49,12 +49,8 @@ private:
 };
 
 #else 
-CALLABLE_FUNC void CC_FUNC(sample_dielectric)(SurfaceInteraction* si, void* matdata) {
+CALLABLE_FUNC void DC_FUNC(sample_dielectric)(SurfaceInteraction* si, void* matdata) {
     const DielectricData* dielectric = reinterpret_cast<DielectricData*>(matdata);
-
-    si->attenuation *= optixDirectCall<float3, SurfaceInteraction*, void*>(dielectric->tex_func_idx, si, dielectric->texdata);
-    si->trace_terminate = false;
-    si->radiance = make_float3(0.0f);
 
     float ni = 1.0f; // air
     float nt = dielectric->ior;  // ior specified 
@@ -75,19 +71,21 @@ CALLABLE_FUNC void CC_FUNC(sample_dielectric)(SurfaceInteraction* si, void* matd
         si->wo = reflect(si->wi, outward_normal);
     else    
         si->wo = refract(si->wi, outward_normal, cosine, ni, nt);
-    si->emission = make_float3(0.0f);
     si->seed = seed;
     si->radiance_evaled = false;
+    si->trace_terminate = false;
 }
 
-CALLABLE_FUNC float3 DC_FUNC(bsdf_diffuse)(SurfaceInteraction* si, void* matdata)
+CALLABLE_FUNC float3 CC_FUNC(bsdf_dielectric)(SurfaceInteraction* si, void* matdata)
 {
-    
+    const DielectricData* dielectric = reinterpret_cast<DielectricData*>(matdata);
+    si->emission = make_float3(0.0f);
+    return optixDirectCall<float3, SurfaceInteraction*, void*>(dielectric->tex_func_idx, si, dielectric->texdata);    
 }
 
-CALLABLE_FUNC void DC_FUNC(pdf_diffuse)(SurfaceInteraction* si, void* matdata)
+CALLABLE_FUNC float DC_FUNC(pdf_dielectric)(SurfaceInteraction* si, void* matdata)
 {
-
+    return 1.0f;
 }
 
 #endif

@@ -38,7 +38,7 @@ void Scene::create_hitgroup_sbt(OptixShaderBindingTable& sbt) {
                     p.bind_radiance_record(&hitgroup_records.back());
                     hitgroup_records.back().data.shapedata = p.shape()->get_dptr();
                     hitgroup_records.back().data.matdata = p.material()->get_dptr();
-                    hitgroup_records.back().data.sample_func_idx = (unsigned int)p.materialtype();
+                    hitgroup_records.back().data.material_type = (unsigned int)p.materialtype();
                 } 
                 // Bind sbt to occlusion program groups.
                 else if (i == 1) 

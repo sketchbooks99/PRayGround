@@ -29,7 +29,7 @@ public:
             m_texture->get_dptr(), 
             m_strength,
             m_twosided,
-            static_cast<unsigned int>(m_texture->type()) + static_cast<unsigned int>(MaterialType::Count)
+            static_cast<unsigned int>(m_texture->type()) + static_cast<unsigned int>(MaterialType::Count) * 2
         };
 
         CUDA_CHECK(cudaMalloc(&d_data, sizeof(EmitterData)));
@@ -50,7 +50,13 @@ private:
 
 #else 
 
-CALLABLE_FUNC void CC_FUNC(sample_emitter)(SurfaceInteraction* si, void* matdata) {
+CALLABLE_FUNC void DC_FUNC(sample_emitter)(SurfaceInteraction* si, void* matdata) {
+    const EmitterData* emitter = reinterpret_cast<EmitterData*>(matdata);
+    si->trace_terminate = true;
+}
+
+CALLABLE_FUNC float3 CC_FUNC(bsdf_emitter)(SurfaceInteraction* si, void* matdata)
+{
     const EmitterData* emitter = reinterpret_cast<EmitterData*>(matdata);
 
     float is_emitted = 1.0f;
@@ -58,8 +64,13 @@ CALLABLE_FUNC void CC_FUNC(sample_emitter)(SurfaceInteraction* si, void* matdata
         is_emitted = dot(si->wi, si->n) < 0.0f ? 1.0f : 0.0f;
 
     si->emission = optixDirectCall<float3, SurfaceInteraction*, void*>(
-        emitter->tex_func_idx, si, emitter->texdata) * emitter->strength;
-    si->trace_terminate = true;
+        emitter->tex_func_idx, si, emitter->texdata) * emitter->strength * is_emitted;
+    return make_float3(0.0f);
+}
+
+CALLABLE_FUNC float DC_FUNC(pdf_emitter)(SurfaceInteraction* si, void* matdata)
+{
+    return 1.0f;
 }
 
 #endif

@@ -14,6 +14,13 @@ enum RayType {
 
 namespace oprt {
 
+struct MaterialProperty
+{
+    void* matdata;
+    int bsdf_sample_idx;
+    int pdf_idx;
+};
+
 /// @note Currently \c spectrum is RGB representation, not spectrum. 
 struct SurfaceInteraction {
     /** Position of intersection point in world coordinates. */
@@ -41,11 +48,10 @@ struct SurfaceInteraction {
     float3 dpdu;    // Tangent vector at a surface.
     float3 dpdv;    // Binormal vector at a surface.
 
-    /** Probability density function */
-    float pdf;
-
     /** Seed for random */
     unsigned int seed;
+
+    MaterialProperty mat_property;
 
     int trace_terminate;
     int radiance_evaled;

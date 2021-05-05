@@ -18,7 +18,7 @@ struct HitGroupData {
     void* matdata;
 
     // Index of direct callables function to sample bsdf properties.
-    unsigned int sample_func_idx;
+    unsigned int material_type;
 };
 
 #ifndef __CUDACC__

@@ -406,8 +406,8 @@ int main(int argc, char* argv[]) {
         // Prepare the pipeline
         std::string params_name = "params";
         oprt::Pipeline pipeline(params_name);
-        pipeline.set_dc_depth(2);   // The maximum call depth of direct callable programs.
-        pipeline.set_cc_depth(2);   // The maximum call depth of continuation callable programs.
+        pipeline.set_dc_depth(4);   // The maximum call depth of direct callable programs.
+        pipeline.set_cc_depth(4);   // The maximum call depth of continuation callable programs.
         pipeline.set_num_payloads(5);
         pipeline.set_num_attributes(5);
         // Create module

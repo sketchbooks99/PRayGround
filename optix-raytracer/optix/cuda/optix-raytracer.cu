@@ -93,6 +93,12 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 				&si 
 			);
 			
+			// Miss radiance
+			if ( si.trace_terminate || depth >= params.max_depth ) {
+				result += si.emission * attenuation;
+				break;
+			}
+			
 			// Sampling scattered direction
 			optixDirectCall<void, oprt::SurfaceInteraction*, void*>(
 				si.mat_property.bsdf_sample_idx, 
@@ -119,6 +125,7 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 				break;
 			}
 
+			attenuation += si.emission;
 			attenuation *= (bsdf_val / pdf_val);
 			
 			ray_origin = si.p;

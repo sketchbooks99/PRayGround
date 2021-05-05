@@ -31,12 +31,12 @@
 // include application utilities
 #include "core/util.h"
 #include "core/cudabuffer.h"
-#include "core/optix-raytracer.h"
 #include "core/scene.h"
 #include "core/primitive.h"
 
 // Header file describe the scene
 #include "scene_config.h"
+#include "optix-raytracer.h"
 
 bool resize_dirty = false;
 bool minimized = false;

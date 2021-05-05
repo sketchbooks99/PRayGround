@@ -4,7 +4,7 @@
 #include <cuda_runtime.h>
 #include "helpers.h"
 #include "macros.h"
-#include "../core/optix-raytracer.h"
+#include "../optix-raytracer.h"
 
 enum RayType {
     RAY_TYPE_RADIANCE = 0,
@@ -40,6 +40,9 @@ struct SurfaceInteraction {
     /** Derivatives on texture coordinates. */
     float3 dpdu;    // Tangent vector at a surface.
     float3 dpdv;    // Binormal vector at a surface.
+
+    /** Probability density function */
+    float pdf;
 
     /** Seed for random */
     unsigned int seed;

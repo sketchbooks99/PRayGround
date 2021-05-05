@@ -2,7 +2,7 @@
 
 #include "../core/primitive.h"
 #include <sutil/Camera.h>
-#include "../core/optix-raytracer.h"
+#include "../optix-raytracer.h"
 
 namespace oprt {
 

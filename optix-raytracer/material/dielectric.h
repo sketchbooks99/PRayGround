@@ -80,6 +80,16 @@ CALLABLE_FUNC void CC_FUNC(sample_dielectric)(SurfaceInteraction* si, void* matd
     si->radiance_evaled = false;
 }
 
+CALLABLE_FUNC float3 DC_FUNC(bsdf_diffuse)(SurfaceInteraction* si, void* matdata)
+{
+    
+}
+
+CALLABLE_FUNC void DC_FUNC(pdf_diffuse)(SurfaceInteraction* si, void* matdata)
+{
+
+}
+
 #endif
 
 }

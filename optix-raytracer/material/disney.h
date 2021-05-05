@@ -88,6 +88,16 @@ CALLABLE_FUNC void CC_FUNC(sample_disney)(SurfaceInteraction* si, void* matdata)
     si->trace_terminate = false;
 }
 
+CALLABLE_FUNC float3 DC_FUNC(bsdf_disney)(SurfaceInteraction* si, void* matdata)
+{   
+    
+}
+
+CALLABLE_FUNC void DC_FUNC(pdf_disney)(SurfaceInteraction* si, void* matdata)
+{
+
+}
+
 #endif
 
 }

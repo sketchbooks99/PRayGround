@@ -54,12 +54,12 @@ inline void cuda_frees(Head& head, Args... args) {
  * @brief Stream out object recursively. 
  */
 template <typename T>
-inline void Message_once(T t) {
+inline void MessageOnce(T t) {
     std::cout << t;
 }
 template <typename Head, typename... Args>
 inline void Message(Head head, Args... args) {
-    Message_once(head);
+    MessageOnce(head);
     const size_t num_args = sizeof...(args);
     if constexpr (num_args > 0) {
         std::cout << ' ';

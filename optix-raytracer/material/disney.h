@@ -57,7 +57,8 @@ public:
             m_sheen,
             m_sheen_tint,
             m_clearcoat,
-            m_clearcoat_gloss
+            m_clearcoat_gloss,
+            static_cast<unsigned int>(m_base->type()) + static_cast<unsigned int>(MaterialType::Count) * 2
         };
 
         CUDA_CHECK(cudaMalloc(&d_data, sizeof(DisneyData)));
@@ -80,7 +81,7 @@ private:
 
 #else
 
-CALLABLE_FUNC void CC_FUNC(sample_disney)(SurfaceInteraction* si, void* matdata)
+CALLABLE_FUNC void DC_FUNC(sample_disney)(SurfaceInteraction* si, void* matdata)
 {
     const DisneyData* disney = reinterpret_cast<DisneyData*>(matdata);
 
@@ -88,12 +89,12 @@ CALLABLE_FUNC void CC_FUNC(sample_disney)(SurfaceInteraction* si, void* matdata)
     si->trace_terminate = false;
 }
 
-CALLABLE_FUNC float3 DC_FUNC(bsdf_disney)(SurfaceInteraction* si, void* matdata)
+CALLABLE_FUNC float3 CC_FUNC(bsdf_disney)(SurfaceInteraction* si, void* matdata)
 {   
     
 }
 
-CALLABLE_FUNC void DC_FUNC(pdf_disney)(SurfaceInteraction* si, void* matdata)
+CALLABLE_FUNC float DC_FUNC(pdf_disney)(SurfaceInteraction* si, void* matdata)
 {
 
 }

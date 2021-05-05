@@ -78,6 +78,7 @@ CALLABLE_FUNC void CC_FUNC(sample_diffuse)(SurfaceInteraction* si, void* matdata
     si->seed = seed;
     si->attenuation *= optixDirectCall<float3, SurfaceInteraction*, void*>(diffuse->tex_func_idx, si, diffuse->texdata);
     si->emission = make_float3(0.0f);
+    si->radiance_evaled = false;
 
     // Next event estimation
     float3 light_emission = make_float3(0.8f, 0.8f, 0.7f) * 10.0f;
@@ -121,7 +122,8 @@ CALLABLE_FUNC float3 DC_FUNC(bsdf_diffuse)(SurfaceInteraction* si, void* matdata
 
 CALLABLE_FUNC void DC_FUNC(pdf_diffuse)(SurfaceInteraction* si, void* matdata)
 {
-
+    const float cosine = fmaxf(0.0f, dot(si.n, si.wo));
+    return cosine / M_PIf;
 }
 
 #endif

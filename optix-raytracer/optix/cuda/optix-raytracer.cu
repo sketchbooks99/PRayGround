@@ -109,7 +109,7 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 			// Evaluate bsdf 
 			float3 bsdf_val = optixContinuationCall<float3, oprt::SurfaceInteraction*, void*>(
 				si.mat_property.bsdf_sample_idx, 
-				&si,  
+				&si,
 				si.mat_property.matdata
 			);
 			
@@ -124,8 +124,9 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 				result += si.emission * attenuation;
 				break;
 			}
-
-			attenuation += si.emission;
+			
+			result += si.emission * attenuation;
+			// attenuation += si.emission;
 			attenuation *= (bsdf_val / pdf_val);
 			
 			ray_origin = si.p;

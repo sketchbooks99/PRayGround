@@ -59,7 +59,7 @@ oprt::Scene my_scene() {
     auto red_diffuse = new oprt::Diffuse(make_float3(0.8f, 0.05f, 0.05f));
     auto green_diffuse = new oprt::Diffuse(make_float3(0.05f, 0.8f, 0.05f));
     auto white_diffuse = new oprt::Diffuse(make_float3(0.8f, 0.8f, 0.8f));
-    auto emitter = new oprt::Emitter(make_float3(0.8f, 0.8f, 0.7f), 25.0f);
+    auto emitter = new oprt::Emitter(make_float3(0.8f, 0.8f, 0.7f), 15.0f);
     auto glass = new oprt::Dielectric(make_float3(0.9f), 1.5f);
     auto floor_checker = new oprt::Diffuse(checker1);
     auto earth_diffuse = new oprt::Diffuse(earth_image);

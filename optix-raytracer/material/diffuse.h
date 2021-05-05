@@ -75,7 +75,6 @@ CALLABLE_FUNC void DC_FUNC(sample_diffuse)(SurfaceInteraction* si, void* matdata
         si->wo = w_in;
     }
     si->seed = seed;
-    si->radiance_evaled = false;
 }
 
 CALLABLE_FUNC float3 CC_FUNC(bsdf_diffuse)(SurfaceInteraction* si, void* matdata)
@@ -87,7 +86,7 @@ CALLABLE_FUNC float3 CC_FUNC(bsdf_diffuse)(SurfaceInteraction* si, void* matdata
     si->radiance_evaled = false;
 
     // Next event estimation
-    float3 light_emission = make_float3(0.8f, 0.8f, 0.7f) * 10.0f;
+    float3 light_emission = make_float3(0.8f, 0.8f, 0.7f) * 15.0f;
     unsigned int seed = si->seed;
     const float z1 = rnd(seed);
     const float z2 = rnd(seed);
@@ -115,11 +114,11 @@ CALLABLE_FUNC float3 CC_FUNC(bsdf_diffuse)(SurfaceInteraction* si, void* matdata
         if (!occluded)
         {
             const float A = length(cross(v1, v2));
-            weight = nDl * LnDl * A / (Ldist * Ldist);
+            weight = nDl * LnDl * A / (M_PIf * Ldist * Ldist);
         }
     }
     si->radiance_evaled = true;
-    si->emission = make_float3(weight);
+    si->emission = light_emission * make_float3(weight);
     return albedo * (cosine / M_PIf);
 }
 

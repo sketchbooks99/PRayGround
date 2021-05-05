@@ -32,7 +32,7 @@ public:
         DiffuseData data {
             m_texture->get_dptr(),
             m_twosided,
-            static_cast<unsigned int>(m_texture->type()) + static_cast<unsigned int>(MaterialType::Count)
+            static_cast<unsigned int>(m_texture->type()) + static_cast<unsigned int>(MaterialType::Count) * 2
         };
 
         CUDA_CHECK(cudaMalloc(&d_data, sizeof(DiffuseData)));
@@ -57,7 +57,7 @@ private:
  *       so this function cannot launch `optixTrace()`.  
  */
 
-CALLABLE_FUNC void CC_FUNC(sample_diffuse)(SurfaceInteraction* si, void* matdata) {
+CALLABLE_FUNC void DC_FUNC(sample_diffuse)(SurfaceInteraction* si, void* matdata) {
     const DiffuseData* diffuse = reinterpret_cast<DiffuseData*>(matdata);
 
     if (diffuse->twosided)
@@ -65,7 +65,6 @@ CALLABLE_FUNC void CC_FUNC(sample_diffuse)(SurfaceInteraction* si, void* matdata
 
     unsigned int seed = si->seed;
     si->trace_terminate = false;
-
     {
         const float z1 = rnd(seed);
         const float z2 = rnd(seed);
@@ -76,12 +75,20 @@ CALLABLE_FUNC void CC_FUNC(sample_diffuse)(SurfaceInteraction* si, void* matdata
         si->wo = w_in;
     }
     si->seed = seed;
-    si->attenuation *= optixDirectCall<float3, SurfaceInteraction*, void*>(diffuse->tex_func_idx, si, diffuse->texdata);
+    si->radiance_evaled = false;
+}
+
+CALLABLE_FUNC float3 CC_FUNC(bsdf_diffuse)(SurfaceInteraction* si, void* matdata)
+{
+    const DiffuseData* diffuse = reinterpret_cast<DiffuseData*>(matdata);
+    const float3 albedo = optixDirectCall<float3, SurfaceInteraction*, void*>(diffuse->tex_func_idx, si, diffuse->texdata);
+    const float cosine = fmaxf(0.0f, dot(si->n, si->wo));
     si->emission = make_float3(0.0f);
     si->radiance_evaled = false;
 
     // Next event estimation
     float3 light_emission = make_float3(0.8f, 0.8f, 0.7f) * 10.0f;
+    unsigned int seed = si->seed;
     const float z1 = rnd(seed);
     const float z2 = rnd(seed);
     si->seed = seed;
@@ -108,21 +115,17 @@ CALLABLE_FUNC void CC_FUNC(sample_diffuse)(SurfaceInteraction* si, void* matdata
         if (!occluded)
         {
             const float A = length(cross(v1, v2));
-            weight = nDl * LnDl * A / (M_PIf * Ldist * Ldist);
+            weight = nDl * LnDl * A / (Ldist * Ldist);
         }
     }
-    si->radiance += light_emission * weight;
     si->radiance_evaled = true;
+    si->emission = make_float3(weight);
+    return albedo * (cosine / M_PIf);
 }
 
-CALLABLE_FUNC float3 DC_FUNC(bsdf_diffuse)(SurfaceInteraction* si, void* matdata)
+CALLABLE_FUNC float DC_FUNC(pdf_diffuse)(SurfaceInteraction* si, void* matdata)
 {
-    
-}
-
-CALLABLE_FUNC void DC_FUNC(pdf_diffuse)(SurfaceInteraction* si, void* matdata)
-{
-    const float cosine = fmaxf(0.0f, dot(si.n, si.wo));
+    const float cosine = fmaxf(0.0f, dot(si->n, si->wo));
     return cosine / M_PIf;
 }
 

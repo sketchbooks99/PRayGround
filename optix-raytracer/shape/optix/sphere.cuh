@@ -80,8 +80,11 @@ CALLABLE_FUNC void CH_FUNC(sphere)() {
     si->wi = ray.d;
     si->uv = get_uv(local_n);
 
-    // Sampling material properties.
-    optixContinuationCall<void, oprt::SurfaceInteraction*, void*>(data->sample_func_idx, si, data->matdata);
+    si->mat_property = {
+        data->matdata,              // matdata
+        data->material_type * 2,    // bsdf_sample_idx
+        data->material_type * 2 + 1 // pdf_idx
+    };
 }
 
 // -------------------------------------------------------------------------------

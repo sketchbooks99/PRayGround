@@ -86,6 +86,25 @@ CALLABLE_FUNC void DC_FUNC(sample_disney)(SurfaceInteraction* si, void* matdata)
     const DisneyData* disney = reinterpret_cast<DisneyData*>(matdata);
 
     unsigned int seed = si->seed;
+    const float z1 = rnd(seed);
+    const float z2 = rnd(seed);
+    const float diffuse_ratio = 1.0f - disney->metallic;
+    Onb onb(si->n);
+
+    if (rnd(seed) < diffuse_ratio)
+    {
+        float3 w_in = cosine_sample_hemisphere(z1, z2);
+        onb.inverse_transform(w_in);
+        si->wo = w_in;
+    }
+    else
+    {
+        float3 h = sample_ggx(z1, z2, disney->roughness);
+        Onb onb(si->n);
+        onb.inverse_transform(h);
+        si->wo = reflect(si->wi, h);
+    }
+    si->seed = seed;
     si->trace_terminate = false;
 }
 

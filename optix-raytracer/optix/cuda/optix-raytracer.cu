@@ -28,6 +28,9 @@
 
 #include <optix.h>
 #include <cuda/random.h>
+
+#include "../../core/color.h"
+
 #include "../../optix/util.h"
 #include "../../optix/sbt.h"
 
@@ -38,6 +41,7 @@
 #include "../../material/dielectric.h"
 #include "../../material/diffuse.h"
 #include "../../material/emitter.h"
+#include "../../material/disney.h"
 
 #include "../../texture/checker.h"
 #include "../../texture/image.h"
@@ -75,12 +79,8 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 		oprt::SurfaceInteraction si;
 		si.seed = seed;
 		si.emission = make_float3(0.0f);
-		// si.radiance = make_float3(0.0f);
-		// si.attenuation = make_float3(1.0f);
 		si.trace_terminate = false;
 		si.radiance_evaled = false;
-
-		// float3 radiance = make_float3(1.0f);
 
 		int depth = 0;
 		for ( ;; ) {
@@ -125,9 +125,9 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 				break;
 			}
 			
-			result += si.emission * attenuation;
 			// attenuation += si.emission;
 			attenuation *= (bsdf_val / pdf_val);
+			result += si.emission * attenuation;
 			
 			ray_origin = si.p;
 			ray_direction = si.wo;

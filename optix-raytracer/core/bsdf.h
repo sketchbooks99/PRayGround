@@ -1,3 +1,18 @@
+// Copyright Disney Enterprises, Inc.  All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License
+// and the following modification to it: Section 6 Trademarks.
+// deleted and replaced with:
+//
+// 6. Trademarks. This License does not grant permission to use the
+// trade names, trademarks, service marks, or product names of the
+// Licensor and its affiliates, except as required for reproducing
+// the content of the NOTICE file.
+//
+// You may obtain a copy of the License at
+// http://www.apache.org/licenses/LICENSE-2.0
+
 #pragma once
 
 #include <cuda/random.h>
@@ -33,7 +48,7 @@ HOSTDEVICE INLINE float3 sample_ggx(const float u1, const float u2, const float 
     float3 p;
     const float a = roughness * roughness;
     const float phi = 2.0f * M_PIf * u1;
-    const float cos_theta = sqrtf((1.0f - u1) / (1.0f * (a*a - 1.0f) * u2));
+    const float cos_theta = sqrtf((1.0f - u2) / (1.0f + (a*a - 1.0f) * u2));
     const float sin_theta = sqrtf(1.0f - cos_theta * cos_theta);
 
     p.x = cosf(phi) * sin_theta;
@@ -78,27 +93,41 @@ HOSTDEVICE INLINE float fr(float cos_i, float ior) {
  * @param cos_i : cosine between normal and incident angle.
  * @param f0 : base reflectance (when incident angle is perpendicular with a surface)
  **/
-HOSTDEVICE INLINE float fr_schlick(float cos_i, float f0) {
-    return f0 + (1.0f-f0)*powf((1.0f-cos_i),5);
+template <class T>
+HOSTDEVICE INLINE T fr_schlick(float cos_i, T f0) {
+    return f0 + (1.0f-f0)*powf((1.0f - cos_i), 5.0f);
 }
-HOSTDEVICE INLINE float ft_schlick(float cos_i, float f90) {
-    return 1.0f + (f90-1.0f)*powf((1.0f - cos_i), 5);
+
+template <class T>
+HOSTDEVICE INLINE T ft_schlick(float cos_i, T f90) {
+    return 1.0f + (f90-1.0f)*powf((1.0f - cos_i), 5.0f);
+}
+
+/**
+ * @ref Physically Based Shading at Disney, https://github.com/wdas/brdf/blob/main/src/brdfs/disney.brdf
+ * @brief NDF from Berry (1923), GTR(gamma = 1)
+ * @note Difference from original ... PI -> M_PIf
+ * @param a : roughness of the surface. [0,1]
+ */
+HOSTDEVICE INLINE float GTR1(float NdotH, float a)
+{
+    if (a >= 1) return 1/M_PIf;
+    float a2 = a*a;
+    float t = 1 + (a2-1)*NdotH*NdotH;
+    return (a2-1) / (M_PIf*log(a2)*t);
 }
 
 /** 
- * @ref: https://learnopengl.com/PBR/Theory
- * 
- * @brief Trowbridge-Reitz GGX function for NDF
- * 
- * @param n : normal
- * @param h : half vector
+ * @ref: https://github.com/wdas/brdf/blob/main/src/brdfs/disney.brdf
+ * @brief Trowbridge-Reitz GGX function for NDF, GTR(gamma = 2)
+ * @note Difference from original ... PI -> M_PIf
  * @param a : roughness of the surface. [0,1]
  **/ 
-HOSTDEVICE INLINE float trowbridge_reitz_ggx(const float3& n, const float3& h, float a) {
-    const float a2 = a*a;
-    const float NdotH = fmaxf(dot(n, h), 0.0f);
-    const float denom = NdotH*NdotH * (a2-1.0f)+1.0f;
-    return a2 / (M_PIf * denom * denom);
+HOSTDEVICE INLINE float GTR2(float NdotH, float a)
+{
+    float a2 = a*a;
+    float t = 1 + (a2-1)*NdotH*NdotH;
+    return a2 / (M_PIf * t*t);
 }
 
 /**

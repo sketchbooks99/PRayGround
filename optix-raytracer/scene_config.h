@@ -9,6 +9,7 @@
 #include "material/conductor.h"
 #include "material/dielectric.h"
 #include "material/diffuse.h"
+#include "material/disney.h"
 #include "material/emitter.h"
 
 #include "texture/constant.h"
@@ -54,6 +55,7 @@ oprt::Scene my_scene() {
         make_float3(0.3f), make_float3(0.9f), 10.0f
     );
     auto earth_image = new oprt::ImageTexture("image/earth.jpg");
+    auto skyblue_constant = new oprt::ConstantTexture(make_float3(0.7f, 0.8f, 1.0f));
 
     // マテリアルの準備 
     auto red_diffuse = new oprt::Diffuse(make_float3(0.8f, 0.05f, 0.05f));
@@ -63,6 +65,8 @@ oprt::Scene my_scene() {
     auto glass = new oprt::Dielectric(make_float3(0.9f), 1.5f);
     auto floor_checker = new oprt::Diffuse(checker1);
     auto earth_diffuse = new oprt::Diffuse(earth_image);
+    auto disney = new oprt::Disney(skyblue_constant);
+    // disney->set_metallic(1.0f);
     auto teapot_diffuse = new oprt::Diffuse(make_float3(1.0f, 0.8f, 0.3f));
 
     // コーネルボックスの中心位置
@@ -109,7 +113,7 @@ oprt::Scene my_scene() {
     auto bunny2_ps = oprt::PrimitiveInstance(bunny2_matrix);
     bunny2_ps.set_sbt_index_base(armadillo_ps.sbt_index());
     auto bunny2 = new oprt::TriangleMesh("model/bunny.obj");
-    bunny2_ps.add_primitive(bunny2, white_diffuse);
+    bunny2_ps.add_primitive(bunny2, disney);
     scene.add_primitive_instance(bunny2_ps);
 
     // Teapot

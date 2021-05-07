@@ -22,7 +22,7 @@ INLINE DEVICE float2 get_uv(float3 p) {
     float phi = atan2(temp.z, temp.x);
     float theta = asin(temp.y);
     float u = 1.0f - (phi + M_PIf) / (2.0f * M_PIf);
-    float v = (theta + M_PIf/2.0f) / M_PIf;
+    float v = 1.0f - (theta + M_PIf/2.0f) / M_PIf;
     return make_float2(u, v);
 }
 

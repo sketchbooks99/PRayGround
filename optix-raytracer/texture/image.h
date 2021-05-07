@@ -43,7 +43,7 @@ private:
         // tex_desc.minMipmapLevelClamp = 0;
         // tex_desc.mipmapFilterMode = cudaFilterModePoint;
         // tex_desc.borderColor[0] = 0.0f;
-        // tex_desc.sRGB = 1;
+        tex_desc.sRGB = 1;
     }
 
     int width, height;

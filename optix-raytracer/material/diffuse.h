@@ -86,7 +86,7 @@ CALLABLE_FUNC float3 CC_FUNC(bsdf_diffuse)(SurfaceInteraction* si, void* matdata
     si->radiance_evaled = false;
 
     // Next event estimation
-    float3 light_emission = make_float3(0.8f, 0.8f, 0.7f) * 15.0f;
+    float3 light_emission = make_float3(0.8f, 0.8f, 0.7f) * 10.0f;
     unsigned int seed = si->seed;
     const float z1 = rnd(seed);
     const float z2 = rnd(seed);

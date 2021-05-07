@@ -30,6 +30,7 @@
 
 // include application utilities
 #include "core/util.h"
+#include "core/file_util.h"
 #include "core/cudabuffer.h"
 #include "core/scene.h"
 #include "core/primitive.h"
@@ -290,7 +291,7 @@ int main(int argc, char* argv[]) {
         {
             if( i >= argc - 1 )
                 printUsageAndExit( argv[0] );
-            outfile = argv[++i];
+            outfile = oprt::path_join(OPRT_ROOT_DIR, argv[++i]).string();
         }
         else if( arg.substr( 0, 6 ) == "--dim=" )
         {

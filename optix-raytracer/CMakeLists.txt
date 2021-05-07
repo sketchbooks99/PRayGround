@@ -50,7 +50,7 @@ OPTIX_add_sample_executable( optix-raytracer target_name
 target_compile_definitions( 
   ${target_name} 
   PRIVATE 
-  OPTIX_RAYTRACER_DIR="${PROJECT_SOURCE_DIR}"
+  OPRT_ROOT_DIR="${PROJECT_SOURCE_DIR}"
 )
 
 target_link_libraries( ${target_name}

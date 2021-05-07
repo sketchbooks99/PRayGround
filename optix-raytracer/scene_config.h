@@ -40,7 +40,7 @@ oprt::Scene my_scene() {
     scene.set_height(1024);
     scene.set_depth(5);
     scene.set_samples_per_launch(1);
-    scene.set_num_samples(10000);
+    scene.set_num_samples(1000);
 
     // カメラの設定
     sutil::Camera camera;
@@ -55,18 +55,19 @@ oprt::Scene my_scene() {
         make_float3(0.3f), make_float3(0.9f), 10.0f
     );
     auto earth_image = new oprt::ImageTexture("image/earth.jpg");
-    auto skyblue_constant = new oprt::ConstantTexture(make_float3(0.7f, 0.8f, 1.0f));
+    auto skyblue_constant = new oprt::ConstantTexture(make_float3(0.8f, 0.05f, 0.05f));
 
     // マテリアルの準備 
     auto red_diffuse = new oprt::Diffuse(make_float3(0.8f, 0.05f, 0.05f));
     auto green_diffuse = new oprt::Diffuse(make_float3(0.05f, 0.8f, 0.05f));
     auto white_diffuse = new oprt::Diffuse(make_float3(0.8f, 0.8f, 0.8f));
-    auto emitter = new oprt::Emitter(make_float3(0.8f, 0.8f, 0.7f), 15.0f);
+    auto emitter = new oprt::Emitter(make_float3(0.8f, 0.8f, 0.7f), 10.0f);
     auto glass = new oprt::Dielectric(make_float3(0.9f), 1.5f);
     auto floor_checker = new oprt::Diffuse(checker1);
     auto earth_diffuse = new oprt::Diffuse(earth_image);
     auto disney = new oprt::Disney(skyblue_constant);
-    // disney->set_metallic(1.0f);
+    disney->set_metallic(0.8f);
+    disney->set_roughness(0.4f);
     auto teapot_diffuse = new oprt::Diffuse(make_float3(1.0f, 0.8f, 0.3f));
 
     // コーネルボックスの中心位置
@@ -127,7 +128,7 @@ oprt::Scene my_scene() {
 
     // Sphere 1
     auto earth_sphere_matrix = sutil::Matrix4x4::translate(cornel_center + make_float3(120.0f, 80.0f, 100.0f))
-                             * sutil::Matrix4x4::rotate(M_PIf, make_float3(1.0f, 0.0f, 0.0f));
+                             * sutil::Matrix4x4::rotate(M_PIf, make_float3(0.0f, 1.0f, 0.0f));
     auto earth_sphere_ps = oprt::PrimitiveInstance(earth_sphere_matrix);
     earth_sphere_ps.set_sbt_index_base(teapot_ps.sbt_index());
     auto earth_sphere = new oprt::Sphere(make_float3(0.0f), 90.0f);

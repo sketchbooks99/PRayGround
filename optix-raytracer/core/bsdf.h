@@ -137,9 +137,11 @@ HOSTDEVICE INLINE float GTR2(float NdotH, float a)
  * @param v : view vector
  * @param k : remapping of roughness that depends on lighting context (direct or IBL).
  */
-HOSTDEVICE INLINE float geometry_schlick_ggx(float NdotV, float k)
+HOSTDEVICE INLINE float geometry_schlick_ggx(float NdotV, float roughness)
 {
-    return NdotV / (NdotV * (1-k) + k);
+    float r = (roughness + 1.0f);
+    float k = (r*r) / 8.0f;
+    return NdotV / (NdotV * (1.0f - k) + k);
 }
 
 /**
@@ -150,12 +152,12 @@ HOSTDEVICE INLINE float geometry_schlick_ggx(float NdotV, float k)
  * @param l : light vector
  * @param k : remapping of roughness that depends on lighting context (direct or IBL).
  */
-HOSTDEVICE INLINE float geometry_smith(const float3& n, const float3& v, const float3& l, float k)
+HOSTDEVICE INLINE float geometry_smith(const float3& n, const float3& v, const float3& l, float roughness)
 {
     const float NdotV = fmaxf(dot(n, v), 0.0f);
     const float NdotL = fmaxf(dot(n, l), 0.0f);
-    const float ggxV = geometry_schlick_ggx(NdotV, k);
-    const float ggxL = geometry_schlick_ggx(NdotL, k);
+    const float ggxV = geometry_schlick_ggx(NdotV, roughness);
+    const float ggxL = geometry_schlick_ggx(NdotL, roughness);
     return ggxV * ggxL;
 }
 
@@ -175,11 +177,6 @@ HOSTDEVICE INLINE float3 refract(const float3& wi, const float3& n, float cos_i,
     float ni_nt = ni / nt;
     float D = sqrtf(nt_ni*nt_ni - (1.0f-cos_i*cos_i)) - cos_i;
     return ni_nt * (wi - D * n);
-}
-
-HOSTDEVICE INLINE float3 retro_transmit(const float3& i, const float3& n)
-{
-    return -i + 2.0f * n * dot(n, i);
 }
 
 }

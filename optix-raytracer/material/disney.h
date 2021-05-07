@@ -33,7 +33,7 @@ public:
     Disney(){}
 
     Disney(Texture* base, float subsurface=0.8f, float metallic=0.1f,
-           float specular=0.5f, float specular_tint=0.0f,
+           float specular=0.0f, float specular_tint=0.0f,
            float roughness=0.4f, float anisotropic=0.0f, 
            float sheen=0.0f, float sheen_tint=0.5f,
            float clearcoat=0.0f, float clearcoat_gloss=0.0f, bool twosided=true)
@@ -128,7 +128,8 @@ CALLABLE_FUNC void DC_FUNC(sample_disney)(SurfaceInteraction* si, void* matdata)
     unsigned int seed = si->seed;
     const float z1 = rnd(seed);
     const float z2 = rnd(seed);
-    const float diffuse_ratio = 1.0f - disney->metallic;
+    const float diffuse_ratio = 0.5f * (1.0f - disney->metallic);
+    // const float diffuse_ratio = 1.0f - disney->metallic;
     Onb onb(si->n);
 
     if (rnd(seed) < diffuse_ratio)
@@ -186,7 +187,7 @@ CALLABLE_FUNC float3 CC_FUNC(bsdf_disney)(SurfaceInteraction* si, void* matdata)
     const float Fd90 = 0.5f + 2.0f * disney->roughness * LdotH*LdotH;
     const float FVd90 = ft_schlick(NdotV, Fd90);
     const float FLd90 = ft_schlick(NdotL, Fd90);
-    const float3 f_diffuse = base_color * FVd90 * FLd90 / M_PIf;
+    const float3 f_diffuse = (base_color / M_PIf) * FVd90 * FLd90;
 
     // Subsurface
     const float Fss90 = disney->roughness * LdotH*LdotH;
@@ -205,19 +206,20 @@ CALLABLE_FUNC float3 CC_FUNC(bsdf_disney)(SurfaceInteraction* si, void* matdata)
     const float3 Fs0 = lerp(0.08f * disney->specular * rho_specular, base_color, disney->metallic);
     const float3 FHs0 = fr_schlick(LdotH, Fs0);
     const float alpha = fmaxf(0.001f, disney->roughness * disney->roughness); // Remapping of roughness
-    const float Dggx = GTR2(NdotH, alpha);
-          float Gggx = geometry_smith(N, V, L, alpha);
-    const float3 f_specular = FHs0 * Dggx * Gggx / (4.0f * NdotV * NdotL);
+    const float Ds = GTR2(NdotH, alpha);
+    const float alpha_g = powf(0.5f*disney->roughness + 0.5f, 2.0f);
+    const float Gs = geometry_smith(N, V, L, alpha_g);
+    const float3 f_specular = FHs0 * Ds * Gs / (4.0f * NdotV * NdotL);
 
     // Clearcoat
-    const float Fcc = fr_schlick(NdotH, 0.04f);
+    const float Fcc = fr_schlick(LdotH, 0.04f);
     const float alpha_cc = 0.1f + (0.001f - 0.1f) * disney->clearcoat_gloss; // lerp
-    const float DBerry = GTR1(NdotH, alpha_cc);
-                Gggx = geometry_smith(N, V, L, 0.25f);
-    const float3 f_clearcoat = make_float3( 0.25f * disney->clearcoat * (Fcc * DBerry * Gggx) / (4.0f * NdotV * NdotL) ); 
+    const float Dcc = GTR1(NdotH, alpha_cc);
+    const float Gcc = geometry_smith(N, V, L, 0.25f);
+    const float3 f_clearcoat = make_float3( 0.25f * disney->clearcoat * (Fcc * Dcc * Gcc) / (4.0f * NdotV * NdotL) ); 
 
     const float3 out = ( 1.0f - disney->metallic ) * ( lerp( f_diffuse, f_subsurface, disney->subsurface ) + f_sheen ) + f_specular + f_clearcoat;
-    return out * clamp(NdotL, 0.0f, 1.0f);    
+    return out * NdotL;
 }
 
 /**
@@ -233,21 +235,26 @@ CALLABLE_FUNC float DC_FUNC(pdf_disney)(SurfaceInteraction* si, void* matdata)
     const float3 L = si->wo;
     const float3 N = si->n;
 
-    const float NdotV = fmaxf(0.0f, dot(N, V));
-    const float NdotL = fmaxf(0.0f, dot(N, L));
+    const float diffuse_ratio = 0.5f * (1.0f - disney->metallic);
+    const float specular_ratio = 1.0f - diffuse_ratio;
+    // const float diffuse_ratio = 1.0f - disney->metallic;
+    // const float specular_ratio = disney->metallic;
+
+    const float NdotL = abs(dot(N, L));
+    const float NdotV = abs(dot(N, V));
 
     const float alpha = fmaxf(0.001f, disney->roughness * disney->roughness);
     const float alpha_cc = 0.1f + (0.001f - 0.1f) * disney->clearcoat_gloss; // lerp
     const float3 H = normalize(V + L);
-    const float NdotH = fmaxf(0.0f, dot(H, N));
+    const float NdotH = abs(dot(H, N));
 
-    const float pdf_Dggx = GTR2(NdotH, alpha);
-    const float pdf_DBerry = GTR1(NdotH, alpha_cc);
+    const float pdf_Ds = GTR2(NdotH, alpha);
+    const float pdf_Dcc = GTR1(NdotH, alpha_cc);
     const float ratio = 1.0f / (1.0f + disney->clearcoat);
-    const float pdf_specular = (pdf_Dggx + ratio * (pdf_DBerry - pdf_Dggx)) / (4.0f * NdotV * NdotL);
+    const float pdf_specular = (pdf_Dcc + ratio * (pdf_Ds - pdf_Dcc)) / (4.0f * NdotH);
     const float pdf_diffuse = NdotL / M_PIf;
 
-    return (1.0f - disney->metallic) * pdf_diffuse + disney->metallic * pdf_specular;
+    return diffuse_ratio * pdf_diffuse + specular_ratio * pdf_specular;
 }
 
 #endif

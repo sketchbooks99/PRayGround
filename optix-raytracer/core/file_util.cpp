@@ -8,8 +8,8 @@ std::filesystem::path find_datapath( const std::filesystem::path& relative_path 
 {
     std::array<std::string, 2> parent_dirs = 
     {
-        OPTIX_RAYTRACER_DIR,
-        path_join(OPTIX_RAYTRACER_DIR, "data").string()
+        OPRT_ROOT_DIR,
+        path_join(OPRT_ROOT_DIR, "data").string()
     };
 
     for (auto &parent : parent_dirs)

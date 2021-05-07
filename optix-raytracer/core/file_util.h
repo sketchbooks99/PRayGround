@@ -30,6 +30,8 @@ inline std::filesystem::path path_join(
  */
 std::filesystem::path find_datapath( const std::filesystem::path& relative_path );
 
+std::filesystem::path root_dir();
+
 /**
  * @brief Get the extension of file.
  */

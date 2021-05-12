@@ -16,6 +16,25 @@ HOSTDEVICE INLINE float3 toSRGB( const float3& c )
         c.z < 0.0031308f ? 12.92f * c.z : 1.055f * powed.z - 0.055f );
 }
 
+INLINE HOSTDEVICE float4 color2float( const uchar4& c )
+{
+    return make_float4(
+        static_cast<float>(c.x) / 255.0f,
+        static_cast<float>(c.y) / 255.0f,
+        static_cast<float>(c.z) / 255.0f,
+        static_cast<float>(c.w) / 255.0f       
+    );
+}
+
+INLINE HOSTDEVICE float3 color2float( const uchar3& c )
+{
+    return make_float3(
+        static_cast<float>(c.x) / 255.0f,
+        static_cast<float>(c.y) / 255.0f,
+        static_cast<float>(c.z) / 255.0f
+    );
+}
+
 HOSTDEVICE INLINE uchar4 make_color( const float3& c )
 {
     // first apply gamma, then convert to unsigned char

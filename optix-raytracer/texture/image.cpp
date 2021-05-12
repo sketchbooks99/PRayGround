@@ -13,7 +13,6 @@ ImageTexture::ImageTexture(const std::string& filename)
     uint8_t* d = stbi_load( filepath.c_str(), &width, &height, &channels, STBI_rgb_alpha );
     Assert(d, "Failed to load image file'"+filename+"'");
     data = new uchar4[width*height];
-    format = UNSIGNED_BYTE4;
     memcpy(data, d, width*height*STBI_rgb_alpha);
 
     stbi_image_free(d);

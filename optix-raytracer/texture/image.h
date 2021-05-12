@@ -8,12 +8,6 @@ struct ImageTextureData {
     cudaTextureObject_t texture;
 };
 
-enum ImageFormat {
-    UNSIGNED_BYTE4,
-    FLOAT4, 
-    FLOAT3
-};
-
 #ifndef __CUDACC__
 class ImageTexture final : public Texture {
 public:
@@ -49,7 +43,6 @@ private:
     int width, height;
     int channels;
     uchar4* data;
-    ImageFormat format;
 
     cudaTextureDesc tex_desc {};
     cudaTextureObject_t d_texture;

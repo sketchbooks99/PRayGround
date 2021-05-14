@@ -39,7 +39,6 @@ void Bitmap<T>::load(const std::string& filename) {
     >;
 
     std::string file_extension = get_extension(filename);
-    if (file_extension == ".png" || file_extension == ".PNG")
 
     if (file_extension == ".png" || file_extension == ".PNG")
         Assert(sizeof(loadable_type) == 4, "The type of bitmap must have 4 channels (RGBA) when loading PNG file.");
@@ -48,68 +47,28 @@ void Bitmap<T>::load(const std::string& filename) {
 
     loadable_type* data = reinterpret_cast<loadable_type*>(
         stbi_load(filename.c_str(), &m_width, &m_height, &m_channels, sizeof(loadable_type)));
-    
-    // PNG
-    if (file_extension == ".png" || file_extension == ".PNG")
+    Assert(data, "Failed to load image file'" + filename + "'");
+
+    // Tの型がfloatの場合は中身を unsigned char [0, 255] -> float [0.0f, 1.0f] に変換する
+    if constexpr (std::is_same_v<T, float4> || std::is_same_v<T, float3>)
     {
-        static_assert(std::is_same_v<T, float4> || std::is_same_v<T, uchar4>, "The type of bitmap should be float4 or uchar4 when load .png file.");
-
-        uchar4* d = reinterpret_cast<uchar4*>(stbi_load(filename.c_str(), &m_width, &m_height, &m_channels, STBI_rgb_alpha));
-        data = new T[m_width*m_height];
-        Assert(d, "Failed to load image file'" + filename + "'");
-
-        if constexpr (std::is_same_v<T, float4>)
+        T* float_data = new T[m_width*m_height];
+        for (auto i=0; i<m_width; i++)
         {
-            float4* fd = new float4[this->m_width*this->m_height];
-            for (int i=0; i<this->m_width; i++)
+            for (auto j=0; j<m_height; j++)
             {
-                for (int j=0; j<this->m_height; j++)
-                {
-                    int idx = i * this->m_height + j;
-                    fd[idx] = color2float(d[idx]);
-                }
+                auto idx = i * m_height + j;
+                fd[idx] = color2float(d[idx]);
             }
-            memcpy(this->m_data, fd, this->m_width*this->m_height*sizeof(T));
-            delete[] fd;
         }
-        else
-        {
-            memcpy(this->m_data, d, this->m_width*this->m_height*sizeof(T));
-        }
-        stbi_image_free(d);
+        memcpy(m_data, float_data, m_width*m_height*sizeof(T));
+        delete[] float_data;
     }
-    // JPG
-    else if (file_extension == ".jpg" || file_extension == ".JPG")
+    else 
     {
-        static_assert(std::is_same_v<T, float3> || std::is_same_v<T, uchar3>, "The type of bitmap should be float3 or uchar3 when load .jpg file.");
-
-        // stbライブラリを使って画像読み込み
-        uchar3* d = reinterpret_cast<uchar3*>(stbi_load(filename.c_str(), &this->m_width, &this->m_height, &this->m_channels, STBI_rgb));
-        // データ読み込みができているかチェック
-        Assert(d, "Failed to load image file'" + filename + "'");
-
-        this->m_data = new T[this->m_width*this->m_height];
-        // stbライブラリはchar型で読み込むので、float4の場合はデータの中身を変換する
-        if constexpr (std::is_same_v<T, float3>)
-        {
-            float3* fd = new float3[this->m_width*this->m_height];
-            for (int i=0; i<this->m_width; i++)
-            {
-                for (int j=0; j<this->m_height; j++)
-                {
-                    int idx = i * this->m_height + j;
-                    fd[idx] = color2float(d[idx]);
-                }
-            }
-            memcpy(this->m_data, fd, this->m_width*this->m_height*sizeof(T));
-            delete[] fd;
-        }
-        else
-        {
-            memcpy(this->m_data, d, this->m_width*this->m_height*sizeof(T));
-        }
-        stbi_image_free(d);
+        memcpy(m_data, data, m_width*m_height*sizeof(T));
     }
+    stbi_image_free(data);
 }
 template void Bitmap<uchar4>::load(const std::string&);
 template void Bitmap<float4>::load(const std::string&);
@@ -130,7 +89,7 @@ void Bitmap<T>::write(const std::string& filename, bool gamma_enabled, int quali
     std::string file_extension = get_extension(filename);
 
     writable_type* data = new writable_type[m_width*m_height];
-    // Tのデータ型が浮動小数点の場合はchar型に変換する。
+    // Tの型がfloatの場合は中身を float [0.0f, 1.0f] -> unsigned char [0, 255] に変換する
     if constexpr (std::is_same_v<T, float4> || std::is_same_v<T, float3>)
     {
         for (int i=0; i<m_width; i++)

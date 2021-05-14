@@ -49,6 +49,7 @@ void Bitmap<T>::load(const std::string& filename) {
         stbi_load(filename.c_str(), &m_width, &m_height, &m_channels, sizeof(loadable_type)));
     Assert(data, "Failed to load image file'" + filename + "'");
 
+    m_data = new T[m_width * m_height];
     // Tの型がfloatの場合は中身を unsigned char [0, 255] -> float [0.0f, 1.0f] に変換する
     if constexpr (std::is_same_v<T, float4> || std::is_same_v<T, float3>)
     {

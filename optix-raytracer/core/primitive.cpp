@@ -191,13 +191,15 @@ void create_material_sample_programs(
 
     for (int i = 0; i < (int)MaterialType::Count; i++) 
     {
+        MaterialType mattype = static_cast<MaterialType>(i);
+
         // Add program to sample and to evaluate bsdf.
         program_groups.push_back(ProgramGroup(OPTIX_PROGRAM_GROUP_KIND_CALLABLES));
         callable_records.push_back(CallableRecord());
         program_groups.back().create(
             ctx, 
-            ProgramEntry( (OptixModule)module, dc_func_str( sample_func_map[ (MaterialType)i ]).c_str() ), 
-            ProgramEntry( (OptixModule)module, cc_func_str( bsdf_func_map[ (MaterialType)i ]).c_str() )
+            ProgramEntry( (OptixModule)module, dc_func_str( sample_func_map[mattype]).c_str() ), 
+            ProgramEntry( (OptixModule)module, cc_func_str( bsdf_func_map[mattype]).c_str() )
         );
         program_groups.back().bind_record(&callable_records.back());
         
@@ -206,7 +208,7 @@ void create_material_sample_programs(
         callable_records.push_back(CallableRecord());
         program_groups.back().create(
             ctx, 
-            ProgramEntry( (OptixModule)module, dc_func_str( pdf_func_map[ (MaterialType)i ]).c_str() ),
+            ProgramEntry( (OptixModule)module, dc_func_str( pdf_func_map[mattype]).c_str() ),
             ProgramEntry( nullptr, nullptr )
         );
         program_groups.back().bind_record(&callable_records.back());
@@ -230,11 +232,13 @@ void create_texture_eval_programs(
 {
     for (int i = 0; i < (int)TextureType::Count; i++)
     {
+        TextureType textype = static_cast<TextureType>(i);
+
         program_groups.push_back(ProgramGroup(OPTIX_PROGRAM_GROUP_KIND_CALLABLES));
         callable_records.push_back(CallableRecord());
         program_groups.back().create(
             ctx, 
-            ProgramEntry( (OptixModule)module, dc_func_str( tex_eval_map[ (TextureType)i ] ).c_str() ),
+            ProgramEntry( (OptixModule)module, dc_func_str( tex_eval_map[textype] ).c_str() ),
             ProgramEntry( nullptr, nullptr )
         );
         program_groups.back().bind_record(&callable_records.back());

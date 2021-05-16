@@ -20,8 +20,6 @@ public:
             CUDA_CHECK( cudaFreeArray( d_array ) );
     }
 
-    float3 eval(const SurfaceInteraction& si) const override { return make_float3(1.0f); }
-
     void prepare_data() override;
 
     TextureType type() const override { return TextureType::Image; }
@@ -40,9 +38,9 @@ private:
         tex_desc.sRGB = 1;
     }
 
-    int width, height;
-    int channels;
-    uchar4* data;
+    int m_width, m_height;
+    int m_channels;
+    uchar4* m_data;
 
     cudaTextureDesc tex_desc {};
     cudaTextureObject_t d_texture;

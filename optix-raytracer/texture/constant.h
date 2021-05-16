@@ -14,8 +14,6 @@ public:
     explicit ConstantTexture(const float3& c) : m_color(c) {}
     ~ConstantTexture() {}
 
-    float3 eval(const SurfaceInteraction& si) const override { return m_color; }
-
     void prepare_data() override {
         ConstantTextureData data = { m_color };
 

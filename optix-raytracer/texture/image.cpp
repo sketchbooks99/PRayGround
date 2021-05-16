@@ -10,10 +10,10 @@ namespace oprt {
 ImageTexture::ImageTexture(const std::string& filename)
 {
     std::string filepath = find_datapath(filename).string();
-    uint8_t* d = stbi_load( filepath.c_str(), &width, &height, &channels, STBI_rgb_alpha );
+    uint8_t* d = stbi_load( filepath.c_str(), &m_width, &m_height, &m_channels, STBI_rgb_alpha );
     Assert(d, "Failed to load image file'"+filename+"'");
-    data = new uchar4[width*height];
-    memcpy(data, d, width*height*STBI_rgb_alpha);
+    m_data = new uchar4[m_width*m_height];
+    memcpy(m_data, d, m_width*m_height*STBI_rgb_alpha);
 
     stbi_image_free(d);
 
@@ -24,11 +24,11 @@ ImageTexture::ImageTexture(const std::string& filename)
 void ImageTexture::prepare_data() 
 {
     // Alloc CUDA array in device memory.
-    int32_t pitch = width * 4 * sizeof( unsigned char );
+    int32_t pitch = m_width * 4 * sizeof( unsigned char );
     cudaChannelFormatDesc channel_desc = cudaCreateChannelDesc<uchar4>();
 
-    CUDA_CHECK( cudaMallocArray( &d_array, &channel_desc, width, height ) );
-    CUDA_CHECK( cudaMemcpy2DToArray( d_array, 0, 0, data, pitch, pitch, height, cudaMemcpyHostToDevice ) );
+    CUDA_CHECK( cudaMallocArray( &d_array, &channel_desc, m_width, m_height ) );
+    CUDA_CHECK( cudaMemcpy2DToArray( d_array, 0, 0, m_data, pitch, pitch, m_height, cudaMemcpyHostToDevice ) );
 
     // Create texture object.
     cudaResourceDesc res_desc;

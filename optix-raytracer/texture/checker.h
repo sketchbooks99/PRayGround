@@ -16,11 +16,6 @@ public:
     : m_color1(c1), m_color2(c2), m_scale(s) {}
     ~CheckerTexture(){}
 
-    float3 eval(const SurfaceInteraction& si) const override { 
-        const bool is_odd = sinf(si.uv.x*M_PIf*0) * sin(si.uv.y*M_PIf*m_scale) < 0;
-        return is_odd ? m_color1 : m_color2;
-    }
-
     void prepare_data() override {
         CheckerTextureData data = {
             m_color1, 

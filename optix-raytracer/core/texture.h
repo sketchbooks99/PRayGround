@@ -40,9 +40,6 @@ inline std::ostream& operator<<(std::ostream& out, TextureType type) {
 
 class Texture {
 public:
-    // Texture evaluation
-    virtual float3 eval(const SurfaceInteraction& si) const = 0;
-
     virtual TextureType type() const = 0;
 
     // Preparing texture data on the device.

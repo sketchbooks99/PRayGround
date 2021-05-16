@@ -32,7 +32,7 @@ void Bitmap<T>::load(const std::string& filename) {
     // 画像ファイルが存在するかのチェック
     Assert(std::filesystem::exists(filename.c_str()), "The image file '" + filename + "' is not found.");
 
-    using loadable_type = std::conditional_t< 
+    using LoadableData = std::conditional_t< 
         (std::is_same_v<T, uchar4> || std::is_same_v<T, float4>), 
         uchar4, 
         uchar3
@@ -45,7 +45,7 @@ void Bitmap<T>::load(const std::string& filename) {
     else if (file_extension == ".jpg" || file_extension == ".JPG")
         Assert(sizeof(loadable_type) == 3, "The type of bitmap must have 3 channels (RGB) when loading JPG file.");
 
-    loadable_type* data = reinterpret_cast<loadable_type*>(
+    LoadableData* data = reinterpret_cast<LoadableData*>(
         stbi_load(filename.c_str(), &m_width, &m_height, &m_channels, sizeof(loadable_type)));
     Assert(data, "Failed to load image file'" + filename + "'");
 
@@ -65,7 +65,7 @@ void Bitmap<T>::load(const std::string& filename) {
         memcpy(m_data, float_data, m_width*m_height*sizeof(T));
         delete[] float_data;
     }
-    else 
+    else
     {
         memcpy(m_data, data, m_width*m_height*sizeof(T));
     }
@@ -81,7 +81,7 @@ template <class T>
 void Bitmap<T>::write(const std::string& filename, bool gamma_enabled, int quality) const
 {
     // Tの方によって出力時の型をuchar4 or uchar3 で切り替える。
-    using writable_type = std::conditional_t< 
+    using WritableData = std::conditional_t< 
         (std::is_same_v<T, uchar4> || std::is_same_v<T, float4>), 
         uchar4, 
         uchar3
@@ -89,7 +89,7 @@ void Bitmap<T>::write(const std::string& filename, bool gamma_enabled, int quali
 
     std::string file_extension = get_extension(filename);
 
-    writable_type* data = new writable_type[m_width*m_height];
+    WritableData* data = new WritableData[m_width*m_height];
     // Tの型がfloatの場合は中身を float [0.0f, 1.0f] -> unsigned char [0, 255] に変換する
     if constexpr (std::is_same_v<T, float4> || std::is_same_v<T, float3>)
     {

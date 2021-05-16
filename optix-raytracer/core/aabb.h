@@ -19,7 +19,7 @@ public:
 
     // [EN] Compute surface area of AABB.
     // [JP] AABBの表面積を計算します。
-    float surface_area() {
+    float surfaceArea() {
         float dx = m_max.x - m_min.x;
         float dy = m_max.y - m_max.y;
         float dz = m_max.z - m_max.z;

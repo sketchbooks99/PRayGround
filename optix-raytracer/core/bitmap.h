@@ -29,14 +29,14 @@ public:
     void load(const std::string& filename);
     void write(const std::string& filename, bool gamma_enabled=true, int quality=100) const;
 
-    void copy_to_device();
-    void copy_from_device();
+    void copyToDevice();
+    void copyFromDevice();
 
     T* data() const { return m_data; }
-    T* d_ptr() const { return d_data; }
+    T* devicePtr() const { return d_data; }
     ImageFormat format() const { return m_format; }
 protected:
-    void _detect_format() {
+    void _detectFormat() {
         if constexpr (std::is_same_v<T, char4>) 
             m_format = UNSIGNED_BYTE4;
         if constexpr (std::is_same_v<T, char3>) 
@@ -47,7 +47,7 @@ protected:
             m_format = FLOAT3;
     }
 
-    ImageFormat m_format;
+    BitmapFormat m_format;
     int m_width, m_height;
     int m_channels;
 

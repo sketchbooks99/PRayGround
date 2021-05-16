@@ -6,7 +6,7 @@
 
 namespace oprt {
 
-void load_obj(
+void loadObj(
     const std::string& filename, 
     std::vector<float3>& vertices,
     std::vector<float3>& normals,
@@ -112,7 +112,7 @@ void load_obj(
     ifs.close();
 }
 
-void load_ply(
+void loadPly(
     const std::string& filename, 
     std::vector<float3>& vertices,
     std::vector<float3>& normals,

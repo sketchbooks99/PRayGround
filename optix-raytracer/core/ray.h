@@ -34,8 +34,8 @@ struct Ray {
 
 INLINE DEVICE oprt::Ray get_local_ray() {
     oprt::Ray ray;
-    ray.o = optixTransformPointFromWorldToObjectSpace(optixGetWorldRayOrigin());
-    ray.d = optixTransformVectorFromWorldToObjectSpace(optixGetWorldRayDirection());
+    ray.o = optixTransformPointFromWorldToObjectSpace( optixGetWorldRayOrigin() );
+    ray.d = normalize( optixTransformVectorFromWorldToObjectSpace( optixGetWorldRayDirection() ) );
     ray.tmin = optixGetRayTmin();
     ray.tmax = optixGetRayTmax();
     ray.t = optixGetRayTime();
@@ -45,7 +45,7 @@ INLINE DEVICE oprt::Ray get_local_ray() {
 INLINE DEVICE oprt::Ray get_world_ray() {
     oprt::Ray ray;
     ray.o = optixGetWorldRayOrigin();
-    ray.d = optixGetWorldRayDirection();
+    ray.d = normalize( optixGetWorldRayDirection() );
     ray.tmin = optixGetRayTmin();
     ray.tmax = optixGetRayTmax();
     ray.t = optixGetRayTime();

@@ -36,7 +36,7 @@ public:
     }
 
     // Create programs based on shape type. 
-    void create_programs(const OptixDeviceContext& ctx, const OptixModule& module) {
+    void createPrograms(const OptixDeviceContext& ctx, const OptixModule& module) {
         Assert(!m_program_groups.empty(), "ProgramGroup is not allocated.");
         if (shapetype() == ShapeType::Mesh) {
             // Program for mesh is only a closest-hit program. 
@@ -58,11 +58,11 @@ public:
     }
 
     // Preparing (alloc and copy) shape data to the device. 
-    void prepare_shapedata() { m_shape_ptr->prepare_data(); }
-    void prepare_matdata() { m_material_ptr->prepare_data(); }
+    void prepareShapeData() { m_shape_ptr->prepareData(); }
+    void prepareMatData() { m_material_ptr->prepareData(); }
 
     // Configure the OptixBuildInput from shape data.
-    void build_input( OptixBuildInput& bi ) { m_shape_ptr->build_input( bi, m_sbt_index ); }
+    void buildInput( OptixBuildInput& bi ) { m_shape_ptr->buildInput( bi, m_sbt_index ); }
 
     /** 
      * \brief 
@@ -97,7 +97,7 @@ public:
     std::vector<ProgramGroup> program_groups() { return m_program_groups; }
 
 private:
-    void _init_program_groups() {
+    void _initProgramGroups() {
         m_program_groups.resize(RAY_TYPE_COUNT);
         for (auto &pg : m_program_groups) {
             pg = ProgramGroup(OPTIX_PROGRAM_GROUP_KIND_HITGROUP);

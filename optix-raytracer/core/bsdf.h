@@ -22,7 +22,7 @@
 
 namespace oprt {
 
-HOSTDEVICE INLINE float3 random_sample_hemisphere(unsigned int seed) {
+HOSTDEVICE INLINE float3 randomSampleHemisphere(unsigned int seed) {
     // return make_float3(0.0f, 1.0f, 0.0f);
     float a = rnd(seed) * 2.0f * M_PIf;
     float z = rnd(seed);
@@ -30,7 +30,7 @@ HOSTDEVICE INLINE float3 random_sample_hemisphere(unsigned int seed) {
     return make_float3(r * cosf(a), r * sinf(a), z);
 }
 
-HOSTDEVICE INLINE float3 cosine_sample_hemisphere(const float u1, const float u2)
+HOSTDEVICE INLINE float3 cosineSampleHemisphere(const float u1, const float u2)
 {
     float3 p;
     const float r = sqrtf(u1);
@@ -43,7 +43,7 @@ HOSTDEVICE INLINE float3 cosine_sample_hemisphere(const float u1, const float u2
     return p;
 }
 
-HOSTDEVICE INLINE float3 sample_ggx(const float u1, const float u2, const float roughness)
+HOSTDEVICE INLINE float3 sampleGGX(const float u1, const float u2, const float roughness)
 {
     float3 p;
     const float a = roughness * roughness;
@@ -63,7 +63,7 @@ HOSTDEVICE INLINE float3 sample_ggx(const float u1, const float u2, const float 
  * @note cos_i must be positive, and this function does not verify
  * whether the ray goes into a surface (is cos_i negative?) or not. 
  **/
-HOSTDEVICE INLINE float fr(float cos_i, float ni, float nt) {
+HOSTDEVICE INLINE float fresnel(float cos_i, float ni, float nt) {
     const float sin_i = sqrtf(fmaxf(0.0f, 1.0f-cos_i*cos_i));
     const float sin_t = ni / nt * sin_i;
     const float cos_t = sqrtf(fmaxf(0.0f, 1.0f-sin_t*sin_t));
@@ -79,7 +79,7 @@ HOSTDEVICE INLINE float fr(float cos_i, float ni, float nt) {
 /** 
  * @brief Compute fresnel reflectance from cosine and index of refraction using Schlick approximation. 
  **/
-HOSTDEVICE INLINE float fr(float cos_i, float ior) {
+HOSTDEVICE INLINE float fresnelSchlick(float cos_i, float ior) {
     float r0 = (1.0f-ior) / (1.0f+ior);
     r0 = r0 * r0;
     return r0 + (1.0f-r0)*powf((1.0f-cos_i),5);
@@ -94,12 +94,12 @@ HOSTDEVICE INLINE float fr(float cos_i, float ior) {
  * @param f0 : base reflectance (when incident angle is perpendicular with a surface)
  **/
 template <class T>
-HOSTDEVICE INLINE T fr_schlick(float cos_i, T f0) {
+HOSTDEVICE INLINE T fresnelSchlickR(float cos_i, T f0) {
     return f0 + (1.0f-f0)*powf((1.0f - cos_i), 5.0f);
 }
 
 template <class T>
-HOSTDEVICE INLINE T ft_schlick(float cos_i, T f90) {
+HOSTDEVICE INLINE T fresnelSchlickT(float cos_i, T f90) {
     return 1.0f + (f90-1.0f)*powf((1.0f - cos_i), 5.0f);
 }
 
@@ -137,7 +137,7 @@ HOSTDEVICE INLINE float GTR2(float NdotH, float a)
  * @param v : view vector
  * @param k : remapping of roughness that depends on lighting context (direct or IBL).
  */
-HOSTDEVICE INLINE float geometry_schlick_ggx(float NdotV, float roughness)
+HOSTDEVICE INLINE float geometrySchlickGGX(float NdotV, float roughness)
 {
     float r = (roughness + 1.0f);
     float k = (r*r) / 8.0f;
@@ -152,12 +152,12 @@ HOSTDEVICE INLINE float geometry_schlick_ggx(float NdotV, float roughness)
  * @param l : light vector
  * @param k : remapping of roughness that depends on lighting context (direct or IBL).
  */
-HOSTDEVICE INLINE float geometry_smith(const float3& n, const float3& v, const float3& l, float roughness)
+HOSTDEVICE INLINE float geometrySmith(const float3& n, const float3& v, const float3& l, float roughness)
 {
     const float NdotV = fmaxf(dot(n, v), 0.0f);
     const float NdotL = fmaxf(dot(n, l), 0.0f);
-    const float ggxV = geometry_schlick_ggx(NdotV, roughness);
-    const float ggxL = geometry_schlick_ggx(NdotL, roughness);
+    const float ggxV = geometrySchlickGGX(NdotV, roughness);
+    const float ggxL = geometrySchlickGGX(NdotL, roughness);
     return ggxV * ggxL;
 }
 

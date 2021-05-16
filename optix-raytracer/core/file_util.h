@@ -7,7 +7,7 @@ namespace oprt {
  * @brief Join pathes recursively as like \c os.path.join() in python
  */
 template <class ParentPath, class... SubPathes>
-inline std::filesystem::path path_join(
+inline std::filesystem::path pathJoin(
     const ParentPath& parent_path,
     const SubPathes&... sub_pathes
 )
@@ -16,7 +16,7 @@ inline std::filesystem::path path_join(
     std::filesystem::path path(parent_path);
     if constexpr ( num_sub_pathes > 0 )
     {
-        path.append( path_join( sub_pathes... ).string() );
+        path.append( pathJoin( sub_pathes... ).string() );
     }
     return path;
 }
@@ -28,23 +28,23 @@ inline std::filesystem::path path_join(
  * If the file exists, return the absolute path to the file, 
  * but if not, throw the runtime error that file is not found.
  */
-std::filesystem::path find_datapath( const std::filesystem::path& relative_path );
+std::filesystem::path findDatapath( const std::filesystem::path& relative_path );
 
-std::filesystem::path root_dir();
+std::filesystem::path rootDir();
 
 /**
  * @brief Get the extension of file.
  */
-std::string get_extension( const std::filesystem::path& filepath );
+std::string getExtension( const std::filesystem::path& filepath );
 
 /**
  * @brief Create a single directory.
  */
-void create_dir( const std::string& abs_path );
+void createDir( const std::string& abs_path );
 
 /**
  * @brief Create directories recursively.
  */
-void create_dirs( const std::string& abs_path );
+void createDirs( const std::string& abs_path );
 
 }

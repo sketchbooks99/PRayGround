@@ -3,7 +3,7 @@
 #include <sutil/Matrix.h>
 #include <sutil/vec_math.h>
 #include "../core/util.h"
-#include "../optix/ray.h"
+#include "../core/ray.h"
 #include "../optix/macros.h"
 
 namespace oprt {
@@ -31,7 +31,7 @@ struct Transform {
         return (t.mat == mat) && (t.matInv == matInv);
     }
 
-    HOSTDEVICE bool is_identity() {
+    HOSTDEVICE bool isIdentity() {
         return (mat == sutil::Matrix4x4::identity()) && (matInv == sutil::Matrix4x4::identity());
     }
 

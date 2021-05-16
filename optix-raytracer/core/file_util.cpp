@@ -4,17 +4,17 @@
 namespace oprt {
 
 // -------------------------------------------------------------------------------s
-std::filesystem::path find_datapath( const std::filesystem::path& relative_path )
+std::filesystem::path findDatapath( const std::filesystem::path& relative_path )
 {
     std::array<std::string, 2> parent_dirs = 
     {
-        OPRT_ROOT_DIR,
-        path_join(OPRT_ROOT_DIR, "data").string()
+        rootDir().string(),
+        pathJoin(OPRT_ROOT_DIR, "data").string()
     };
 
     for (auto &parent : parent_dirs)
     {
-        auto filepath = path_join(parent, relative_path);
+        auto filepath = pathJoin(parent, relative_path);
         if ( std::filesystem::exists(filepath) )
             return filepath;
     }
@@ -22,13 +22,18 @@ std::filesystem::path find_datapath( const std::filesystem::path& relative_path 
 }
 
 // -------------------------------------------------------------------------------
-std::string get_extension( const std::filesystem::path& filepath )
+std::filesystem::path rootDir() {
+    return std::filesystem::path(OPRT_ROOT_DIR);
+}
+
+// -------------------------------------------------------------------------------
+std::string getExtension( const std::filesystem::path& filepath )
 {
     return filepath.has_extension() ? filepath.extension().string() : "";
 }
 
 // -------------------------------------------------------------------------------
-void create_dir( const std::string& abs_path )
+void createDir( const std::string& abs_path )
 {
     // Check if the directory is existed.
     if (std::filesystem::exists(abs_path)) {
@@ -41,7 +46,7 @@ void create_dir( const std::string& abs_path )
 }
 
 // -------------------------------------------------------------------------------
-void create_dirs( const std::string& abs_path )
+void createDirs( const std::string& abs_path )
 {
     // Check if the directory is existed.
     if (std::filesystem::exists(abs_path)) {

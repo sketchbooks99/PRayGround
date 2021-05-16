@@ -23,7 +23,7 @@ struct Onb {
         m_tangent = cross( m_binormal, m_normal );
     }
 
-    INLINE HOSTDEVICE void inverse_transform(float3& p) const {
+    INLINE HOSTDEVICE void inverseTransform(float3& p) const {
         p = p.x*m_tangent + p.y*m_binormal + p.z*m_normal;
     }
 

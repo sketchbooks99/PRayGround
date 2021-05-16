@@ -1,8 +1,8 @@
 #pragma once 
 
 #include <sutil/vec_math.h>
-#include "../../core/transform.h"
 #include "../../core/material.h"
+#include "../../core/ray.h"
 #include "../../optix/sbt.h"
 
 namespace oprt {
@@ -10,7 +10,6 @@ namespace oprt {
 struct SphereData {
     float3 center;
     float radius;
-    // Transform transform;
 };
 
 }
@@ -46,14 +45,14 @@ CALLABLE_FUNC void IS_FUNC(sphere)() {
         float root1 = (-half_b - sqrtd) / a;
         bool check_second = true;
         if ( root1 > ray.tmin && root1 < ray.tmax ) {
-            float3 normal = normalize((ray.o + normalize(ray.d) * root1 - center) / radius);
+            float3 normal = normalize((ray.at(root1) - center) / radius);
             optixReportIntersection(root1, 0, float3_as_ints(normal));
         }
 
         if (check_second) {
             float root2 = (-half_b + sqrtd) / a;
             if ( root2 > ray.tmin && root2 < ray.tmax ) {
-                float3 normal = normalize((ray.o + normalize(ray.d) * root2 - center) / radius);
+                float3 normal = normalize((ray.at(root2) - center) / radius);
                 optixReportIntersection(root2, 0, float3_as_ints(normal));
             }
         }
@@ -71,7 +70,7 @@ CALLABLE_FUNC void CH_FUNC(sphere)() {
         int_as_float( optixGetAttribute_1() ),
         int_as_float( optixGetAttribute_2() )
     );
-    float3 world_n = optixTransformVectorFromObjectToWorldSpace(local_n);
+    float3 world_n = optixTransformNormalFromObjectToWorldSpace(local_n);
     world_n = normalize(world_n);
 
     oprt::SurfaceInteraction* si = get_surfaceinteraction();

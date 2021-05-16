@@ -11,7 +11,7 @@ namespace oprt {
  * @param accel_data 
  * @param ps 
  */
-void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data, const PrimitiveInstance& ps) {
+void buildGas(const OptixDeviceContext& ctx, AccelData& accel_data, const PrimitiveInstance& ps) {
     std::vector<Primitive> meshes;
     std::vector<Primitive> customs;
 
@@ -129,7 +129,7 @@ void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data, const Primi
  * @param instance_id 
  * @param instances 
  */
-void build_instances(const OptixDeviceContext& ctx, 
+void buildInstances(const OptixDeviceContext& ctx, 
                const AccelData& accel_data,
                const PrimitiveInstance& primitive_instance, 
                unsigned int& sbt_base_offset,
@@ -181,7 +181,7 @@ void build_instances(const OptixDeviceContext& ctx,
  * @param program_groups 
  * @param callable_records 
  */
-void create_material_sample_programs(
+void createMaterialPrograms(
     const OptixDeviceContext& ctx,
     const Module& module, 
     std::vector<ProgramGroup>& program_groups, 
@@ -223,7 +223,7 @@ void create_material_sample_programs(
  * @param program_groups 
  * @param callable_records 
  */
-void create_texture_eval_programs(
+void createTexturePrograms(
     const OptixDeviceContext& ctx, 
     const Module& module, 
     std::vector<ProgramGroup>& program_groups,

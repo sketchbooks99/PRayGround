@@ -13,7 +13,7 @@ using ProgramEntry = std::pair<OptixModule, const char*>;
 class ProgramGroup {
 public: 
     ProgramGroup() {}
-    explicit ProgramGroup(OptixProgramGroupKind prg_kind) : m_program_kind(prg_kind), m_program_options({}) {}
+    explicit ProgramGroup(OptixProgramGroupKind prg_kind) : m_program_kind(prg_kind) {}
     explicit ProgramGroup(OptixProgramGroupKind prg_kind, OptixProgramGroupOptions prg_options)
     : m_program_kind(prg_kind), m_program_options(prg_options) {}
 
@@ -57,22 +57,22 @@ public:
      * \note Only the closest-hit program is used to create hitgroup program. 
      */
     void createHitgroupProgram( const OptixDeviceContext& ctx, 
-                                  const ProgramEntry& ch_entry ) 
+                                const ProgramEntry& ch_entry ) 
     {
         createHitgroupProgram(ctx, ch_entry, ProgramEntry(nullptr, nullptr), ProgramEntry(nullptr, nullptr));
     }
     /** \brief Closest-hit and intersection program are used to create hitgroup program. */
     void createHitgroupProgram( const OptixDeviceContext& ctx,
-                                  const ProgramEntry& ch_entry,
-                                  const ProgramEntry& is_entry) 
+                                const ProgramEntry& ch_entry,
+                                const ProgramEntry& is_entry)
     {
         createHitgroupProgram(ctx, ch_entry, ProgramEntry(nullptr, nullptr), is_entry);
     }
     /** \brief All of programs are used to create hitgroup program. */
     void createHitgroupProgram( const OptixDeviceContext& ctx,
-                                  const ProgramEntry& ch_entry,
-                                  const ProgramEntry& ah_entry,
-                                  const ProgramEntry& is_entry);
+                                const ProgramEntry& ch_entry,
+                                const ProgramEntry& ah_entry,
+                                const ProgramEntry& is_entry);
 
     /** Creation of callable programs */
     void createCallableProgram( const OptixDeviceContext& ctx, 

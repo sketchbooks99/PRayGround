@@ -196,7 +196,7 @@ void createMaterialPrograms(
         // Add program to sample and to evaluate bsdf.
         program_groups.push_back(ProgramGroup(OPTIX_PROGRAM_GROUP_KIND_CALLABLES));
         callable_records.push_back(CallableRecord());
-        program_groups.back().create(
+        program_groups.back().createCallableProgram(
             ctx, 
             ProgramEntry( static_cast<OptixModule>(module), dc_func_str( sample_func_map[mattype] ).c_str() ), 
             ProgramEntry( static_cast<OptixModule>(module), cc_func_str( bsdf_func_map[mattype] ).c_str() )
@@ -206,7 +206,7 @@ void createMaterialPrograms(
         // Add program to evaluate pdf.
         program_groups.push_back(ProgramGroup(OPTIX_PROGRAM_GROUP_KIND_CALLABLES));
         callable_records.push_back(CallableRecord());
-        program_groups.back().create(
+        program_groups.back().createCallableProgram(
             ctx, 
             ProgramEntry( static_cast<OptixModule>(module), dc_func_str( pdf_func_map[mattype] ).c_str() ),
             ProgramEntry( nullptr, nullptr )
@@ -236,7 +236,7 @@ void createTexturePrograms(
 
         program_groups.push_back(ProgramGroup(OPTIX_PROGRAM_GROUP_KIND_CALLABLES));
         callable_records.push_back(CallableRecord());
-        program_groups.back().create(
+        program_groups.back().createCallableProgram(
             ctx, 
             ProgramEntry( static_cast<OptixModule>(module), dc_func_str( tex_eval_map[textype] ).c_str() ),
             ProgramEntry( nullptr, nullptr )

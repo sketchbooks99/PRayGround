@@ -89,7 +89,7 @@ INLINE DEVICE oprt::SurfaceInteraction* getSurfaceInteraction()
 {
     const unsigned int u0 = optixGetPayload_0();
     const unsigned int u1 = optixGetPayload_1();
-    return reinterpret_cast<oprt::SurfaceInteraction*>( unpack_pointer(u0, u1) ); 
+    return reinterpret_cast<oprt::SurfaceInteraction*>( unpackPointer(u0, u1) ); 
 }
 
 // -------------------------------------------------------------------------------

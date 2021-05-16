@@ -136,11 +136,11 @@ public:
     explicit PrimitiveInstance(const Transform& transform, const std::vector<Primitive>& primitives)
     : m_transform(transform), m_primitives(primitives) {}
 
-    void add_primitive(const Primitive& p) { 
+    void addPrimitive(const Primitive& p) { 
         m_primitives.push_back(p); 
         m_primitives.back().setSbtIndex(this->sbtIndexBase() + (this->numPrimitives() - 1));
     }
-    void add_primitive(Shape* shape_ptr, Material* mat_ptr) {
+    void addPrimitive(Shape* shape_ptr, Material* mat_ptr) {
         m_primitives.emplace_back(shape_ptr, mat_ptr);
         m_primitives.back().setSbtIndex(this->sbtIndexBase() + (this->numPrimitives() - 1) );
     }

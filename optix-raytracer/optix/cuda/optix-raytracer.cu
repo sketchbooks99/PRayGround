@@ -84,7 +84,7 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 
 		int depth = 0;
 		for ( ;; ) {
-			trace_radiance(
+			traceRadiance(
 				params.handle,
 				ray_origin, 
 				ray_direction, 
@@ -147,14 +147,15 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 		accum_color = lerp(accum_color_prev, accum_color, a);
 	}
 	params.accum_buffer[image_index] = make_float4(accum_color, 1.0f);
-	params.frame_buffer[image_index] = make_color(accum_color);
+	uchar3 color = make_color(accum_color);
+	params.frame_buffer[image_index] = make_uchar4(color.x, color.y, color.z, 255);
 }
 
 // -------------------------------------------------------------------------------
 CALLABLE_FUNC void MS_FUNC(radiance)()
 {
 	oprt::MissData* rt_data = reinterpret_cast<oprt::MissData*>(optixGetSbtDataPointer());
-	oprt::SurfaceInteraction *si = get_surfaceinteraction();
+	oprt::SurfaceInteraction *si = getSurfaceInteraction();
 
 	// si->radiance = make_float3(rt_data->bg_color);
 	si->emission = make_float3(rt_data->bg_color);

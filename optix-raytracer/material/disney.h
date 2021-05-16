@@ -46,11 +46,11 @@ public:
     
     ~Disney() {}
 
-    void prepare_data() override {
-        m_base->prepare_data();
+    void prepareData() override {
+        m_base->prepareData();
 
         DisneyData data = {
-            m_base->get_dptr(),
+            m_base->devicePtr(),
             m_subsurface,
             m_metallic, 
             m_specular, 
@@ -75,35 +75,35 @@ public:
 
     MaterialType type() const override { return MaterialType::Disney; }
 
-    void set_subsurface(float subsurface) { m_subsurface = subsurface; }
+    void setSubsurface(float subsurface) { m_subsurface = subsurface; }
     float subsurface() const { return m_subsurface; }
 
-    void set_metallic(float metallic) { m_metallic = metallic; }
+    void setMetallic(float metallic) { m_metallic = metallic; }
     float metallic() const { return m_metallic; }
 
-    void set_specular(float specular) { m_specular = specular; }
+    void setSpecular(float specular) { m_specular = specular; }
     float specular() const { return m_specular; }
 
-    void set_specular_tint(float specular_tint) { m_specular_tint = specular_tint; }
-    float specular_tint() const { return m_specular_tint; }
+    void setSpecularTint(float specular_tint) { m_specular_tint = specular_tint; }
+    float specularTint() const { return m_specular_tint; }
 
-    void set_roughness(float roughness) { m_roughness = roughness; }
+    void setRoughness(float roughness) { m_roughness = roughness; }
     float roughness() const { return m_roughness; }
 
-    void set_anisotropic(float anisotropic) { m_anisotropic = anisotropic; }
+    void setAnisotropic(float anisotropic) { m_anisotropic = anisotropic; }
     float anisotropic() const { return m_anisotropic; }
 
-    void set_sheen(float sheen) { m_sheen = sheen; }
+    void setSheen(float sheen) { m_sheen = sheen; }
     float sheen() const { return m_sheen; }
 
-    void set_sheen_tint(float sheen_tint) { m_sheen_tint = sheen_tint; }
-    float sheen_tint() const { return m_sheen_tint; }
+    void setSheenTint(float sheen_tint) { m_sheen_tint = sheen_tint; }
+    float sheenTint() const { return m_sheen_tint; }
 
-    void set_clearcoat(float clearcoat) { m_clearcoat = clearcoat; }
+    void setClearcoat(float clearcoat) { m_clearcoat = clearcoat; }
     float clearcoat() const { return m_clearcoat; }
 
-    void set_clearcoat_gloss(float clearcoat_gloss) { m_clearcoat_gloss = clearcoat_gloss; }
-    float clearcoat_gloss() const { return m_clearcoat_gloss; }
+    void setClearoatGloss(float clearcoat_gloss) { m_clearcoat_gloss = clearcoat_gloss; }
+    float clearcoatGloss() const { return m_clearcoat_gloss; }
 private:
     Texture* m_base;
     float m_subsurface;
@@ -134,14 +134,14 @@ CALLABLE_FUNC void DC_FUNC(sample_disney)(SurfaceInteraction* si, void* matdata)
 
     if (rnd(seed) < diffuse_ratio)
     {
-        float3 w_in = cosine_sample_hemisphere(z1, z2);
-        onb.inverse_transform(w_in);
+        float3 w_in = cosineSampleHemisphere(z1, z2);
+        onb.inverseTransform(w_in);
         si->wo = normalize(w_in);
     }
     else
     {
-        float3 h = sample_ggx(z1, z2, disney->roughness);
-        onb.inverse_transform(h);
+        float3 h = sampleGGX(z1, z2, disney->roughness);
+        onb.inverseTransform(h);
         si->wo = normalize(reflect(si->wi, h));
     }
     si->seed = seed;
@@ -185,14 +185,14 @@ CALLABLE_FUNC float3 CC_FUNC(bsdf_disney)(SurfaceInteraction* si, void* matdata)
     // Diffuse term (diffuse, subsurface, sheen) ======================
     // Diffuse
     const float Fd90 = 0.5f + 2.0f * disney->roughness * LdotH*LdotH;
-    const float FVd90 = ft_schlick(NdotV, Fd90);
-    const float FLd90 = ft_schlick(NdotL, Fd90);
+    const float FVd90 = fresnelSchlickT(NdotV, Fd90);
+    const float FLd90 = fresnelSchlickT(NdotL, Fd90);
     const float3 f_diffuse = (base_color / M_PIf) * FVd90 * FLd90;
 
     // Subsurface
     const float Fss90 = disney->roughness * LdotH*LdotH;
-    const float FVss90 = ft_schlick(NdotV, Fss90);
-    const float FLss90 = ft_schlick(NdotL, Fss90); 
+    const float FVss90 = fresnelSchlickT(NdotV, Fss90);
+    const float FLss90 = fresnelSchlickT(NdotL, Fss90); 
     const float3 f_subsurface = (base_color / M_PIf) * 1.25f * (FVss90 * FLss90 * ((1.0f / (NdotV * NdotL)) - 0.5f) + 0.5f);
 
     // Sheen
@@ -204,18 +204,18 @@ CALLABLE_FUNC float3 CC_FUNC(bsdf_disney)(SurfaceInteraction* si, void* matdata)
     // Spcular
     const float3 rho_specular = lerp(make_float3(1.0f), rho_tint, disney->specular_tint);
     const float3 Fs0 = lerp(0.08f * disney->specular * rho_specular, base_color, disney->metallic);
-    const float3 FHs0 = fr_schlick(LdotH, Fs0);
+    const float3 FHs0 = fresnelSchlickR(LdotH, Fs0);
     const float alpha = fmaxf(0.001f, disney->roughness * disney->roughness); // Remapping of roughness
     const float Ds = GTR2(NdotH, alpha);
     const float alpha_g = powf(0.5f*disney->roughness + 0.5f, 2.0f);
-    const float Gs = geometry_smith(N, V, L, alpha_g);
+    const float Gs = geometrySmith(N, V, L, alpha_g);
     const float3 f_specular = FHs0 * Ds * Gs / (4.0f * NdotV * NdotL);
 
     // Clearcoat
-    const float Fcc = fr_schlick(LdotH, 0.04f);
+    const float Fcc = fresnelSchlickR(LdotH, 0.04f);
     const float alpha_cc = 0.1f + (0.001f - 0.1f) * disney->clearcoat_gloss; // lerp
     const float Dcc = GTR1(NdotH, alpha_cc);
-    const float Gcc = geometry_smith(N, V, L, 0.25f);
+    const float Gcc = geometrySmith(N, V, L, 0.25f);
     const float3 f_clearcoat = make_float3( 0.25f * disney->clearcoat * (Fcc * Dcc * Gcc) / (4.0f * NdotV * NdotL) ); 
 
     const float3 out = ( 1.0f - disney->metallic ) * ( lerp( f_diffuse, f_subsurface, disney->subsurface ) + f_sheen ) + f_specular + f_clearcoat;

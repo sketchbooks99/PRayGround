@@ -189,7 +189,7 @@ void createMaterialPrograms(
 ) {
     // program_groups.clear(); <- Is it needed?
 
-    for (int i = 0; i < (int)MaterialType::Count; i++) 
+    for (int i = 0; i < static_cast<int>(MaterialType::Count); i++) 
     {
         MaterialType mattype = static_cast<MaterialType>(i);
 
@@ -198,8 +198,8 @@ void createMaterialPrograms(
         callable_records.push_back(CallableRecord());
         program_groups.back().create(
             ctx, 
-            ProgramEntry( (OptixModule)module, dc_func_str( sample_func_map[mattype]).c_str() ), 
-            ProgramEntry( (OptixModule)module, cc_func_str( bsdf_func_map[mattype]).c_str() )
+            ProgramEntry( static_cast<OptixModule>(module), dc_func_str( sample_func_map[mattype] ).c_str() ), 
+            ProgramEntry( static_cast<OptixModule>(module), cc_func_str( bsdf_func_map[mattype] ).c_str() )
         );
         program_groups.back().bindRecord(&callable_records.back());
         
@@ -208,7 +208,7 @@ void createMaterialPrograms(
         callable_records.push_back(CallableRecord());
         program_groups.back().create(
             ctx, 
-            ProgramEntry( (OptixModule)module, dc_func_str( pdf_func_map[mattype]).c_str() ),
+            ProgramEntry( static_cast<OptixModule>(module), dc_func_str( pdf_func_map[mattype] ).c_str() ),
             ProgramEntry( nullptr, nullptr )
         );
         program_groups.back().bindRecord(&callable_records.back());
@@ -230,7 +230,7 @@ void createTexturePrograms(
     std::vector<CallableRecord>& callable_records
 )
 {
-    for (int i = 0; i < (int)TextureType::Count; i++)
+    for (int i = 0; i < static_cast<int>(TextureType::Count); i++)
     {
         TextureType textype = static_cast<TextureType>(i);
 
@@ -238,7 +238,7 @@ void createTexturePrograms(
         callable_records.push_back(CallableRecord());
         program_groups.back().create(
             ctx, 
-            ProgramEntry( (OptixModule)module, dc_func_str( tex_eval_map[textype] ).c_str() ),
+            ProgramEntry( static_cast<OptixModule>(module), dc_func_str( tex_eval_map[textype] ).c_str() ),
             ProgramEntry( nullptr, nullptr )
         );
         program_groups.back().bindRecord(&callable_records.back());

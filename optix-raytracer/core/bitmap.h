@@ -41,7 +41,7 @@ public:
 
     T* data() const { return m_data; }
     T* devicePtr() const { return d_data; }
-    ImageFormat format() const { return m_format; }
+    BitmapFormat format() const { return m_format; }
 protected:
     void _detectFormat() {
         if constexpr (std::is_same_v<T, char4>) {

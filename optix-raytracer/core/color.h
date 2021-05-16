@@ -35,16 +35,19 @@ INLINE HOSTDEVICE float3 color2float( const uchar3& c )
     );
 }
 
-HOSTDEVICE INLINE uchar4 make_color( const float3& c )
+INLINE HOSTDEVICE uchar3 make_color( const float3& c, bool gamma_enalbed=true)
 {
     // first apply gamma, then convert to unsigned char
-    float3 srgb = toSRGB( clamp( c, 0.0f, 1.0f ) );
-    return make_uchar4( quantizeUnsigned8Bits( srgb.x ), quantizeUnsigned8Bits( srgb.y ), quantizeUnsigned8Bits( srgb.z ), 255u );
+    float3 rgb = c;
+    if (gamma_enalbed)
+        rgb = toSRGB( clamp( c, 0.0f, 1.0f ) );
+    return make_uchar3( quantizeUnsigned8Bits( rgb.x ), quantizeUnsigned8Bits( rgb.y ), quantizeUnsigned8Bits( rgb.z ));
 }
 
-HOSTDEVICE INLINE uchar4 make_color( const float4& c )
+INLINE HOSTDEVICE uchar4 make_color( const float4& c, bool gamma_enabled=true )
 {
-    return make_color( make_float3( c.x, c.y, c.z ) );
+    uchar3 rgb = make_color( make_float3( c.x, c.y, c.z ), gamma_enabled );
+    return make_uchar4( rgb.x, rgb.y, rgb.z, (unsigned char)( clamp( c.w, 0.0f, 1.0f ) * 255.0f ) );
 }
 
 /**

@@ -22,11 +22,11 @@ public:
 
     ~Emitter() { }
 
-    void prepare_data() override {
-        m_texture->prepare_data();
+    void prepareData() override {
+        m_texture->prepareData();
 
         EmitterData data = {
-            m_texture->get_dptr(), 
+            m_texture->devicePtr(), 
             m_strength,
             m_twosided,
             static_cast<unsigned int>(m_texture->type()) + static_cast<unsigned int>(MaterialType::Count) * 2

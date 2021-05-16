@@ -36,7 +36,7 @@ public:
     unsigned int height() const { return m_height; }
 
     void setEnvironment(const float4& env) { m_environment = env; }
-    const float4& environment() const { return m_environment; }
+    float4 environment() const { return m_environment; }
 
     void setDepth(unsigned int d) { m_depth = d; }
     unsigned int depth() const { return m_depth; }

@@ -38,15 +38,15 @@ void Bitmap<T>::load(const std::string& filename) {
         uchar3
     >;
 
-    std::string file_extension = get_extension(filename);
+    std::string file_extension = getExtension(filename);
 
     if (file_extension == ".png" || file_extension == ".PNG")
-        Assert(sizeof(loadable_type) == 4, "The type of bitmap must have 4 channels (RGBA) when loading PNG file.");
+        Assert(sizeof(LoadableData) == 4, "The type of bitmap must have 4 channels (RGBA) when loading PNG file.");
     else if (file_extension == ".jpg" || file_extension == ".JPG")
-        Assert(sizeof(loadable_type) == 3, "The type of bitmap must have 3 channels (RGB) when loading JPG file.");
+        Assert(sizeof(LoadableData) == 3, "The type of bitmap must have 3 channels (RGB) when loading JPG file.");
 
     LoadableData* data = reinterpret_cast<LoadableData*>(
-        stbi_load(filename.c_str(), &m_width, &m_height, &m_channels, sizeof(loadable_type)));
+        stbi_load(filename.c_str(), &m_width, &m_height, &m_channels, sizeof(LoadableData)));
     Assert(data, "Failed to load image file'" + filename + "'");
 
     m_data = new T[m_width * m_height];
@@ -59,7 +59,7 @@ void Bitmap<T>::load(const std::string& filename) {
             for (auto j=0; j<m_height; j++)
             {
                 auto idx = i * m_height + j;
-                fd[idx] = color2float(d[idx]);
+                float_data[idx] = color2float(data[idx]);
             }
         }
         memcpy(m_data, float_data, m_width*m_height*sizeof(T));
@@ -87,7 +87,7 @@ void Bitmap<T>::write(const std::string& filename, bool gamma_enabled, int quali
         uchar3
     >;
 
-    std::string file_extension = get_extension(filename);
+    std::string file_extension = getExtension(filename);
 
     WritableData* data = new WritableData[m_width*m_height];
     // Tの型がfloatの場合は中身を float [0.0f, 1.0f] -> unsigned char [0, 255] に変換する
@@ -109,11 +109,11 @@ void Bitmap<T>::write(const std::string& filename, bool gamma_enabled, int quali
     
     if (file_extension == ".png" || file_extension == ".PNG")
     {
-        stbi_write_png(filename, m_width, m_height, m_channels, data, 0);
+        stbi_write_png(filename.c_str(), m_width, m_height, m_channels, data, 0);
     }
     else if (file_extension == ".jpg" || file_extension == ".JPG")
     {
-        stbi_write_jpg(filename, m_width, m_height, m_channels, data, quality);
+        stbi_write_jpg(filename.c_str(), m_width, m_height, m_channels, data, quality);
     }
 
     delete[] data;
@@ -127,12 +127,12 @@ template void Bitmap<uchar3>::write(const std::string&, bool, int) const;
 template <class T>
 void Bitmap<T>::copyToDevice() {
     // CPU側のデータが準備されているかチェック
-    Assert(this->m_data, "Image data in the host side has been not allocated yet.");
+    Assert(m_data, "Image data in the host side has been not allocated yet.");
 
     // GPU上に画像データを準備
     CUDABuffer<T> d_buffer;
-    d_buffer.alloc_copy(this->m_data, this->m_width*this->m_height*sizeof(T));
-    d_data = d_buffer.data();
+    d_buffer.copyToDevice(m_data, m_width*m_height*sizeof(T));
+    d_data = d_buffer.deviceData();
 }
 template void Bitmap<uchar4>::copyToDevice();
 template void Bitmap<uchar3>::copyToDevice();

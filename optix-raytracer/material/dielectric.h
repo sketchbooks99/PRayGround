@@ -23,11 +23,11 @@ public:
     : m_texture(texture), m_ior(ior) {}
     ~Dielectric() { }
 
-    void prepare_data() override {
-        m_texture->prepare_data();
+    void prepareData() override {
+        m_texture->prepareData();
 
         DielectricData data = {
-            m_texture->get_dptr(), 
+            m_texture->devicePtr(), 
             m_ior, 
             static_cast<unsigned int>(m_texture->type()) + static_cast<unsigned int>(MaterialType::Count) * 2
         };
@@ -64,7 +64,7 @@ CALLABLE_FUNC void DC_FUNC(sample_dielectric)(SurfaceInteraction* si, void* matd
     float sine = sqrtf(1.0 - cosine*cosine);
     bool cannot_refract = (ni / nt) * sine > 1.0f;
 
-    float reflect_prob = fr(cosine, ni, nt);
+    float reflect_prob = fresnel(cosine, ni, nt);
     unsigned int seed = si->seed;
 
     if (cannot_refract || reflect_prob > rnd(seed))

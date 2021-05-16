@@ -22,11 +22,11 @@ public:
     : m_texture(texture), m_fuzz(f), m_twosided(twosided) {}
     ~Conductor() {}
 
-    void prepare_data() override {
-        m_texture->prepare_data();
+    void prepareData() override {
+        m_texture->prepareData();
 
         ConductorData data = {
-            m_texture->get_dptr(), 
+            m_texture->devicePtr(), 
             m_fuzz,
             m_twosided,
             static_cast<unsigned int>(m_texture->type()) + static_cast<unsigned int>(MaterialType::Count) * 2

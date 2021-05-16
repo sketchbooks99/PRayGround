@@ -26,11 +26,11 @@ public:
 
     ~Diffuse() { }
 
-    void prepare_data() override {
-        m_texture->prepare_data();
+    void prepareData() override {
+        m_texture->prepareData();
 
         DiffuseData data {
-            m_texture->get_dptr(),
+            m_texture->devicePtr(),
             m_twosided,
             static_cast<unsigned int>(m_texture->type()) + static_cast<unsigned int>(MaterialType::Count) * 2
         };
@@ -69,9 +69,9 @@ CALLABLE_FUNC void DC_FUNC(sample_diffuse)(SurfaceInteraction* si, void* matdata
         const float z1 = rnd(seed);
         const float z2 = rnd(seed);
 
-        float3 w_in = cosine_sample_hemisphere(z1, z2);
+        float3 w_in = cosineSampleHemisphere(z1, z2);
         Onb onb(si->n);
-        onb.inverse_transform(w_in);
+        onb.inverseTransform(w_in);
         si->wo = w_in;
     }
     si->seed = seed;
@@ -103,7 +103,7 @@ CALLABLE_FUNC float3 CC_FUNC(bsdf_diffuse)(SurfaceInteraction* si, void* matdata
     float weight = 0.0f;
     if (nDl > 0.0f && LnDl > 0.0f)
     {
-        const bool occluded = trace_occlusion(
+        const bool occluded = traceOcclusion(
             params.handle, 
             si->p, 
             L, 

@@ -2,12 +2,12 @@
 
 namespace oprt {
 
-void ProgramGroup::create_single_program( const OptixDeviceContext& ctx, const ProgramEntry& entry )
+void ProgramGroup::createSingleProgram( const OptixDeviceContext& ctx, const ProgramEntry& entry )
 {
     Assert( m_program_kind == OPTIX_PROGRAM_GROUP_KIND_RAYGEN || 
             m_program_kind == OPTIX_PROGRAM_GROUP_KIND_MISS   || 
             m_program_kind == OPTIX_PROGRAM_GROUP_KIND_EXCEPTION,
-            "The OptixProgramGroupKind " + to_str(m_program_kind) + " is not a single-call program." );
+            "The OptixProgramGroupKind " + toString(m_program_kind) + " is not a single-call program." );
 
     OptixProgramGroupDesc prog_desc = {};
     char log[2048];
@@ -42,7 +42,7 @@ void ProgramGroup::create_single_program( const OptixDeviceContext& ctx, const P
     ));
 }
 
-void ProgramGroup::create_hitgroup_program( 
+void ProgramGroup::createHitgroupProgram( 
     const OptixDeviceContext& ctx, 
     const ProgramEntry& ch_entry, 
     const ProgramEntry& ah_entry, 
@@ -50,7 +50,7 @@ void ProgramGroup::create_hitgroup_program(
 )
 {
     Assert(m_program_kind == OPTIX_PROGRAM_GROUP_KIND_HITGROUP,
-           "The OprixProgramGroupKind " + to_str(m_program_kind) + " is not a hitgroup program.");
+           "The OprixProgramGroupKind " + toString(m_program_kind) + " is not a hitgroup program.");
 
     char log[2048];
     size_t sizeof_log = sizeof(log);
@@ -74,14 +74,14 @@ void ProgramGroup::create_hitgroup_program(
     ));
 }
 
-void ProgramGroup::create_callable_program( 
+void ProgramGroup::createCallableProgram( 
     const OptixDeviceContext& ctx, 
     const ProgramEntry& dc_entry, 
     const ProgramEntry& cc_entry
 ) 
 {
     Assert(m_program_kind == OPTIX_PROGRAM_GROUP_KIND_CALLABLES,
-            "The OptixProgramGroupKind " + to_str(m_program_kind) + " is not a callble program.");
+            "The OptixProgramGroupKind " + toString(m_program_kind) + " is not a callble program.");
     
     char log[2048];
     size_t sizeof_log = sizeof( log );

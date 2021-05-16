@@ -65,13 +65,13 @@ public:
     virtual ShapeType type() const = 0;
     virtual AABB bound() const = 0;
 
-    virtual void prepare_data() = 0;
-    virtual void build_input( OptixBuildInput& bi, uint32_t sbt_idx ) = 0;
-    void free_aabb_buffer() {
+    virtual void prepareData() = 0;
+    virtual void buildInput( OptixBuildInput& bi, uint32_t sbt_idx ) = 0;
+    void freeAabbBuffer() {
         if (d_aabb_buffer) cuda_free( d_aabb_buffer ); 
     }
 
-    void* get_dptr() const { return d_data; }
+    void* devicePtr() const { return d_data; }
 protected:
     void* d_data { 0 };
     CUdeviceptr d_aabb_buffer { 0 };

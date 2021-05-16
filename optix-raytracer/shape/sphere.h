@@ -11,7 +11,7 @@ public:
 
     ShapeType type() const override { return ShapeType::Sphere; }
 
-    void prepare_data() override 
+    void prepareData() override 
     {
         SphereData data = {
             m_center, 
@@ -29,17 +29,17 @@ public:
     /**
      * @note \c index_offset is not needed.
      */
-    void build_input( OptixBuildInput& bi, uint32_t sbt_idx ) override
+    void buildInput( OptixBuildInput& bi, uint32_t sbt_idx ) override
     {
         CUDABuffer<uint32_t> d_sbt_indices;
         uint32_t* sbt_indices = new uint32_t[1];
         sbt_indices[0] = sbt_idx;
-        d_sbt_indices.alloc_copy(sbt_indices, sizeof(uint32_t));
+        d_sbt_indices.copyToDevice(sbt_indices, sizeof(uint32_t));
 
         // Prepare bounding box information on the device.
         OptixAabb aabb = (OptixAabb)this->bound();
 
-        if (d_aabb_buffer) free_aabb_buffer();
+        if (d_aabb_buffer) freeAabbBuffer();
 
         CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_aabb_buffer), sizeof(OptixAabb)));
         CUDA_CHECK(cudaMemcpy(
@@ -56,7 +56,7 @@ public:
         bi.customPrimitiveArray.numPrimitives = 1;
         bi.customPrimitiveArray.flags = input_flags;
         bi.customPrimitiveArray.numSbtRecords = 1;
-        bi.customPrimitiveArray.sbtIndexOffsetBuffer = d_sbt_indices.d_ptr();
+        bi.customPrimitiveArray.sbtIndexOffsetBuffer = d_sbt_indices.devicePtr();
         bi.customPrimitiveArray.sbtIndexOffsetSizeInBytes = sizeof(uint32_t);
         bi.customPrimitiveArray.sbtIndexOffsetStrideInBytes = sizeof(uint32_t);
     }

@@ -125,7 +125,7 @@ template void Bitmap<uchar3>::write(const std::string&, bool, int) const;
 
 // --------------------------------------------------------------------
 template <class T>
-void Bitmap<T>::copy_to_device() {
+void Bitmap<T>::copyToDevice() {
     // CPU側のデータが準備されているかチェック
     Assert(this->m_data, "Image data in the host side has been not allocated yet.");
 
@@ -134,9 +134,9 @@ void Bitmap<T>::copy_to_device() {
     d_buffer.alloc_copy(this->m_data, this->m_width*this->m_height*sizeof(T));
     d_data = d_buffer.data();
 }
-template void Bitmap<uchar4>::copy_to_device();
-template void Bitmap<uchar3>::copy_to_device();
-template void Bitmap<float4>::copy_to_device();
-template void Bitmap<float3>::copy_to_device();
+template void Bitmap<uchar4>::copyToDevice();
+template void Bitmap<uchar3>::copyToDevice();
+template void Bitmap<float4>::copyToDevice();
+template void Bitmap<float3>::copyToDevice();
 
 }

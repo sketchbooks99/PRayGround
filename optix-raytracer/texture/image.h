@@ -20,11 +20,11 @@ public:
             CUDA_CHECK( cudaFreeArray( d_array ) );
     }
 
-    void prepare_data() override;
+    void prepareData() override;
 
     TextureType type() const override { return TextureType::Image; }
 private:
-    void _init_texture_desc() {
+    void _initTextureDesc() {
         tex_desc.addressMode[0] = cudaAddressModeClamp;
         tex_desc.addressMode[1] = cudaAddressModeClamp;
         tex_desc.filterMode = cudaFilterModeLinear;

@@ -43,10 +43,10 @@ public:
     virtual TextureType type() const = 0;
 
     // Preparing texture data on the device.
-    virtual void prepare_data() = 0;
+    virtual void prepareData() = 0;
 
     // Get data pointer on the device.
-    void* get_dptr() const { return d_data; }
+    void* devicePtr() const { return d_data; }
 protected:
     // CUdeviceptr d_data { 0 };
     void* d_data;

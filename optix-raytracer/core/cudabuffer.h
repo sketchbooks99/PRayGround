@@ -43,7 +43,7 @@ public:
     }
 
     // Free data from the device.
-    void init() {
+    void free() {
         if (isAllocated())
             cuda_free(m_ptr);
         m_ptr = 0;

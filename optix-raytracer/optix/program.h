@@ -35,52 +35,52 @@ public:
         case OPTIX_PROGRAM_GROUP_KIND_MISS: 
         case OPTIX_PROGRAM_GROUP_KIND_EXCEPTION:
             if constexpr (num_entries == 1)
-                create_single_program(ctx, entries...);
+                createSingleProgram(ctx, entries...);
             break;
         case OPTIX_PROGRAM_GROUP_KIND_HITGROUP:
             if constexpr (num_entries <= 3)
-                create_hitgroup_program(ctx, entries...);
+                createHitgroupProgram(ctx, entries...);
             break;
         case OPTIX_PROGRAM_GROUP_KIND_CALLABLES:
             if constexpr (num_entries == 2)
-                create_callable_program(ctx, entries...);
+                createCallableProgram(ctx, entries...);
             break;
         }
     }
 
     /** \brief Creation of a single-call program (Raygen, Miss, Exception) */
-    void create_single_program( const OptixDeviceContext& ctx, 
+    void createSingleProgram( const OptixDeviceContext& ctx, 
                                 const ProgramEntry& entry );
 
     /** 
      * \brief Creation of hitgroup programs 
      * \note Only the closest-hit program is used to create hitgroup program. 
      */
-    void create_hitgroup_program( const OptixDeviceContext& ctx, 
+    void createHitgroupProgram( const OptixDeviceContext& ctx, 
                                   const ProgramEntry& ch_entry ) 
     {
-        create_hitgroup_program(ctx, ch_entry, ProgramEntry(nullptr, nullptr), ProgramEntry(nullptr, nullptr));
+        createHitgroupProgram(ctx, ch_entry, ProgramEntry(nullptr, nullptr), ProgramEntry(nullptr, nullptr));
     }
     /** \brief Closest-hit and intersection program are used to create hitgroup program. */
-    void create_hitgroup_program( const OptixDeviceContext& ctx,
+    void createHitgroupProgram( const OptixDeviceContext& ctx,
                                   const ProgramEntry& ch_entry,
                                   const ProgramEntry& is_entry) 
     {
-        create_hitgroup_program(ctx, ch_entry, ProgramEntry(nullptr, nullptr), is_entry);
+        createHitgroupProgram(ctx, ch_entry, ProgramEntry(nullptr, nullptr), is_entry);
     }
     /** \brief All of programs are used to create hitgroup program. */
-    void create_hitgroup_program( const OptixDeviceContext& ctx,
+    void createHitgroupProgram( const OptixDeviceContext& ctx,
                                   const ProgramEntry& ch_entry,
                                   const ProgramEntry& ah_entry,
                                   const ProgramEntry& is_entry);
 
     /** Creation of callable programs */
-    void create_callable_program( const OptixDeviceContext& ctx, 
+    void createCallableProgram( const OptixDeviceContext& ctx, 
                                   const ProgramEntry& dc_entry, 
                                   const ProgramEntry& cc_entry);
 
     template <typename SBTRecord>
-    void bind_record(SBTRecord* record) {
+    void bindRecord(SBTRecord* record) {
         OPTIX_CHECK(optixSbtRecordPackHeader(m_program, record));
     }
 private:

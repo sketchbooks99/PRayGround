@@ -49,9 +49,9 @@ struct Transform {
 #endif 
 
 #ifndef __CUDACC__
-    HOST void rotate_x(const float radians) { this->rotate(radians, make_float3(1, 0, 0)); }
-    HOST void rotate_y(const float radians) { this->rotate(radians, make_float3(0, 1, 0)); }
-    HOST void rotate_z(const float radians) { this->rotate(radians, make_float3(0, 0, 1)); }
+    HOST void rotateX(const float radians) { rotate(radians, make_float3(1, 0, 0)); }
+    HOST void rotateY(const float radians) { rotate(radians, make_float3(0, 1, 0)); }
+    HOST void rotateZ(const float radians) { rotate(radians, make_float3(0, 0, 1)); }
     HOST void rotate(const float radians, const float3& axis) {
         sutil::Matrix4x4 rotateMat = sutil::Matrix4x4::rotate(radians, axis);
         sutil::Matrix4x4 rotateMatInv = rotateMat.inverse();
@@ -71,7 +71,7 @@ struct Transform {
         *this *= Transform(scaleMat, scaleMatInv);
     }
 #else
-    DEVICE float3 point_mul(const float3& p) {
+    DEVICE float3 pointMul(const float3& p) {
         float x = mat[0*4+0]*p.x + mat[0*4+1]*p.y + mat[0*4+2]*p.z + mat[0*4+3];
         float y = mat[1*4+0]*p.x + mat[1*4+1]*p.y + mat[1*4+2]*p.z + mat[1*4+3];
         float z = mat[2*4+0]*p.x + mat[2*4+1]*p.y + mat[2*4+2]*p.z + mat[2*4+3];
@@ -82,7 +82,7 @@ struct Transform {
             return make_float3(x, y, z) / w;
     }
 
-    DEVICE float3 vector_mul(const float3& v) {
+    DEVICE float3 vectorMul(const float3& v) {
         float x = v.x, y = v.y, z = v.z;
         return make_float3(mat[0*4+0]*x + mat[0*4+1]*y + mat[0*4+2]*z,
                            mat[1*4+0]*x + mat[1*4+1]*y + mat[1*4+2]*z,
@@ -90,16 +90,16 @@ struct Transform {
     }
 
     // Multiply itself and normal
-    DEVICE float3 normal_mul(const float3& n) {
+    DEVICE float3 normalMul(const float3& n) {
         float x = n.x, y = n.y, z = n.z;
         return make_float3(matInv[0*4+0]*x + matInv[1*4*0]*y + matInv[2*4+0]*z,
                            matInv[0*4+1]*x + matInv[1*4*1]*y + matInv[2*4+1]*z,
                            matInv[0*4+2]*x + matInv[1*4*2]*y + matInv[2*4+2]*z);
     }
 
-    DEVICE Ray transform_ray(const Ray& r) {
-        float3 ro = point_mul(r.o);
-        float3 rd = vector_mul(r.d);
+    DEVICE Ray transformRay(const Ray& r) {
+        float3 ro = pointMul(r.o);
+        float3 rd = vectorMul(r.d);
         return { ro, rd, r.tmin, r.tmax, r.t, r.spectrum };
     }
 #endif

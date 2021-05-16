@@ -22,8 +22,8 @@ public:
 
     ShapeType type() const override { return ShapeType::Mesh; }
 
-    void prepare_data() override;
-    void build_input( OptixBuildInput& bi, uint32_t sbt_idx ) override;
+    void prepareData() override;
+    void buildInput( OptixBuildInput& bi, uint32_t sbt_idx ) override;
     /**
      * @note 
      * Currently, triangle never need AABB at intersection test on the device side.
@@ -38,10 +38,10 @@ public:
     std::vector<float2> texcoords() const { return m_texcoords; }
 
     // Getters of device side pointers.
-    CUdeviceptr get_dvertices() const { return d_vertices; }
-    CUdeviceptr get_dindices() const { return d_indices; }
-    CUdeviceptr get_dnormals() const { return d_normals; }
-    CUdeviceptr get_dtexcoords() const { return d_texcoords; }
+    CUdeviceptr deviceVertices() const { return d_vertices; }
+    CUdeviceptr deviceIndices() const { return d_indices; }
+    CUdeviceptr deviceNormals() const { return d_normals; }
+    CUdeviceptr deivceTexcoords() const { return d_texcoords; }
 
 private:
     std::vector<float3> m_vertices;

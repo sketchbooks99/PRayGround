@@ -13,7 +13,6 @@ struct MeshData {
     int3* indices;
     float3* normals;
     float2* texcoords;
-    // Transform transform;
 };
 
 }
@@ -25,7 +24,7 @@ CALLABLE_FUNC void CH_FUNC(mesh)()
     oprt::HitGroupData* data = reinterpret_cast<oprt::HitGroupData*>(optixGetSbtDataPointer());
     const oprt::MeshData* mesh_data = reinterpret_cast<oprt::MeshData*>(data->shapedata);
 
-    oprt::Ray ray = get_world_ray();
+    oprt::Ray ray = getWorldRay();
     
     const int prim_idx = optixGetPrimitiveIndex();
     const int3 index = mesh_data->indices[prim_idx];
@@ -46,7 +45,7 @@ CALLABLE_FUNC void CH_FUNC(mesh)()
     float3 world_n = optixTransformNormalFromObjectToWorldSpace(local_n);
     world_n = normalize(world_n);
 
-    oprt::SurfaceInteraction* si = get_surfaceinteraction();
+    oprt::SurfaceInteraction* si = getSurfaceinteraction();
     si->p = ray.at(ray.tmax);
     si->n = world_n;
     si->wi = ray.d;

@@ -12,14 +12,14 @@ TriangleMesh::TriangleMesh(
     const std::string& filename, bool is_smooth)
 {
     if (filename.substr(filename.length() - 4) == ".obj") {
-        std::string filepath = find_datapath(filename).string();
+        std::string filepath = findDatapath(filename).string();
         Message("Loading OBJ file '" + filepath + "' ...");
-        load_obj(filepath, m_vertices, m_normals, m_indices, m_texcoords);
+        loadObj(filepath, m_vertices, m_normals, m_indices, m_texcoords);
     }
     else if (filename.substr(filename.length() - 4) == ".ply") {
-        std::string filepath = find_datapath(filename).string();
+        std::string filepath = findDatapath(filename).string();
         Message("Loading PLY file '" + filepath + "' ...");
-        load_ply(filepath, m_vertices, m_normals, m_indices, m_texcoords);
+        loadPly(filepath, m_vertices, m_normals, m_indices, m_texcoords);
     }
 
     // Calculate normals if they are empty.
@@ -112,22 +112,22 @@ TriangleMesh::TriangleMesh(std::vector<float3> vertices,
 }
 
 // ------------------------------------------------------------------
-void TriangleMesh::prepare_data() {
+void TriangleMesh::prepareData() {
     CUDABuffer<float3> d_vertices_buf;
     CUDABuffer<int3> d_indices_buf;
     CUDABuffer<float3> d_normals_buf;
     CUDABuffer<float2> d_texcoords_buf;
-    d_vertices_buf.alloc_copy(m_vertices);
-    d_indices_buf.alloc_copy(m_indices);
-    d_normals_buf.alloc_copy(m_normals);
-    d_texcoords_buf.alloc_copy(m_texcoords);
+    d_vertices_buf.copyToDevice(m_vertices);
+    d_indices_buf.copyToDevice(m_indices);
+    d_normals_buf.copyToDevice(m_normals);
+    d_texcoords_buf.copyToDevice(m_texcoords);
 
     // device side pointer of mesh data
     MeshData data = {
-        d_vertices_buf.data(),
-        d_indices_buf.data(), 
-        d_normals_buf.data(),
-        d_texcoords_buf.data()
+        d_vertices_buf.deviceData(),
+        d_indices_buf.deviceData(), 
+        d_normals_buf.deviceData(),
+        d_texcoords_buf.deviceData()
     };
 
     CUDA_CHECK(cudaMalloc(&d_data, sizeof(MeshData)));
@@ -137,17 +137,17 @@ void TriangleMesh::prepare_data() {
         cudaMemcpyHostToDevice
     ));
 
-    d_vertices = d_vertices_buf.d_ptr();
-    d_indices = d_indices_buf.d_ptr();
-    d_normals = d_normals_buf.d_ptr();
-    d_texcoords = d_texcoords_buf.d_ptr();
+    d_vertices = d_vertices_buf.devicePtr();
+    d_indices = d_indices_buf.devicePtr();
+    d_normals = d_normals_buf.devicePtr();
+    d_texcoords = d_texcoords_buf.devicePtr();
 }   
 
 // ------------------------------------------------------------------
-void TriangleMesh::build_input( OptixBuildInput& bi, const uint32_t sbt_idx ) {
+void TriangleMesh::buildInput( OptixBuildInput& bi, const uint32_t sbt_idx ) {
     CUDABuffer<uint32_t> d_sbt_indices;
     std::vector<uint32_t> sbt_indices(m_indices.size(), sbt_idx);
-    d_sbt_indices.alloc_copy(sbt_indices);
+    d_sbt_indices.copyToDevice(sbt_indices);
 
     unsigned int* triangle_input_flags = new unsigned int[1];
     triangle_input_flags[0] = OPTIX_GEOMETRY_FLAG_DISABLE_ANYHIT;
@@ -163,7 +163,7 @@ void TriangleMesh::build_input( OptixBuildInput& bi, const uint32_t sbt_idx ) {
     bi.triangleArray.numIndexTriplets = static_cast<uint32_t>(m_indices.size());
     bi.triangleArray.indexBuffer = d_indices;
     bi.triangleArray.numSbtRecords = 1;
-    bi.triangleArray.sbtIndexOffsetBuffer = d_sbt_indices.d_ptr();
+    bi.triangleArray.sbtIndexOffsetBuffer = d_sbt_indices.devicePtr();
     bi.triangleArray.sbtIndexOffsetSizeInBytes = sizeof(uint32_t);
     bi.triangleArray.sbtIndexOffsetStrideInBytes = sizeof(uint32_t);
 }

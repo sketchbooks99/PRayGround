@@ -16,7 +16,7 @@ void buildGas(const OptixDeviceContext& ctx, AccelData& accel_data, const Primit
     std::vector<Primitive> customs;
 
     for (auto &p : ps.primitives()) {
-        if (p.shapetype() == ShapeType::Mesh) meshes.push_back(p);
+        if (p.shapeType() == ShapeType::Mesh) meshes.push_back(p);
         else                                  customs.push_back(p);
     }
 
@@ -37,11 +37,11 @@ void buildGas(const OptixDeviceContext& ctx, AccelData& accel_data, const Primit
         std::vector<OptixBuildInput> build_inputs(primitives_subset.size());
         unsigned int index_offset = 0;
         for (size_t i=0; i<primitives_subset.size(); i++) {
-            primitives_subset[i].prepare_shapedata();
-            primitives_subset[i].prepare_matdata();
-            primitives_subset[i].build_input(build_inputs[i]);
+            primitives_subset[i].prepareShapeData();
+            primitives_subset[i].prepareMaterialData();
+            primitives_subset[i].buildInput(build_inputs[i]);
 
-            switch ( primitives_subset[i].shapetype() ) {
+            switch ( primitives_subset[i].shapeType() ) {
             case ShapeType::Mesh:
                 index_offset += build_inputs[i].triangleArray.numIndexTriplets;
                 break;
@@ -100,7 +100,7 @@ void buildGas(const OptixDeviceContext& ctx, AccelData& accel_data, const Primit
         // Free temporarily buffers 
         cuda_free(d_temp_buffer);
         /// \note Currently, only aabb buffer is freed.
-        for (auto& p : primitives_subset) p.free_temp_buffer(); 
+        for (auto& p : primitives_subset) p.freeTempBuffer(); 
 
         size_t compacted_gas_size;
         CUDA_CHECK(cudaMemcpy(&compacted_gas_size, (void*)emitProperty.result, sizeof(size_t), cudaMemcpyDeviceToHost));
@@ -201,7 +201,7 @@ void createMaterialPrograms(
             ProgramEntry( (OptixModule)module, dc_func_str( sample_func_map[mattype]).c_str() ), 
             ProgramEntry( (OptixModule)module, cc_func_str( bsdf_func_map[mattype]).c_str() )
         );
-        program_groups.back().bind_record(&callable_records.back());
+        program_groups.back().bindRecord(&callable_records.back());
         
         // Add program to evaluate pdf.
         program_groups.push_back(ProgramGroup(OPTIX_PROGRAM_GROUP_KIND_CALLABLES));
@@ -211,7 +211,7 @@ void createMaterialPrograms(
             ProgramEntry( (OptixModule)module, dc_func_str( pdf_func_map[mattype]).c_str() ),
             ProgramEntry( nullptr, nullptr )
         );
-        program_groups.back().bind_record(&callable_records.back());
+        program_groups.back().bindRecord(&callable_records.back());
     }
 }
 
@@ -241,7 +241,7 @@ void createTexturePrograms(
             ProgramEntry( (OptixModule)module, dc_func_str( tex_eval_map[textype] ).c_str() ),
             ProgramEntry( nullptr, nullptr )
         );
-        program_groups.back().bind_record(&callable_records.back());
+        program_groups.back().bindRecord(&callable_records.back());
     }
 }
 

@@ -6,7 +6,7 @@
 namespace oprt {
 
 template <typename T>
-std::string to_str(T t) {
+std::string toString(T t) {
     std::ostringstream oss;
     oss << t;
     return oss.str();

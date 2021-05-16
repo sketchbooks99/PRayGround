@@ -34,6 +34,7 @@
 #include "core/cudabuffer.h"
 #include "core/scene.h"
 #include "core/primitive.h"
+#include "core/bitmap.h"
 
 // Header file describe the scene
 #include "scene_config.h"
@@ -291,7 +292,7 @@ int main(int argc, char* argv[]) {
         {
             if( i >= argc - 1 )
                 printUsageAndExit( argv[0] );
-            outfile = oprt::path_join(OPRT_ROOT_DIR, argv[++i]).string();
+            outfile = oprt::pathJoin(OPRT_ROOT_DIR, argv[++i]).string();
         }
         else if( arg.substr( 0, 6 ) == "--dim=" )
         {
@@ -334,7 +335,7 @@ int main(int argc, char* argv[]) {
 
         params.width                             = scene.width();
         params.height                            = scene.height();
-        params.samples_per_launch                = scene.samples_per_launch();
+        params.samples_per_launch                = scene.samplesPerLaunch();
         params.max_depth                         = scene.depth();
 
         // Initialize camera state.
@@ -346,19 +347,19 @@ int main(int argc, char* argv[]) {
         unsigned int sbt_base_offset = 0; 
         unsigned int instance_id = 0;
         std::vector<oprt::AccelData*> accels;
-        for ( auto ps : scene.primitive_instances() ) {
+        for ( auto ps : scene.primitiveInstances() ) {
             accels.push_back( new oprt::AccelData() );
-            oprt::build_gas( optix_context, *accels.back(), ps );
-            oprt::build_instances( optix_context, *accels.back(), ps, sbt_base_offset, instance_id, instances ); 
+            oprt::buildGas( optix_context, *accels.back(), ps );
+            oprt::buildInstances( optix_context, *accels.back(), ps, sbt_base_offset, instance_id, instances ); 
         }
 
         oprt::CUDABuffer<OptixInstance> d_instances;
-        d_instances.alloc_copy(instances);
+        d_instances.copyToDevice(instances);
 
         // Prepare build input for instances.
         OptixBuildInput instance_input = {};
         instance_input.type = OPTIX_BUILD_INPUT_TYPE_INSTANCES;
-        instance_input.instanceArray.instances = d_instances.d_ptr();
+        instance_input.instanceArray.instances = d_instances.devicePtr();
         instance_input.instanceArray.numInstances = (unsigned int)instances.size();
 
         OptixAccelBuildOptions accel_options = {};
@@ -407,13 +408,13 @@ int main(int argc, char* argv[]) {
         // Prepare the pipeline
         std::string params_name = "params";
         oprt::Pipeline pipeline(params_name);
-        pipeline.set_dc_depth(4);   // The maximum call depth of direct callable programs.
-        pipeline.set_cc_depth(4);   // The maximum call depth of continuation callable programs.
-        pipeline.set_num_payloads(5);
-        pipeline.set_num_attributes(5);
+        pipeline.setDirectCallableDepth(4);   // The maximum call depth of direct callable programs.
+        pipeline.setContinuationCallableDepth(4);   // The maximum call depth of continuation callable programs.
+        pipeline.setNumPayloads(5);
+        pipeline.setNumAttributes(5);
         // Create module
         oprt::Module module("optix/cuda/optix-raytracer.cu");
-        module.create(optix_context, pipeline.compile_options());
+        module.create(optix_context, pipeline.compileOptions());
 
         /**
          * \brief Create programs
@@ -425,8 +426,8 @@ int main(int argc, char* argv[]) {
         // Create and bind sbt to raygen program
         oprt::CUDABuffer<oprt::RayGenRecord> d_raygen_record;
         oprt::RayGenRecord rg_record = {};
-        raygen_program.bind_record( &rg_record );
-        d_raygen_record.alloc_copy( &rg_record, sizeof( oprt::RayGenRecord ) );
+        raygen_program.bindRecord( &rg_record );
+        d_raygen_record.copyToDevice( &rg_record, sizeof( oprt::RayGenRecord ) );
         
         // Miss program
         std::vector<oprt::ProgramGroup> miss_programs( RAY_TYPE_COUNT );
@@ -437,33 +438,33 @@ int main(int argc, char* argv[]) {
         oprt::CUDABuffer<oprt::MissRecord> d_miss_record;
         oprt::MissRecord ms_records[RAY_TYPE_COUNT];
         for (int i=0; i<RAY_TYPE_COUNT; i++) {
-            miss_programs[i].bind_record( &ms_records[i] );
-            ms_records[i].data.bg_color = scene.bgcolor();  
+            miss_programs[i].bindRecord( &ms_records[i] );
+            ms_records[i].data.bg_color = scene.environment();  
         }
-        d_miss_record.alloc_copy( ms_records, sizeof(oprt::MissRecord) * RAY_TYPE_COUNT );
+        d_miss_record.copyToDevice( ms_records, sizeof(oprt::MissRecord) * RAY_TYPE_COUNT );
 
         // Bind sbts to raygen and miss program
-        sbt.raygenRecord = d_raygen_record.d_ptr();
-        sbt.missRecordBase = d_miss_record.d_ptr();
+        sbt.raygenRecord = d_raygen_record.devicePtr();
+        sbt.missRecordBase = d_miss_record.devicePtr();
         sbt.missRecordStrideInBytes = static_cast<uint32_t>( sizeof( oprt::MissRecord ) );
         sbt.missRecordCount = RAY_TYPE_COUNT;
 
         // HitGroup programs
-        scene.create_hitgroup_programs( optix_context, module );
-        std::vector<oprt::ProgramGroup> hitgroup_programs = scene.hitgroup_programs();
+        scene.createHitgroupPrograms( optix_context, module );
+        std::vector<oprt::ProgramGroup> hitgroup_programs = scene.hitgroupPrograms();
         std::copy( hitgroup_programs.begin(), hitgroup_programs.end(), std::back_inserter( program_groups ) );
 
         // Create sbts and bind it to hitgroup programs.
-        scene.create_hitgroup_sbt( sbt );
+        scene.createHitgroupSBT( sbt );
 
         // Callable programs for sampling bsdf properties.
         std::vector<oprt::ProgramGroup> callable_programs;
         std::vector<oprt::CallableRecord> callable_records;
-        create_material_sample_programs( optix_context, module, callable_programs, callable_records );
-        create_texture_eval_programs( optix_context, module, callable_programs, callable_records );
+        createMaterialPrograms( optix_context, module, callable_programs, callable_records );
+        createTexturePrograms( optix_context, module, callable_programs, callable_records );
         oprt::CUDABuffer<oprt::CallableRecord> d_callable_records;
-        d_callable_records.alloc_copy(callable_records);
-        sbt.callablesRecordBase = d_callable_records.d_ptr();
+        d_callable_records.copyToDevice(callable_records);
+        sbt.callablesRecordBase = d_callable_records.devicePtr();
         sbt.callablesRecordCount = static_cast<unsigned int>( callable_records.size() );
         sbt.callablesRecordStrideInBytes = static_cast<unsigned int>( sizeof(oprt::CallableRecord ) ); 
 
@@ -549,8 +550,8 @@ int main(int argc, char* argv[]) {
             handleCameraUpdate( params, camera );
             handleResize( output_buffer, params );
 
-            int num_launches = scene.num_samples() / scene.samples_per_launch();
-            oprt::Assert(scene.num_samples()%scene.samples_per_launch() == 0, 
+            int num_launches = scene.numSamples() / scene.samplesPerLaunch();
+            oprt::Assert(scene.numSamples() % scene.samplesPerLaunch() == 0, 
                 "The number of total samples must be a multiple of the number of sampler per launch.");
 
             auto start_time = std::chrono::steady_clock::now();
@@ -564,13 +565,15 @@ int main(int argc, char* argv[]) {
             std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds>(render_time);
             printf("Render time: %dm %ds %dms\n", (int)m.count(), (int)s.count(), (int)ms.count());
 
-            sutil::ImageBuffer buffer;
-            buffer.data         = output_buffer.getHostPointer();
-            buffer.width        = output_buffer.width();
-            buffer.height       = output_buffer.height();
-            buffer.pixel_format = sutil::BufferImageFormat::UNSIGNED_BYTE4;
+            // sutil::ImageBuffer buffer;
+            // buffer.data         = output_buffer.getHostPointer();
+            // buffer.width        = output_buffer.width();
+            // buffer.height       = output_buffer.height();
+            // buffer.pixel_format = sutil::BufferImageFormat::UNSIGNED_BYTE4;
 
-            sutil::saveImage( outfile.c_str(), buffer, false );
+            // sutil::saveImage( outfile.c_str(), buffer, false );
+            oprt::Bitmap<uchar4> bitmap(output_buffer.getHostPointer(), output_buffer.width(), output_buffer.height());
+            bitmap.write(outfile, true);
 
             if( output_buffer_type == sutil::CUDAOutputBufferType::GL_INTEROP )
             {

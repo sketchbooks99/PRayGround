@@ -27,30 +27,30 @@ class Primitive {
 public:
     Primitive(Shape* shape_ptr, Material* material_ptr)
     : m_shape_ptr(shape_ptr), m_material_ptr(material_ptr) {
-        _init_program_groups();
+        _initProgramGroups();
     }
 
     Primitive(Shape* shape_ptr, Material* material_ptr, uint32_t sbt_index)
     : m_shape_ptr(shape_ptr), m_material_ptr(material_ptr), m_sbt_index(sbt_index) {
-        _init_program_groups();
+        _initProgramGroups();
     }
 
     // Create programs based on shape type. 
     void createPrograms(const OptixDeviceContext& ctx, const OptixModule& module) {
         Assert(!m_program_groups.empty(), "ProgramGroup is not allocated.");
-        if (shapetype() == ShapeType::Mesh) {
+        if (shapeType() == ShapeType::Mesh) {
             // Program for mesh is only a closest-hit program. 
-            m_program_groups[0].create( ctx, ProgramEntry( module, ch_func_str( shape_map[shapetype()]).c_str() ) );
+            m_program_groups[0].create( ctx, ProgramEntry( module, ch_func_str( shape_map[shapeType()]).c_str() ) );
             if (m_program_groups.size() > 1) {
-                m_program_groups[1].create( ctx, ProgramEntry( module, ch_func_str( shape_occlusion_map[shapetype()]).c_str() ) );
+                m_program_groups[1].create( ctx, ProgramEntry( module, ch_func_str( shape_occlusion_map[shapeType()]).c_str() ) );
             }
         } else {
             // Programs for custom primitives must include closeset-hit and intersection programs.
-            m_program_groups[0].create( ctx, ProgramEntry( module, ch_func_str( shape_map[shapetype()]).c_str() ), 
-                                             ProgramEntry( module, is_func_str( shape_map[shapetype()]).c_str() ) );
+            m_program_groups[0].create( ctx, ProgramEntry( module, ch_func_str( shape_map[shapeType()]).c_str() ), 
+                                             ProgramEntry( module, is_func_str( shape_map[shapeType()]).c_str() ) );
             if (m_program_groups.size() > 1) {
-                m_program_groups[1].create( ctx, ProgramEntry( module, ch_func_str( shape_occlusion_map[shapetype()]).c_str() ),
-                                                 ProgramEntry( module, is_func_str( shape_map[shapetype()]).c_str() ) );
+                m_program_groups[1].create( ctx, ProgramEntry( module, ch_func_str( shape_occlusion_map[shapeType()]).c_str() ),
+                                                 ProgramEntry( module, is_func_str( shape_map[shapeType()]).c_str() ) );
                 
             }
         
@@ -59,7 +59,7 @@ public:
 
     // Preparing (alloc and copy) shape data to the device. 
     void prepareShapeData() { m_shape_ptr->prepareData(); }
-    void prepareMatData() { m_material_ptr->prepareData(); }
+    void prepareMaterialData() { m_material_ptr->prepareData(); }
 
     // Configure the OptixBuildInput from shape data.
     void buildInput( OptixBuildInput& bi ) { m_shape_ptr->buildInput( bi, m_sbt_index ); }
@@ -70,31 +70,31 @@ public:
      * \note  
      * Currently, only aabb_buffer is freed
      */
-    void free_temp_buffer() { if (m_shape_ptr->type() != ShapeType::Mesh) m_shape_ptr->free_aabb_buffer(); }
+    void freeTempBuffer() { if (m_shape_ptr->type() != ShapeType::Mesh) m_shape_ptr->freeAabbBuffer(); }
 
     // Bind programs and HitGroupRecord
     template <typename SBTRecord>
-    void bind_radiance_record(SBTRecord* record) {
+    void bindRadianceRecord(SBTRecord* record) {
         Assert(!m_program_groups.empty(), "ProgramGroups is not allocated.");
-        m_program_groups[0].bind_record(record);
+        m_program_groups[0].bindRecord(record);
     }
     template <typename SBTRecord>
-    void bind_occlusion_record(SBTRecord* record) {
+    void bindOcclusionRecord(SBTRecord* record) {
         Assert(m_program_groups.size() > 1, "Occlusion program is not contained in rendering.");
-        m_program_groups[1].bind_record(record);
+        m_program_groups[1].bindRecord(record);
     }
 
     // Setter
-    void set_sbt_index(const uint32_t idx) { m_sbt_index = idx; } 
+    void setSbtIndex(const uint32_t idx) { m_sbt_index = idx; } 
 
     // Getter 
-    uint32_t sbt_index() const { return m_sbt_index; }
+    uint32_t sbtIndex() const { return m_sbt_index; }
     Material* material() const { return m_material_ptr; }
     Shape* shape() const { return m_shape_ptr; }
-    ShapeType shapetype() const { return m_shape_ptr->type(); }
-    MaterialType materialtype() const { return m_material_ptr->type(); }
+    ShapeType shapeType() const { return m_shape_ptr->type(); }
+    MaterialType materialType() const { return m_material_ptr->type(); }
 
-    std::vector<ProgramGroup> program_groups() { return m_program_groups; }
+    std::vector<ProgramGroup> programGroups() { return m_program_groups; }
 
 private:
     void _initProgramGroups() {
@@ -138,11 +138,11 @@ public:
 
     void add_primitive(const Primitive& p) { 
         m_primitives.push_back(p); 
-        m_primitives.back().set_sbt_index(this->sbt_index_base() + (this->num_primitives() - 1));
+        m_primitives.back().setSbtIndex(this->sbtIndexBase() + (this->numPrimitives() - 1));
     }
     void add_primitive(Shape* shape_ptr, Material* mat_ptr) {
         m_primitives.emplace_back(shape_ptr, mat_ptr);
-        m_primitives.back().set_sbt_index(this->sbt_index_base() + (this->num_primitives() - 1) );
+        m_primitives.back().setSbtIndex(this->sbtIndexBase() + (this->numPrimitives() - 1) );
     }
 
     /**
@@ -150,25 +150,24 @@ public:
      */
     void sort() {
         std::sort(m_primitives.begin(), m_primitives.end(), 
-            [](const Primitive& p1, const Primitive& p2){ return (int)p1.shapetype() < (int)p2.shapetype(); });
+            [](const Primitive& p1, const Primitive& p2){ return (int)p1.shapeType() < (int)p2.shapeType(); });
         uint32_t sbt_index = 0;
         for (auto &p : m_primitives) {
-            p.set_sbt_index(this->sbt_index_base() + sbt_index);
+            p.setSbtIndex(this->sbtIndexBase() + sbt_index);
             sbt_index++;
         }
     }
 
     // Allow to return primitives as lvalue. 
     std::vector<Primitive> primitives() const { return m_primitives; }
-    std::vector<Primitive>& primitives() { return m_primitives; }
 
-    size_t num_primitives() const { return m_primitives.size(); }
+    size_t numPrimitives() const { return m_primitives.size(); }
 
-    void set_sbt_index_base(const unsigned int base) { m_sbt_index_base = base; }
-    unsigned int sbt_index_base() const { return m_sbt_index_base; }
-    unsigned int sbt_index() const { return m_sbt_index_base + (unsigned int)m_primitives.size(); }
+    void setSbtIndexBase(const unsigned int base) { m_sbt_index_base = base; }
+    unsigned int sbtIndexBase() const { return m_sbt_index_base; }
+    unsigned int sbtIndex() const { return m_sbt_index_base + (unsigned int)m_primitives.size(); }
     
-    void set_transform(const Transform& t) { m_transform = t; } 
+    void setTransform(const Transform& t) { m_transform = t; } 
     Transform transform() const { return m_transform; }
 private:
     Transform m_transform;
@@ -176,23 +175,23 @@ private:
     unsigned int m_sbt_index_base { 0 };
 };
 
-void build_gas(const OptixDeviceContext& ctx, AccelData& accel_data, const PrimitiveInstance& ps);
+void buildGas(const OptixDeviceContext& ctx, AccelData& accel_data, const PrimitiveInstance& ps);
 
-void build_instances(const OptixDeviceContext& ctx, 
+void buildInstances(const OptixDeviceContext& ctx, 
                const AccelData& accel_data,
                const PrimitiveInstance& primitive_instance, 
                unsigned int& sbt_base_offset,
                unsigned int& instance_id,
                std::vector<OptixInstance>& instances);
 
-void create_material_sample_programs(
+void createMaterialPrograms(
     const OptixDeviceContext& ctx,
     const Module& module, 
     std::vector<ProgramGroup>& program_groups, 
     std::vector<CallableRecord>& callable_records
 );
 
-void create_texture_eval_programs(
+void createTexturePrograms(
     const OptixDeviceContext& ctx, 
     const Module& module, 
     std::vector<ProgramGroup>& program_groups,

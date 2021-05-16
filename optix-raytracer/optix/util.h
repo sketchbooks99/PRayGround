@@ -71,21 +71,21 @@ INLINE DEVICE void swap(T& a, T& b)
     T c(a); a = b; b = c;
 }
 
-INLINE DEVICE void* unpack_pointer( unsigned int i0, unsigned int i1 )
+INLINE DEVICE void* unpackPointer( unsigned int i0, unsigned int i1 )
 {
     const unsigned long long uptr = static_cast<unsigned long long>( i0 ) << 32 | i1;
     void* ptr = reinterpret_cast<void*>( uptr );
     return ptr;
 }
 
-INLINE DEVICE void pack_pointer(void* ptr, unsigned int& i0, unsigned int& i1)
+INLINE DEVICE void packPointer(void* ptr, unsigned int& i0, unsigned int& i1)
 {
     const unsigned long long uptr = reinterpret_cast<unsigned long long>( ptr );
     i0 = uptr >> 32;
     i1 = uptr & 0x00000000ffffffff;
 }
 
-INLINE DEVICE oprt::SurfaceInteraction* get_surfaceinteraction()
+INLINE DEVICE oprt::SurfaceInteraction* getSurfaceInteraction()
 {
     const unsigned int u0 = optixGetPayload_0();
     const unsigned int u1 = optixGetPayload_1();
@@ -98,7 +98,7 @@ static INLINE DEVICE void setPayloadOcclusion(bool occluded)
 	optixSetPayload_0(static_cast<unsigned int>(occluded));
 }
 
-INLINE DEVICE bool trace_occlusion(
+INLINE DEVICE bool traceOcclusion(
     OptixTraversableHandle handle, float3 ro, float3 rd, float tmin, float tmax
 ) 
 {
@@ -120,7 +120,7 @@ INLINE DEVICE bool trace_occlusion(
     return occluded;
 }
 
-INLINE DEVICE void trace_radiance(
+INLINE DEVICE void traceRadiance(
     OptixTraversableHandle handle,
     float3                 ray_origin,
     float3                 ray_direction,
@@ -132,7 +132,7 @@ INLINE DEVICE void trace_radiance(
     // TODO: deduce stride from num ray-types passed in params
 
     unsigned int u0, u1;
-    pack_pointer( si, u0, u1 );
+    packPointer( si, u0, u1 );
     optixTrace(
         handle,
         ray_origin,

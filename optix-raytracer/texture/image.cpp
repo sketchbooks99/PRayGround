@@ -9,7 +9,7 @@ namespace oprt {
 // ---------------------------------------------------------------------
 ImageTexture::ImageTexture(const std::string& filename)
 {
-    std::string filepath = find_datapath(filename).string();
+    std::string filepath = findDatapath(filename).string();
     uint8_t* d = stbi_load( filepath.c_str(), &m_width, &m_height, &m_channels, STBI_rgb_alpha );
     Assert(d, "Failed to load image file'"+filename+"'");
     m_data = new uchar4[m_width*m_height];
@@ -17,11 +17,11 @@ ImageTexture::ImageTexture(const std::string& filename)
 
     stbi_image_free(d);
 
-    _init_texture_desc();
+    _initTextureDesc();
 }
 
 // ---------------------------------------------------------------------
-void ImageTexture::prepare_data() 
+void ImageTexture::prepareData() 
 {
     // Alloc CUDA array in device memory.
     int32_t pitch = m_width * 4 * sizeof( unsigned char );

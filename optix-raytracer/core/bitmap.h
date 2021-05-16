@@ -22,8 +22,15 @@ enum BitmapFormat {
 template <class T>
 class Bitmap {
 public:
-    Bitmap(){}
-    explicit Bitmap(const std::string& filename) {}
+    Bitmap() { _detectFormat(); }
+    Bitmap(T* data, int width, int height) : m_data(data), m_width(width), m_height(height) 
+    {
+        _detectFormat();
+    }
+    explicit Bitmap(const std::string& filename) 
+    {
+        _detectFormat();
+    }
 
     void allocate(int width, int height);
     void load(const std::string& filename);
@@ -37,14 +44,22 @@ public:
     ImageFormat format() const { return m_format; }
 protected:
     void _detectFormat() {
-        if constexpr (std::is_same_v<T, char4>) 
+        if constexpr (std::is_same_v<T, char4>) {
             m_format = UNSIGNED_BYTE4;
-        if constexpr (std::is_same_v<T, char3>) 
+            m_channels = 4;
+        }
+        if constexpr (std::is_same_v<T, char3>) {
             m_format = UNSIGNED_BYTE3;
-        if constexpr (std::is_same_v<T, float4>)
+            m_channels = 3;
+        }
+        if constexpr (std::is_same_v<T, float4>) {
             m_format = FLOAT4;
-        if constexpr (std::is_same_v<T, float3>)
+            m_channels = 4;
+        }
+        if constexpr (std::is_same_v<T, float3>) {
             m_format = FLOAT3;
+            m_channels = 3;
+        }
     }
 
     BitmapFormat m_format;

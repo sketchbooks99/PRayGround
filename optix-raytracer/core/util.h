@@ -6,6 +6,7 @@
 #include <cuda_runtime.h>
 #include <stdexcept>
 #include <array>
+#include <regex>
 #include <cstring>
 #include <fstream>
 #include <iomanip>

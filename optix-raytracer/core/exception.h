@@ -50,9 +50,35 @@ public:
     static const StackTrace getStackTrace();
 };
 
-// ------------------------------------------------------------
-class Exception : public std::runtime_error {
-
-};
-
 }
+
+#ifndef __CUDACC__
+#define OPTIX_CHECK_TRACE( call )                                                                           \
+    do                                                                                                      \
+    {                                                                                                       \
+        OptixResult res = call;                                                                             \
+        if( res != OPTIX_SUCCESS )                                                                          \
+        {                                                                                                   \
+            oprt::StackTrace stack_trace = oprt::StackTracer::getStackTrace();                              \
+            std::stringstream ss;                                                                           \
+            ss << "[STACK TRACE] " << std::endl;                                                            \
+            for (size_t i = 0; i < stack_trace.trace_size; i++)                                             \
+            {                                                                                               \
+                if (i != 0)                                                                                 \
+                {                                                                                           \
+                    ss << std::endl;                                                                        \
+                }                                                                                           \
+                ss << " ";                                                                                  \
+                ss << std::setw(16) << std::setfill('0') << std::hex << (uint64_t)stack_trace.traces[i];    \
+                ss << " | ";                                                                                \
+                ss << stack_trace.symbols[i];                                                               \
+            }                                                                                               \
+            ss << std::endl;                                                                                \
+            std::cout << ss.str();                                                                          \
+            ss.str("");                                                                                     \
+            ss << "Optix call '" << #call << "' failed: " __FILE__ ":"                                      \
+               << __LINE__ << ")\n";                                                                        \
+            throw sutil::Exception( res, ss.str().c_str() );                                                \
+        }                                                                                                   \
+    } while( 0 )
+#endif

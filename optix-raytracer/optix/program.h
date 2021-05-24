@@ -1,7 +1,7 @@
 #pragma once 
 
 #include <utility> // for std::pair< , >
-#include "../core/util.h"
+#include "../core/exception.h"
 #include <optix.h>
 #include <optix_stubs.h>
 
@@ -81,7 +81,7 @@ public:
 
     template <typename SBTRecord>
     void bindRecord(SBTRecord* record) {
-        OPTIX_CHECK(optixSbtRecordPackHeader(m_program, record));
+        OPTIX_CHECK_TRACE(optixSbtRecordPackHeader(m_program, record));
     }
 private:
     OptixProgramGroup m_program { 0 };

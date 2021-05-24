@@ -33,6 +33,7 @@ OPTIX_add_sample_executable( optix-raytracer target_name
   core/primitive.cpp 
   core/scene.cpp
   core/bitmap.cpp
+  core/exception.cpp
 
   optix/program.cpp
 

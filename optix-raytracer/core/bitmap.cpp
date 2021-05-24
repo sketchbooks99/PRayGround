@@ -32,7 +32,7 @@ void Bitmap<T>::load(const std::string& filename) {
     // 画像ファイルが存在するかのチェック
     Assert(std::filesystem::exists(filename.c_str()), "The image file '" + filename + "' is not found.");
 
-    using LoadableData = std::conditional_t< 
+    using Loadable_t = std::conditional_t< 
         (std::is_same_v<T, uchar4> || std::is_same_v<T, float4>), 
         uchar4, 
         uchar3
@@ -41,12 +41,12 @@ void Bitmap<T>::load(const std::string& filename) {
     std::string file_extension = getExtension(filename);
 
     if (file_extension == ".png" || file_extension == ".PNG")
-        Assert(sizeof(LoadableData) == 4, "The type of bitmap must have 4 channels (RGBA) when loading PNG file.");
+        Assert(sizeof(Loadable_t) == 4, "The type of bitmap must have 4 channels (RGBA) when loading PNG file.");
     else if (file_extension == ".jpg" || file_extension == ".JPG")
-        Assert(sizeof(LoadableData) == 3, "The type of bitmap must have 3 channels (RGB) when loading JPG file.");
+        Assert(sizeof(Loadable_t) == 3, "The type of bitmap must have 3 channels (RGB) when loading JPG file.");
 
-    LoadableData* data = reinterpret_cast<LoadableData*>(
-        stbi_load(filename.c_str(), &m_width, &m_height, &m_channels, sizeof(LoadableData)));
+    Loadable_t* data = reinterpret_cast<Loadable_t*>(
+        stbi_load(filename.c_str(), &m_width, &m_height, &m_channels, sizeof(Loadable_t)));
     Assert(data, "Failed to load image file'" + filename + "'");
 
     m_data = new T[m_width * m_height];
@@ -81,7 +81,7 @@ template <class T>
 void Bitmap<T>::write(const std::string& filename, bool gamma_enabled, int quality) const
 {
     // Tの方によって出力時の型をuchar4 or uchar3 で切り替える。
-    using WritableData = std::conditional_t< 
+    using Writable_t = std::conditional_t< 
         (std::is_same_v<T, uchar4> || std::is_same_v<T, float4>), 
         uchar4, 
         uchar3
@@ -89,7 +89,7 @@ void Bitmap<T>::write(const std::string& filename, bool gamma_enabled, int quali
 
     std::string file_extension = getExtension(filename);
 
-    WritableData* data = new WritableData[m_width*m_height];
+    Writable_t* data = new Writable_t[m_width*m_height];
     // Tの型がfloatの場合は中身を float [0.0f, 1.0f] -> unsigned char [0, 255] に変換する
     if constexpr (std::is_same_v<T, float4> || std::is_same_v<T, float3>)
     {

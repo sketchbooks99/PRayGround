@@ -6,13 +6,13 @@
 
 namespace oprt {
 
-#ifdef _WIN32 || _WIN64
+#if defined(_WIN32) || defined(_WIN64)
 
 #include <Windows.h>
 #include <ImageHlp.h>
 #pragma comment(lib, "imagehlp.lib")
 
-const StackTrace StackTracer::getStackTrace()
+StackTrace StackTracer::getStackTrace()
 {
     // 最大トレースサイズ
     constexpr size_t max_size = 256;
@@ -72,13 +72,13 @@ const StackTrace StackTracer::getStackTrace()
     }
     else
     {
-
+        
     }
 
     return stack_trace;
 }
 
-#elif __linux__
+#elif defined(__linux__)
 
 const StackTrace StackTracer::getStackTrace()
 {
@@ -208,6 +208,12 @@ std::string getSymbolInfoText(const std::string& raw_symbol_info)
     }
 
     return symbol_info_text;
+}
+
+// ------------------------------------------------------------
+Exception::Exception(const std::string& msg, const std::string& file, const std::string& func, const int line)
+{
+
 }
 
 }

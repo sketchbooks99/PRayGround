@@ -76,11 +76,13 @@ public:
     template <typename SBTRecord>
     void bindRadianceRecord(SBTRecord* record) {
         Assert(!m_program_groups.empty(), "ProgramGroups is not allocated.");
+        Message("bindRadianceRecord()");
         m_program_groups[0].bindRecord(record);
     }
     template <typename SBTRecord>
     void bindOcclusionRecord(SBTRecord* record) {
         Assert(m_program_groups.size() > 1, "Occlusion program is not contained in rendering.");
+        Message("bindOcclusionRecord()");
         m_program_groups[1].bindRecord(record);
     }
 
@@ -160,6 +162,7 @@ public:
 
     // Allow to return primitives as lvalue. 
     std::vector<Primitive> primitives() const { return m_primitives; }
+    std::vector<Primitive>& primitives() { return m_primitives; }
 
     size_t numPrimitives() const { return m_primitives.size(); }
 

@@ -13,6 +13,7 @@
 #include <sstream>
 #include <random>
 #include <vector>
+#include <utility>
 #include "../core/stream_helpers.h"
 #endif
 

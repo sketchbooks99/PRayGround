@@ -94,7 +94,7 @@ public:
     ShapeType shapeType() const { return m_shape_ptr->type(); }
     MaterialType materialType() const { return m_material_ptr->type(); }
 
-    std::vector<ProgramGroup> programGroups() { return m_program_groups; }
+    std::vector<ProgramGroup> programGroups() const { return m_program_groups; }
 
 private:
     void _initProgramGroups() {
@@ -160,6 +160,7 @@ public:
 
     // Allow to return primitives as lvalue. 
     std::vector<Primitive> primitives() const { return m_primitives; }
+    std::vector<Primitive>& primitives() { return m_primitives; }
 
     size_t numPrimitives() const { return m_primitives.size(); }
 

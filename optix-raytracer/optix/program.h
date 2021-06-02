@@ -1,9 +1,8 @@
 #pragma once 
 
-#include <utility> // for std::pair< , >
+#include "../core/util.h"
 #include <optix.h>
 #include <optix_stubs.h>
-#include "../core/util.h"
 
 namespace oprt { 
 

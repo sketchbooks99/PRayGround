@@ -36,6 +36,7 @@
 
 #include "../../shape/optix/sphere.cuh"
 #include "../../shape/optix/trianglemesh.cuh"
+#include "../../shape/optix/plane.cuh"
 
 #include "../../material/conductor.h"
 #include "../../material/dielectric.h"

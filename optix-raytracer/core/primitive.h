@@ -76,13 +76,11 @@ public:
     template <typename SBTRecord>
     void bindRadianceRecord(SBTRecord* record) {
         Assert(!m_program_groups.empty(), "ProgramGroups is not allocated.");
-        Message("bindRadianceRecord()");
         m_program_groups[0].bindRecord(record);
     }
     template <typename SBTRecord>
     void bindOcclusionRecord(SBTRecord* record) {
         Assert(m_program_groups.size() > 1, "Occlusion program is not contained in rendering.");
-        Message("bindOcclusionRecord()");
         m_program_groups[1].bindRecord(record);
     }
 

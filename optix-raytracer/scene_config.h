@@ -5,6 +5,7 @@
 
 #include "shape/sphere.h"
 #include "shape/trianglemesh.h"
+#include "shape/plane.h"
 
 #include "material/conductor.h"
 #include "material/dielectric.h"
@@ -54,8 +55,11 @@ oprt::Scene my_scene() {
     auto checker1 = new oprt::CheckerTexture(
         make_float3(0.3f), make_float3(0.9f), 10.0f
     );
+    auto checker2 = new oprt::CheckerTexture(
+        make_float3(0.8f, 0.05f, 0.05f), make_float3(0.8f), 10.0f
+    );
     auto earth_image = new oprt::ImageTexture("image/earth.jpg");
-    auto skyblue_constant = new oprt::ConstantTexture(make_float3(0.8f, 0.05f, 0.05f));
+    auto skyblue_constant = new oprt::ConstantTexture(make_float3(83.0f/255.0f, 179.0f/255.0f, 181.0f/255.0f));
 
     // マテリアルの準備 
     auto red_diffuse = new oprt::Diffuse(make_float3(0.8f, 0.05f, 0.05f));
@@ -64,6 +68,7 @@ oprt::Scene my_scene() {
     auto emitter = new oprt::Emitter(make_float3(0.8f, 0.8f, 0.7f), 15.0f);
     auto glass = new oprt::Dielectric(make_float3(0.9f), 1.5f);
     auto floor_checker = new oprt::Diffuse(checker1);
+    auto plane_checker = new oprt::Diffuse(checker2);
     auto earth_diffuse = new oprt::Diffuse(earth_image);
     auto disney = new oprt::Disney(skyblue_constant);
     disney->setMetallic(0.8f);
@@ -94,6 +99,7 @@ oprt::Scene my_scene() {
     cornel_ps.addPrimitive(left_wall_mesh, green_diffuse);
     // Ceiling light
     auto ceiling_light_mesh = oprt::createQuadMesh(213.0f, 343.0f, 227.0f, 332.0f, 548.6f, oprt::Axis::Y);
+    // auto ceiling_light = new oprt::Plane(make_float2(213.0f, 227.0f), make_float2(343.0f, 332.0f));
     cornel_ps.addPrimitive(ceiling_light_mesh, emitter);
     scene.addPrimitiveInstance(cornel_ps);
 
@@ -143,6 +149,13 @@ oprt::Scene my_scene() {
     auto glass_sphere = new oprt::Sphere(make_float3(0.0f), 80.0f);
     glass_sphere_ps.addPrimitive(glass_sphere, glass);
     scene.addPrimitiveInstance(glass_sphere_ps);
+
+    auto plane_matrix = sutil::Matrix4x4::translate(cornel_center + make_float3(0.0f, -100.0f, 50.0f));
+    auto plane_ps = oprt::PrimitiveInstance(plane_matrix);
+    plane_ps.setSbtIndexBase(glass_sphere_ps.sbtIndex());
+    auto plane = new oprt::Plane(make_float2(-50.0f, -50.0f), make_float2(50.0f, 50.0f));
+    plane_ps.addPrimitive(plane, plane_checker);
+    scene.addPrimitiveInstance(plane_ps);
 
     return scene;
 }

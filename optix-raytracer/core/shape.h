@@ -22,12 +22,14 @@ enum class ShapeType {
  **/
 static std::map<ShapeType, const char*> shape_map = {
     { ShapeType::Mesh, "mesh" },
-    { ShapeType::Sphere, "sphere" }
+    { ShapeType::Sphere, "sphere" },
+    { ShapeType::Plane, "plane" }
 };
 
 static std::map<ShapeType, const char*> shape_occlusion_map = {
     { ShapeType::Mesh, "mesh_occlusion"},
-    { ShapeType::Sphere, "sphere_occlusion"}
+    { ShapeType::Sphere, "sphere_occlusion"},
+    { ShapeType::Plane, "plane_occlusion" }
 };
 
 inline std::ostream& operator<<(std::ostream& out, ShapeType type) {

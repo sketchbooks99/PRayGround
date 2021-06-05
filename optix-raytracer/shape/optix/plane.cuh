@@ -60,8 +60,8 @@ CALLABLE_FUNC void CH_FUNC(plane)()
 
     si->mat_property = {
         data->matdata,              // material data
-        data->material_type * 2,    // bsdf_sample_idx
-        data->material_type * 2 + 1 // pdf_idx
+        data->material_type * 2,    // bsdf_sample_id
+        data->material_type * 2 + 1 // pdf_id
     };
 }
 

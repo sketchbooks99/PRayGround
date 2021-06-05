@@ -10,7 +10,7 @@ namespace oprt {
 struct DielectricData {
     void* texdata;
     float ior;
-    unsigned int tex_func_idx;
+    unsigned int tex_func_id;
 };
 
 #ifndef __CUDACC__
@@ -80,7 +80,7 @@ CALLABLE_FUNC float3 CC_FUNC(bsdf_dielectric)(SurfaceInteraction* si, void* matd
 {
     const DielectricData* dielectric = reinterpret_cast<DielectricData*>(matdata);
     si->emission = make_float3(0.0f);
-    return optixDirectCall<float3, SurfaceInteraction*, void*>(dielectric->tex_func_idx, si, dielectric->texdata);    
+    return optixDirectCall<float3, SurfaceInteraction*, void*>(dielectric->tex_func_id, si, dielectric->texdata);    
 }
 
 CALLABLE_FUNC float DC_FUNC(pdf_dielectric)(SurfaceInteraction* si, void* matdata)

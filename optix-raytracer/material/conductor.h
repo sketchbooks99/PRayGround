@@ -10,7 +10,7 @@ struct ConductorData {
     void* texdata;
     float fuzz;
     bool twosided;
-    unsigned int tex_func_idx;
+    unsigned int tex_func_id;
 };
 
 #ifndef __CUDACC__
@@ -64,7 +64,7 @@ CALLABLE_FUNC float3 CC_FUNC(bsdf_conductor)(SurfaceInteraction* si, void* matda
 {
     const ConductorData* conductor = reinterpret_cast<ConductorData*>(matdata);
     si->emission = make_float3(0.0f);
-    return optixDirectCall<float3, SurfaceInteraction*, void*>(conductor->tex_func_idx, si, conductor->texdata);
+    return optixDirectCall<float3, SurfaceInteraction*, void*>(conductor->tex_func_id, si, conductor->texdata);
 }
 
 CALLABLE_FUNC float DC_FUNC(pdf_conductor)(SurfaceInteraction* si, void* matdata)

@@ -102,21 +102,21 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 			
 			// Sampling scattered direction
 			optixDirectCall<void, oprt::SurfaceInteraction*, void*>(
-				si.mat_property.bsdf_sample_idx, 
+				si.mat_property.bsdf_sample_id, 
 				&si,  
 				si.mat_property.matdata
 			);
 
 			// Evaluate bsdf 
 			float3 bsdf_val = optixContinuationCall<float3, oprt::SurfaceInteraction*, void*>(
-				si.mat_property.bsdf_sample_idx, 
+				si.mat_property.bsdf_sample_id, 
 				&si,
 				si.mat_property.matdata
 			);
 			
 			// Evaluate pdf
 			float pdf_val = optixDirectCall<float, oprt::SurfaceInteraction*, void*>(
-				si.mat_property.pdf_idx, 
+				si.mat_property.pdf_id, 
 				&si,  
 				si.mat_property.matdata
 			);

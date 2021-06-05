@@ -17,8 +17,8 @@ namespace oprt {
 struct MaterialProperty
 {
     void* matdata;
-    unsigned int bsdf_sample_idx;
-    unsigned int pdf_idx;
+    unsigned int bsdf_sample_id;
+    unsigned int pdf_id;
 };
 
 /// @note Currently \c spectrum is RGB representation, not spectrum. 

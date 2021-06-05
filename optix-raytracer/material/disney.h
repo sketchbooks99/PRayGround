@@ -23,7 +23,7 @@ struct DisneyData {
     float clearcoat;
     float clearcoat_gloss;   
     bool twosided;  
-    unsigned int tex_func_idx;  
+    unsigned int tex_func_id;  
 };
 
 #ifndef __CUDACC__
@@ -179,7 +179,7 @@ CALLABLE_FUNC float3 CC_FUNC(bsdf_disney)(SurfaceInteraction* si, void* matdata)
     const float LdotH /* = VdotH */ = dot(L, H);
 
     const float3 base_color = optixDirectCall<float3, SurfaceInteraction*, void*>(
-        disney->tex_func_idx, si, disney->base_tex
+        disney->tex_func_id, si, disney->base_tex
     );
 
     // Diffuse term (diffuse, subsurface, sheen) ======================

@@ -26,8 +26,8 @@ CALLABLE_FUNC void CH_FUNC(mesh)()
 
     oprt::Ray ray = getWorldRay();
     
-    const int prim_idx = optixGetPrimitiveIndex();
-    const int3 index = mesh_data->indices[prim_idx];
+    const int prim_id = optixGetPrimitiveIndex();
+    const int3 index = mesh_data->indices[prim_id];
     const float u = optixGetTriangleBarycentrics().x;
     const float v = optixGetTriangleBarycentrics().y;
 
@@ -53,8 +53,8 @@ CALLABLE_FUNC void CH_FUNC(mesh)()
 
     si->mat_property = {
         data->matdata,              // matdata
-        data->material_type * 2,    // bsdf_sample_idx
-        data->material_type * 2 + 1 // pdf_idx
+        data->material_type * 2,    // bsdf_sample_id
+        data->material_type * 2 + 1 // pdf_idq
     };
 }
 

@@ -80,7 +80,6 @@ oprt::Scene my_scene() {
 
     // コーネルボックス用のプリミティブインスタンス
     oprt::PrimitiveInstance cornel_ps = oprt::PrimitiveInstance(oprt::Transform());
-    cornel_ps.setSbtIndexBase(0);
 
     // Floor 
     auto floor_mesh = oprt::createQuadMesh(0.0f, 556.0f, 0.0f, 559.2f, 0.0f, oprt::Axis::Y);
@@ -107,7 +106,6 @@ oprt::Scene my_scene() {
     auto armadillo_matrix = sutil::Matrix4x4::translate(cornel_center + make_float3(150.0f, -210.0f, -130.0f)) 
                           * sutil::Matrix4x4::scale(make_float3(1.2f));
     auto armadillo_ps = oprt::PrimitiveInstance(armadillo_matrix);
-    armadillo_ps.setSbtIndexBase(cornel_ps.sbtIndex());
     auto armadillo = new oprt::TriangleMesh("model/Armadillo.ply");
     auto metal = new oprt::Conductor(make_float3(0.8f, 0.8f, 0.2f), 0.01f);
     armadillo_ps.addPrimitive(armadillo, metal);
@@ -118,7 +116,6 @@ oprt::Scene my_scene() {
                        * sutil::Matrix4x4::rotate(M_PIf, make_float3(0.0f, 1.0f, 0.0f))
                        * sutil::Matrix4x4::scale(make_float3(1200.0f));
     auto bunny2_ps = oprt::PrimitiveInstance(bunny2_matrix);
-    bunny2_ps.setSbtIndexBase(armadillo_ps.sbtIndex());
     auto bunny2 = new oprt::TriangleMesh("model/bunny.obj");
     bunny2_ps.addPrimitive(bunny2, disney);
     scene.addPrimitiveInstance(bunny2_ps);
@@ -127,7 +124,6 @@ oprt::Scene my_scene() {
     auto teapot_matrix = sutil::Matrix4x4::translate(cornel_center + make_float3(-150.0f, -260.0f, -120.0f)) 
                        * sutil::Matrix4x4::scale(make_float3(40.0f));
     auto teapot_ps = oprt::PrimitiveInstance(teapot_matrix);
-    teapot_ps.setSbtIndexBase(bunny2_ps.sbtIndex());
     auto teapot = new oprt::TriangleMesh("model/teapot_normal_merged.obj");
     teapot_ps.addPrimitive(teapot, teapot_diffuse);
     scene.addPrimitiveInstance(teapot_ps);
@@ -136,7 +132,6 @@ oprt::Scene my_scene() {
     auto earth_sphere_matrix = sutil::Matrix4x4::translate(cornel_center + make_float3(120.0f, 80.0f, 100.0f))
                              * sutil::Matrix4x4::rotate(M_PIf, make_float3(0.0f, 1.0f, 0.0f));
     auto earth_sphere_ps = oprt::PrimitiveInstance(earth_sphere_matrix);
-    earth_sphere_ps.setSbtIndexBase(teapot_ps.sbtIndex());
     auto earth_sphere = new oprt::Sphere(make_float3(0.0f), 90.0f);
     earth_sphere_ps.addPrimitive(earth_sphere, earth_diffuse);
     scene.addPrimitiveInstance(earth_sphere_ps);
@@ -145,17 +140,9 @@ oprt::Scene my_scene() {
     auto glass_sphere_matrix = sutil::Matrix4x4::translate(cornel_center + make_float3(-150.0f, 0.0f, 80.0f))
                              * sutil::Matrix4x4::rotate(M_PIf, make_float3(1.0f, 0.0f, 0.0f));
     auto glass_sphere_ps = oprt::PrimitiveInstance(glass_sphere_matrix);
-    glass_sphere_ps.setSbtIndexBase(earth_sphere_ps.sbtIndex());
     auto glass_sphere = new oprt::Sphere(make_float3(0.0f), 80.0f);
     glass_sphere_ps.addPrimitive(glass_sphere, glass);
     scene.addPrimitiveInstance(glass_sphere_ps);
-
-    auto plane_matrix = sutil::Matrix4x4::translate(cornel_center + make_float3(0.0f, -100.0f, 50.0f));
-    auto plane_ps = oprt::PrimitiveInstance(plane_matrix);
-    plane_ps.setSbtIndexBase(glass_sphere_ps.sbtIndex());
-    auto plane = new oprt::Plane(make_float2(-50.0f, -50.0f), make_float2(50.0f, 50.0f));
-    plane_ps.addPrimitive(plane, plane_checker);
-    scene.addPrimitiveInstance(plane_ps);
 
     return scene;
 }

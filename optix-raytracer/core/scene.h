@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../core/primitive.h"
+#include "../core/bitmap.h"
 #include <sutil/Camera.h>
 #include "../optix-raytracer.h"
 
@@ -30,7 +31,13 @@ public:
      */
     void createHitgroupSBT(OptixShaderBindingTable& sbt);
 
-    void addPrimitiveInstance(const PrimitiveInstance& ps) { m_primitive_instances.push_back(ps); }
+    void addPrimitiveInstance(PrimitiveInstance ps) {
+        if (m_primitive_instances.empty())
+            ps.setSbtIndexBase(0);
+        else
+            ps.setSbtIndexBase(m_primitive_instances.back().sbtIndex());
+        m_primitive_instances.push_back(ps); 
+    }
     std::vector<PrimitiveInstance> primitiveInstances() const { return m_primitive_instances; }
 
     void setWidth(unsigned int w) { m_width = w; }

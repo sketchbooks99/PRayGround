@@ -19,7 +19,7 @@ inline std::ostream& operator<<(std::ostream& out, EmitterType type)
         case EmitterType::Point:   return out << "EmitterType::Point";
         case EmitterType::Area:    return out << "EmitterType::Area";
         case EmitterType::Envmap:  return out << "EmitterType::Envmap";
-        default:                   return "";
+        default:                   return out << "";
     }
 }
 

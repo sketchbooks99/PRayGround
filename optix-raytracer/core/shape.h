@@ -64,6 +64,8 @@ inline std::ostream& operator<<(std::ostream& out, const AccelData& accel) {
 // Abstract class for readability
 class Shape {
 public:
+    virtual ~Shape() {}
+
     virtual ShapeType type() const = 0;
     virtual AABB bound() const = 0;
 

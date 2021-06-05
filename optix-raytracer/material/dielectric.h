@@ -19,8 +19,13 @@ class Dielectric final : public Material {
 public:
     Dielectric(const float3& a, float ior)
     : m_texture(new ConstantTexture(a)), m_ior(ior) { }
-    Dielectric(Texture* texture, float ior)
+
+    Dielectric(const std::shared_ptr<Texture>& texture, float ior)
     : m_texture(texture), m_ior(ior) {}
+
+    Dielectric(Texture* texture, int ior)
+    : m_texture(texture), m_ior(ior) {}
+    
     ~Dielectric() { }
 
     void prepareData() override {
@@ -44,7 +49,7 @@ public:
 
 private:
     // float3 m_albedo;
-    Texture* m_texture;
+    std::shared_ptr<Texture> m_texture;
     float m_ior;
 };
 

@@ -43,7 +43,7 @@ public:
     MaterialType type() const override { return MaterialType::Emitter; }
 
 private:
-    Texture* m_texture;
+    std::shared_ptr<Texture> m_texture;
     float m_strength;
     bool m_twosided;
 };

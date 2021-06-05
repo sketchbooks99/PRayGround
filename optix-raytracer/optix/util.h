@@ -21,6 +21,12 @@ struct MaterialProperty
     unsigned int pdf_id;
 };
 
+// enum class HitType {
+//     Geometry,   // Scene geometry
+//     Emitter,    // Emitter sampling
+//     Medium      // Future work
+// };
+
 /// @note Currently \c spectrum is RGB representation, not spectrum. 
 struct SurfaceInteraction {
     /** Position of intersection point in world coordinates. */
@@ -52,6 +58,8 @@ struct SurfaceInteraction {
     unsigned int seed;
 
     MaterialProperty mat_property;
+
+    HitType hit_type;
 
     int trace_terminate;
     int radiance_evaled;

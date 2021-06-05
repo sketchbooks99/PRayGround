@@ -85,7 +85,7 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 
 		int depth = 0;
 		for ( ;; ) {
-			traceRadiance(
+			trace(
 				params.handle,
 				ray_origin, 
 				ray_direction, 
@@ -93,8 +93,8 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 				1e16f, 
 				&si 
 			);
-			
-			// Miss radiance
+
+			// Miss radiance 
 			if ( si.trace_terminate || depth >= params.max_depth ) {
 				result += si.emission * attenuation;
 				break;
@@ -121,7 +121,7 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 				si.mat_property.matdata
 			);
 
-			if ( si.trace_terminate || depth >= params.max_depth ) {
+			if ( si.trace_terminate ) {
 				result += si.emission * attenuation;
 				break;
 			}

@@ -9,7 +9,7 @@ struct EmitterData {
     void* texdata;
     float strength;
     bool twosided;
-    unsigned int tex_func_idx;
+    unsigned int tex_func_id;
 };
 
 #ifndef __CUDACC__
@@ -43,7 +43,7 @@ public:
     MaterialType type() const override { return MaterialType::Emitter; }
 
 private:
-    Texture* m_texture;
+    std::shared_ptr<Texture> m_texture;
     float m_strength;
     bool m_twosided;
 };
@@ -64,7 +64,7 @@ CALLABLE_FUNC float3 CC_FUNC(bsdf_emitter)(SurfaceInteraction* si, void* matdata
         is_emitted = dot(si->wi, si->n) < 0.0f ? 1.0f : 0.0f;
 
     si->emission = optixDirectCall<float3, SurfaceInteraction*, void*>(
-        emitter->tex_func_idx, si, emitter->texdata) * emitter->strength * is_emitted;
+        emitter->tex_func_id, si, emitter->texdata) * emitter->strength * is_emitted;
     return make_float3(0.0f);
 }
 

@@ -36,6 +36,7 @@
 
 #include "../../shape/optix/sphere.cuh"
 #include "../../shape/optix/trianglemesh.cuh"
+#include "../../shape/optix/plane.cuh"
 
 #include "../../material/conductor.h"
 #include "../../material/dielectric.h"
@@ -84,7 +85,7 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 
 		int depth = 0;
 		for ( ;; ) {
-			traceRadiance(
+			trace(
 				params.handle,
 				ray_origin, 
 				ray_direction, 
@@ -92,8 +93,8 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 				1e16f, 
 				&si 
 			);
-			
-			// Miss radiance
+
+			// Miss radiance 
 			if ( si.trace_terminate || depth >= params.max_depth ) {
 				result += si.emission * attenuation;
 				break;
@@ -101,26 +102,26 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 			
 			// Sampling scattered direction
 			optixDirectCall<void, oprt::SurfaceInteraction*, void*>(
-				si.mat_property.bsdf_sample_idx, 
+				si.mat_property.bsdf_sample_id, 
 				&si,  
 				si.mat_property.matdata
 			);
 
 			// Evaluate bsdf 
 			float3 bsdf_val = optixContinuationCall<float3, oprt::SurfaceInteraction*, void*>(
-				si.mat_property.bsdf_sample_idx, 
+				si.mat_property.bsdf_sample_id, 
 				&si,
 				si.mat_property.matdata
 			);
 			
 			// Evaluate pdf
 			float pdf_val = optixDirectCall<float, oprt::SurfaceInteraction*, void*>(
-				si.mat_property.pdf_idx, 
+				si.mat_property.pdf_id, 
 				&si,  
 				si.mat_property.matdata
 			);
 
-			if ( si.trace_terminate || depth >= params.max_depth ) {
+			if ( si.trace_terminate ) {
 				result += si.emission * attenuation;
 				break;
 			}

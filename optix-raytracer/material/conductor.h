@@ -10,7 +10,7 @@ struct ConductorData {
     void* texdata;
     float fuzz;
     bool twosided;
-    unsigned int tex_func_idx;
+    unsigned int tex_func_id;
 };
 
 #ifndef __CUDACC__
@@ -18,8 +18,13 @@ class Conductor final : public Material {
 public:
     Conductor(const float3& a, float f, bool twosided=true) 
     : m_texture(new ConstantTexture(a)), m_fuzz(f), m_twosided(twosided) {}
+
     Conductor(Texture* texture, float f, bool twosided=true)
     : m_texture(texture), m_fuzz(f), m_twosided(twosided) {}
+
+    Conductor(const std::shared_ptr<Texture>& texture, float f, bool twosided=true)
+    : m_texture(texture), m_fuzz(f), m_twosided(twosided) {}
+    
     ~Conductor() {}
 
     void prepareData() override {
@@ -43,7 +48,7 @@ public:
     MaterialType type() const override { return MaterialType::Conductor; }
     
 private:
-    Texture* m_texture;
+    std::shared_ptr<Texture> m_texture;
     float m_fuzz;
     bool m_twosided;
 };
@@ -64,7 +69,7 @@ CALLABLE_FUNC float3 CC_FUNC(bsdf_conductor)(SurfaceInteraction* si, void* matda
 {
     const ConductorData* conductor = reinterpret_cast<ConductorData*>(matdata);
     si->emission = make_float3(0.0f);
-    return optixDirectCall<float3, SurfaceInteraction*, void*>(conductor->tex_func_idx, si, conductor->texdata);
+    return optixDirectCall<float3, SurfaceInteraction*, void*>(conductor->tex_func_id, si, conductor->texdata);
 }
 
 CALLABLE_FUNC float DC_FUNC(pdf_conductor)(SurfaceInteraction* si, void* matdata)

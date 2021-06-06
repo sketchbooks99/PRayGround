@@ -12,7 +12,7 @@ namespace oprt {
 struct DiffuseData {
     void* texdata;
     bool twosided;
-    unsigned int tex_func_idx;
+    unsigned int tex_func_id;
 };
 
 #ifndef __CUDACC__
@@ -21,7 +21,11 @@ class Diffuse final : public Material {
 public:
     explicit Diffuse(const float3& a, bool twosided=true)
     : m_texture(new ConstantTexture(a)), m_twosided(twosided) { }
+
     explicit Diffuse(Texture* texture, bool twosided=true)
+    : m_texture(texture), m_twosided(twosided) {}
+
+    explicit Diffuse(const std::shared_ptr<Texture>& texture, bool twosided=true)
     : m_texture(texture), m_twosided(twosided) {}
 
     ~Diffuse() { }
@@ -46,7 +50,7 @@ public:
     MaterialType type() const override { return MaterialType::Diffuse; }
 
 private:
-    Texture* m_texture;
+    std::shared_ptr<Texture> m_texture;
     bool m_twosided;
 };
 
@@ -80,7 +84,7 @@ CALLABLE_FUNC void DC_FUNC(sample_diffuse)(SurfaceInteraction* si, void* matdata
 CALLABLE_FUNC float3 CC_FUNC(bsdf_diffuse)(SurfaceInteraction* si, void* matdata)
 {
     const DiffuseData* diffuse = reinterpret_cast<DiffuseData*>(matdata);
-    const float3 albedo = optixDirectCall<float3, SurfaceInteraction*, void*>(diffuse->tex_func_idx, si, diffuse->texdata);
+    const float3 albedo = optixDirectCall<float3, SurfaceInteraction*, void*>(diffuse->tex_func_id, si, diffuse->texdata);
     const float cosine = fmaxf(0.0f, dot(si->n, si->wo));
     si->emission = make_float3(0.0f);
     si->radiance_evaled = false;

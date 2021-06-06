@@ -210,7 +210,6 @@ void createMaterialPrograms(
             ProgramEntry( static_cast<OptixModule>(module), dc_func_str( pdf_func_map[mattype] ).c_str() ),
             ProgramEntry( nullptr, nullptr )
         );
-        Message("createMaterialPrograms(): bindRecord()");
         callable_records.push_back(CallableRecord());
         program_groups.back().bindRecord(&callable_records.back());
     }
@@ -241,7 +240,6 @@ void createTexturePrograms(
             ProgramEntry( static_cast<OptixModule>(module), dc_func_str( tex_eval_map[textype] ).c_str() ),
             ProgramEntry( nullptr, nullptr )
         );
-        Message("createTexturePrograms(): bindRecord()");
         callable_records.push_back(CallableRecord());
         program_groups.back().bindRecord(&callable_records.back());
     }

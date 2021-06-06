@@ -17,9 +17,15 @@ namespace oprt {
 struct MaterialProperty
 {
     void* matdata;
-    unsigned int bsdf_sample_idx;
-    unsigned int pdf_idx;
+    unsigned int bsdf_sample_id;
+    unsigned int pdf_id;
 };
+
+// enum class HitType {
+//     Geometry,   // Scene geometry
+//     Emitter,    // Emitter sampling
+//     Medium      // Future work
+// };
 
 /// @note Currently \c spectrum is RGB representation, not spectrum. 
 struct SurfaceInteraction {
@@ -52,6 +58,8 @@ struct SurfaceInteraction {
     unsigned int seed;
 
     MaterialProperty mat_property;
+
+    HitType hit_type;
 
     int trace_terminate;
     int radiance_evaled;
@@ -120,7 +128,7 @@ INLINE DEVICE bool traceOcclusion(
     return occluded;
 }
 
-INLINE DEVICE void traceRadiance(
+INLINE DEVICE void trace(
     OptixTraversableHandle handle,
     float3                 ray_origin,
     float3                 ray_direction,

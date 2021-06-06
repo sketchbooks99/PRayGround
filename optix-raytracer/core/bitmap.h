@@ -62,12 +62,12 @@ protected:
         }
     }
 
+    T* m_data;  // CPU側のデータ
+    T* d_data;  // GPU側のデータ
+
     BitmapFormat m_format;
     int m_width, m_height;
     int m_channels;
-
-    T* m_data;  // CPU側のデータ
-    T* d_data;  // GPU側のデータ
 };
 
 using BitmapPNG = Bitmap<uchar4>;

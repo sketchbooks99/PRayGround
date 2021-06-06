@@ -25,13 +25,15 @@ namespace oprt {
 
 class Primitive {
 public:
-    Primitive(Shape* shape_ptr, Material* material_ptr)
-    : m_shape_ptr(shape_ptr), m_material_ptr(material_ptr) {
+    Primitive(const std::shared_ptr<Shape>& shape, const std::shared_ptr<Material>& material)
+    : m_shape(shape), m_material(material) 
+    {
         _initProgramGroups();
     }
 
-    Primitive(Shape* shape_ptr, Material* material_ptr, uint32_t sbt_index)
-    : m_shape_ptr(shape_ptr), m_material_ptr(material_ptr), m_sbt_index(sbt_index) {
+    Primitive(const std::shared_ptr<Shape>& shape, const std::shared_ptr<Material>& material, uint32_t sbt_index)
+    : m_shape(shape), m_material(material), m_sbt_index(sbt_index) 
+    {
         _initProgramGroups();
     }
 
@@ -58,11 +60,11 @@ public:
     }
 
     // Preparing (alloc and copy) shape data to the device. 
-    void prepareShapeData() { m_shape_ptr->prepareData(); }
-    void prepareMaterialData() { m_material_ptr->prepareData(); }
+    void prepareShapeData() { m_shape->prepareData(); }
+    void prepareMaterialData() { m_material->prepareData(); }
 
     // Configure the OptixBuildInput from shape data.
-    void buildInput( OptixBuildInput& bi ) { m_shape_ptr->buildInput( bi, m_sbt_index ); }
+    void buildInput( OptixBuildInput& bi ) { m_shape->buildInput( bi, m_sbt_index ); }
 
     /** 
      * \brief 
@@ -70,19 +72,17 @@ public:
      * \note  
      * Currently, only aabb_buffer is freed
      */
-    void freeTempBuffer() { if (m_shape_ptr->type() != ShapeType::Mesh) m_shape_ptr->freeAabbBuffer(); }
+    void freeTempBuffer() { if (m_shape->type() != ShapeType::Mesh) m_shape->freeAabbBuffer(); }
 
     // Bind programs and HitGroupRecord
     template <typename SBTRecord>
     void bindRadianceRecord(SBTRecord* record) {
         Assert(!m_program_groups.empty(), "ProgramGroups is not allocated.");
-        Message("bindRadianceRecord()");
         m_program_groups[0].bindRecord(record);
     }
     template <typename SBTRecord>
     void bindOcclusionRecord(SBTRecord* record) {
         Assert(m_program_groups.size() > 1, "Occlusion program is not contained in rendering.");
-        Message("bindOcclusionRecord()");
         m_program_groups[1].bindRecord(record);
     }
 
@@ -91,12 +91,12 @@ public:
 
     // Getter 
     uint32_t sbtIndex() const { return m_sbt_index; }
-    Material* material() const { return m_material_ptr; }
-    Shape* shape() const { return m_shape_ptr; }
-    ShapeType shapeType() const { return m_shape_ptr->type(); }
-    MaterialType materialType() const { return m_material_ptr->type(); }
+    std::shared_ptr<Material> material() const { return m_material; }
+    std::shared_ptr<Shape> shape() const { return m_shape; }
+    ShapeType shapeType() const { return m_shape->type(); }
+    MaterialType materialType() const { return m_material->type(); }
 
-    std::vector<ProgramGroup> programGroups() { return m_program_groups; }
+    std::vector<ProgramGroup> programGroups() const { return m_program_groups; }
 
 private:
     void _initProgramGroups() {
@@ -107,8 +107,8 @@ private:
     }
 
     // Member variables.
-    Shape* m_shape_ptr;
-    Material* m_material_ptr;
+    std::shared_ptr<Shape> m_shape;
+    std::shared_ptr<Material> m_material;
 
     /** 
      * \note
@@ -142,8 +142,8 @@ public:
         m_primitives.push_back(p); 
         m_primitives.back().setSbtIndex(this->sbtIndexBase() + (this->numPrimitives() - 1));
     }
-    void addPrimitive(Shape* shape_ptr, Material* mat_ptr) {
-        m_primitives.emplace_back(shape_ptr, mat_ptr);
+    void addPrimitive(const std::shared_ptr<Shape>& shape, const std::shared_ptr<Material>& material) {
+        m_primitives.emplace_back(shape, material);
         m_primitives.back().setSbtIndex(this->sbtIndexBase() + (this->numPrimitives() - 1) );
     }
 

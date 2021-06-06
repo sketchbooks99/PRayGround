@@ -10,7 +10,7 @@ namespace oprt {
 struct DielectricData {
     void* texdata;
     float ior;
-    unsigned int tex_func_idx;
+    unsigned int tex_func_id;
 };
 
 #ifndef __CUDACC__
@@ -19,8 +19,13 @@ class Dielectric final : public Material {
 public:
     Dielectric(const float3& a, float ior)
     : m_texture(new ConstantTexture(a)), m_ior(ior) { }
-    Dielectric(Texture* texture, float ior)
+
+    Dielectric(const std::shared_ptr<Texture>& texture, float ior)
     : m_texture(texture), m_ior(ior) {}
+
+    Dielectric(Texture* texture, int ior)
+    : m_texture(texture), m_ior(ior) {}
+    
     ~Dielectric() { }
 
     void prepareData() override {
@@ -44,7 +49,7 @@ public:
 
 private:
     // float3 m_albedo;
-    Texture* m_texture;
+    std::shared_ptr<Texture> m_texture;
     float m_ior;
 };
 
@@ -80,7 +85,7 @@ CALLABLE_FUNC float3 CC_FUNC(bsdf_dielectric)(SurfaceInteraction* si, void* matd
 {
     const DielectricData* dielectric = reinterpret_cast<DielectricData*>(matdata);
     si->emission = make_float3(0.0f);
-    return optixDirectCall<float3, SurfaceInteraction*, void*>(dielectric->tex_func_idx, si, dielectric->texdata);    
+    return optixDirectCall<float3, SurfaceInteraction*, void*>(dielectric->tex_func_id, si, dielectric->texdata);    
 }
 
 CALLABLE_FUNC float DC_FUNC(pdf_dielectric)(SurfaceInteraction* si, void* matdata)

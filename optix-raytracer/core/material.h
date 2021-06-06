@@ -84,6 +84,8 @@ inline std::ostream& operator<<(std::ostream& out, const MaterialType& type) {
 // Abstract class to compute scattering properties.
 class Material {
 public:
+    virtual ~Material() {}
+    
     virtual void prepareData() = 0;
     virtual MaterialType type() const = 0;
     

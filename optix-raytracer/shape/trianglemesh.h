@@ -58,16 +58,16 @@ private:
 /**
  * @brief Create a quad mesh
  */
-TriangleMesh* createQuadMesh(const float u_min, const float u_max, 
+std::shared_ptr<TriangleMesh> createQuadMesh(const float u_min, const float u_max, 
                              const float v_min, const float v_max, 
                              const float k, Axis axis);
 
 /**
  * @brief Create mesh
  */
-TriangleMesh* createTriangleMesh(const std::string& filename, bool is_smooth=true);
+std::shared_ptr<TriangleMesh> createTriangleMesh(const std::string& filename, bool is_smooth=true);
 
-TriangleMesh* createTriangleMesh(
+std::shared_ptr<TriangleMesh> createTriangleMesh(
     const std::vector<float3>& vertices,
     const std::vector<int3>& indices, 
     const std::vector<float3>& normals,

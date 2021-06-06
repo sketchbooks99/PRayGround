@@ -50,3 +50,5 @@ HOSTDEVICE INLINE unsigned char quantizeUnsigned8Bits( float x )
     reinterpret_cast<unsigned int&>((u).z)
 
 #define float3_as_ints( u ) float_as_int( u.x ), float_as_int( u.y ), float_as_int( u.z )
+
+#define float2_as_ints( u ) float_as_int( u.x ), float_as_int( u.y )

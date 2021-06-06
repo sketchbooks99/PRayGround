@@ -29,4 +29,10 @@ private:
     float3 m_min, m_max;
 };
 
+inline std::ostream& operator<<(std::ostream& out, const AABB& aabb)
+{
+    out << "min: " << aabb.min() << ", max: " << aabb.max();
+    return out; 
+}
+
 }

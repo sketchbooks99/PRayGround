@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../core/primitive.h"
+#include "../core/bitmap.h"
 #include <sutil/Camera.h>
 #include "../optix-raytracer.h"
 
@@ -9,6 +10,10 @@ namespace oprt {
 class Scene {
 public:
     Scene() {}
+
+    void createSceneOnDevice();
+
+    void render();
 
     /** 
      * @brief Create programs associated with primitives.
@@ -26,14 +31,23 @@ public:
      */
     void createHitgroupSBT(OptixShaderBindingTable& sbt);
 
-    void addPrimitiveInstance(const PrimitiveInstance& ps) { m_primitive_instances.push_back(ps); }
+    void addPrimitiveInstance(PrimitiveInstance ps) {
+        if (m_primitive_instances.empty())
+            ps.setSbtIndexBase(0);
+        else
+            ps.setSbtIndexBase(m_primitive_instances.back().sbtIndex());
+        m_primitive_instances.push_back(ps); 
+    }
     std::vector<PrimitiveInstance> primitiveInstances() const { return m_primitive_instances; }
 
-    void setWidth(const unsigned int w) { m_width = w; }
+    void setWidth(unsigned int w) { m_width = w; }
     unsigned int width() const { return m_width; }
 
-    void setHeight(const unsigned int h) { m_height = h; }
+    void setHeight(unsigned int h) { m_height = h; }
     unsigned int height() const { return m_height; }
+
+    void setResolution(unsigned int w, unsigned int h) { m_width = w; m_height = h; }
+    uint2 resolution() const { return make_uint2(m_width, m_height); }
 
     void setEnvironment(const float4& env) { m_environment = env; }
     float4 environment() const { return m_environment; }
@@ -57,6 +71,7 @@ private:
     unsigned int m_samples_per_launch;                      // Specify the number of samples per call of optixLaunch.
     unsigned int m_num_samples;                             // The number of samples per pixel for non-interactive mode.
     sutil::Camera m_camera;                                 // Camera
+    Bitmap<uchar4> m_film;
 };
 
 }

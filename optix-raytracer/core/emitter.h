@@ -6,41 +6,31 @@
 
 namespace oprt {
 
-/**
- * @brief Area light. Emittance is evaluated at the closest-hit program associated with a geometry.
- */
-struct AreaEmitterData {
-    
+enum class EmitterType {
+    Point = 0,
+    Area = 1, 
+    Envmap = 2
 };
 
-class AreaEmitter {
+inline std::ostream& operator<<(std::ostream& out, EmitterType type)
+{
+    switch(type)
+    {
+        case EmitterType::Point:   return out << "EmitterType::Point";
+        case EmitterType::Area:    return out << "EmitterType::Area";
+        case EmitterType::Envmap:  return out << "EmitterType::Envmap";
+        default:                   return out << "";
+    }
+}
+
+class Emitter {
 public:
-    AreaEmitter(Shape* shape, Texture* texture) {}
+    virtual void prepareData() = 0;
+    virtual EmitterType type() const = 0;
 
-
-private:
-    Shape* m_shape;
-    Texture* m_texture;
-    float strength;
-};
-
-/**
- * @brief Environment emitter. In general, emittance is evaluated at a miss program.
- * 
- * @note 
- * - If you'd like to render with image based lighting, you must be use latitude-longitude format (sphere map).
- * - EnvironmentEmitter allows ordinary textures such as checker or constant.
- */
-struct EnvironmentEmitterData {
-
-};
-
-class EnvironmentEmitter {
-public:
-    explicit EnvironmentEmitter(const std::string& filename);
-    explicit EnvironmentEmitter(Texture* texture);
-private:
-    Texture* m_texture;
+    void* devicePtr() const { return d_data; }
+protected:
+    void* d_data { 0 };
 };
 
 }

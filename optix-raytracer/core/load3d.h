@@ -14,7 +14,7 @@ void loadObj(
     std::vector<float2>& coordinates
 )
 {
-    std::vector<float3> tmp_normals;
+    std::vector<float3> temp_normals;
     std::vector<int3> normal_indices;
     std::ifstream ifs(filename, std::ios::in);
     Assert(ifs.is_open(), "The OBJ file '"+filename+"' is not found.");
@@ -39,7 +39,7 @@ void loadObj(
         else if(header == "vn") {
             float x, y, z;
             iss >> x >> y >> z;
-            tmp_normals.emplace_back(make_float3(x, y, z));
+            temp_normals.emplace_back(make_float3(x, y, z));
         }
         else if (header == "f")
         {
@@ -78,19 +78,20 @@ void loadObj(
                     temp_vert_indices.emplace_back(vert_idx - 1);
                 }
                 else
-                    throw std::runtime_error("Invalid format in face information input.\n");
+                    Throw("Invalid format in face information input.");
             }
-            if (temp_vert_indices.size() < 3)
-                throw std::runtime_error("The number of indices is less than 3.\n");
+            Assert(temp_vert_indices.size() >= 3, "The number of indices is less than 3.");
 
             if (temp_vert_indices.size() == 3) {
-                indices.emplace_back(make_int3(
-                    temp_vert_indices[0], temp_vert_indices[1], temp_vert_indices[2]));
+                indices.push_back(make_int3(temp_vert_indices[0], temp_vert_indices[1], temp_vert_indices[2]));
+                normal_indices.push_back(make_int3(temp_norm_indices[0], temp_norm_indices[1], temp_norm_indices[2]));
             }
-            // Get more then 4 inputs.
-            // NOTE: 
-            //      This case is implemented under the assumption that if face input are more than 4, 
-            //      mesh are configured by quad and inputs are partitioned with 4 stride.
+            /** 
+             * Get more then 4 inputs.
+             * @note 
+             * This case is implemented under the assumption that if face input are more than 4, 
+             * mesh are configured by quad and inputs are partitioned with 4 stride. 
+             */
             else
             {
                 for (int i = 0; i<int(temp_vert_indices.size() / 4); i++)
@@ -109,6 +110,20 @@ void loadObj(
             }
         }
     }
+
+    if (!temp_normals.empty() && temp_normals.size() == vertices.size())
+    {
+        normals.resize(temp_normals.size());
+        for (size_t i=0; i<indices.size(); i++)
+        {
+            int3 v_id = indices[i];
+            int3 n_id = normal_indices[i];
+            normals[v_id.x] = temp_normals[n_id.x];
+            normals[v_id.y] = temp_normals[n_id.y];
+            normals[v_id.z] = temp_normals[n_id.z];
+        }
+    }
+
     ifs.close();
 }
 

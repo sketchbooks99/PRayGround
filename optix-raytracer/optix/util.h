@@ -128,7 +128,7 @@ INLINE DEVICE bool traceOcclusion(
     return occluded;
 }
 
-INLINE DEVICE void traceRadiance(
+INLINE DEVICE void trace(
     OptixTraversableHandle handle,
     float3                 ray_origin,
     float3                 ray_direction,

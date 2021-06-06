@@ -25,20 +25,8 @@ namespace oprt {
 
 class Primitive {
 public:
-    Primitive(Shape* shape, Material* material)
-    : m_shape(shape), m_material(material) 
-    {
-        _initProgramGroups();
-    }
-
     Primitive(const std::shared_ptr<Shape>& shape, const std::shared_ptr<Material>& material)
     : m_shape(shape), m_material(material) 
-    {
-        _initProgramGroups();
-    }
-
-    Primitive(Shape* shape, Material* material, uint32_t sbt_index)
-    : m_shape(shape), m_material(material), m_sbt_index(sbt_index) 
     {
         _initProgramGroups();
     }
@@ -154,8 +142,8 @@ public:
         m_primitives.push_back(p); 
         m_primitives.back().setSbtIndex(this->sbtIndexBase() + (this->numPrimitives() - 1));
     }
-    void addPrimitive(Shape* shape, Material* mat_ptr) {
-        m_primitives.emplace_back(shape, mat_ptr);
+    void addPrimitive(const std::shared_ptr<Shape>& shape, const std::shared_ptr<Material>& material) {
+        m_primitives.emplace_back(shape, material);
         m_primitives.back().setSbtIndex(this->sbtIndexBase() + (this->numPrimitives() - 1) );
     }
 

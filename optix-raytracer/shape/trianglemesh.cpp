@@ -169,7 +169,7 @@ void TriangleMesh::buildInput( OptixBuildInput& bi, const uint32_t sbt_idx ) {
 }
 
 // ------------------------------------------------------------------
-TriangleMesh* createQuadMesh(
+std::shared_ptr<TriangleMesh> createQuadMesh(
     const float u_min, const float u_max,
     const float v_min, const float v_max, 
     const float k, Axis axis) 
@@ -221,13 +221,13 @@ TriangleMesh* createQuadMesh(
 }
 
 // ------------------------------------------------------------------
-TriangleMesh* createTriangleMesh(const std::string& filename, bool is_smooth)
+std::shared_ptr<TriangleMesh> createTriangleMesh(const std::string& filename, bool is_smooth)
 {
-    return new TriangleMesh(filename, is_smooth);
+    return std::make_shared<TriangleMesh>(filename, is_smooth);
 }
 
 // ------------------------------------------------------------------
-TriangleMesh* createTriangleMesh(
+std::shared_ptr<TriangleMesh> createTriangleMesh(
     const std::vector<float3>& vertices,
     const std::vector<int3>& indices, 
     const std::vector<float3>& normals,
@@ -235,7 +235,7 @@ TriangleMesh* createTriangleMesh(
     bool is_smooth
 )
 {
-    return new TriangleMesh(vertices, indices, normals, texcoords, is_smooth);
+    return std::make_shared<TriangleMesh>(vertices, indices, normals, texcoords, is_smooth);
 }
 
 

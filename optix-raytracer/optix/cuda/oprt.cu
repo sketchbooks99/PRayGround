@@ -30,22 +30,7 @@
 #include <cuda/random.h>
 
 #include "../../core/color.h"
-
-#include "../../optix/util.h"
-#include "../../optix/sbt.h"
-
-#include "../../shape/optix/sphere.cuh"
-#include "../../shape/optix/trianglemesh.cuh"
-#include "../../shape/optix/plane.cuh"
-
-#include "../../material/conductor.h"
-#include "../../material/dielectric.h"
-#include "../../material/diffuse.h"
-#include "../../material/emitter.h"
-#include "../../material/disney.h"
-
-#include "../../texture/checker.h"
-#include "../../texture/image.h"
+#include "../../oprt.cu"
 
 // -------------------------------------------------------------------------------
 CALLABLE_FUNC void RG_FUNC(raygen)()

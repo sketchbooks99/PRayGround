@@ -14,7 +14,7 @@ class CheckerTexture final : public Texture {
 public:
     CheckerTexture(const float3& c1, const float3& c2, float s=5)
     : m_color1(c1), m_color2(c2), m_scale(s) {}
-    ~CheckerTexture(){}
+    ~CheckerTexture() noexcept {}
 
     void prepareData() override {
         CheckerTextureData data = {

@@ -413,7 +413,7 @@ int main(int argc, char* argv[]) {
         pipeline.setNumPayloads(5);
         pipeline.setNumAttributes(5);
         // Create module
-        oprt::Module module("optix/cuda/optix-raytracer.cu");
+        oprt::Module module("optix/cuda/oprt.cu");
         module.create(optix_context, pipeline.compileOptions());
 
         /**

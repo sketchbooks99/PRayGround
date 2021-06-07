@@ -38,7 +38,7 @@
 
 // Header file describe the scene
 #include "scene_config.h"
-#include "optix-raytracer.h"
+#include "oprt.h"
 
 bool resize_dirty = false;
 bool minimized = false;

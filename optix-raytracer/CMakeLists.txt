@@ -26,7 +26,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-OPTIX_add_sample_executable( optix-raytracer target_name
+OPTIX_add_sample_executable( oprt target_name
 
   # ===== SOURCE =====  
   core/file_util.cpp
@@ -41,10 +41,10 @@ OPTIX_add_sample_executable( optix-raytracer target_name
 
   texture/image.cpp
   
-  optix-raytracer.cpp
+  oprt.cpp
 
   # ===== CUDA =====
-  optix/cuda/optix-raytracer.cu
+  optix/cuda/oprt.cu
 
   # OPTIONS -rdc true
 )

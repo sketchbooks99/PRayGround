@@ -1,13 +1,11 @@
 #pragma once
 
-#include "scene.h"
-#include "emitter.h"
+#include "../oprt.h"
 
-namespace oprt {
+namespace oprt
+{
 
-void setEnvironment(const std::string& filename);
-void setEnvironment(Texture* texture);
-
-void render(const Scene& scene);
+void oprtEnvironment(const float3&);
+// void oprtEnvironment(const std::shared_ptr<EnvironmentEmitter>& env);
 
 }

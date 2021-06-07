@@ -68,3 +68,35 @@ enum HitType
 };
 
 }
+
+#ifndef __CUDACC__
+// optix utilities
+#include "optix/module.h"
+#include "optix/pipeline.h"
+#include "optix/sbt.h"
+#include "optix/program.h"
+#include "optix/macros.h"
+
+// application utilities
+#include "core/util.h"
+#include "core/file_util.h"
+#include "core/cudabuffer.h"
+#include "core/primitive.h"
+#include "core/scene.h"
+#include "core/bitmap.h"
+#endif
+
+// shape include
+#include "shape/sphere.h"
+#include "shape/trianglemesh.h"
+
+// material include 
+#include "material/conductor.h"
+#include "material/dielectric.h"
+#include "material/diffuse.h"
+#include "material/emitter.h"
+
+// texture include 
+#include "texture/constant.h"
+#include "texture/checker.h"
+#include "texture/image.h"

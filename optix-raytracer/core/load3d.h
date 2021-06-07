@@ -84,7 +84,9 @@ void loadObj(
 
             if (temp_vert_indices.size() == 3) {
                 indices.push_back(make_int3(temp_vert_indices[0], temp_vert_indices[1], temp_vert_indices[2]));
-                normal_indices.push_back(make_int3(temp_norm_indices[0], temp_norm_indices[1], temp_norm_indices[2]));
+                
+                if (!temp_norm_indices.empty())
+                    normal_indices.push_back(make_int3(temp_norm_indices[0], temp_norm_indices[1], temp_norm_indices[2]));
             }
             /** 
              * Get more then 4 inputs.

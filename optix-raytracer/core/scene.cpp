@@ -2,6 +2,19 @@
 
 namespace oprt {
 
+// --------------------------------------------------------------------------------
+void Scene::freeSceneFromDevice()
+{
+    for (auto& ps : m_primitive_instances)
+    {
+        for (auto& p : ps.primitives())
+        {
+            p.material()->freeData();
+        }
+    }
+}
+
+// --------------------------------------------------------------------------------
 void Scene::createHitgroupPrograms(const OptixDeviceContext& ctx, const Module& module)
 {
     for (auto& ps : m_primitive_instances)
@@ -13,6 +26,7 @@ void Scene::createHitgroupPrograms(const OptixDeviceContext& ctx, const Module& 
     }
 }
 
+// --------------------------------------------------------------------------------
 std::vector<ProgramGroup> Scene::hitgroupPrograms()
 {
     std::vector<ProgramGroup> program_groups;
@@ -25,6 +39,7 @@ std::vector<ProgramGroup> Scene::hitgroupPrograms()
     return program_groups;
 }
 
+// --------------------------------------------------------------------------------
 void Scene::createHitgroupSBT(OptixShaderBindingTable& sbt) {
     size_t hitgroup_record_size = sizeof(HitGroupRecord);
     std::vector<HitGroupRecord> hitgroup_records;

@@ -30,7 +30,7 @@
 #include <cuda/random.h>
 
 #include "../../core/color.h"
-#include "../../oprt.cu"
+#include "../../oprt.h"
 
 // -------------------------------------------------------------------------------
 CALLABLE_FUNC void RG_FUNC(raygen)()

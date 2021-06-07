@@ -4,7 +4,7 @@
 #include <cuda_runtime.h>
 #include "helpers.h"
 #include "macros.h"
-#include "../oprt.h"
+#include "../core/util.h"
 
 enum RayType {
     RAY_TYPE_RADIANCE = 0,

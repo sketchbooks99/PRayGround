@@ -40,12 +40,11 @@ inline std::ostream& operator<<(std::ostream& out, TextureType type) {
 
 class Texture {
 public:
-    virtual ~Texture() noexcept(false) {}
-
     virtual TextureType type() const = 0;
 
     // Preparing texture data on the device.
     virtual void prepareData() = 0;
+    virtual void freeData() {}
 
     // Get data pointer on the device.
     void* devicePtr() const { return d_data; }

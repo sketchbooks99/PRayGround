@@ -85,6 +85,11 @@ public:
         ));
     }
 
+    void freeData() override
+    {
+        m_base->freeData();
+    }
+
     MaterialType type() const override { return MaterialType::Disney; }
 
     void setBaseTexture(const std::shared_ptr<Texture>& base) { m_base = base; }

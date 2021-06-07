@@ -87,6 +87,7 @@ public:
     virtual ~Material() {}
     
     virtual void prepareData() = 0;
+    virtual void freeData() = 0;
     virtual MaterialType type() const = 0;
     
     void* devicePtr() const { return d_data; }

@@ -12,6 +12,7 @@ public:
     Scene() {}
 
     void createSceneOnDevice();
+    void freeSceneFromDevice();
 
     void render();
 

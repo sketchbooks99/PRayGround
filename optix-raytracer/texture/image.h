@@ -13,14 +13,8 @@ class ImageTexture final : public Texture {
 public:
     explicit ImageTexture(const std::string& filename);
 
-    ~ImageTexture() noexcept(false) {
-        if (d_texture != 0) 
-            CUDA_CHECK( cudaDestroyTextureObject( d_texture ) );
-        if (d_array != 0)
-            CUDA_CHECK( cudaFreeArray( d_array ) );
-    }
-
     void prepareData() override;
+    void freeData() override;
 
     TextureType type() const override { return TextureType::Image; }
 private:

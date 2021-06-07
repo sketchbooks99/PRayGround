@@ -47,6 +47,11 @@ public:
         ));
     }
 
+    void freeData() override
+    {
+        m_texture->freeData();
+    }
+
     MaterialType type() const override { return MaterialType::Diffuse; }
 
 private:

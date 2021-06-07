@@ -21,21 +21,6 @@
 
 #include <GLFW/glfw3.h>
 
-// include optix utilities
-#include "optix/module.h"
-#include "optix/pipeline.h"
-#include "optix/sbt.h"
-#include "optix/program.h"
-#include "optix/macros.h"
-
-// include application utilities
-#include "core/util.h"
-#include "core/file_util.h"
-#include "core/cudabuffer.h"
-#include "core/scene.h"
-#include "core/primitive.h"
-#include "core/bitmap.h"
-
 // Header file describe the scene
 #include "scene_config.h"
 #include "oprt.h"
@@ -590,6 +575,7 @@ int main(int argc, char* argv[]) {
         oprt::cuda_frees(sbt.raygenRecord, sbt.missRecordBase, sbt.hitgroupRecordBase, 
                        params.accum_buffer,
                        d_params);
+        scene.freeSceneFromDevice();
 
     }
     catch( std::exception& e )

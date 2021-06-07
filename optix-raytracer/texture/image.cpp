@@ -48,4 +48,12 @@ void ImageTexture::prepareData()
     ));
 }
 
+void ImageTexture::freeData()
+{
+    if (d_texture != 0) 
+        CUDA_CHECK( cudaDestroyTextureObject( d_texture ) );
+    if (d_array != 0)
+        CUDA_CHECK( cudaFreeArray( d_array ) );
+}
+
 }

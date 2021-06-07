@@ -52,6 +52,7 @@
 #include "material/conductor.h"
 #include "material/dielectric.h"
 #include "material/diffuse.h"
+#include "material/disney.h"
 #include "material/emitter.h"
 
 // texture include 

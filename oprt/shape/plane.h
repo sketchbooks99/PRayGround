@@ -1,34 +1,34 @@
-#pragma once 
+#pragma once
 
+#include "optix/plane.cuh"
+
+#ifndef __CUDACC__
 #include "../core/shape.h"
-#include "optix/sphere.cuh"
+#include "../core/cudabuffer.h"
 
 namespace oprt {
 
-class Sphere final : public Shape {
+class Plane final : public Shape {
 public:
-    explicit Sphere(float3 c, float r) : m_center(c), m_radius(r) {}
+    explicit Plane(float2 min, float2 max) : m_min(min), m_max(max) {}
 
-    ShapeType type() const override { return ShapeType::Sphere; }
+    ShapeType type() const override { return ShapeType::Plane; }
 
-    void prepareData() override 
+    void prepareData() override
     {
-        SphereData data = {
-            m_center, 
-            m_radius
+        PlaneData data = {
+            m_min, 
+            m_max
         };
 
-        CUDA_CHECK( cudaMalloc( &d_data, sizeof(SphereData) ) );
+        CUDA_CHECK( cudaMalloc( &d_data, sizeof(PlaneData) ) );
         CUDA_CHECK( cudaMemcpy(
-            d_data,
-            &data, sizeof(SphereData),
+            d_data, 
+            &data, sizeof(SphereData), 
             cudaMemcpyHostToDevice
         ));
     }
 
-    /**
-     * @note \c index_offset is not needed.
-     */
     void buildInput( OptixBuildInput& bi, uint32_t sbt_idx ) override
     {
         CUDABuffer<uint32_t> d_sbt_indices;
@@ -37,7 +37,7 @@ public:
         d_sbt_indices.copyToDevice(sbt_indices, sizeof(uint32_t));
 
         // Prepare bounding box information on the device.
-        OptixAabb aabb = (OptixAabb)this->bound();
+        OptixAabb aabb = static_cast<OptixAabb>(bound());
 
         if (d_aabb_buffer) freeAabbBuffer();
 
@@ -61,13 +61,16 @@ public:
         bi.customPrimitiveArray.sbtIndexOffsetStrideInBytes = sizeof(uint32_t);
     }
 
-    AABB bound() const override { 
-        return AABB( m_center - make_float3(m_radius),
-                     m_center + make_float3(m_radius) );
+    AABB bound() const override
+    {
+        AABB box{make_float3(m_min.x, -0.01f, m_min.y), make_float3(m_max.x, 0.01f, m_max.y)};
+        Message(box);
+        return box;
     }
 private:
-    float3 m_center;
-    float m_radius;
+    float2 m_min, m_max;
 };
 
 }
+
+#endif

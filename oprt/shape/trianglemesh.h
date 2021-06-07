@@ -1,7 +1,9 @@
 #pragma once
 
-#include "../core/shape.h"
 #include "optix/trianglemesh.cuh"
+
+#ifndef __CUDACC__
+#include "../core/shape.h"
 
 namespace oprt {
 
@@ -76,3 +78,5 @@ std::shared_ptr<TriangleMesh> createTriangleMesh(
 );
 
 }
+
+#endif

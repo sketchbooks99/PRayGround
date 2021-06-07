@@ -1,32 +1,36 @@
-#pragma once
+#pragma once 
 
+#include "optix/sphere.cuh"
+
+#ifndef __CUDACC__
 #include "../core/shape.h"
-#include "../core/cudabuffer.h"
-#include "optix/plane.cuh"
 
 namespace oprt {
 
-class Plane final : public Shape {
+class Sphere final : public Shape {
 public:
-    explicit Plane(float2 min, float2 max) : m_min(min), m_max(max) {}
+    explicit Sphere(float3 c, float r) : m_center(c), m_radius(r) {}
 
-    ShapeType type() const override { return ShapeType::Plane; }
+    ShapeType type() const override { return ShapeType::Sphere; }
 
-    void prepareData() override
+    void prepareData() override 
     {
-        PlaneData data = {
-            m_min, 
-            m_max
+        SphereData data = {
+            m_center, 
+            m_radius
         };
 
-        CUDA_CHECK( cudaMalloc( &d_data, sizeof(PlaneData) ) );
+        CUDA_CHECK( cudaMalloc( &d_data, sizeof(SphereData) ) );
         CUDA_CHECK( cudaMemcpy(
-            d_data, 
-            &data, sizeof(SphereData), 
+            d_data,
+            &data, sizeof(SphereData),
             cudaMemcpyHostToDevice
         ));
     }
 
+    /**
+     * @note \c index_offset is not needed.
+     */
     void buildInput( OptixBuildInput& bi, uint32_t sbt_idx ) override
     {
         CUDABuffer<uint32_t> d_sbt_indices;
@@ -35,7 +39,7 @@ public:
         d_sbt_indices.copyToDevice(sbt_indices, sizeof(uint32_t));
 
         // Prepare bounding box information on the device.
-        OptixAabb aabb = static_cast<OptixAabb>(bound());
+        OptixAabb aabb = (OptixAabb)this->bound();
 
         if (d_aabb_buffer) freeAabbBuffer();
 
@@ -59,14 +63,15 @@ public:
         bi.customPrimitiveArray.sbtIndexOffsetStrideInBytes = sizeof(uint32_t);
     }
 
-    AABB bound() const override
-    {
-        AABB box{make_float3(m_min.x, -0.01f, m_min.y), make_float3(m_max.x, 0.01f, m_max.y)};
-        Message(box);
-        return box;
+    AABB bound() const override { 
+        return AABB( m_center - make_float3(m_radius),
+                     m_center + make_float3(m_radius) );
     }
 private:
-    float2 m_min, m_max;
+    float3 m_center;
+    float m_radius;
 };
 
 }
+
+#endif

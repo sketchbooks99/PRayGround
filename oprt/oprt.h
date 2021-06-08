@@ -42,6 +42,25 @@
 #include "core/primitive.h"
 #include "core/scene.h"
 #include "core/bitmap.h"
+
+#include <cuda_gl_interop.h>
+#include <cuda_runtime.h>
+
+#include <optix.h>
+#include <optix_function_table_definition.h>
+#include <optix_stubs.h>
+
+#include <sampleConfig.h>
+
+#include <sutil/CUDAOutputBuffer.h>
+#include <sutil/Camera.h>
+#include <sutil/Exception.h>
+#include <sutil/GLDisplay.h>
+#include <sutil/Matrix.h>
+#include <sutil/Trackball.h>
+#include <sutil/sutil.h>
+#include <sutil/vec_math.h>
+#include <optix_stack_size.h>
 #endif
 
 // shape include

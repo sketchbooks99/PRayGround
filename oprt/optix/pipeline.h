@@ -42,7 +42,7 @@ public:
     OptixPipelineCompileOptions compileOptions() const { return m_compile_options; }
 
     /** \brief Link options */
-    void setLinkOptions( const OptixPipelineLinkOptions& op) { m_link_options = op; }
+    void setLinkOptions( const OptixPipelineLinkOptions& op ) { m_link_options = op; }
     void setLinkTraceDepth( unsigned int depth ) { m_link_options.maxTraceDepth = depth; }
     void setLinkDebugLevel( const OptixCompileDebugLevel& debug_level ) { m_link_options.debugLevel = debug_level; }
     OptixPipelineLinkOptions link_options() const { return m_link_options; }

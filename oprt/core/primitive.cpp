@@ -4,14 +4,13 @@
 
 namespace oprt {
 
-/**
- * @brief 
- * 
- * @param ctx 
- * @param accel_data 
- * @param ps 
- */
-void buildGas(const OptixDeviceContext& ctx, AccelData& accel_data, const PrimitiveInstance& ps) {
+// ---------------------------------------------------------------------------
+void buildGas(
+    const OptixDeviceContext& ctx, 
+    AccelData& accel_data, 
+    const PrimitiveInstance& ps
+) 
+{
     std::vector<Primitive> meshes;
     std::vector<Primitive> customs;
 
@@ -22,7 +21,7 @@ void buildGas(const OptixDeviceContext& ctx, AccelData& accel_data, const Primit
 
     auto build_single_gas = [&ctx](std::vector<Primitive> primitives_subset, 
                                    const Transform& transform, 
-                                   AccelData::HandleData& handle) 
+                                   AccelData::HandleData& handle)
     {
         if (handle.d_buffer)
         {
@@ -119,22 +118,15 @@ void buildGas(const OptixDeviceContext& ctx, AccelData& accel_data, const Primit
     if (customs.size() > 0) build_single_gas(customs, ps.transform(), accel_data.customs);
 }
 
-/**
- * @brief 
- * 
- * @param ctx 
- * @param accel_data 
- * @param primitive_instance 
- * @param sbt_base_offset 
- * @param instance_id 
- * @param instances 
- */
-void buildInstances(const OptixDeviceContext& ctx, 
-               const AccelData& accel_data,
-               const PrimitiveInstance& primitive_instance, 
-               unsigned int& sbt_base_offset,
-               unsigned int& instance_id,
-               std::vector<OptixInstance>& instances)
+// ---------------------------------------------------------------------------
+void buildInstances(
+    const OptixDeviceContext& ctx, 
+    const AccelData& accel_data,
+    const PrimitiveInstance& primitive_instance,
+    unsigned int& sbt_base_offset,
+    unsigned int& instance_id,
+    std::vector<OptixInstance>& instances
+)
 {
     const unsigned int visibility_mask = 255;
 
@@ -173,14 +165,7 @@ void buildInstances(const OptixDeviceContext& ctx,
     }
 }
 
-/**
- * @brief Create a material sample programs object
- * 
- * @param ctx 
- * @param module 
- * @param program_groups 
- * @param callable_records 
- */
+// ---------------------------------------------------------------------------
 void createMaterialPrograms(
     const OptixDeviceContext& ctx,
     const Module& module, 
@@ -215,14 +200,7 @@ void createMaterialPrograms(
     }
 }
 
-/**
- * @brief Create programs for texture evaluation
- * 
- * @param ctx 
- * @param module 
- * @param program_groups 
- * @param callable_records 
- */
+// ---------------------------------------------------------------------------
 void createTexturePrograms(
     const OptixDeviceContext& ctx, 
     const Module& module, 

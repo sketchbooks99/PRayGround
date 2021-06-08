@@ -19,19 +19,6 @@
 
 #include <filesystem>
 
-/**
- * \note 
- * If a PrimitiveInstance store meshes and custom primitives (i.e. Sphere, Cylinder...), 
- * please sort primitives array to render geometries correctly as like follow code.
- * 
- * auto ps = oprt::PrimitiveInstance(oprt::Transform());
- * ps.set_sbt_index_base(0);
- * ps.addPrimitive(sphere, white_lambert);
- * ps.addPrimitive(mesh, metal);
- * ps.sort();
- * scene.addPrimitive_instance(ps);
- */
-
 oprt::Scene my_scene() {
     oprt::Scene scene;
 

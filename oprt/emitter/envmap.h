@@ -1,4 +1,5 @@
 #include "../core/emitter.h"
+#include "../texture/constant.h"
 
 /**
  * @brief Environment emitter. In general, emittance is evaluated at a miss program.
@@ -11,14 +12,15 @@
 namespace oprt {
 
 struct EnvironmentEmitterData {
-
+    void* texdata;
+    unsigned int tex_func_id;
 };
 
 class EnvironmentEmitter {
 public:
     explicit EnvironmentEmitter(const std::string& filename);
     explicit EnvironmentEmitter(const float3& c)
-    : m_texture(c) {}
+    : m_texture(std::make_shared<ConstantTexture>(c)) {}
     explicit EnvironmentEmitter(const std::shared_ptr<Texture>& texture)
     : m_texture(texture) {}
 private:

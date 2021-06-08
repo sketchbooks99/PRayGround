@@ -3,7 +3,7 @@
 namespace oprt {
 
 // --------------------------------------------------------------------------------
-void Scene::freeSceneFromDevice()
+void Scene::freeFromDevice()
 {
     for (auto& ps : m_primitive_instances)
     {

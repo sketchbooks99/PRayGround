@@ -11,8 +11,8 @@ class Scene {
 public:
     Scene() {}
 
-    void createSceneOnDevice();
-    void freeSceneFromDevice();
+    void createOnDevice();
+    void freeFromDevice();
 
     void render();
 
@@ -33,6 +33,7 @@ public:
     void createHitgroupSBT(OptixShaderBindingTable& sbt);
 
     void addPrimitiveInstance(PrimitiveInstance ps) {
+        ps.sort();
         if (m_primitive_instances.empty())
             ps.setSbtIndexBase(0);
         else

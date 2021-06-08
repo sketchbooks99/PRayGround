@@ -1,24 +1,5 @@
 #include <glad/glad.h>
 
-#include <cuda_gl_interop.h>
-#include <cuda_runtime.h>
-
-#include <optix.h>
-#include <optix_function_table_definition.h>
-#include <optix_stubs.h>
-
-#include <sampleConfig.h>
-
-#include <sutil/CUDAOutputBuffer.h>
-#include <sutil/Camera.h>
-#include <sutil/Exception.h>
-#include <sutil/GLDisplay.h>
-#include <sutil/Matrix.h>
-#include <sutil/Trackball.h>
-#include <sutil/sutil.h>
-#include <sutil/vec_math.h>
-#include <optix_stack_size.h>
-
 #include <GLFW/glfw3.h>
 
 // Header file describe the scene
@@ -329,7 +310,7 @@ int main(int argc, char* argv[]) {
 
         // Create instances that manage GAS, sbtOffset, and transform of geometries.
         std::vector<OptixInstance> instances;
-        unsigned int sbt_base_offset = 0; 
+        unsigned int sbt_base_offset = 0;
         unsigned int instance_id = 0;
         std::vector<oprt::AccelData*> accels;
         for ( auto ps : scene.primitiveInstances() ) {
@@ -348,7 +329,7 @@ int main(int argc, char* argv[]) {
         instance_input.instanceArray.numInstances = (unsigned int)instances.size();
 
         OptixAccelBuildOptions accel_options = {};
-        accel_options.buildFlags = OPTIX_BUILD_FLAG_NONE; 
+        accel_options.buildFlags = OPTIX_BUILD_FLAG_NONE;
         accel_options.operation = OPTIX_BUILD_OPERATION_BUILD;
 
         OptixAccelBufferSizes ias_buffer_sizes;
@@ -575,7 +556,7 @@ int main(int argc, char* argv[]) {
         oprt::cuda_frees(sbt.raygenRecord, sbt.missRecordBase, sbt.hitgroupRecordBase, 
                        params.accum_buffer,
                        d_params);
-        scene.freeSceneFromDevice();
+        scene.freeFromDevice();
 
     }
     catch( std::exception& e )

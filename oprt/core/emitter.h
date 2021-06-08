@@ -9,7 +9,8 @@ namespace oprt {
 enum class EmitterType {
     Point = 0,
     Area = 1, 
-    Envmap = 2
+    Envmap = 2,
+    Count = 3
 };
 
 inline std::ostream& operator<<(std::ostream& out, EmitterType type)

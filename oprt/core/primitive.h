@@ -26,15 +26,15 @@ namespace oprt {
 class Primitive {
 public:
     Primitive(const std::shared_ptr<Shape>& shape, const std::shared_ptr<Material>& material)
-    : m_shape(shape), m_material(material) 
-    {
-        _initProgramGroups();
-    }
+    : Primitive(shape, material, 0) {}
 
     Primitive(const std::shared_ptr<Shape>& shape, const std::shared_ptr<Material>& material, uint32_t sbt_index)
     : m_shape(shape), m_material(material), m_sbt_index(sbt_index) 
     {
-        _initProgramGroups();
+        m_program_groups.resize(RAY_TYPE_COUNT);
+        for (auto &pg : m_program_groups) {
+            pg = ProgramGroup(OPTIX_PROGRAM_GROUP_KIND_HITGROUP);
+        }
     }
 
     // Create programs based on shape type. 
@@ -99,13 +99,6 @@ public:
     std::vector<ProgramGroup> programGroups() const { return m_program_groups; }
 
 private:
-    void _initProgramGroups() {
-        m_program_groups.resize(RAY_TYPE_COUNT);
-        for (auto &pg : m_program_groups) {
-            pg = ProgramGroup(OPTIX_PROGRAM_GROUP_KIND_HITGROUP);
-        }
-    }
-
     // Member variables.
     std::shared_ptr<Shape> m_shape;
     std::shared_ptr<Material> m_material;
@@ -140,11 +133,11 @@ public:
 
     void addPrimitive(const Primitive& p) { 
         m_primitives.push_back(p); 
-        m_primitives.back().setSbtIndex(this->sbtIndexBase() + (this->numPrimitives() - 1));
+        m_primitives.back().setSbtIndex(sbtIndexBase() + (numPrimitives() - 1));
     }
     void addPrimitive(const std::shared_ptr<Shape>& shape, const std::shared_ptr<Material>& material) {
         m_primitives.emplace_back(shape, material);
-        m_primitives.back().setSbtIndex(this->sbtIndexBase() + (this->numPrimitives() - 1) );
+        m_primitives.back().setSbtIndex(sbtIndexBase() + (numPrimitives() - 1) );
     }
 
     /**
@@ -155,7 +148,7 @@ public:
             [](const Primitive& p1, const Primitive& p2){ return (int)p1.shapeType() < (int)p2.shapeType(); });
         uint32_t sbt_index = 0;
         for (auto &p : m_primitives) {
-            p.setSbtIndex(this->sbtIndexBase() + sbt_index);
+            p.setSbtIndex(sbtIndexBase() + sbt_index);
             sbt_index++;
         }
     }
@@ -168,9 +161,9 @@ public:
 
     void setSbtIndexBase(const unsigned int base) { m_sbt_index_base = base; }
     unsigned int sbtIndexBase() const { return m_sbt_index_base; }
-    unsigned int sbtIndex() const { return m_sbt_index_base + (unsigned int)m_primitives.size(); }
+    unsigned int sbtIndex() const { return m_sbt_index_base + static_cast<unsigned int>(m_primitives.size()); }
     
-    void setTransform(const Transform& t) { m_transform = t; } 
+    void setTransform(const Transform& t) { m_transform = t; }
     Transform transform() const { return m_transform; }
 private:
     Transform m_transform;

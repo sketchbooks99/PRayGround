@@ -530,14 +530,7 @@ int main(int argc, char* argv[]) {
             std::chrono::seconds s = std::chrono::duration_cast<std::chrono::seconds>(render_time);
             std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds>(render_time);
             printf("Render time: %dm %ds %dms\n", (int)m.count(), (int)s.count(), (int)ms.count());
-
-            // sutil::ImageBuffer buffer;
-            // buffer.data         = output_buffer.getHostPointer();
-            // buffer.width        = output_buffer.width();
-            // buffer.height       = output_buffer.height();
-            // buffer.pixel_format = sutil::BufferImageFormat::UNSIGNED_BYTE4;
-
-            // sutil::saveImage( outfile.c_str(), buffer, false );
+            
             oprt::Bitmap<uchar4> bitmap(output_buffer.getHostPointer(), output_buffer.width(), output_buffer.height());
             bitmap.write(outfile, true);
 

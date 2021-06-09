@@ -109,6 +109,7 @@ void Bitmap<T>::write(const std::string& filename, bool gamma_enabled, int quali
     
     if (file_extension == ".png" || file_extension == ".PNG")
     {
+        stbi_flip_vertically_on_write(true);
         stbi_write_png(filename.c_str(), m_width, m_height, m_channels, data, 0);
     }
     else if (file_extension == ".jpg" || file_extension == ".JPG")

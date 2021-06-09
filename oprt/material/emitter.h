@@ -17,7 +17,8 @@ class Emitter final : public Material {
 public:
     Emitter(const float3& color, float strength=1.0f, bool twosided=true) 
     : m_texture(new ConstantTexture(color)), m_strength(strength), m_twosided(twosided) { }
-    Emitter(Texture* texture, float strength=1.0f, bool twosided=true)
+
+    Emitter(const std::shared_ptr<Texture>& texture, float strength=1.0f, bool twosided=true)
     : m_texture(texture), m_strength(strength), m_twosided(twosided) {}
 
     ~Emitter() { }

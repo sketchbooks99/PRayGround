@@ -23,9 +23,6 @@ public:
     Dielectric(const std::shared_ptr<Texture>& texture, float ior)
     : m_texture(texture), m_ior(ior) {}
 
-    Dielectric(Texture* texture, int ior)
-    : m_texture(texture), m_ior(ior) {}
-    
     ~Dielectric() { }
 
     void prepareData() override {

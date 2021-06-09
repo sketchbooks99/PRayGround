@@ -32,18 +32,6 @@ class Disney final : public Material {
 public:
     Disney(){}
 
-    Disney(Texture* base, float subsurface=0.8f, float metallic=0.1f,
-           float specular=0.0f, float specular_tint=0.0f,
-           float roughness=0.4f, float anisotropic=0.0f, 
-           float sheen=0.0f, float sheen_tint=0.5f,
-           float clearcoat=0.0f, float clearcoat_gloss=0.0f, bool twosided=true)
-    : m_base(base), m_subsurface(subsurface), m_metallic(metallic),
-      m_specular(specular), m_specular_tint(specular_tint),
-      m_roughness(roughness), m_anisotropic(anisotropic),
-      m_sheen(sheen), m_sheen_tint(sheen_tint),
-      m_clearcoat(clearcoat), m_clearcoat_gloss(clearcoat_gloss),
-      m_twosided(twosided) {}
-
     Disney(const std::shared_ptr<Texture> base, float subsurface=0.8f, float metallic=0.1f,
            float specular=0.0f, float specular_tint=0.0f,
            float roughness=0.4f, float anisotropic=0.0f, 
@@ -93,7 +81,6 @@ public:
     MaterialType type() const override { return MaterialType::Disney; }
 
     void setBaseTexture(const std::shared_ptr<Texture>& base) { m_base = base; }
-    void setBaseTexture(Texture* base) { m_base = std::shared_ptr<Texture>(base); }
     std::shared_ptr<Texture> base() const { return m_base; }
 
     void setSubsurface(float subsurface) { m_subsurface = subsurface; }

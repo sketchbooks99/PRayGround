@@ -52,7 +52,7 @@ public:
 
         std::vector<OptixProgramGroup> optix_prg_groups;
         std::transform(prg_groups.begin(), prg_groups.end(), std::back_inserter(optix_prg_groups),
-            [](OptixProgramGroup pg){ return static_cast<OptixProgramGroup>(pg); });
+            [](ProgramGroup pg){ return static_cast<OptixProgramGroup>(pg); });
 
         // Create pipeline from program groups.
         char log[2048];

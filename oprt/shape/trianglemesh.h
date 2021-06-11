@@ -17,7 +17,7 @@ public:
     explicit TriangleMesh(const std::string& filename, bool is_smooth=true);
     TriangleMesh(
         std::vector<float3> vertices, 
-        std::vector<int3> indices, 
+        std::vector<Face> faces, 
         std::vector<float3> normals, 
         std::vector<float2> texcoords,
         bool is_smooth=true);
@@ -35,24 +35,24 @@ public:
     AABB bound() const override { return AABB(); } 
 
     std::vector<float3> vertices() const { return m_vertices; } 
-    std::vector<int3> indices() const { return m_indices; } 
+    std::vector<Face> faces() const { return m_faces; } 
     std::vector<float3> normals() const { return m_normals; }
     std::vector<float2> texcoords() const { return m_texcoords; }
 
     // Getters of device side pointers.
     CUdeviceptr deviceVertices() const { return d_vertices; }
-    CUdeviceptr deviceIndices() const { return d_indices; }
+    CUdeviceptr deviceFaces() const { return d_faces; }
     CUdeviceptr deviceNormals() const { return d_normals; }
     CUdeviceptr deivceTexcoords() const { return d_texcoords; }
 
 private:
     std::vector<float3> m_vertices;
-    std::vector<int3> m_indices;
+    std::vector<Face> m_faces;
     std::vector<float3> m_normals;
     std::vector<float2> m_texcoords;
 
     CUdeviceptr d_vertices { 0 };
-    CUdeviceptr d_indices { 0 };
+    CUdeviceptr d_faces { 0 };
     CUdeviceptr d_normals { 0 };
     CUdeviceptr d_texcoords { 0 };
 };
@@ -71,7 +71,7 @@ std::shared_ptr<TriangleMesh> createTriangleMesh(const std::string& filename, bo
 
 std::shared_ptr<TriangleMesh> createTriangleMesh(
     const std::vector<float3>& vertices,
-    const std::vector<int3>& indices, 
+    const std::vector<Face>& faces, 
     const std::vector<float3>& normals,
     const std::vector<float2>& texcoords,
     bool is_smooth = true

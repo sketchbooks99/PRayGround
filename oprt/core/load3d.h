@@ -3,6 +3,7 @@
 #include <sutil/vec_math.h>
 #include "../ext/happly/happly.h"
 #include <algorithm>
+#include "../shape/optix/trianglemesh.cuh"
 
 namespace oprt {
 
@@ -10,12 +11,11 @@ void loadObj(
     const std::string& filename, 
     std::vector<float3>& vertices,
     std::vector<float3>& normals,
-    std::vector<int3>& indices,
+    std::vector<Face>& faces,
     std::vector<float2>& coordinates
 )
 {
     std::vector<float3> temp_normals;
-    std::vector<int3> normal_indices;
     std::ifstream ifs(filename, std::ios::in);
     Assert(ifs.is_open(), "The OBJ file '"+filename+"' is not found.");
     while (!ifs.eof())
@@ -48,7 +48,7 @@ void loadObj(
             std::vector<int> temp_norm_indices;
 
             // Future work -----------------------------------
-            // std::vector<int> temp_tex_indices;
+            // std::vector<int> temp_tex_faces;
             // ----------------------------------------------- 
             for (std::string buffer; iss >> buffer;)
             {
@@ -58,7 +58,7 @@ void loadObj(
                     // Input - index(vertex)/index(texture)/index(normal)
                     temp_vert_indices.emplace_back(vert_idx - 1);
                     temp_norm_indices.emplace_back(norm_idx - 1);
-                    // temp_tex_indices.emplace_back(tex_idx - 1);
+                    // temp_tex_faces.emplace_back(tex_idx - 1);
                 }
                 else if (sscanf(buffer.c_str(), "%d//%d", &vert_idx, &norm_idx) == 2)
                 {
@@ -70,7 +70,7 @@ void loadObj(
                 {
                     // Input - index(vertex)/index(texture)
                     temp_vert_indices.emplace_back(vert_idx - 1);
-                    //temp_tex_indices.emplace_back(tex_idx - 1);
+                    //temp_tex_faces.emplace_back(tex_idx - 1);
                 }
                 else if (sscanf(buffer.c_str(), "%d", &vert_idx) == 1)
                 {
@@ -80,13 +80,16 @@ void loadObj(
                 else
                     Throw("Invalid format in face information input.");
             }
-            Assert(temp_vert_indices.size() >= 3, "The number of indices is less than 3.");
+            Assert(temp_vert_indices.size() >= 3, "The number of faces is less than 3.");
 
             if (temp_vert_indices.size() == 3) {
-                indices.push_back(make_int3(temp_vert_indices[0], temp_vert_indices[1], temp_vert_indices[2]));
+                Face face{ {0, 0, 0}, {0, 0, 0}, {0, 0, 0} };
+                face.vertex_id = make_int3(temp_vert_indices[0], temp_vert_indices[1], temp_vert_indices[2]);
                 
                 if (!temp_norm_indices.empty())
-                    normal_indices.push_back(make_int3(temp_norm_indices[0], temp_norm_indices[1], temp_norm_indices[2]));
+                    face.normal_id = make_int3(temp_norm_indices[0], temp_norm_indices[1], temp_norm_indices[2]);
+
+                faces.push_back(face);
             }
             /** 
              * Get more then 4 inputs.
@@ -94,35 +97,22 @@ void loadObj(
              * This case is implemented under the assumption that if face input are more than 4, 
              * mesh are configured by quad and inputs are partitioned with 4 stride. 
              */
-            else
+            else if (temp_vert_indices.size() == 4)
             {
-                for (int i = 0; i<int(temp_vert_indices.size() / 4); i++)
-                {
-                    // The index value of 0th vertex in quad
-                    auto base_idx = i * 4;
-                    indices.emplace_back(make_int3(
-                        temp_vert_indices[base_idx + 0],
-                        temp_vert_indices[base_idx + 1],
-                        temp_vert_indices[base_idx + 2]));
-                    indices.emplace_back(make_int3(
-                        temp_vert_indices[base_idx + 2],
-                        temp_vert_indices[base_idx + 3],
-                        temp_vert_indices[base_idx + 0]));
-                }
-            }
-        }
-    }
+                Face face1{ {0, 0, 0}, {0, 0, 0}, {0, 0, 0} };
+                Face face2{ {0, 0, 0}, {0, 0, 0}, {0, 0, 0} };
 
-    if (!temp_normals.empty() && temp_normals.size() == vertices.size())
-    {
-        normals.resize(temp_normals.size());
-        for (size_t i=0; i<indices.size(); i++)
-        {
-            int3 v_id = indices[i];
-            int3 n_id = normal_indices[i];
-            normals[v_id.x] = temp_normals[n_id.x];
-            normals[v_id.y] = temp_normals[n_id.y];
-            normals[v_id.z] = temp_normals[n_id.z];
+                face1.vertex_id = make_int3(temp_vert_indices[0], temp_vert_indices[1], temp_vert_indices[2]);
+                face2.vertex_id = make_int3(temp_vert_indices[2], temp_vert_indices[3], temp_vert_indices[0]);
+
+                if (!temp_norm_indices.empty())
+                {
+                    face1.normal_id = make_int3(temp_norm_indices[0], temp_norm_indices[1], temp_norm_indices[2]);
+                    face2.normal_id = make_int3(temp_norm_indices[2], temp_norm_indices[3], temp_norm_indices[0]);
+                }
+                faces.push_back(face1);
+                faces.push_back(face2);
+            }
         }
     }
 
@@ -133,7 +123,7 @@ void loadPly(
     const std::string& filename, 
     std::vector<float3>& vertices,
     std::vector<float3>& normals,
-    std::vector<int3>& indices, 
+    std::vector<Face>& faces, 
     std::vector<float2>& coordinates
 ) 
 {
@@ -150,10 +140,16 @@ void loadPly(
     std::transform(ply_vertices.begin(), ply_vertices.end(), std::back_inserter(vertices), 
         [](const std::array<double, 3>& v) { return make_float3(v[0], v[1], v[2]); } );
 
-    // Get face indices.
+    // Get face faces.
     std::vector<std::vector<size_t>> ply_faces = plyIn.getFaceIndices();
-    std::transform(ply_faces.begin(), ply_faces.end(), std::back_inserter(indices), 
-        [](const std::vector<size_t>& f) { return make_int3(f[0], f[1], f[2]); } );
+    std::transform(ply_faces.begin(), ply_faces.end(), std::back_inserter(faces), 
+        [](const std::vector<size_t>& f) { 
+            return Face{
+                make_int3(f[0], f[1], f[2]), // vertex_id
+                make_int3(0),                // normal_id
+                make_int3(0)                 // texcoord_id
+            }; 
+        } );
 }
 
 }

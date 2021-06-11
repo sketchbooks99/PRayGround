@@ -17,7 +17,7 @@ public:
     : m_program_kind(prg_kind), m_program_options(prg_options) {}
 
     /** \brief Enable to cast from `ProgramGroup` to `OptixProgramGroup` */
-    operator OptixProgramGroup() { return m_program; }
+    explicit operator OptixProgramGroup() { return m_program; }
 
     void destroy() {
         OPTIX_CHECK(optixProgramGroupDestroy(m_program));

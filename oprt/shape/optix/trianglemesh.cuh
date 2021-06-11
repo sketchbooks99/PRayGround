@@ -8,9 +8,15 @@
 
 namespace oprt {
 
+struct Face {
+    int3 vertex_id; 
+    int3 normal_id; 
+    int3 texcoord_id;
+};
+
 struct MeshData {
     float3* vertices;
-    int3* indices;
+    Face* faces;
     float3* normals;
     float2* texcoords;
 };
@@ -27,18 +33,18 @@ CALLABLE_FUNC void CH_FUNC(mesh)()
     oprt::Ray ray = getWorldRay();
     
     const int prim_id = optixGetPrimitiveIndex();
-    const int3 index = mesh_data->indices[prim_id];
+    const oprt::Face face = mesh_data->faces[prim_id];
     const float u = optixGetTriangleBarycentrics().x;
     const float v = optixGetTriangleBarycentrics().y;
 
-    const float2 texcoord0 = mesh_data->texcoords[index.x];
-    const float2 texcoord1 = mesh_data->texcoords[index.y];
-    const float2 texcoord2 = mesh_data->texcoords[index.z];
+    const float2 texcoord0 = mesh_data->texcoords[face.texcoord_id.x];
+    const float2 texcoord1 = mesh_data->texcoords[face.texcoord_id.y];
+    const float2 texcoord2 = mesh_data->texcoords[face.texcoord_id.z];
     const float2 texcoords = (1-u-v)*texcoord0 + u*texcoord1 + v*texcoord2;
 
-    float3 n0 = normalize(mesh_data->normals[index.x]);
-	float3 n1 = normalize(mesh_data->normals[index.y]);
-	float3 n2 = normalize(mesh_data->normals[index.z]);
+    float3 n0 = normalize(mesh_data->normals[face.normal_id.x]);
+	float3 n1 = normalize(mesh_data->normals[face.normal_id.y]);
+	float3 n2 = normalize(mesh_data->normals[face.normal_id.z]);
 
     // Linear interpolation of normal by barycentric coordinates.
     float3 local_n = (1.0f-u-v)*n0 + u*n1 + v*n2;

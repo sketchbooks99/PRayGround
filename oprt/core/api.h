@@ -32,13 +32,13 @@ std::shared_ptr<T> oprtCreateCustomShape(Args... args)
 template <class T, class... Args> 
 std::shared_ptr<T> oprtCreateCustomTexture(Args... args)
 {
-
+    
 }
 
 template <class... Args>
 auto oprtCreateDefinedMaterial(const std::string& name, Args... args)
 {
-    
+
 }
 
 template <class... Args> 

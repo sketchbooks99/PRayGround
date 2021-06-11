@@ -385,10 +385,10 @@ int main(int argc, char* argv[]) {
         /**
          * \brief Create programs
          */
-        std::vector<OptixProgramGroup> program_groups;
+        std::vector<oprt::ProgramGroup> program_groups;
         // Raygen program
         auto raygen_program = oprt::createRayGenProgram( optix_context, (OptixModule)module, RG_FUNC_STR("raygen") );
-        program_groups.push_back( (OptixProgramGroup)raygen_program );
+        program_groups.push_back( raygen_program );
         // Create and bind sbt to raygen program
         oprt::CUDABuffer<oprt::RayGenRecord> d_raygen_record;
         oprt::RayGenRecord rg_record = {};
@@ -544,7 +544,7 @@ int main(int argc, char* argv[]) {
          */
         pipeline.destroy();
         module.destroy();
-        for ( auto& pg : program_groups ) OPTIX_CHECK( optixProgramGroupDestroy(pg) );
+        for ( auto& pg : program_groups ) OPTIX_CHECK( optixProgramGroupDestroy(static_cast<OptixProgramGroup>(pg)) );
         OPTIX_CHECK( optixDeviceContextDestroy( optix_context ) );
         oprt::cuda_frees(sbt.raygenRecord, sbt.missRecordBase, sbt.hitgroupRecordBase, 
                        params.accum_buffer,

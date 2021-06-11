@@ -48,7 +48,12 @@ public:
     OptixPipelineLinkOptions link_options() const { return m_link_options; }
 
     /** \brief Create pipeline object and calculate the stack sizes of pipeline. */
-    void create( const OptixDeviceContext& ctx, const std::vector<OptixProgramGroup>& prg_groups) {
+    void create( const OptixDeviceContext& ctx, const std::vector<ProgramGroup>& prg_groups) {
+
+        std::vector<OptixProgramGroup> optix_prg_groups;
+        std::transform(prg_groups.begin(), prg_groups.end(), std::back_inserter(optix_prg_groups),
+            [](OptixProgramGroup pg){ return static_cast<OptixProgramGroup>(pg); });
+
         // Create pipeline from program groups.
         char log[2048];
         size_t sizeof_log = sizeof(log);
@@ -57,8 +62,8 @@ public:
             ctx,
             &m_compile_options,
             &m_link_options,
-            prg_groups.data(),
-            static_cast<unsigned int>(prg_groups.size()),
+            optix_prg_groups.data(),
+            static_cast<unsigned int>(optix_prg_groups.size()),
             log, 
             &sizeof_log, 
             &m_pipeline
@@ -66,8 +71,8 @@ public:
 
         // Specify the max traversal depth and calculate the stack sizes.
         OptixStackSizes stack_sizes = {};
-        for (auto& prg_group : prg_groups) {
-            OPTIX_CHECK(optixUtilAccumulateStackSizes(prg_group, &stack_sizes));
+        for (auto& optix_prg_group : optix_prg_groups) {
+            OPTIX_CHECK(optixUtilAccumulateStackSizes(optix_prg_group, &stack_sizes));
         }
         
         uint32_t dc_stacksize_from_traversal;

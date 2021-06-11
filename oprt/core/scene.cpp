@@ -21,7 +21,7 @@ void Scene::createHitgroupPrograms(const OptixDeviceContext& ctx, const Module& 
     {
         for (auto& p : ps.primitives())
         {
-            p.createPrograms(ctx, (OptixModule)module);
+            p.createPrograms(ctx, static_cast<OptixModule>(module));
         }
     }
 }

@@ -16,7 +16,17 @@ void Bitmap<T>::allocate(int width, int height)
 {
     m_width = width; m_height = height;
     Assert(!this->m_data, "Image data in the host side is already allocated.");
+
+    using Element_t = std::conditional_t<
+        std::is_same_v<T, float4> || std::is_same_v<T, float3>, 
+        float, 
+        unsigned char
+    >;
+    constexpr int num_element = static_cast<int>(sizeof(T) / sizeof(Element_t));
+    std::vector<Element_t> zero_arr(num_element * m_width * m_height, static_cast<Element_t>(0));
+
     m_data = new T[m_width*m_height];
+    memcpy(m_data, zero_arr.data(), sizeof(T) * m_width * m_height);
 }
 template void Bitmap<uchar4>::allocate(int, int);
 template void Bitmap<float4>::allocate(int, int);

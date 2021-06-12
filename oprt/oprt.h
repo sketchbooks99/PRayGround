@@ -34,6 +34,7 @@
 #include "optix/sbt.h"
 #include "optix/program.h"
 #include "optix/macros.h"
+#include "optix/context.h"
 
 // application utilities
 #include "core/util.h"

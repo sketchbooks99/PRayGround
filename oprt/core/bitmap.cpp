@@ -35,7 +35,9 @@ template void Bitmap<float3>::allocate(int, int);
 
 // --------------------------------------------------------------------
 /**
- * @todo T = float4 でも jpg ファイルを読み込みたい場合に対応する...?
+ * @todo 
+ * - T = float4 でも jpg ファイルを読み込みたい場合に対応する...?
+ * - テンプレートの特殊化
  */
 template <class T>
 void Bitmap<T>::load(const std::string& filename) {
@@ -87,6 +89,10 @@ template void Bitmap<uchar3>::load(const std::string&);
 template void Bitmap<float3>::load(const std::string&);
 
 // --------------------------------------------------------------------
+/**
+ * @todo
+ * テンプレートの特殊化
+ */
 template <class T>
 void Bitmap<T>::write(const std::string& filename, bool gamma_enabled, int quality) const
 {

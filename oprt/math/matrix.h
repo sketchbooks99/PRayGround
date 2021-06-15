@@ -51,7 +51,7 @@ public:
     /**
      * @note
      * [JP] 以下の変換行列関数は \c N に応じて特殊化されます。
-     * [EN] The following transformation functions specilized depending on N.
+     * [EN] The following transformation functions specilized depending on \c N.
      */
     static HOSTDEVICE Matrix<T, N> rotate(const float radians, const float3& axis);
     static HOSTDEVICE Matrix<T, N> translate(const float3& t);

@@ -14,6 +14,7 @@
 #include <random>
 #include <vector>
 #include <utility>
+#include <filesystem>
 #include "../core/stream_helpers.h"
 #endif
 

@@ -30,6 +30,7 @@ Bitmap_<PixelType>::Bitmap_(PixelType* data, int width, int height, Format forma
     memcpy(m_data, data, sizeof(PixelType) * m_width * m_height * m_channels);
 }
 
+// --------------------------------------------------------------------
 template <typename PixelType>
 Bitmap_<PixelType>::Bitmap_(const std::filesystem::path& filepath)
 {
@@ -63,8 +64,8 @@ void Bitmap_<PixelType>::allocate(int width, int height, Format format)
 
     // ピクセルデータのゼロ初期化
     std::vector<PixelType> zero_arr(m_channels * m_width * m_height, static_cast<Element_t>(0));
-    m_data = new PixelType[m_width*m_height*m_channels];
-    memcpy(m_data, zero_arr.data(), sizeof(PixelType) * m_width * m_height * m_channels);
+    m_data = new PixelType[m_width * m_height * m_channels];
+    memcpy(m_data, zero_arr.data(), zero_arr.size() * sizeof(PixelType));
 }
 
 // --------------------------------------------------------------------

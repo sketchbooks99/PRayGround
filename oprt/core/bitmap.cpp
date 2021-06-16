@@ -212,10 +212,11 @@ void Bitmap_<PixelType>::copyToDevice()
 
     // GPU上に画像データを準備
     CUDABuffer<PixelType> d_buffer;
-    d_buffer.copyToDevice(m_data, m_width*m_height*sizeof(PixelType));
+    d_buffer.copyToDevice(m_data, m_width * m_height * m_channels*sizeof(PixelType));
     d_data = d_buffer.deviceData();
 }
 
+// --------------------------------------------------------------------
 template <typename PixelType>
 void Bitmap_<PixelType>::copyFromDevice()
 {

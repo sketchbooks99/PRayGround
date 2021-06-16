@@ -73,7 +73,7 @@ private:
     unsigned int m_samples_per_launch;                      // Specify the number of samples per call of optixLaunch.
     unsigned int m_num_samples;                             // The number of samples per pixel for non-interactive mode.
     sutil::Camera m_camera;                                 // Camera
-    Bitmap<uchar4> m_film;
+    Bitmap m_film;
 };
 
 }

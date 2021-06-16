@@ -37,7 +37,7 @@ void createDir( const std::string& abs_path )
 {
     // Check if the directory is existed.
     if (std::filesystem::exists(abs_path)) {
-        Message("The directory '", abs_path, "' is already existed.");
+        Message(WARNING, "The directory '", abs_path, "' is already existed.");
         return;
     }
     // Create new directory with path specified.
@@ -50,7 +50,7 @@ void createDirs( const std::string& abs_path )
 {
     // Check if the directory is existed.
     if (std::filesystem::exists(abs_path)) {
-        Message("The directory '", abs_path, "' is already existed.");
+        Message(WARNING, "The directory '", abs_path, "' is already existed.");
         return;
     }
     bool result = std::filesystem::create_directories( abs_path );

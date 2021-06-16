@@ -16,6 +16,11 @@
 #include <utility>
 #include <filesystem>
 #include "../core/stream_helpers.h"
+
+#if defined(_WIN32) | defined(_WIN64)
+    #include <windows.h>
+#endif
+
 #endif
 
 #include "../optix/macros.h"
@@ -68,6 +73,14 @@ enum class Axis {
 
 /** Error handling at the host side. */
 #ifndef __CUDACC__
+
+enum MessageType
+{
+    STANDARD,
+    WARNING,
+    ERROR,
+};
+
 inline void Throw(const std::string& msg) {
     throw std::runtime_error(msg);
 }
@@ -94,17 +107,54 @@ inline void cuda_frees(Head& head, Args... args) {
 /**
  * @brief Stream out object recursively. 
  */
-template <typename T>
-inline void MessageOnce(T t) {
-    std::cout << t;
-}
+
 template <typename Head, typename... Args>
-inline void Message(Head head, Args... args) {
-    MessageOnce(head);
+inline void Message(MessageType type, Head head, Args... args) {
+
+#if defined(__linux__)
+
+    switch(type)
+    {
+        case STANDARD:
+            break;
+        case WARNING:
+            std::cout << "\033[33m"; // yellow
+            break;
+        case ERROR:
+            std::cout << "\033[31m"; // red
+            break;
+    }
+    std::cout << head << "\033[0m";
+
+#elif defined(_WIN32) | defined(_WIN64)
+
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_SCREEN_BUFFER_INFO consoleInfo;
+    WORD current_attributes;
+
+    GetConsoleScreenBufferInfo(hConsole, &consoleInfo);
+    current_attributes = consoleInfo.wAttributes;
+    switch (type)
+    {
+        case STANDARD:
+            break;
+        case WARNING:
+            SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN); // yellow
+            break;
+        case ERROR:
+            SetConsoleTextAttribute(hConsole, FOREGROUND_RED);                    // red
+            break;
+    }
+    std::cout << head;
+    SetConsoleTextAttribute(hConsole, current_attributes);
+
+#endif
+
+    // Recusrive call of message function  
     const size_t num_args = sizeof...(args);
     if constexpr (num_args > 0) {
         std::cout << ' ';
-        Message(args...);
+        Message(type, args...);
     }
     if constexpr (num_args == 0) std::cout << std::endl;
 }

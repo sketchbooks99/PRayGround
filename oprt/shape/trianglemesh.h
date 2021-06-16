@@ -14,7 +14,7 @@ namespace oprt {
 class TriangleMesh final : public Shape {
 public:
     TriangleMesh() {}
-    explicit TriangleMesh(const std::string& filename, bool is_smooth=true);
+    explicit TriangleMesh(const std::filesystem::path& filename, bool is_smooth=true);
     TriangleMesh(
         std::vector<float3> vertices, 
         std::vector<Face> faces, 

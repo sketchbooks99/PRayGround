@@ -5,7 +5,11 @@
 
 namespace oprt {
 
-static void contextLogCallback( unsigned int level, const char* tag, const char* msg, void* cbdata);
+static void contextLogCallback( unsigned int level, const char* tag, const char* msg, void* cbdata)
+{
+    std::cerr << "[" << std::setw( 2 ) << level << "][" << std::setw( 12 ) << tag << "]: "
+            << msg << "\n";
+}
 
 static OptixDeviceContextOptions default_options = 
 {
@@ -55,9 +59,9 @@ public:
     
     unsigned int deviceId() const { return m_device_id; }
 private:
+    unsigned int m_device_id { 0 };
     OptixDeviceContext m_ctx;
     OptixDeviceContextOptions m_options;
-    unsigned int m_device_id { 0 };
 };
 
 }

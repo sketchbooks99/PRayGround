@@ -67,6 +67,7 @@
 // shape include
 #include "shape/sphere.h"
 #include "shape/trianglemesh.h"
+#include "shape/plane.h"
 
 // material include 
 #include "material/conductor.h"
@@ -79,3 +80,5 @@
 #include "texture/constant.h"
 #include "texture/checker.h"
 #include "texture/image.h"
+
+using namespace oprt;

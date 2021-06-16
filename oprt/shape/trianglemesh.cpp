@@ -9,16 +9,16 @@ namespace oprt {
 /** @note At present, only .obj file format is supported. */
 // ------------------------------------------------------------------
 TriangleMesh::TriangleMesh(
-    const std::string& filename, bool is_smooth)
+    const std::filesystem::path& relative_path, bool is_smooth)
 {
-    if (filename.substr(filename.length() - 4) == ".obj") {
-        std::string filepath = findDatapath(filename).string();
-        Message("Loading OBJ file '" + filepath + "' ...");
+    if (relative_path.string().substr(relative_path.string().length() - 4) == ".obj") {
+        std::filesystem::path filepath = findDatapath(relative_path).string();
+        Message(STANDARD, "Loading OBJ file '" + filepath.string() + "' ...");
         loadObj(filepath, m_vertices, m_normals, m_faces, m_texcoords);
     }
-    else if (filename.substr(filename.length() - 4) == ".ply") {
-        std::string filepath = findDatapath(filename).string();
-        Message("Loading PLY file '" + filepath + "' ...");
+    else if (relative_path.string().substr(relative_path.string().length() - 4) == ".ply") {
+        std::filesystem::path filepath = findDatapath(relative_path).string();
+        Message(STANDARD, "Loading PLY file '" + filepath.string() + "' ...");
         loadPly(filepath, m_vertices, m_normals, m_faces, m_texcoords);
     }
 

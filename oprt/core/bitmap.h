@@ -15,6 +15,8 @@ namespace oprt {
 template <typename PixelType>
 class Bitmap_ {
 public:
+    using Type = PixelType;
+
     enum class Format 
     {
         GRAY,       // 1 channels
@@ -55,6 +57,6 @@ private:
 
 using Bitmap = Bitmap_<unsigned char>;
 using BitmapFloat = Bitmap_<float>;
-using BitmapInt = Bitmap_<int>;
+using BitmapDouble = Bitmap_<double>;
 
 }

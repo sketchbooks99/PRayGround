@@ -64,7 +64,6 @@ public:
     AABB bound() const override
     {
         AABB box{make_float3(m_min.x, -0.01f, m_min.y), make_float3(m_max.x, 0.01f, m_max.y)};
-        Message(box);
         return box;
     }
 private:

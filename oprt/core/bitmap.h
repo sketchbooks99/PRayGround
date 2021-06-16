@@ -27,10 +27,10 @@ public:
     };
 
     Bitmap_();
-    Bitmap_(PixelType* data, int width, int height, Format format);
+    Bitmap_(Format format, int width, int height, PixelType* data = nullptr);
     explicit Bitmap_(const std::filesystem::path& filepath);
 
-    void allocate(int width, int height, Format format);
+    void allocate(Format format, int width, int height);
     void fillData(PixelType* data, int width, int height, int offset_x, int offset_y);
     void fillData(PixelType* data, int2 res, int2 offset) 
     { 

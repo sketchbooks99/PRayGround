@@ -18,10 +18,11 @@ Bitmap_<PixelType>::Bitmap_()
 
 // --------------------------------------------------------------------
 template <typename PixelType>
-Bitmap_<PixelType>::Bitmap_(PixelType* data, int width, int height, Format format)
+Bitmap_<PixelType>::Bitmap_(Format format, int width, int height, PixelType* data)
 {
-    allocate(width, height, format);
-    memcpy(m_data, data, sizeof(PixelType) * m_width * m_height * m_channels);
+    allocate(format, width, height);
+    if (data)
+        memcpy(m_data, data, sizeof(PixelType) * m_width * m_height * m_channels);
 }
 
 // --------------------------------------------------------------------
@@ -33,7 +34,7 @@ Bitmap_<PixelType>::Bitmap_(const std::filesystem::path& filepath)
 
 // --------------------------------------------------------------------
 template <typename PixelType>
-void Bitmap_<PixelType>::allocate(int width, int height, Format format)
+void Bitmap_<PixelType>::allocate(Format format, int width, int height)
 {
     Assert(!this->m_data, "Image data in the host side is already allocated. Please use fillData() if you'd like to override bitmap data with your specified range.");
 
@@ -204,7 +205,8 @@ void Bitmap_<PixelType>::write(const std::filesystem::path& filepath, int qualit
 
 // --------------------------------------------------------------------
 template <typename PixelType>
-void Bitmap_<PixelType>::copyToDevice() {
+void Bitmap_<PixelType>::copyToDevice() 
+{
     // CPU側のデータが準備されているかチェック
     Assert(m_data, "Image data in the host side has been not allocated yet.");
 
@@ -212,6 +214,18 @@ void Bitmap_<PixelType>::copyToDevice() {
     CUDABuffer<PixelType> d_buffer;
     d_buffer.copyToDevice(m_data, m_width*m_height*sizeof(PixelType));
     d_data = d_buffer.deviceData();
+}
+
+template <typename PixelType>
+void Bitmap_<PixelType>::copyFromDevice()
+{
+    Assert(d_data, "No data has been allocated on the device yet.");
+
+    CUDA_CHECK(cudaMemcpy(
+        m_data,
+        d_data, m_width * m_height * m_channels * sizeof(PixelType),
+        cudaMemcpyHostToDevice
+    ));
 }
 
 template class Bitmap_<float>;

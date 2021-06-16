@@ -531,7 +531,8 @@ int main(int argc, char* argv[]) {
             std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds>(render_time);
             printf("Render time: %dm %ds %dms\n", (int)m.count(), (int)s.count(), (int)ms.count());
             
-            Bitmap bitmap(reinterpret_cast<unsigned char*>(output_buffer.getHostPointer()), output_buffer.width(), output_buffer.height(), Bitmap::Format::RGBA);
+            Bitmap bitmap(Bitmap::Format::RGBA, output_buffer.width(), output_buffer.height(), 
+                reinterpret_cast<unsigned char*>(output_buffer.getHostPointer()));
             bitmap.write(outfile);
 
             if( output_buffer_type == sutil::CUDAOutputBufferType::GL_INTEROP )

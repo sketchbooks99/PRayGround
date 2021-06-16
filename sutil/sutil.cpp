@@ -248,7 +248,6 @@ Texture loadTexture( const char* fname, float3 default_color, cudaTextureDesc* t
     }
 }
 
-
 ImageBuffer loadImage( const char* fname, int32_t force_components )
 {
     const std::string filename( fname );

@@ -10,28 +10,62 @@
 
 namespace oprt {
 
-// --------------------------------------------------------------------
-template <class T>
-void Bitmap<T>::allocate(int width, int height)
+/**
+ * @todo Update implementation of bitmap class 
+ * @note class T = float4, uchar4 or some vector type 
+ *    -> typename PixelType = float, unsigned char or other primitive type.
+ */
+
+template <typename PixelType>
+Bitmap_<PixelType>::Bitmap_() 
 {
-    m_width = width; m_height = height;
-    Assert(!this->m_data, "Image data in the host side is already allocated.");
 
-    using Element_t = std::conditional_t<
-        std::is_same_v<T, float4> || std::is_same_v<T, float3>, 
-        float, 
-        unsigned char
-    >;
-    constexpr int num_element = static_cast<int>(sizeof(T) / sizeof(Element_t));
-    std::vector<Element_t> zero_arr(num_element * m_width * m_height, static_cast<Element_t>(0));
-
-    m_data = new T[m_width*m_height];
-    memcpy(m_data, zero_arr.data(), sizeof(T) * m_width * m_height);
 }
-template void Bitmap<uchar4>::allocate(int, int);
-template void Bitmap<float4>::allocate(int, int);
-template void Bitmap<uchar3>::allocate(int, int);
-template void Bitmap<float3>::allocate(int, int);
+
+// --------------------------------------------------------------------
+template <typename PixelType>
+Bitmap_<PixelType>::Bitmap_(PixelType* data, int width, int height, Format format)
+{
+    allocate(width, height, format);
+    memcpy(m_data, data, sizeof(PixelType) * m_width * m_height * m_channels);
+}
+
+template <typename PixelType>
+Bitmap_<PixelType>::Bitmap_(const std::filesystem::path& filepath)
+{
+    load(filepath);
+}
+
+// --------------------------------------------------------------------
+template <typename PixelType>
+void Bitmap_<PixelType>::allocate(int width, int height, Format format)
+{
+    Assert(!this->m_data, "Image data in the host side is already allocated. Please use fillData() if you'd like to override bitmap data with your specified range.");
+
+    m_width = width; 
+    m_height = height;
+    m_format = format;
+    switch (m_format)
+    {
+        case Format::GRAY:
+            m_channels = 1;
+            break;
+        case Format::GRAY_ALPHA:
+            m_channels = 2;
+            break;
+        case Format::RGB:
+            m_channels = 3;
+            break;
+        case Format::RGBA:
+            m_channels = 4;
+            break;
+    }
+
+    // ピクセルデータのゼロ初期化
+    std::vector<PixelType> zero_arr(m_channels * m_width * m_height, static_cast<Element_t>(0));
+    m_data = new PixelType[m_width*m_height*m_channels];
+    memcpy(m_data, zero_arr.data(), sizeof(PixelType) * m_width * m_height * m_channels);
+}
 
 // --------------------------------------------------------------------
 /**
@@ -39,33 +73,33 @@ template void Bitmap<float3>::allocate(int, int);
  * - T = float4 でも jpg ファイルを読み込みたい場合に対応する...?
  * - テンプレートの特殊化
  */
-template <class T>
-void Bitmap<T>::load(const std::string& filename) {
+template <typename PixelType>
+void Bitmap_<PixelType>::load(const std::filesystem::path& filepath) {
     // 画像ファイルが存在するかのチェック
-    Assert(std::filesystem::exists(filename.c_str()), "The image file '" + filename + "' is not found.");
+    Assert(std::filesystem::exists(filepath), "The image file '" + filepath + "' is not found.");
 
     using Loadable_t = std::conditional_t< 
-        (std::is_same_v<T, uchar4> || std::is_same_v<T, float4>), 
+        (std::is_same_v<PixelType, uchar4> || std::is_same_v<PixelType, float4>), 
         uchar4, 
         uchar3
     >;
 
-    std::string file_extension = getExtension(filename);
+    std::string file_extension = getExtension(filepath);
 
     if (file_extension == ".png" || file_extension == ".PNG")
-        Assert(sizeof(Loadable_t) == 4, "The type of bitmap must have 4 channels (RGBA) when loading PNG file.");
+        Assert(sizeof(Loadable_t) == 4, "The type of Bitmap_ must have 4 channels (RGBA) when loading PNG file.");
     else if (file_extension == ".jpg" || file_extension == ".JPG")
-        Assert(sizeof(Loadable_t) == 3, "The type of bitmap must have 3 channels (RGB) when loading JPG file.");
+        Assert(sizeof(Loadable_t) == 3, "The type of Bitmap_ must have 3 channels (RGB) when loading JPG file.");
 
     Loadable_t* data = reinterpret_cast<Loadable_t*>(
-        stbi_load(filename.c_str(), &m_width, &m_height, &m_channels, sizeof(Loadable_t)));
-    Assert(data, "Failed to load image file'" + filename + "'");
+        stbi_load(filepath.c_str(), &m_width, &m_height, &m_channels, sizeof(Loadable_t)));
+    Assert(data, "Failed to load image file'" + filepath + "'");
 
     m_data = new T[m_width * m_height];
     // Tの型がfloatの場合は中身を unsigned char [0, 255] -> float [0.0f, 1.0f] に変換する
-    if constexpr (std::is_same_v<T, float4> || std::is_same_v<T, float3>)
+    if constexpr (std::is_same_v<PixelType, float4> || std::is_same_v<PixelType, float3>)
     {
-        T* float_data = new T[m_width*m_height];
+        PixelType* float_data = new T[m_width*m_height];
         for (auto i=0; i<m_width; i++)
         {
             for (auto j=0; j<m_height; j++)
@@ -74,40 +108,36 @@ void Bitmap<T>::load(const std::string& filename) {
                 float_data[idx] = color2float(data[idx]);
             }
         }
-        memcpy(m_data, float_data, m_width*m_height*sizeof(T));
+        memcpy(m_data, float_data, m_width*m_height*sizeof(PixelType));
         delete[] float_data;
     }
     else
     {
-        memcpy(m_data, data, m_width*m_height*sizeof(T));
+        memcpy(m_data, data, m_width*m_height*sizeof(PixelType));
     }
     stbi_image_free(data);
 }
-template void Bitmap<uchar4>::load(const std::string&);
-template void Bitmap<float4>::load(const std::string&);
-template void Bitmap<uchar3>::load(const std::string&);
-template void Bitmap<float3>::load(const std::string&);
 
 // --------------------------------------------------------------------
 /**
  * @todo
  * テンプレートの特殊化
  */
-template <class T>
-void Bitmap<T>::write(const std::string& filename, bool gamma_enabled, int quality) const
+template <typename PixelType>
+void Bitmap_<PixelType>::write(const std::filesystem::path& filepath, int quality) const
 {
     // Tの方によって出力時の型をuchar4 or uchar3 で切り替える。
     using Writable_t = std::conditional_t< 
-        (std::is_same_v<T, uchar4> || std::is_same_v<T, float4>), 
+        (std::is_same_v<PixelType, uchar4> || std::is_same_v<PixelType, float4>), 
         uchar4, 
         uchar3
     >;
 
-    std::string file_extension = getExtension(filename);
+    std::string file_extension = getExtension(filepath);
 
     Writable_t* data = new Writable_t[m_width*m_height];
     // Tの型がfloatの場合は中身を float [0.0f, 1.0f] -> unsigned char [0, 255] に変換する
-    if constexpr (std::is_same_v<T, float4> || std::is_same_v<T, float3>)
+    if constexpr (std::is_same_v<PixelType, float4> || std::is_same_v<PixelType, float3>)
     {
         for (int i=0; i<m_width; i++)
         {
@@ -120,40 +150,47 @@ void Bitmap<T>::write(const std::string& filename, bool gamma_enabled, int quali
     }
     else 
     {
-        memcpy(data, m_data, m_width*m_height*sizeof(T));
+        memcpy(data, m_data, m_width*m_height*sizeof(PixelType));
     }
     
     if (file_extension == ".png" || file_extension == ".PNG")
     {
         stbi_flip_vertically_on_write(true);
-        stbi_write_png(filename.c_str(), m_width, m_height, m_channels, data, 0);
+        stbi_write_png(filepath.c_str(), m_width, m_height, m_channels, data, 0);
     }
     else if (file_extension == ".jpg" || file_extension == ".JPG")
     {
-        stbi_write_jpg(filename.c_str(), m_width, m_height, m_channels, data, quality);
+        stbi_write_jpg(filepath.c_str(), m_width, m_height, m_channels, data, quality);
     }
 
     delete[] data;
 }
-template void Bitmap<float4>::write(const std::string&, bool, int) const;
-template void Bitmap<uchar4>::write(const std::string&, bool, int) const;
-template void Bitmap<float3>::write(const std::string&, bool, int) const;
-template void Bitmap<uchar3>::write(const std::string&, bool, int) const;
+
+template <typename PixelType>
+void Bitmap_<PixelType>::load(const std::filesystem::path& filepath)
+{
+    Assert(std::filesystem::exists(filepath), "The image file '" + filepath + "' is not found.");
+
+    // 拡張子の取得
+    std::string file_extension = getExtension(filepath);
+
+    
+}
 
 // --------------------------------------------------------------------
-template <class T>
-void Bitmap<T>::copyToDevice() {
+template <typename PixelType>
+void Bitmap_<PixelType>::copyToDevice() {
     // CPU側のデータが準備されているかチェック
     Assert(m_data, "Image data in the host side has been not allocated yet.");
 
     // GPU上に画像データを準備
     CUDABuffer<T> d_buffer;
-    d_buffer.copyToDevice(m_data, m_width*m_height*sizeof(T));
+    d_buffer.copyToDevice(m_data, m_width*m_height*sizeof(PixelType));
     d_data = d_buffer.deviceData();
 }
-template void Bitmap<uchar4>::copyToDevice();
-template void Bitmap<uchar3>::copyToDevice();
-template void Bitmap<float4>::copyToDevice();
-template void Bitmap<float3>::copyToDevice();
+
+template class Bitmap_<float>;
+template class Bitmap_<unsigned char>;
+template class Bitmap_<int>;
 
 }

@@ -12,43 +12,49 @@ namespace oprt {
  * Implement manager for HDR format (.hdr, .exr)
  */
 
-template <typename T, unsigned int N>
-class Bitmap {
+template <typename PixelType>
+class Bitmap_ {
 public:
-    Bitmap() { m_channels = N; }
-    Bitmap(T* data, int width, int height) : m_data(data), m_width(width), m_height(height) 
+    enum class Format 
     {
-    }
-    explicit Bitmap(const std::string& filename) 
-    {
-    }
+        GRAY,       // 1 channels
+        GRAY_ALPHA, // 2 channels
+        RGB,        // 3 channels
+        RGBA        // 4 channels
+    };
 
-    void allocate(int width, int height);
-    void load(const std::string& filename);
-    void write(const std::string& filename, bool gamma_enabled=true, int quality=100) const;
+    Bitmap_();
+    Bitmap_(PixelType* data, int width, int height, Format format);
+    explicit Bitmap_(const std::filesystem::path& filepath);
+
+    void allocate(int width, int height, Format format);
+    void fillData(PixelType* data, int width, int height, int offset_x=0, int offset_y=0);
+    void fillData(PixelType* data, int2 res, int2 offset);
+
+    void load(const std::filesystem::path& filepath);
+    void write(const std::filesystem::path& filepath, int quality=100) const;
 
     void copyToDevice();
     void copyFromDevice();
 
-    T* data() const { return m_data; }
-    T* devicePtr() const { return d_data; 
+    PixelType* data() const { return m_data; }
+    PixelType* devicePtr() const { return d_data; }
 
     int width() const { return m_width; }
     int height() const { return m_height; }
     int channels() const { return m_channels; }
 private:
-    T* m_data;  // CPU側のデータ
-    T* d_data;  // GPU側のデータ
+    PixelType* m_data { nullptr };  // CPU側のデータ
+    PixelType* d_data { nullptr };  // GPU側のデータ
 
-    int m_width, m_height;
-    int m_channels;
+    Format m_format { Format::GRAY };
+    int m_width { 0 };
+    int m_height { 0 };
+    int m_channels { 0 };
 };
 
-using BitmapPNG = Bitmap<unsigned char, 4>;
-using BitmapJPG = Bitmap<unsigned char, 3>;
-using BitmapUchar4 = Bitmap<unsigned char, 4>;
-using BitmapUchar3 = Bitmap<unsigned char, 4>;
-using BitmapFloat4 = Bitmap<float, 4>;
-using BitmapFloat3 = Bitmap<float, 3>;
+using Bitmap = Bitmap_<unsigned char>;
+using BitmapFloat = Bitmap_<float>;
+using BitmapInt = Bitmap_<int>;
 
 }

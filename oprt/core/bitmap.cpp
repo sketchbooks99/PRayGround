@@ -64,6 +64,27 @@ void Bitmap_<PixelType>::allocate(int width, int height, Format format)
 
 // --------------------------------------------------------------------
 template <typename PixelType>
+void Bitmap_<PixelType>::fillData(PixelType* data, int width, int height, int offset_x, int offset_y)
+{
+    Assert(m_data, "Please allocate the bitmap before filling data with specified range.");
+
+    if (m_width < offset_x + width || m_height < offset_y + height)
+    {
+        Message(WARNING, "The range of data to fill which specified by offset and resolution exceeded the dimension of the bitmap.");
+        height = m_height - offset_y;
+        width = m_height - offset_x;
+    }
+
+    for (int y = offset_y; y < offset_y + height; y++)
+    {
+        int dst_base = (y * m_width + offset_x) * m_channels;
+        int src_base = ((y - offset_y) * width) * m_channels;
+        memcpy(&m_data[dst_base], &data[src_base], sizeof(PixelType) * width * m_channels);
+    }
+}
+
+// --------------------------------------------------------------------
+template <typename PixelType>
 void Bitmap_<PixelType>::load(const std::filesystem::path& filepath) {
     // 画像ファイルが存在するかのチェック
     Assert(std::filesystem::exists(filepath), "The image file '" + filepath.string() + "' is not found.");

@@ -22,7 +22,8 @@ public:
         GRAY,       // 1 channels
         GRAY_ALPHA, // 2 channels
         RGB,        // 3 channels
-        RGBA        // 4 channels
+        RGBA,       // 4 channels
+        UNKNOWN
     };
 
     Bitmap_();
@@ -30,8 +31,11 @@ public:
     explicit Bitmap_(const std::filesystem::path& filepath);
 
     void allocate(int width, int height, Format format);
-    void fillData(PixelType* data, int width, int height, int offset_x=0, int offset_y=0);
-    void fillData(PixelType* data, int2 res, int2 offset);
+    void fillData(PixelType* data, int width, int height, int offset_x, int offset_y);
+    void fillData(PixelType* data, int2 res, int2 offset) 
+    { 
+        fillData(data, res.x, res.y, offset.x, offset.y); 
+    }
 
     void load(const std::filesystem::path& filepath);
     void write(const std::filesystem::path& filepath, int quality=100) const;
@@ -49,7 +53,7 @@ private:
     PixelType* m_data { nullptr };  // CPU側のデータ
     PixelType* d_data { nullptr };  // GPU側のデータ
 
-    Format m_format { Format::GRAY };
+    Format m_format { Format::UNKNOWN };
     int m_width { 0 };
     int m_height { 0 };
     int m_channels { 0 };

@@ -105,10 +105,12 @@ void Bitmap_<PixelType>::load(const std::filesystem::path& filepath) {
     else if (file_extension == ".hdr" || file_extension == ".HDR")
     {
         Message(WARNING, "Sorry! Bitmap doesn't support to load HDR image currently.");
+        return;
     }
     else 
     {
         Message(WARNING, "This format is not loadable with bitmap.");
+        return;
     }
 
     m_data = new PixelType[m_width * m_height * m_channels];
@@ -196,10 +198,12 @@ void Bitmap_<PixelType>::write(const std::filesystem::path& filepath, int qualit
     else if (file_extension == ".exr" || file_extension == ".EXR")
     {
         Message(WARNING, "Sorry! Bitmap doesn't support to write out image with .exr format currently.");
+        return;
     }
     else 
     {
         Message(WARNING, "This format is not writable with bitmap.");
+        return;
     }
 }
 

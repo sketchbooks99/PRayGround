@@ -68,6 +68,7 @@
 #include "shape/sphere.h"
 #include "shape/trianglemesh.h"
 #include "shape/plane.h"
+#include "shape/cylinder.h"
 
 // material include 
 #include "material/conductor.h"

@@ -72,7 +72,6 @@ public:
     virtual ~Shape() {}
 
     virtual ShapeType type() const = 0;
-    virtual std::pair<std::string, std::string> deviceFuncNames() {} 
     virtual AABB bound() const = 0;
 
     virtual void prepareData() = 0;

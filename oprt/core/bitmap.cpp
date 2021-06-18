@@ -71,7 +71,7 @@ void Bitmap_<PixelType>::fillData(PixelType* data, int width, int height, int of
 
     if (m_width < offset_x + width || m_height < offset_y + height)
     {
-        Message(WARNING, "The range of data to fill which specified by offset and resolution exceeded the dimension of the bitmap.");
+        Message(MSG_WARNING, "The range of data to fill which specified by offset and resolution exceeded the dimension of the bitmap.");
         height = m_height - offset_y;
         width = m_height - offset_x;
     }
@@ -95,21 +95,21 @@ void Bitmap_<PixelType>::load(const std::filesystem::path& filepath) {
     unsigned char* data = nullptr;
     if (file_extension == ".png" || file_extension == ".PNG") {
         m_format = Format::RGBA;
-        data = stbi_load(filepath.c_str(), &m_width, &m_height, &m_channels, STBI_rgb_alpha);
+        data = stbi_load(filepath.string().c_str(), &m_width, &m_height, &m_channels, STBI_rgb_alpha);
     }
     else if (file_extension == ".jpg" || file_extension == ".EXR")
     {
         m_format = Format::RGB;
-        data = stbi_load(filepath.c_str(), &m_width, &m_height, &m_channels, STBI_rgb);
+        data = stbi_load(filepath.string().c_str(), &m_width, &m_height, &m_channels, STBI_rgb);
     }
     else if (file_extension == ".hdr" || file_extension == ".HDR")
     {
-        Message(WARNING, "Sorry! Bitmap doesn't support to load HDR image currently.");
+        Message(MSG_WARNING, "Sorry! Bitmap doesn't support to load HDR image currently.");
         return;
     }
     else 
     {
-        Message(WARNING, "This format is not loadable with bitmap.");
+        Message(MSG_WARNING, "This format is not loadable with bitmap.");
         return;
     }
 
@@ -127,7 +127,7 @@ void Bitmap_<PixelType>::load(const std::filesystem::path& filepath) {
         PixelType denom = static_cast<PixelType>(255.0);
         if constexpr (!std::is_same_v<PixelType, float>)
         {
-            Message(WARNING, "This PixelType is not recommended to load image (Recommended ... unsigned char or float).",
+            Message(MSG_WARNING, "This PixelType is not recommended to load image (Recommended ... unsigned char or float).",
                              "It may use too large memory space to store pixel values and may degrade the performance of application.");
             denom = static_cast<PixelType>(1);
         }
@@ -186,23 +186,23 @@ void Bitmap_<PixelType>::write(const std::filesystem::path& filepath, int qualit
     if (file_extension == ".png" || file_extension == ".PNG")
     {
         stbi_flip_vertically_on_write(true);
-        stbi_write_png(filepath.c_str(), m_width, m_height, m_channels, data, m_width * m_channels);
+        stbi_write_png(filepath.string().c_str(), m_width, m_height, m_channels, data, m_width * m_channels);
         delete[] data;
     }
     else if (file_extension == ".jpg" || file_extension == ".JPG")
     {
         stbi_flip_vertically_on_write(true);
-        stbi_write_jpg(filepath.c_str(), m_width, m_height, m_channels, data, quality);
+        stbi_write_jpg(filepath.string().c_str(), m_width, m_height, m_channels, data, quality);
         delete[] data;
     }
     else if (file_extension == ".exr" || file_extension == ".EXR")
     {
-        Message(WARNING, "Sorry! Bitmap doesn't support to write out image with .exr format currently.");
+        Message(MSG_WARNING, "Sorry! Bitmap doesn't support to write out image with .exr format currently.");
         return;
     }
     else 
     {
-        Message(WARNING, "This format is not writable with bitmap.");
+        Message(MSG_WARNING, "This format is not writable with bitmap.");
         return;
     }
 }

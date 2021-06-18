@@ -28,9 +28,6 @@ public:
         ));
     }
 
-    /**
-     * @note \c index_offset is not needed.
-     */
     void buildInput( OptixBuildInput& bi, uint32_t sbt_idx ) override
     {
         CUDABuffer<uint32_t> d_sbt_indices;
@@ -39,7 +36,7 @@ public:
         d_sbt_indices.copyToDevice(sbt_indices, sizeof(uint32_t));
 
         // Prepare bounding box information on the device.
-        OptixAabb aabb = (OptixAabb)this->bound();
+        OptixAabb aabb = static_cast<OptixAabb>(bound());
 
         if (d_aabb_buffer) freeAabbBuffer();
 

@@ -8,7 +8,7 @@
 namespace oprt {
 
 void loadObj(
-    const std::string& filename, 
+    const std::filesystem::path& filename, 
     std::vector<float3>& vertices,
     std::vector<float3>& normals,
     std::vector<Face>& faces,
@@ -17,7 +17,7 @@ void loadObj(
 {
     std::vector<float3> temp_normals;
     std::ifstream ifs(filename, std::ios::in);
-    Assert(ifs.is_open(), "The OBJ file '"+filename+"' is not found.");
+    Assert(ifs.is_open(), "The OBJ file '" + filename.string() + "' is not found.");
     while (!ifs.eof())
     {
         std::string line;
@@ -120,14 +120,14 @@ void loadObj(
 }
 
 void loadPly(
-    const std::string& filename, 
+    const std::filesystem::path& filename, 
     std::vector<float3>& vertices,
     std::vector<float3>& normals,
     std::vector<Face>& faces, 
     std::vector<float2>& coordinates
 ) 
 {
-    happly::PLYData plyIn(filename);
+    happly::PLYData plyIn(filename.string());
     try {
         plyIn.validate();
     } catch (const std::exception& e) {

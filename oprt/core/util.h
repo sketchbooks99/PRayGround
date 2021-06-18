@@ -76,9 +76,9 @@ enum class Axis {
 
 enum MessageType
 {
-    STANDARD,
-    WARNING,
-    ERROR,
+    MSG_NORMAL,
+    MSG_WARNING,
+    MSG_ERROR
 };
 
 inline void Throw(const std::string& msg) {
@@ -115,12 +115,12 @@ inline void Message(MessageType type, Head head, Args... args) {
 
     switch(type)
     {
-        case STANDARD:
+        case MSG_NORMAL:
             break;
-        case WARNING:
+        case MSG_WARNING:
             std::cout << "\033[33m"; // yellow
             break;
-        case ERROR:
+        case MSG_ERROR:
             std::cout << "\033[31m"; // red
             break;
     }
@@ -136,12 +136,12 @@ inline void Message(MessageType type, Head head, Args... args) {
     current_attributes = consoleInfo.wAttributes;
     switch (type)
     {
-        case STANDARD:
+        case MSG_NORMAL:
             break;
-        case WARNING:
+        case MSG_WARNING:
             SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN); // yellow
             break;
-        case ERROR:
+        case MSG_ERROR:
             SetConsoleTextAttribute(hConsole, FOREGROUND_RED);                    // red
             break;
     }

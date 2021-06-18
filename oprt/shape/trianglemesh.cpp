@@ -13,12 +13,12 @@ TriangleMesh::TriangleMesh(
 {
     if (relative_path.string().substr(relative_path.string().length() - 4) == ".obj") {
         std::filesystem::path filepath = findDatapath(relative_path).string();
-        Message(STANDARD, "Loading OBJ file '" + filepath.string() + "' ...");
+        Message(MSG_NORMAL, "Loading OBJ file '" + filepath.string() + "' ...");
         loadObj(filepath, m_vertices, m_normals, m_faces, m_texcoords);
     }
     else if (relative_path.string().substr(relative_path.string().length() - 4) == ".ply") {
         std::filesystem::path filepath = findDatapath(relative_path).string();
-        Message(STANDARD, "Loading PLY file '" + filepath.string() + "' ...");
+        Message(MSG_NORMAL, "Loading PLY file '" + filepath.string() + "' ...");
         loadPly(filepath, m_vertices, m_normals, m_faces, m_texcoords);
     }
 

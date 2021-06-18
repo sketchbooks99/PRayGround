@@ -40,29 +40,31 @@ CALLABLE_FUNC void IS_FUNC(cylinder)()
         float sqrtd = sqrtf(discriminant);
         float t1 = (-half_b - sqrtd) / a;
         bool check_second = true;
-        if ( t1 > ray.tmin && t1 < ray.tmax )
+        if ( ray.tmin < t1 && t1 < ray.tmax )
         {
-            const float3 P = ray.at(t1);
+            float3 P = ray.at(t1);
             float3 normal = normalize((P - make_float3(P.x, 0.0f, P.z)) / radius);
+            check_second = false;
             optixReportIntersection(t1, 0, float3_as_ints(normal));
         }
 
         if (check_second)
         {
             float t2 = (-half_b + sqrtd) / a;
-            if ( t2> ray.tmin && ray.tmax < t2 )
+            if ( ray.tmin < t2 && t2 < ray.tmax )
             {
+                float3 P = ray.at(t2);
                 float3 normal = normalize((P - make_float3(P.x, 0.0f, P.z)) / radius);
-                optixReportIntersection(t1, 0, float3_as_ints(normal));
+                optixReportIntersection(t2, 0, float3_as_ints(normal));
             }
         }
     }
 }
 
-CALLABLE_FUNC void CH_FUNC(sphere)()
+CALLABLE_FUNC void CH_FUNC(cylinder)()
 {
     const HitGroupData* data = reinterpret_cast<HitGroupData*>(optixGetSbtDataPointer());
-    const CylinderData cylinder = reinterpret_cast<CylinderData*>(data->shapedata);
+    const CylinderData* cylinder = reinterpret_cast<CylinderData*>(data->shapedata);
 
     oprt::Ray ray = getWorldRay();
 
@@ -74,7 +76,7 @@ CALLABLE_FUNC void CH_FUNC(sphere)()
     float3 world_n = optixTransformNormalFromObjectToWorldSpace(local_n);
     world_n = normalize(world_n);
 
-    SurfaceIntaraction* si = getSurfaceInteraction();
+    SurfaceInteraction* si = getSurfaceInteraction();
     si->p = ray.at(ray.tmax);
     si->n = world_n;
     si->wi = ray.d;
@@ -85,6 +87,11 @@ CALLABLE_FUNC void CH_FUNC(sphere)()
         data->material_type * 2,     // id of callable function to evaluate bsdf and for importance sampling
         data->material_type * 2 + 1  // id of callable function to evaluate pdf
     };
+}
+
+CALLABLE_FUNC void CH_FUNC(cylinder_occlusion)()
+{
+    setPayloadOcclusion(true);
 }
 
 #endif

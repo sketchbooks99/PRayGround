@@ -114,5 +114,12 @@ Scene my_scene() {
     glass_sphere_ps.addPrimitive(glass_sphere, glass);
     scene.addPrimitiveInstance(glass_sphere_ps);
 
+    // Cylinder
+    auto cylinder_matrix = sutil::Matrix4x4::translate(cornel_center + make_float3(150.0f, 0.0f, -100.0f));
+    auto cylinder_ps = PrimitiveInstance(cylinder_matrix);
+    auto cylinder = std::make_shared<Cylinder>(50.0f, 80.0f);
+    cylinder_ps.addPrimitive(cylinder, white_diffuse);
+    scene.addPrimitiveInstance(cylinder_ps);
+
     return scene;
 }

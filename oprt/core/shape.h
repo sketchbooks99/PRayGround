@@ -9,9 +9,11 @@
 namespace oprt {
 
 enum class ShapeType {
-    Mesh = 0,       // Mesh with triangle 
-    Sphere = 1,     // Sphere 
-    Plane = 2       // Plane (rectangle)
+    Mesh = 0,        
+    Sphere = 1,      
+    Plane = 2,       
+    Cylinder = 3, 
+    Arbitrary = 4
 };
 
 /** 
@@ -23,21 +25,24 @@ enum class ShapeType {
 static std::map<ShapeType, const char*> shape_map = {
     { ShapeType::Mesh, "mesh" },
     { ShapeType::Sphere, "sphere" },
-    { ShapeType::Plane, "plane" }
+    { ShapeType::Plane, "plane" }, 
+    { ShapeType::Cylinder, "cylinder" }
 };
 
 static std::map<ShapeType, const char*> shape_occlusion_map = {
     { ShapeType::Mesh, "mesh_occlusion"},
     { ShapeType::Sphere, "sphere_occlusion"},
-    { ShapeType::Plane, "plane_occlusion" }
+    { ShapeType::Plane, "plane_occlusion" }, 
+    { ShapeType::Cylinder, "cylinder_occlusion" }
 };
 
 inline std::ostream& operator<<(std::ostream& out, ShapeType type) {
     switch(type) {
-    case ShapeType::Mesh:   return out << "ShapeType::Mesh";
-    case ShapeType::Sphere: return out << "ShapeType::Sphere";
-    case ShapeType::Plane:  return out << "ShapeType::Plane";
-    default:                return out << "";
+    case ShapeType::Mesh:       return out << "ShapeType::Mesh";
+    case ShapeType::Sphere:     return out << "ShapeType::Sphere";
+    case ShapeType::Plane:      return out << "ShapeType::Plane";
+    case ShapeType::Cylinder:   return out << "ShapeType::Cylinder";
+    default:                    return out << "";
     }
 }
 
@@ -67,6 +72,7 @@ public:
     virtual ~Shape() {}
 
     virtual ShapeType type() const = 0;
+    virtual std::pair<std::string, std::string> deviceFuncNames() {} 
     virtual AABB bound() const = 0;
 
     virtual void prepareData() = 0;

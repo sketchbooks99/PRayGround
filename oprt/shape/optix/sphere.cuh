@@ -41,18 +41,18 @@ CALLABLE_FUNC void IS_FUNC(sphere)() {
 
     if (discriminant > 0.0f) {
         float sqrtd = sqrtf(discriminant);
-        float root1 = (-half_b - sqrtd) / a;
+        float t1 = (-half_b - sqrtd) / a;
         bool check_second = true;
-        if ( root1 > ray.tmin && root1 < ray.tmax ) {
-            float3 normal = normalize((ray.at(root1) - center) / radius);
-            optixReportIntersection(root1, 0, float3_as_ints(normal));
+        if ( t1 > ray.tmin && t1 < ray.tmax ) {
+            float3 normal = normalize((ray.at(t1) - center) / radius);
+            optixReportIntersection(t1, 0, float3_as_ints(normal));
         }
 
         if (check_second) {
-            float root2 = (-half_b + sqrtd) / a;
-            if ( root2 > ray.tmin && root2 < ray.tmax ) {
-                float3 normal = normalize((ray.at(root2) - center) / radius);
-                optixReportIntersection(root2, 0, float3_as_ints(normal));
+            float t2 = (-half_b + sqrtd) / a;
+            if ( t2 > ray.tmin && t2 < ray.tmax ) {
+                float3 normal = normalize((ray.at(t2) - center) / radius);
+                optixReportIntersection(t2, 0, float3_as_ints(normal));
             }
         }
     }

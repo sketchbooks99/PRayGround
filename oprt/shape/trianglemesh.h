@@ -28,9 +28,12 @@ public:
     void buildInput( OptixBuildInput& bi, uint32_t sbt_idx ) override;
     /**
      * @note 
-     * Currently, triangle never need AABB at intersection test on the device side.
-     * However, in the future, I'd like to make this renderer be able to
-     * switch computing devices (CPU or GPU) according to the need of an application.
+     * Currently, triangle never need AABB for intersection test on the device side
+     * because test for triangle is built in at OptiX and automatically performed 
+     * by using input mesh information.
+     * However, in the future, I'd like to make this renderer be able to switch 
+     * computing devices (CPU or GPU) according to the need of an application, 
+     * and AABB will be needed for this.
      */
     AABB bound() const override { return AABB(); } 
 

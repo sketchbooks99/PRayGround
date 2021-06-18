@@ -30,17 +30,19 @@ CALLABLE_FUNC void IS_FUNC(cylinder)()
     const float c = dot(ray.o, ray.o) - ray.o.y * ray.o.y - radius*radius;
     const float discriminant = half_b*half_b - a*c;
 
-    /**
-     * @todo
-     * Implement test for upper and lower of cylinder.
-     */
-
     if (discriminant > 0.0f)
     {
+        /// @todo
+        /// Test for upper/lower disk but hasn't been tested yet.
+        const float upper = height / 2.0f;
+        const float lower = -height / 2.0f;
+        float ty1 = fmin( (lower - ray.o.y) / ray.d.y, (upper - ray.o.y) / ray.d.y );
+        float ty2 = fmax( (lower - ray.o.y) / ray.d.y, (upper - ray.o.y) / ray.d.y );
+
         float sqrtd = sqrtf(discriminant);
         float t1 = (-half_b - sqrtd) / a;
         bool check_second = true;
-        if ( ray.tmin < t1 && t1 < ray.tmax )
+        if ( (ray.tmin < t1 && t1 < ray.tmax) && (ty1 < t1 && t1 < ty2) )
         {
             float3 P = ray.at(t1);
             float3 normal = normalize((P - make_float3(P.x, 0.0f, P.z)) / radius);
@@ -51,7 +53,7 @@ CALLABLE_FUNC void IS_FUNC(cylinder)()
         if (check_second)
         {
             float t2 = (-half_b + sqrtd) / a;
-            if ( ray.tmin < t2 && t2 < ray.tmax )
+            if ( (ray.tmin < t2 && t2 < ray.tmax) && (ty1 < t1 && t1 < ty2) )
             {
                 float3 P = ray.at(t2);
                 float3 normal = normalize((P - make_float3(P.x, 0.0f, P.z)) / radius);

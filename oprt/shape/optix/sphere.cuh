@@ -12,8 +12,6 @@ struct SphereData {
     float radius;
 };
 
-}
-
 #ifdef __CUDACC__
 
 INLINE DEVICE float2 getUV(const float3& p) {
@@ -25,13 +23,13 @@ INLINE DEVICE float2 getUV(const float3& p) {
 }
 
 CALLABLE_FUNC void IS_FUNC(sphere)() {
-    const oprt::HitGroupData* data = reinterpret_cast<oprt::HitGroupData*>(optixGetSbtDataPointer());
-    const oprt::SphereData* sphere_data = reinterpret_cast<oprt::SphereData*>(data->shapedata);
+    const HitGroupData* data = reinterpret_cast<HitGroupData*>(optixGetSbtDataPointer());
+    const SphereData* sphere_data = reinterpret_cast<SphereData*>(data->shapedata);
 
     const float3 center = sphere_data->center;
     const float radius = sphere_data->radius;
 
-    oprt::Ray ray = getLocalRay();
+    Ray ray = getLocalRay();
 
     const float3 oc = ray.o - center;
     const float a = dot(ray.d, ray.d);
@@ -59,10 +57,10 @@ CALLABLE_FUNC void IS_FUNC(sphere)() {
 }
 
 CALLABLE_FUNC void CH_FUNC(sphere)() {
-    const oprt::HitGroupData* data = reinterpret_cast<oprt::HitGroupData*>(optixGetSbtDataPointer());
-    const oprt::SphereData* sphere_data = reinterpret_cast<oprt::SphereData*>(data->shapedata);
+    const HitGroupData* data = reinterpret_cast<HitGroupData*>(optixGetSbtDataPointer());
+    const SphereData* sphere_data = reinterpret_cast<SphereData*>(data->shapedata);
 
-    oprt::Ray ray = getWorldRay();
+    Ray ray = getWorldRay();
 
     float3 local_n = make_float3(
         int_as_float( optixGetAttribute_0() ),
@@ -72,7 +70,7 @@ CALLABLE_FUNC void CH_FUNC(sphere)() {
     float3 world_n = optixTransformNormalFromObjectToWorldSpace(local_n);
     world_n = normalize(world_n);
 
-    oprt::SurfaceInteraction* si = getSurfaceInteraction();
+    SurfaceInteraction* si = getSurfaceInteraction();
     si->p = ray.at(ray.tmax);
     si->n = world_n;
     si->wi = ray.d;
@@ -92,3 +90,5 @@ CALLABLE_FUNC void CH_FUNC(sphere_occlusion)()
 }
 
 #endif
+
+}

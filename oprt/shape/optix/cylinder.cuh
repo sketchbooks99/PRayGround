@@ -32,33 +32,46 @@ CALLABLE_FUNC void IS_FUNC(cylinder)()
 
     if (discriminant > 0.0f)
     {
-        /// @todo
-        /// Test for upper/lower disk but hasn't been tested yet.
+        bool hit_side = true;
+        const float sqrtd = sqrtf(discriminant);
+        const float side_t1 = (-half_b - sqrtd) / a;
+        const float side_t2 = (-half_b + sqrtd) / a;
+
+        const float side_tmin = fmin( side_t1, side_t2 );
+        const float side_tmax = fmax( side_t1, side_t2 );
+
+        if ( (side_tmin < ray.tmin || side_tmin > ray.tmax) && 
+             (side_tmax < ray.tmin || side_tmax > ray.tmax) )
+            return;
+
         const float upper = height / 2.0f;
         const float lower = -height / 2.0f;
-        float ty1 = fmin( (lower - ray.o.y) / ray.d.y, (upper - ray.o.y) / ray.d.y );
-        float ty2 = fmax( (lower - ray.o.y) / ray.d.y, (upper - ray.o.y) / ray.d.y );
+        const float y_tmin = fmin( (lower - ray.o.y) / ray.d.y, (upper - ray.o.y) / ray.d.y );
+        const float y_tmax = fmax( (lower - ray.o.y) / ray.d.y, (upper - ray.o.y) / ray.d.y );
 
-        float sqrtd = sqrtf(discriminant);
-        float t1 = (-half_b - sqrtd) / a;
-        bool check_second = true;
-        if ( (ray.tmin < t1 && t1 < ray.tmax) && (ty1 < t1 && t1 < ty2) )
+        float t = fmax(y_tmin, side_tmin);
+        if (t > ray.tmax)
+            return;
+
+        if (t >= ray.tmin)
         {
-            float3 P = ray.at(t1);
-            float3 normal = normalize((P - make_float3(P.x, 0.0f, P.z)) / radius);
-            check_second = false;
-            optixReportIntersection(t1, 0, float3_as_ints(normal));
+            float3 P = ray.at(t);
+            float3 normal = y_tmin > side_tmin 
+                          ? normalize(P - make_float3(P.x, 0.0f, P.z))   // Hit at disk
+                          : normalize(P - make_float3(0.0f, P.y, 0.0f)); // Hit at side
+            optixReportIntersection(t, 0, float3_as_ints(normal));
         }
-
-        if (check_second)
+        else 
         {
-            float t2 = (-half_b + sqrtd) / a;
-            if ( (ray.tmin < t2 && t2 < ray.tmax) && (ty1 < t1 && t1 < ty2) )
-            {
-                float3 P = ray.at(t2);
-                float3 normal = normalize((P - make_float3(P.x, 0.0f, P.z)) / radius);
-                optixReportIntersection(t2, 0, float3_as_ints(normal));
-            }
+            t = fmin(y_tmax, side_tmax);
+            if (t < ray.tmin)
+                return;
+
+            float3 P = ray.at(t);
+            float3 normal = y_tmax < side_tmax 
+                          ? normalize(P - make_float3(P.x, 0.0f, P.z))   // Hit at disk
+                          : normalize(P - make_float3(0.0f, P.y, 0.0f)); // Hit at side
+            optixReportIntersection(t, 0, float3_as_ints(normal));
         }
     }
 }

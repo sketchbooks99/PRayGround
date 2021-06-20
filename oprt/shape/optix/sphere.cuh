@@ -14,7 +14,7 @@ struct SphereData {
 
 #ifdef __CUDACC__
 
-INLINE DEVICE float2 getUV(const float3& p) {
+static INLINE DEVICE float2 getUV(const float3& p) {
     float phi = atan2(p.z, p.x);
     float theta = asin(p.y);
     float u = 1.0f - (phi + M_PIf) / (2.0f * M_PIf);

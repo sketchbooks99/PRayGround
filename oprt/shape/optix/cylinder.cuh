@@ -15,7 +15,9 @@ struct CylinderData
 
 #ifdef __CUDACC__
 
-INLINE DEVICE float2 getUV(const float3& p, const float radius, const float height, const bool hit_disk)
+static INLINE DEVICE float2 getUV(
+    const float3& p, const float radius, const float height, const bool hit_disk
+)
 {
     if (hit_disk)
     {
@@ -86,13 +88,16 @@ CALLABLE_FUNC void IS_FUNC(cylinder)()
         
         if (check_second)
         {
-            float3 P = ray.at(t2);
-            bool hit_disk = y_tmax < side_tmax;
-            float3 normal = hit_disk
-                          ? normalize(P - make_float3(P.x, 0.0f, P.z))   // Hit at disk
-                          : normalize(P - make_float3(0.0f, P.y, 0.0f)); // Hit at side
-            float2 uv = getUV(P, radius, height, hit_disk);
-            optixReportIntersection(t2, 0, float3_as_ints(normal), float2_as_ints(uv));
+            if (ray.tmin < t2 && t2 < ray.tmax)
+            {
+                float3 P = ray.at(t2);
+                bool hit_disk = y_tmax < side_tmax;
+                float3 normal = hit_disk
+                            ? normalize(P - make_float3(P.x, 0.0f, P.z))   // Hit at disk
+                            : normalize(P - make_float3(0.0f, P.y, 0.0f)); // Hit at side
+                float2 uv = getUV(P, radius, height, hit_disk);
+                optixReportIntersection(t2, 0, float3_as_ints(normal), float2_as_ints(uv));
+            }
         }
     }
 }

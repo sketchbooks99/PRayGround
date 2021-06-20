@@ -49,29 +49,29 @@ CALLABLE_FUNC void IS_FUNC(cylinder)()
         const float y_tmin = fmin( (lower - ray.o.y) / ray.d.y, (upper - ray.o.y) / ray.d.y );
         const float y_tmax = fmax( (lower - ray.o.y) / ray.d.y, (upper - ray.o.y) / ray.d.y );
 
-        float t = fmax(y_tmin, side_tmin);
-        if (t > ray.tmax)
+        float t1 = fmax(y_tmin, side_tmin);
+        float t2 = fmin(y_tmax, side_tmax);
+        if (t1 > t2 || (t2 < ray.tmin) || (t1 > ray.tmax))
             return;
-
-        if (t >= ray.tmin)
+        
+        bool check_second = true;
+        if (ray.tmin < t1 && t1 < ray.tmax)
         {
-            float3 P = ray.at(t);
+            float3 P = ray.at(t1);
             float3 normal = y_tmin > side_tmin 
                           ? normalize(P - make_float3(P.x, 0.0f, P.z))   // Hit at disk
                           : normalize(P - make_float3(0.0f, P.y, 0.0f)); // Hit at side
-            optixReportIntersection(t, 0, float3_as_ints(normal));
+            optixReportIntersection(t1, 0, float3_as_ints(normal));
+            check_second = false;
         }
-        else 
+        
+        if (check_second)
         {
-            t = fmin(y_tmax, side_tmax);
-            if (t < ray.tmin)
-                return;
-
-            float3 P = ray.at(t);
+            float3 P = ray.at(t2);
             float3 normal = y_tmax < side_tmax 
                           ? normalize(P - make_float3(P.x, 0.0f, P.z))   // Hit at disk
                           : normalize(P - make_float3(0.0f, P.y, 0.0f)); // Hit at side
-            optixReportIntersection(t, 0, float3_as_ints(normal));
+            optixReportIntersection(t2, 0, float3_as_ints(normal));
         }
     }
 }

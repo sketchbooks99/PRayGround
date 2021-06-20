@@ -43,6 +43,7 @@ CALLABLE_FUNC void IS_FUNC(sphere)() {
         bool check_second = true;
         if ( t1 > ray.tmin && t1 < ray.tmax ) {
             float3 normal = normalize((ray.at(t1) - center) / radius);
+            check_second = false;
             optixReportIntersection(t1, 0, float3_as_ints(normal));
         }
 

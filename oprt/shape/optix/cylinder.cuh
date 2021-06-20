@@ -15,6 +15,24 @@ struct CylinderData
 
 #ifdef __CUDACC__
 
+INLINE DEVICE float2 getUV(const float3& p, const float radius, const float height, const bool hit_disk)
+{
+    if (hit_disk)
+    {
+        const float r = sqrtf(p.x*p.x + p.z*p.z) / radius;
+        const float theta = atan2(p.z, p.x);
+        float u = 1.0f - (theta + M_PIf/2.0f) / M_PIf;
+        return make_float2(u, r);
+    } 
+    else
+    {
+        const float theta = atan2(p.z, p.x);
+        const float v = (p.y + height / 2.0f) / height;
+        float u = 1.0f - (theta + M_PIf/2.0f) / M_PIf;
+        return make_float2(u, v);
+    }
+}
+
 CALLABLE_FUNC void IS_FUNC(cylinder)()
 {
     const HitGroupData* data = reinterpret_cast<HitGroupData*>(optixGetSbtDataPointer());
@@ -32,7 +50,6 @@ CALLABLE_FUNC void IS_FUNC(cylinder)()
 
     if (discriminant > 0.0f)
     {
-        bool hit_side = true;
         const float sqrtd = sqrtf(discriminant);
         const float side_t1 = (-half_b - sqrtd) / a;
         const float side_t2 = (-half_b + sqrtd) / a;
@@ -58,20 +75,24 @@ CALLABLE_FUNC void IS_FUNC(cylinder)()
         if (ray.tmin < t1 && t1 < ray.tmax)
         {
             float3 P = ray.at(t1);
-            float3 normal = y_tmin > side_tmin 
+            bool hit_disk = y_tmin > side_tmin;
+            float3 normal = hit_disk 
                           ? normalize(P - make_float3(P.x, 0.0f, P.z))   // Hit at disk
                           : normalize(P - make_float3(0.0f, P.y, 0.0f)); // Hit at side
-            optixReportIntersection(t1, 0, float3_as_ints(normal));
+            float2 uv = getUV(P, radius, height, hit_disk);
+            optixReportIntersection(t1, 0, float3_as_ints(normal), float2_as_ints(uv));
             check_second = false;
         }
         
         if (check_second)
         {
             float3 P = ray.at(t2);
-            float3 normal = y_tmax < side_tmax 
+            bool hit_disk = y_tmax < side_tmax;
+            float3 normal = hit_disk
                           ? normalize(P - make_float3(P.x, 0.0f, P.z))   // Hit at disk
                           : normalize(P - make_float3(0.0f, P.y, 0.0f)); // Hit at side
-            optixReportIntersection(t2, 0, float3_as_ints(normal));
+            float2 uv = getUV(P, radius, height, hit_disk);
+            optixReportIntersection(t2, 0, float3_as_ints(normal), float2_as_ints(uv));
         }
     }
 }
@@ -88,14 +109,19 @@ CALLABLE_FUNC void CH_FUNC(cylinder)()
         int_as_float( optixGetAttribute_1() ), 
         int_as_float( optixGetAttribute_2() )
     );
+
+    float2 uv = make_float2(
+        int_as_float( optixGetAttribute_3() ),
+        int_as_float( optixGetAttribute_4() )
+    );
+
     float3 world_n = optixTransformNormalFromObjectToWorldSpace(local_n);
-    world_n = normalize(world_n);
 
     SurfaceInteraction* si = getSurfaceInteraction();
     si->p = ray.at(ray.tmax);
-    si->n = world_n;
+    si->n = normalize(world_n);
     si->wi = ray.d;
-    si->uv = make_float2(1.0f);
+    si->uv = uv;
 
     si->mat_property = {
         data->matdata,               // material data

@@ -297,7 +297,7 @@ int main(int argc, char* argv[]) {
         OPTIX_CHECK(optixDeviceContextCreate(cu_context, &options, &optix_context));
 
         // Load the scene
-        oprt::Scene scene = my_scene();
+        Scene scene = my_scene();
 
         params.width                             = scene.width();
         params.height                            = scene.height();

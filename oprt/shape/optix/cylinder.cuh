@@ -59,8 +59,7 @@ CALLABLE_FUNC void IS_FUNC(cylinder)()
         const float side_tmin = fmin( side_t1, side_t2 );
         const float side_tmax = fmax( side_t1, side_t2 );
 
-        if ( (side_tmin < ray.tmin || side_tmin > ray.tmax) && 
-             (side_tmax < ray.tmin || side_tmax > ray.tmax) )
+        if ( side_tmin > ray.tmax || side_tmax < ray.tmin )
             return;
 
         const float upper = height / 2.0f;

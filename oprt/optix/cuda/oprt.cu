@@ -106,7 +106,7 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 				si.mat_property.matdata
 			);
 
-			if ( si.trace_terminate ) {
+			if ( si.trace_terminate && !si.radiance_evaled ) {
 				result += si.emission * attenuation;
 				break;
 			}

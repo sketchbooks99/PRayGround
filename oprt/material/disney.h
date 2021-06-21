@@ -148,11 +148,15 @@ CALLABLE_FUNC void DC_FUNC(sample_disney)(SurfaceInteraction* si, void* matdata)
     }
     else
     {
+        /// @todo Change sampling functions according to the ratio to choose specular or clearcoat pdf
+        /// ratio = 1.0f / (1.0f + clearcoat);
+
         float3 h = sampleGGX(z1, z2, disney->roughness);
         onb.inverseTransform(h);
         si->wo = normalize(reflect(si->wi, h));
     }
     si->seed = seed;
+    si->radiance_evaled = false;
     si->trace_terminate = false;
 }
 

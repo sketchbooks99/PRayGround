@@ -30,6 +30,7 @@ Scene my_scene() {
     );
     auto earth_image = std::make_shared<ImageTexture>("image/earth.jpg");
     auto skyblue_constant = std::make_shared<ConstantTexture>(make_float3(83.0f/255.0f, 179.0f/255.0f, 181.0f/255.0f));
+    auto white_constant = std::make_shared<ConstantTexture>(make_float3(1.0f));
 
     // マテリアルの準備 
     auto red_diffuse = std::make_shared<Diffuse>(make_float3(0.8f, 0.05f, 0.05f));
@@ -40,7 +41,7 @@ Scene my_scene() {
     auto floor_checker = std::make_shared<Diffuse>(checker1);
     auto plane_checker = std::make_shared<Diffuse>(checker2);
     auto earth_diffuse = std::make_shared<Diffuse>(earth_image);
-    auto disney = std::make_shared<Disney>(skyblue_constant);
+    auto disney = std::make_shared<Disney>(white_constant);
     disney->setMetallic(0.8f);
     disney->setRoughness(0.4f);
     auto teapot_diffuse = std::make_shared<Diffuse>(make_float3(1.0f, 0.8f, 0.3f));

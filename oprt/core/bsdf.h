@@ -57,6 +57,14 @@ HOSTDEVICE INLINE float3 sampleGGX(const float u1, const float u2, const float r
     return p;
 }
 
+HOSTDEVICE INLINE float3 sampleGTR1(const float u1, const float u2, const float roughness)
+{
+    float3 p;
+    const float a = roughness * roughness;
+    const float phi = 2.0f * M_PIf * u1;
+    const float cos_theta = 1.0f; 
+}
+
 /** 
  * @ref: http://www.pbr-book.org/3ed-2018/Reflection_Models/Specular_Reflection_and_Transmission.html
  * 

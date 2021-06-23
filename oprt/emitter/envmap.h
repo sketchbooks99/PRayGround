@@ -16,6 +16,8 @@ struct EnvironmentEmitterData {
     unsigned int tex_func_id;
 };
 
+#ifndef __CUDACC__
+
 class EnvironmentEmitter : public Emitter {
 public:
     explicit EnvironmentEmitter(const std::filesystem::path& filename);
@@ -30,5 +32,7 @@ public:
 private:
     std::shared_ptr<Texture> m_texture;
 };
+
+#endif
 
 }

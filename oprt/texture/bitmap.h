@@ -13,15 +13,19 @@ struct BitmapTextureData {
 };
 
 #ifndef __CUDACC__
-class BitmapTexture final : public Texture {
+
+template <typename PixelType>
+class BitmapTexture_ final : public Texture {
 public:
-    explicit BitmapTexture(const std::filesystem::path& filename);
+    explicit BitmapTexture_(const std::filesystem::path& filename);
 
     void prepareData() override;
     void freeData() override;
 
     TextureType type() const override { return TextureType::Bitmap; }
 private:
+    using Vec_t = std::conditional_t<std::is_same_v<PixelType, float>, float4, uchar4>;
+
     void _initTextureDesc() {
         m_tex_desc.addressMode[0] = cudaAddressModeClamp;
         m_tex_desc.addressMode[1] = cudaAddressModeClamp;
@@ -36,12 +40,15 @@ private:
         m_tex_desc.sRGB = 1;
     }
 
-    std::shared_ptr<Bitmap> m_bitmap;
+    std::shared_ptr<Bitmap<PixelType>> m_bitmap;
 
     cudaTextureDesc m_tex_desc {};
     cudaTextureObject_t d_texture;
     cudaArray_t d_array { nullptr };
 };
+
+using BitmapTexture = BitmapTexture_<unsigned char>;
+using BitmapTextureFloat = BitmapTexture_<float>;
 
 #else
 CALLABLE_FUNC float3 DC_FUNC(eval_bitmap)(SurfaceInteraction* si, void* texdata) {

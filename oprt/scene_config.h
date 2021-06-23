@@ -50,28 +50,28 @@ Scene my_scene() {
     float3 cornel_center = make_float3(278.0f, 274.4f, 279.6f);
 
     // コーネルボックス用のプリミティブインスタンス
-    PrimitiveInstance cornel_ps = PrimitiveInstance(Transform());
+    // PrimitiveInstance cornel_ps = PrimitiveInstance(Transform());
 
-    // Floor 
-    auto floor_mesh = createQuadMesh(0.0f, 556.0f, 0.0f, 559.2f, 0.0f, Axis::Y);
-    cornel_ps.addPrimitive(floor_mesh, floor_checker);
-    // Ceiling 
-    auto ceiling_mesh = createQuadMesh(0.0f, 556.0f, 0.0f, 559.2f, 548.8f, Axis::Y);
-    cornel_ps.addPrimitive(ceiling_mesh, white_diffuse);
-    // Back wall 
-    auto back_wall_mesh = createQuadMesh(0.0f, 556.0f, 0.0f, 548.8f, 559.2f, Axis::Z);
-    cornel_ps.addPrimitive(back_wall_mesh, white_diffuse);
-    // Right wall 
-    auto right_wall_mesh = createQuadMesh(0.0f, 548.8f, 0.0f, 559.2f, 0.0f, Axis::X);
-    cornel_ps.addPrimitive(right_wall_mesh, red_diffuse);
-    // Left wall 
-    auto left_wall_mesh = createQuadMesh(0.0f, 548.8f, 0.0f, 559.2f, 556.0f, Axis::X);
-    cornel_ps.addPrimitive(left_wall_mesh, green_diffuse);
-    // Ceiling light
-    auto ceiling_light_mesh = createQuadMesh(213.0f, 343.0f, 227.0f, 332.0f, 548.6f, Axis::Y);
-    // auto ceiling_light = new Plane(make_float2(213.0f, 227.0f), make_float2(343.0f, 332.0f));
-    cornel_ps.addPrimitive(ceiling_light_mesh, emitter);
-    scene.addPrimitiveInstance(cornel_ps);
+    // // Floor 
+    // auto floor_mesh = createQuadMesh(0.0f, 556.0f, 0.0f, 559.2f, 0.0f, Axis::Y);
+    // cornel_ps.addPrimitive(floor_mesh, floor_checker);
+    // // Ceiling 
+    // auto ceiling_mesh = createQuadMesh(0.0f, 556.0f, 0.0f, 559.2f, 548.8f, Axis::Y);
+    // cornel_ps.addPrimitive(ceiling_mesh, white_diffuse);
+    // // Back wall 
+    // auto back_wall_mesh = createQuadMesh(0.0f, 556.0f, 0.0f, 548.8f, 559.2f, Axis::Z);
+    // cornel_ps.addPrimitive(back_wall_mesh, white_diffuse);
+    // // Right wall 
+    // auto right_wall_mesh = createQuadMesh(0.0f, 548.8f, 0.0f, 559.2f, 0.0f, Axis::X);
+    // cornel_ps.addPrimitive(right_wall_mesh, red_diffuse);
+    // // Left wall 
+    // auto left_wall_mesh = createQuadMesh(0.0f, 548.8f, 0.0f, 559.2f, 556.0f, Axis::X);
+    // cornel_ps.addPrimitive(left_wall_mesh, green_diffuse);
+    // // Ceiling light
+    // auto ceiling_light_mesh = createQuadMesh(213.0f, 343.0f, 227.0f, 332.0f, 548.6f, Axis::Y);
+    // // auto ceiling_light = new Plane(make_float2(213.0f, 227.0f), make_float2(343.0f, 332.0f));
+    // cornel_ps.addPrimitive(ceiling_light_mesh, emitter);
+    // scene.addPrimitiveInstance(cornel_ps);
 
     // Armadillo
     auto armadillo_matrix = sutil::Matrix4x4::translate(cornel_center + make_float3(150.0f, -210.0f, -130.0f)) 

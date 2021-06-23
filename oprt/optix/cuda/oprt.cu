@@ -32,6 +32,8 @@
 #include "../../core/color.h"
 #include "../../oprt.h"
 
+namespace oprt {
+
 // -------------------------------------------------------------------------------
 CALLABLE_FUNC void RG_FUNC(raygen)()
 {
@@ -62,7 +64,7 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 
 		float3 attenuation = make_float3(1.0f);
 
-		oprt::SurfaceInteraction si;
+		SurfaceInteraction si;
 		si.seed = seed;
 		si.emission = make_float3(0.0f);
 		si.trace_terminate = false;
@@ -86,21 +88,21 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 			}
 			
 			// Sampling scattered direction
-			optixDirectCall<void, oprt::SurfaceInteraction*, void*>(
+			optixDirectCall<void, SurfaceInteraction*, void*>(
 				si.mat_property.bsdf_sample_id, 
 				&si,  
 				si.mat_property.matdata
 			);
 
 			// Evaluate bsdf 
-			float3 bsdf_val = optixContinuationCall<float3, oprt::SurfaceInteraction*, void*>(
+			float3 bsdf_val = optixContinuationCall<float3, SurfaceInteraction*, void*>(
 				si.mat_property.bsdf_sample_id, 
 				&si,
 				si.mat_property.matdata
 			);
 			
 			// Evaluate pdf
-			float pdf_val = optixDirectCall<float, oprt::SurfaceInteraction*, void*>(
+			float pdf_val = optixDirectCall<float, SurfaceInteraction*, void*>(
 				si.mat_property.pdf_id, 
 				&si,  
 				si.mat_property.matdata
@@ -140,10 +142,21 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 // -------------------------------------------------------------------------------
 CALLABLE_FUNC void MS_FUNC(radiance)()
 {
-	oprt::MissData* rt_data = reinterpret_cast<oprt::MissData*>(optixGetSbtDataPointer());
-	oprt::SurfaceInteraction *si = getSurfaceInteraction();
+	MissData* rt_data = reinterpret_cast<MissData*>(optixGetSbtDataPointer());
+	SurfaceInteraction *si = getSurfaceInteraction();
+
+	Ray ray = getWorldRay();
+	float3 p = normalize(ray.at(ray.tmax - length(ray.o)));
+
+	float phi = atan2(p.z, p.x);
+	float theta = asin(p.y);
+	float u = 1.0f - (phi + M_PIf) / (2.0f * M_PIf);
+	float v = 1.0f - (theta + M_PIf/2.0f) / M_PIf;
+	si->emission = make_float3(u, v, 0.5f);
 
 	// si->radiance = make_float3(rt_data->bg_color);
-	si->emission = make_float3(rt_data->bg_color);
+	// si->emission = make_float3(rt_data->bg_color);
 	si->trace_terminate = true;
+}
+
 }

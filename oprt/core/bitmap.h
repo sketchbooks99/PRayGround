@@ -28,8 +28,8 @@ public:
 
     Bitmap_();
     Bitmap_(Format format, int width, int height, PixelType* data = nullptr);
-    explicit Bitmap_(const std::filesystem::path& filepath);
-    explicit Bitmap_(const std::filesystem::path& filepath, Format format);
+    explicit Bitmap_(const std::filesystem::path& filename);
+    explicit Bitmap_(const std::filesystem::path& filename, Format format);
 
     void allocate(Format format, int width, int height);
     void fillData(PixelType* data, int width, int height, int offset_x, int offset_y);
@@ -38,9 +38,9 @@ public:
         fillData(data, res.x, res.y, offset.x, offset.y); 
     }
 
-    void load(const std::filesystem::path& filepath);
-    void load(const std::filesystem::path& filepath, Format format);
-    void write(const std::filesystem::path& filepath, int quality=100) const;
+    void load(const std::filesystem::path& filename);
+    void load(const std::filesystem::path& filename, Format format);
+    void write(const std::filesystem::path& filename, int quality=100) const;
 
     void copyToDevice();
     void copyFromDevice();

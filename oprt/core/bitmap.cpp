@@ -7,6 +7,8 @@
 #include "../ext/stb/stb_image.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../ext/stb/stb_image_write.h"
+#define TINYEXR_IMPLEMENTATION
+#include "../ext/tinyexr/tinyexr.h"
 
 namespace oprt {
 
@@ -27,16 +29,16 @@ Bitmap_<PixelType>::Bitmap_(Format format, int width, int height, PixelType* dat
 
 // --------------------------------------------------------------------
 template <typename PixelType>
-Bitmap_<PixelType>::Bitmap_(const std::filesystem::path& filepath)
+Bitmap_<PixelType>::Bitmap_(const std::filesystem::path& filename)
 {
-    load(filepath);
+    load(filename);
 }
 
 // --------------------------------------------------------------------
 template <typename PixelType>
-Bitmap_<PixelType>::Bitmap_(const std::filesystem::path& filepath, Format format)
+Bitmap_<PixelType>::Bitmap_(const std::filesystem::path& filename, Format format)
 {
-    load(filepath, format);
+    load(filename, format);
 }
 
 // --------------------------------------------------------------------
@@ -92,15 +94,53 @@ void Bitmap_<PixelType>::fillData(PixelType* data, int width, int height, int of
 }
 
 template <typename PixelType>
-void Bitmap_<PixelType>::load(const std::filesystem::path& filepath, Format format)
+void Bitmap_<PixelType>::load(const std::filesystem::path& filename, Format format)
 {
     m_format = format;
-    load(filepath);
+    load(filename);
+}
+
+template <typename PixelType>
+void Bitmap_<PixelType>::load(const std::filesystem::path& filename)
+{
+    Message(MSG_WARNING, "Bitmap_<PixelType>::load() is only implemented when PixelType = unsigned char or float.");
+}
+
+template <>
+void Bitmap_<unsigned char>::load(const std::filesystem::path& filename)
+{
+    std::optional<std::filesystem::path> filepath = findDatapath(filename);
+    Assert(filepath, "The input file for bitmap '" + filename.string() + "' is not found.");
+
+    auto ext = getExtension(filepath.value());
+
+    if (ext == ".png" || ext == ".PNG")
+    {
+        if (m_format == Format::UNKNOWN)
+            m_format = Format::RGBA;
+    }
+    else if (ext == ".jpg" || ext == ".JPG")
+    {
+        if (m_format == Format::UNKNOWN)
+            m_format = Format::RGB;
+    }
+    else if (ext == ".exr" || ext == ".EXR")
+    {
+        Message(MSG_ERROR, "EXR format can be loaded only in BitmapFloat.");
+        return;
+    }
+    m_data = stbi_load(filepath.value().string().c_str(), &m_width, &m_height, &m_channels, type2channels[m_format]);
+}
+
+template <>
+void Bitmap_<float>::load(const std::filesystem::path& filename)
+{
+    
 }
 
 // --------------------------------------------------------------------
 template <typename PixelType>
-void Bitmap_<PixelType>::load(const std::filesystem::path& filepath) {
+void Bitmap_<PixelType>::load(const std::filesystem::path& filename) {
     // 画像ファイルが存在するかのチェック
     Assert(std::filesystem::exists(filepath), "The image file '" + filepath.string() + "' is not found.");
 
@@ -118,9 +158,9 @@ void Bitmap_<PixelType>::load(const std::filesystem::path& filepath) {
             m_format = Format::RGB;
         data = stbi_load(filepath.string().c_str(), &m_width, &m_height, &m_channels, type2channels[m_format]);
     }
-    else if (file_extension == ".hdr" || file_extension == ".HDR")
+    else if (file_extension == ".exr" || file_extension == ".EXR")
     {
-        Message(MSG_WARNING, "Sorry! Bitmap doesn't support to load HDR image currently.");
+        // Message(MSG_WARNING, "Sorry! Bitmap doesn't support to load HDR image currently.");
         return;
     }
     else 

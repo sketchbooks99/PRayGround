@@ -17,6 +17,7 @@
 #include <filesystem>
 #include <optional>
 #include <map>
+#include <concepts>
 #include "../core/stream_helpers.h"
 
 #if defined(_WIN32) | defined(_WIN64)
@@ -87,8 +88,15 @@ inline void Throw(const std::string& msg) {
     throw std::runtime_error(msg);
 }
 
-inline void Assert(bool condition, const std::string& msg) {
-    if (!condition) Throw(msg);
+template <class T>
+concept BoolConvertible = requires(T x)
+{
+    (bool)x;
+};
+
+template <BoolConvertible T>
+inline void Assert(T condition, const std::string& msg) {
+    if (!(bool)condition) Throw(msg);
 }
 
 template <typename T>

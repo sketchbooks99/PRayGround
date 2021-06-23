@@ -10,3 +10,6 @@
 [submodule "oprt/ext/stb"]
 	path = oprt/ext/stb
 	url = https://github.com/nothings/stb.git
+[submodule "oprt/ext/tinyexr"]
+	path = oprt/ext/tinyexr
+	url = https://github.com/syoyo/tinyexr.git

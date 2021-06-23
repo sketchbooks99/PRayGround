@@ -6,7 +6,8 @@
 namespace oprt {
 
 // ---------------------------------------------------------------------
-BitmapTexture::BitmapTexture(const std::filesystem::path& filename)
+template <>
+BitmapTexture_<float>::BitmapTexture_(const std::filesystem::path& filename)
 {
     std::optional<std::filesystem::path> filepath = findDatapath(filename);
     if (!filepath)
@@ -14,23 +15,71 @@ BitmapTexture::BitmapTexture(const std::filesystem::path& filename)
         Message(MSG_ERROR, "The texture file '" + filename.string() + "' is not found.");
         int width = 512;
         int height = 512;
-        uchar4 magenta = make_uchar4(255, 0, 255, 255);
-        std::vector<uchar4> pixels(width * height, magenta);
-        m_bitmap = std::make_shared<Bitmap>(Bitmap::Format::RGBA, width, height, reinterpret_cast<Bitmap::Type*>(pixels.data()));
+        float4 magenta = make_float4(1.0f, 0.0f, 1.0f, 1.0f);
+        std::vector<float4> pixels(width * height, magenta);
+        m_bitmap = std::make_shared<Bitmap_<float>>(
+            BitmapFloat::Format::RGBA, width, height, reinterpret_cast<BitmapFloat::Type*>(pixels.data())
+        );
     }
     else
     {
-        m_bitmap = std::make_shared<Bitmap>(filepath.value(), Bitmap::Format::RGBA);
+        auto ext = getExtension(filepath.value());
+        if ( ext == ".exr" || ext == ".EXR" )
+        {
+            
+        }
     }
-    _initTextureDesc();
+}
+
+template <>
+BitmapTexture_<unsigned char>::BitmapTexture_(const std::filesystem::path& filename)
+{
+
+}
+
+template <typename PixelType>
+BitmapTexture_<PixelType>::BitmapTexture_(const std::filesystem::path& filename)
+{
+    std::optional<std::filesystem::path> filepath = findDatapath(filename);
+    if (!filepath)
+    {
+        Message(MSG_ERROR, "The texture file '" + filename.string() + "' is not found.");
+        int width = 512;
+        int height = 512;
+        Vec_t magenta;
+        if constexpr (std::is_same_v<PixelType, unsigned char>)
+            magenta = make_uchar4(255, 0, 255, 255);
+        else 
+            magenta = make_float4(1.0f, 0.0f, 1.0f, 1.0f);
+        std::vector<Vec_t> pixels(width * height, magenta);
+        m_bitmap = std::make_shared<Bitmap_<PixelType>>(
+            Bitmap_<PixelType>::Format::RGBA, width, height, reinterpret_cast<Bitmap_<PixelType>::Type*>(pixels.data()));
+    }
+    else
+    {
+        m_bitmap = std::make_shared<Bitmap_<PixelType>>(filepath.value(), Bitmap_<PixelType>::Format::RGBA);
+    }
+
+    // Initialize texture description
+    m_tex_desc.addressMode[0] = cudaAddressModeClamp;
+    m_tex_desc.addressMode[1] = cudaAddressModeClamp;
+    m_tex_desc.filterMode = cudaFilterModeLinear;
+    m_tex_desc.normalizedCoords = 1;
+    m_tex_desc.sRGB = 1;
+    if constexpr (std::is_same_v<PixelType, float>)
+        m_tex_desc.readMode = cudaReadModeElementType;
+    else
+        m_tex_desc.readMode = cudaReadModeNormalizedFloat;
 }
 
 // ---------------------------------------------------------------------
-void BitmapTexture::prepareData()
+template <typename PixelType>
+void BitmapTexture_<PixelType>::prepareData()
 {
     // Alloc CUDA array in device memory.
-    int32_t pitch = m_bitmap->width() * 4 * sizeof( unsigned char );
-    cudaChannelFormatDesc channel_desc = cudaCreateChannelDesc<uchar4>();
+    int32_t pitch = m_bitmap->width() * sizeof(Vec_t);
+
+    cudaChannelFormatDesc channel_desc = cudaCreateChannelDesc<Vec_t>();
 
     CUDA_CHECK( cudaMallocArray( &d_array, &channel_desc, m_bitmap->width(), m_bitmap->height() ) );
     CUDA_CHECK( cudaMemcpy2DToArray( d_array, 0, 0, m_bitmap->data(), pitch, pitch, m_bitmap->height(), cudaMemcpyHostToDevice ) );
@@ -42,24 +91,28 @@ void BitmapTexture::prepareData()
     res_desc.res.array.array = d_array;
 
     CUDA_CHECK( cudaCreateTextureObject( &d_texture, &res_desc, &m_tex_desc, nullptr ) );
-    BitmapTextureData texture_data = { 
+    BitmapTexture_Data texture_data = { 
         d_texture
     };
 
-    CUDA_CHECK( cudaMalloc( &d_data, sizeof(BitmapTextureData) ) );
+    CUDA_CHECK( cudaMalloc( &d_data, sizeof(BitmapTexture_Data) ) );
     CUDA_CHECK( cudaMemcpy(
         d_data, 
-        &texture_data, sizeof(BitmapTextureData), 
+        &texture_data, sizeof(BitmapTexture_Data), 
         cudaMemcpyHostToDevice
     ));
 }
 
-void BitmapTexture::freeData()
+// ---------------------------------------------------------------------
+template <typename PixelType>
+void BitmapTexture_<PixelType>::freeData()
 {
     if (d_texture != 0) 
         CUDA_CHECK( cudaDestroyTextureObject( d_texture ) );
     if (d_array != 0)
         CUDA_CHECK( cudaFreeArray( d_array ) );
 }
+
+
 
 }

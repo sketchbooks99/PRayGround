@@ -80,6 +80,6 @@
 // texture include 
 #include "texture/constant.h"
 #include "texture/checker.h"
-#include "texture/image.h"
+#include "texture/bitmap.h"
 
 using namespace oprt;

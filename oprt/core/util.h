@@ -15,6 +15,8 @@
 #include <vector>
 #include <utility>
 #include <filesystem>
+#include <optional>
+#include <map>
 #include "../core/stream_helpers.h"
 
 #if defined(_WIN32) | defined(_WIN64)

@@ -12,14 +12,20 @@ TriangleMesh::TriangleMesh(
     const std::filesystem::path& relative_path, bool is_smooth)
 {
     if (relative_path.string().substr(relative_path.string().length() - 4) == ".obj") {
-        std::filesystem::path filepath = findDatapath(relative_path).string();
-        Message(MSG_NORMAL, "Loading OBJ file '" + filepath.string() + "' ...");
-        loadObj(filepath, m_vertices, m_normals, m_faces, m_texcoords);
+        std::optional<std::filesystem::path> filepath = findDatapath(relative_path);
+        if (!filepath)
+            Message(MSG_ERROR, "The OBJ file '" + filepath.value().string() + "' is not found.");
+
+        Message(MSG_NORMAL, "Loading OBJ file '" + filepath.value().string() + "' ...");
+        loadObj(filepath.value(), m_vertices, m_normals, m_faces, m_texcoords);
     }
     else if (relative_path.string().substr(relative_path.string().length() - 4) == ".ply") {
-        std::filesystem::path filepath = findDatapath(relative_path).string();
-        Message(MSG_NORMAL, "Loading PLY file '" + filepath.string() + "' ...");
-        loadPly(filepath, m_vertices, m_normals, m_faces, m_texcoords);
+        std::optional<std::filesystem::path> filepath = findDatapath(relative_path);
+        if (!filepath)
+            Message(MSG_ERROR, "The PLY file '" + filepath.value().string() + "' is not found.");
+            
+        Message(MSG_NORMAL, "Loading PLY file '" + filepath.value().string() + "' ...");
+        loadPly(filepath.value(), m_vertices, m_normals, m_faces, m_texcoords);
     }
 
     // Calculate normals if they are empty.

@@ -19,7 +19,7 @@ public:
     AreaEmitter(
         const std::shared_ptr<Shape>& shape, 
         const std::shared_ptr<Texture>& texture, 
-        float intensity,
+        float intensity = 1.0f,
         bool twosided = true
     );
 

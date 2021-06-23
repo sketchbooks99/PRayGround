@@ -29,6 +29,7 @@ public:
     Bitmap_();
     Bitmap_(Format format, int width, int height, PixelType* data = nullptr);
     explicit Bitmap_(const std::filesystem::path& filepath);
+    explicit Bitmap_(const std::filesystem::path& filepath, Format format);
 
     void allocate(Format format, int width, int height);
     void fillData(PixelType* data, int width, int height, int offset_x, int offset_y);
@@ -38,6 +39,7 @@ public:
     }
 
     void load(const std::filesystem::path& filepath);
+    void load(const std::filesystem::path& filepath, Format format);
     void write(const std::filesystem::path& filepath, int quality=100) const;
 
     void copyToDevice();
@@ -50,6 +52,15 @@ public:
     int height() const { return m_height; }
     int channels() const { return m_channels; }
 private:
+    std::map<Format, int> type2channels = 
+    {
+        { Format::GRAY, 1 }, 
+        { Format::GRAY_ALPHA, 2}, 
+        { Format::RGB, 3 }, 
+        { Format::RGBA, 4 }, 
+        { Format::UNKNOWN, 0 }
+    };
+
     PixelType* m_data { nullptr };  // CPU側のデータ
     PixelType* d_data { nullptr };  // GPU側のデータ
 

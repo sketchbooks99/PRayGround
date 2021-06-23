@@ -34,6 +34,13 @@ Bitmap_<PixelType>::Bitmap_(const std::filesystem::path& filepath)
 
 // --------------------------------------------------------------------
 template <typename PixelType>
+Bitmap_<PixelType>::Bitmap_(const std::filesystem::path& filepath, Format format)
+{
+    load(filepath, format);
+}
+
+// --------------------------------------------------------------------
+template <typename PixelType>
 void Bitmap_<PixelType>::allocate(Format format, int width, int height)
 {
     Assert(!this->m_data, "Image data in the host side is already allocated. Please use fillData() if you'd like to override bitmap data with your specified range.");
@@ -84,6 +91,13 @@ void Bitmap_<PixelType>::fillData(PixelType* data, int width, int height, int of
     }
 }
 
+template <typename PixelType>
+void Bitmap_<PixelType>::load(const std::filesystem::path& filepath, Format format)
+{
+    m_format = format;
+    load(filepath);
+}
+
 // --------------------------------------------------------------------
 template <typename PixelType>
 void Bitmap_<PixelType>::load(const std::filesystem::path& filepath) {
@@ -94,13 +108,15 @@ void Bitmap_<PixelType>::load(const std::filesystem::path& filepath) {
 
     unsigned char* data = nullptr;
     if (file_extension == ".png" || file_extension == ".PNG") {
-        m_format = Format::RGBA;
-        data = stbi_load(filepath.string().c_str(), &m_width, &m_height, &m_channels, STBI_rgb_alpha);
+        if (m_format == Format::UNKNOWN)
+            m_format = Format::RGBA;
+        data = stbi_load(filepath.string().c_str(), &m_width, &m_height, &m_channels, type2channels[m_format]);
     }
-    else if (file_extension == ".jpg" || file_extension == ".EXR")
+    else if (file_extension == ".jpg" || file_extension == ".JPG")
     {
-        m_format = Format::RGB;
-        data = stbi_load(filepath.string().c_str(), &m_width, &m_height, &m_channels, STBI_rgb);
+        if (m_format == Format::UNKNOWN)
+            m_format = Format::RGB;
+        data = stbi_load(filepath.string().c_str(), &m_width, &m_height, &m_channels, type2channels[m_format]);
     }
     else if (file_extension == ".hdr" || file_extension == ".HDR")
     {
@@ -113,12 +129,12 @@ void Bitmap_<PixelType>::load(const std::filesystem::path& filepath) {
         return;
     }
 
-    m_data = new PixelType[m_width * m_height * m_channels];
+    m_data = new PixelType[m_width * m_height * type2channels[m_format]];
 
     // unsigned char の場合はそのままコピー
     if constexpr (std::is_same_v<PixelType, unsigned char>)
     {
-        memcpy(m_data, data, sizeof(PixelType) * m_width * m_height * m_channels);
+        memcpy(m_data, data, sizeof(PixelType) * m_width * m_height * type2channels[m_format]);
     }
     /// PixelTypeが浮動小数点型の場合は [0, 255] -> [0, 1]で正規化する
     /// その他の方の場合は、警告を出し unsigned char -> PixelType で型変換するのみ
@@ -135,7 +151,7 @@ void Bitmap_<PixelType>::load(const std::filesystem::path& filepath) {
         {
             for (int y = 0; y < m_height; y++)
             {
-                for (int c = 0; c < m_channels; c++)
+                for (int c = 0; c < type2channels[m_format]; c++)
                 {
                     int idx = (y * m_width + x) * m_channels + c;
                     m_data[idx] = static_cast<PixelType>(data[idx] / denom);

@@ -39,7 +39,7 @@ OPTIX_add_sample_executable( oprt target_name
 
   shape/trianglemesh.cpp
 
-  texture/image.cpp
+  texture/bitmap.cpp
   
   oprt.cpp
 

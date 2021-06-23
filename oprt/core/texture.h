@@ -14,7 +14,7 @@ namespace oprt {
 enum class TextureType {
     Constant = 0,
     Checker = 1, 
-    Image = 2,
+    Bitmap = 2,
     Count = 3
 };
 
@@ -25,14 +25,14 @@ enum class TextureType {
 static std::map<TextureType, const char*> tex_eval_map = {
     { TextureType::Constant, "eval_constant" }, 
     { TextureType::Checker, "eval_checker" },
-    { TextureType::Image, "eval_image" }
+    { TextureType::Bitmap, "eval_bitmap" }
 };
 
 inline std::ostream& operator<<(std::ostream& out, TextureType type) {
     switch (type) {
     case TextureType::Constant: return out << "TextureType::Constant";
     case TextureType::Checker:  return out << "TextureType::Checker";
-    case TextureType::Image:    return out << "TextureType::Image";
+    case TextureType::Bitmap:    return out << "TextureType::Bitmap";
     default:                    return out << "";
     }
 }

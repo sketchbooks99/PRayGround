@@ -16,13 +16,17 @@ struct EnvironmentEmitterData {
     unsigned int tex_func_id;
 };
 
-class EnvironmentEmitter {
+class EnvironmentEmitter : public Emitter {
 public:
-    explicit EnvironmentEmitter(const std::string& filename);
+    explicit EnvironmentEmitter(const std::filesystem::path& filename);
     explicit EnvironmentEmitter(const float3& c)
     : m_texture(std::make_shared<ConstantTexture>(c)) {}
     explicit EnvironmentEmitter(const std::shared_ptr<Texture>& texture)
     : m_texture(texture) {}
+
+    void prepareData() override;
+
+    EmitterType type() const override { return EmitterType::Envmap; }
 private:
     std::shared_ptr<Texture> m_texture;
 };

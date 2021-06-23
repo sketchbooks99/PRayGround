@@ -28,7 +28,7 @@ Scene my_scene() {
     auto checker2 = std::make_shared<CheckerTexture>(
         make_float3(0.8f, 0.05f, 0.05f), make_float3(0.8f), 10.0f
     );
-    auto earth_image = std::make_shared<ImageTexture>("image/earth.jpg");
+    auto earth_image = std::make_shared<BitmapTexture>("image/earth.jpg");
     auto skyblue_constant = std::make_shared<ConstantTexture>(make_float3(83.0f/255.0f, 179.0f/255.0f, 181.0f/255.0f));
     auto white_constant = std::make_shared<ConstantTexture>(make_float3(1.0f));
 

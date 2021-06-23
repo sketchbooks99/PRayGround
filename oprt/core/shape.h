@@ -4,7 +4,6 @@
 #include "../core/aabb.h"
 #include "../optix/macros.h"
 #include <sutil/vec_math.h>
-#include <map>
 
 namespace oprt {
 

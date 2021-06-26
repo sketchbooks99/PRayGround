@@ -30,7 +30,7 @@ public:
     explicit operator OptixPipeline() const { return m_pipeline; }
     explicit operator OptixPipeline&() { return m_pipeline; }
 
-    /** \brief Compile options. */
+    /** Compile options. */
     void setCompileOptions( const OptixPipelineCompileOptions& op ) { m_compile_options = op; }
     void useMotionBlur( bool is_use ) { m_compile_options.usesMotionBlur = is_use; }
     void setTraversableGraphFlags( unsigned int flags ) { m_compile_options.traversableGraphFlags = flags; }
@@ -41,13 +41,13 @@ public:
 
     OptixPipelineCompileOptions compileOptions() const { return m_compile_options; }
 
-    /** \brief Link options */
+    /** Link options */
     void setLinkOptions( const OptixPipelineLinkOptions& op ) { m_link_options = op; }
     void setLinkTraceDepth( unsigned int depth ) { m_link_options.maxTraceDepth = depth; }
     void setLinkDebugLevel( const OptixCompileDebugLevel& debug_level ) { m_link_options.debugLevel = debug_level; }
     OptixPipelineLinkOptions link_options() const { return m_link_options; }
 
-    /** \brief Create pipeline object and calculate the stack sizes of pipeline. */
+    /** Create pipeline object and calculate the stack sizes of pipeline. */
     void create( const OptixDeviceContext& ctx, const std::vector<ProgramGroup>& prg_groups) {
 
         std::vector<OptixProgramGroup> optix_prg_groups;
@@ -99,18 +99,18 @@ public:
         ));
     }
 
-    /** \brief Depth of traversal */
+    /** Depth of traversal */
     void setTraceDepth(uint32_t depth) { 
         m_trace_depth = depth;
         m_link_options.maxTraceDepth = m_trace_depth;
     }
     uint32_t traceDepth() const { return m_trace_depth; }
 
-    /** \brief Depth of continuation-callable */
+    /** Depth of continuation-callable */
     void setContinuationCallableDepth(uint32_t depth) { m_cc_depth = depth; }
     uint32_t continuationCallableDepth() const { return m_cc_depth; }
 
-    /** \brief Depth of direct-callable */
+    /** Depth of direct-callable */
     void setDirectCallableDepth(uint32_t depth) { m_dc_depth = depth; }
     uint32_t directCallableDepth() const { return m_dc_depth; }
 

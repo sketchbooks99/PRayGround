@@ -2,6 +2,7 @@
 
 #include "../core/primitive.h"
 #include "../core/bitmap.h"
+#include "../emitter/envmap.h"
 #include <sutil/Camera.h>
 // #include "../oprt.h"
 
@@ -42,17 +43,16 @@ public:
     }
     std::vector<PrimitiveInstance> primitiveInstances() const { return m_primitive_instances; }
 
-    void setWidth(unsigned int w) { m_width = w; }
-    unsigned int width() const { return m_width; }
-
-    void setHeight(unsigned int h) { m_height = h; }
-    unsigned int height() const { return m_height; }
-
-    void setResolution(unsigned int w, unsigned int h) { m_width = w; m_height = h; }
-    uint2 resolution() const { return make_uint2(m_width, m_height); }
-
-    void setEnvironment(const float4& env) { m_environment = env; }
-    float4 environment() const { return m_environment; }
+    void setEnvironment(const float3& color) 
+    { 
+        m_environment = std::make_shared<EnvironmentEmitter>(color);
+    }
+    void setEnvironment(const std::shared_ptr<EnvironmentEmitter>& env) { m_environment = env; }
+    void setEnvironment(const std::filesystem::path& filename)
+    {
+        m_environment = std::make_shared<EnvironmentEmitter>(filename);
+    }
+    std::shared_ptr<EnvironmentEmitter> environment() const { return m_environment; }
 
     void setDepth(unsigned int d) { m_depth = d; }
     unsigned int depth() const { return m_depth; }
@@ -65,15 +65,18 @@ public:
 
     void setCamera(const sutil::Camera& camera) { m_camera = camera; }
     const sutil::Camera& camera() const { return m_camera; }
+
+    void setFilm(const std::shared_ptr<Bitmap>& film) { m_film = film; }
+    std::shared_ptr<Bitmap> film() const { return m_film; }
 private:
     std::vector<PrimitiveInstance> m_primitive_instances;   // Primitive instances with same transformation.
-    unsigned int m_width, m_height;                         // Dimensions of output result.
-    float4 m_environment;                                       // Background color
+    std::shared_ptr<EnvironmentEmitter> m_environment;      // Environment map
     unsigned int m_depth;                                   // Maximum depth of ray tracing.
     unsigned int m_samples_per_launch;                      // Specify the number of samples per call of optixLaunch.
     unsigned int m_num_samples;                             // The number of samples per pixel for non-interactive mode.
     sutil::Camera m_camera;                                 // Camera
-    Bitmap m_film;
+    /// @note For future work, This should be a vector of bitmap to enable AOV.
+    std::shared_ptr<Bitmap> m_film;                         // Film of rendering
 };
 
 }

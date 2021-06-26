@@ -1,3 +1,5 @@
+#pragma once
+
 #include "../core/emitter.h"
 #include "../texture/constant.h"
 
@@ -18,7 +20,7 @@ struct EnvironmentEmitterData {
 
 #ifndef __CUDACC__
 
-class EnvironmentEmitter : public Emitter {
+class EnvironmentEmitter final : public Emitter {
 public:
     explicit EnvironmentEmitter(const std::filesystem::path& filename);
     explicit EnvironmentEmitter(const float3& c)

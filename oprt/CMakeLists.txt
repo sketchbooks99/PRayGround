@@ -40,6 +40,8 @@ OPTIX_add_sample_executable( oprt target_name
   shape/trianglemesh.cpp
 
   texture/bitmap.cpp
+
+  emitter/envmap.cpp
   
   oprt.cpp
 

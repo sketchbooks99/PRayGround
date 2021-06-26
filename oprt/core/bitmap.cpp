@@ -110,7 +110,7 @@ template <>
 void Bitmap_<unsigned char>::load(const std::filesystem::path& filename)
 {
     std::optional<std::filesystem::path> filepath = findDatapath(filename);
-    Assert(filepath, "The input file for bitmap '" + filename.string() + "' is not found.");
+    Assert(filepath, "oprt::Bitmap_<unsigned char>::load(): The input file for bitmap '" + filename.string() + "' is not found.");
 
     auto ext = getExtension(filepath.value());
 
@@ -126,80 +126,122 @@ void Bitmap_<unsigned char>::load(const std::filesystem::path& filename)
     }
     else if (ext == ".exr" || ext == ".EXR")
     {
-        Message(MSG_ERROR, "EXR format can be loaded only in BitmapFloat.");
+        Message(MSG_ERROR, "oprt::Bitmap_<unsigned char>::load(): EXR format can be loaded only in BitmapFloat.");
         return;
     }
     m_data = stbi_load(filepath.value().string().c_str(), &m_width, &m_height, &m_channels, type2channels[m_format]);
+    m_channels = type2channels[m_format];
 }
 
 template <>
 void Bitmap_<float>::load(const std::filesystem::path& filename)
 {
-    
-}
+    std::optional<std::filesystem::path> filepath = findDatapath(filename);
+    Assert(filepath, "oprt::Bitmap_<float>::load(): The input file for bitmap '" + filename.string() + "' is not found.");
 
-// --------------------------------------------------------------------
-template <typename PixelType>
-void Bitmap_<PixelType>::load(const std::filesystem::path& filename) {
-    // 画像ファイルが存在するかのチェック
-    Assert(std::filesystem::exists(filepath), "The image file '" + filepath.string() + "' is not found.");
+    auto ext = getExtension(filepath.value());
 
-    std::string file_extension = getExtension(filepath);
+    // EXR 形式の場合はそのまま読み込む
+    if (ext == ".exr" || ext == ".EXR")
+    {
+        m_format = m_format== Format::UNKNOWN ? Format::RGBA : m_format;
 
-    unsigned char* data = nullptr;
-    if (file_extension == ".png" || file_extension == ".PNG") {
-        if (m_format == Format::UNKNOWN)
-            m_format = Format::RGBA;
-        data = stbi_load(filepath.string().c_str(), &m_width, &m_height, &m_channels, type2channels[m_format]);
-    }
-    else if (file_extension == ".jpg" || file_extension == ".JPG")
-    {
-        if (m_format == Format::UNKNOWN)
-            m_format = Format::RGB;
-        data = stbi_load(filepath.string().c_str(), &m_width, &m_height, &m_channels, type2channels[m_format]);
-    }
-    else if (file_extension == ".exr" || file_extension == ".EXR")
-    {
-        // Message(MSG_WARNING, "Sorry! Bitmap doesn't support to load HDR image currently.");
-        return;
-    }
-    else 
-    {
-        Message(MSG_WARNING, "This format is not loadable with bitmap.");
-        return;
-    }
-
-    m_data = new PixelType[m_width * m_height * type2channels[m_format]];
-
-    // unsigned char の場合はそのままコピー
-    if constexpr (std::is_same_v<PixelType, unsigned char>)
-    {
-        memcpy(m_data, data, sizeof(PixelType) * m_width * m_height * type2channels[m_format]);
-    }
-    /// PixelTypeが浮動小数点型の場合は [0, 255] -> [0, 1]で正規化する
-    /// その他の方の場合は、警告を出し unsigned char -> PixelType で型変換するのみ
-    else
-    {
-        PixelType denom = static_cast<PixelType>(255.0);
-        if constexpr (!std::is_same_v<PixelType, float>)
+        const char* err = nullptr;
+        int result = LoadEXR(&m_data, &m_width, &m_height, filepath.value().string().c_str(), &err);
+        if (result != TINYEXR_SUCCESS)
         {
-            Message(MSG_WARNING, "This PixelType is not recommended to load image (Recommended ... unsigned char or float).",
-                             "It may use too large memory space to store pixel values and may degrade the performance of application.");
-            denom = static_cast<PixelType>(1);
-        }
-        for (int x = 0; x < m_width; x++)
-        {
-            for (int y = 0; y < m_height; y++)
+            if (err)
             {
-                for (int c = 0; c < type2channels[m_format]; c++)
-                {
-                    int idx = (y * m_width + x) * m_channels + c;
-                    m_data[idx] = static_cast<PixelType>(data[idx] / denom);
-                }
+                Message(MSG_ERROR, "oprt::Bitmap_<float>::load():", err);
+                FreeEXRErrorMessage(err);
+                return;
             }
         }
     }
+    // PNG/JPG 形式の場合は uint8_t* [0, 255] -> float* [0, 1] に変換 
+    else
+    {
+        if (ext == ".png" || ext == ".PNG") 
+            m_format = m_format == Format::UNKNOWN ? Format::RGBA : m_format;
+        else if (ext == ".jpg" || ext == ".JPG")
+            m_format = m_format == Format::UNKNOWN ? Format::RGB  : m_format;
+
+        uint8_t* raw_data = stbi_load(filepath.value().string().c_str(), &m_width, &m_height, &m_channels, type2channels[m_format]);
+        m_channels = type2channels[m_format];
+        m_data = new float[m_width * m_height * m_channels];
+        for (int i = 0; i < m_width * m_height * m_channels; i += m_channels)
+        {
+            for (int c = 0; c < m_channels; c++)
+            {
+                m_data[i + c] = static_cast<float>(raw_data[i + c]) / 255.0f;
+            }
+        }
+        stbi_image_free(raw_data);
+    }
 }
+
+// --------------------------------------------------------------------
+// template <typename PixelType>
+// void Bitmap_<PixelType>::load(const std::filesystem::path& filename) {
+//     // 画像ファイルが存在するかのチェック
+//     Assert(std::filesystem::exists(filepath), "The image file '" + filepath.string() + "' is not found.");
+
+//     std::string file_extension = getExtension(filepath);
+
+//     unsigned char* data = nullptr;
+//     if (file_extension == ".png" || file_extension == ".PNG") {
+//         if (m_format == Format::UNKNOWN)
+//             m_format = Format::RGBA;
+//         data = stbi_load(filepath.string().c_str(), &m_width, &m_height, &m_channels, type2channels[m_format]);
+//     }
+//     else if (file_extension == ".jpg" || file_extension == ".JPG")
+//     {
+//         if (m_format == Format::UNKNOWN)
+//             m_format = Format::RGB;
+//         data = stbi_load(filepath.string().c_str(), &m_width, &m_height, &m_channels, type2channels[m_format]);
+//     }
+//     else if (file_extension == ".exr" || file_extension == ".EXR")
+//     {
+//         // Message(MSG_WARNING, "Sorry! Bitmap doesn't support to load HDR image currently.");
+//         return;
+//     }
+//     else 
+//     {
+//         Message(MSG_WARNING, "This format is not loadable with bitmap.");
+//         return;
+//     }
+
+//     m_data = new PixelType[m_width * m_height * type2channels[m_format]];
+
+//     // unsigned char の場合はそのままコピー
+//     if constexpr (std::is_same_v<PixelType, unsigned char>)
+//     {
+//         memcpy(m_data, data, sizeof(PixelType) * m_width * m_height * type2channels[m_format]);
+//     }
+//     /// PixelTypeが浮動小数点型の場合は [0, 255] -> [0, 1]で正規化する
+//     /// その他の方の場合は、警告を出し unsigned char -> PixelType で型変換するのみ
+//     else
+//     {
+//         PixelType denom = static_cast<PixelType>(255.0);
+//         if constexpr (!std::is_same_v<PixelType, float>)
+//         {
+//             Message(MSG_WARNING, "This PixelType is not recommended to load image (Recommended ... unsigned char or float).",
+//                              "It may use too large memory space to store pixel values and may degrade the performance of application.");
+//             denom = static_cast<PixelType>(1);
+//         }
+//         for (int x = 0; x < m_width; x++)
+//         {
+//             for (int y = 0; y < m_height; y++)
+//             {
+//                 for (int c = 0; c < type2channels[m_format]; c++)
+//                 {
+//                     int idx = (y * m_width + x) * m_channels + c;
+//                     m_data[idx] = static_cast<PixelType>(data[idx] / denom);
+//                 }
+//             }
+//         }
+//     }
+// }
 
 // --------------------------------------------------------------------
 template <typename PixelType>

@@ -44,7 +44,7 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <tinygltf/stb_image_write.h>
 #define TINYEXR_IMPLEMENTATION
-#include <tinyexr/tinyexr.h>
+#include "../oprt/ext/tinyexr/tinyexr.h"
 
 #include <nvrtc.h>
 

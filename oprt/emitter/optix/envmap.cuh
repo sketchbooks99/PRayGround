@@ -4,6 +4,8 @@
 
 namespace oprt {
 
+#ifdef __CUDACC__
+
 CALLABLE_FUNC void MS_FUNC(envmap)()
 {
     EnvironmentEmitterData* env = reinterpret_cast<EnvironmentEmitterData*>(optixGetSbtDataPointer());
@@ -21,5 +23,6 @@ CALLABLE_FUNC void MS_FUNC(envmap)()
     si->trace_terminate = true;
 }
 
+#endif
 
 }

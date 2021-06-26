@@ -16,16 +16,16 @@ void ProgramGroup::createSingleProgram( const OptixDeviceContext& ctx, const Pro
     prog_desc.kind = m_program_kind;
     switch(m_program_kind) {
     case OPTIX_PROGRAM_GROUP_KIND_RAYGEN:
-        prog_desc.raygen.module = entry.first;
-        prog_desc.raygen.entryFunctionName = entry.second;
+        prog_desc.raygen.module = static_cast<OptixModule>(entry.module);
+        prog_desc.raygen.entryFunctionName = entry.func_name;
         break;
     case OPTIX_PROGRAM_GROUP_KIND_MISS:
-        prog_desc.miss.module = entry.first;
-        prog_desc.miss.entryFunctionName = entry.second;
+        prog_desc.miss.module = static_cast<OptixModule>(entry.module);
+        prog_desc.miss.entryFunctionName = entry.func_name;
         break;
     case OPTIX_PROGRAM_GROUP_KIND_EXCEPTION:
-        prog_desc.exception.module = entry.first;
-        prog_desc.exception.entryFunctionName = entry.second;
+        prog_desc.exception.module = static_cast<OptixModule>(entry.module);
+        prog_desc.exception.entryFunctionName = entry.func_name;
         break;
     default:
         break;
@@ -57,12 +57,12 @@ void ProgramGroup::createHitgroupProgram(
 
     OptixProgramGroupDesc prog_desc = {};
     prog_desc.kind = m_program_kind;
-    prog_desc.hitgroup.moduleCH = ch_entry.first;
-    prog_desc.hitgroup.entryFunctionNameCH = ch_entry.second;
-    prog_desc.hitgroup.moduleAH = ah_entry.first;
-    prog_desc.hitgroup.entryFunctionNameAH = ah_entry.second;
-    prog_desc.hitgroup.moduleIS = is_entry.first;
-    prog_desc.hitgroup.entryFunctionNameIS = is_entry.second;
+    prog_desc.hitgroup.moduleCH = static_cast<OptixModule>(ch_entry.module);
+    prog_desc.hitgroup.entryFunctionNameCH = ch_entry.func_name;
+    prog_desc.hitgroup.moduleAH = static_cast<OptixModule>(ah_entry.module);
+    prog_desc.hitgroup.entryFunctionNameAH = ah_entry.func_name;
+    prog_desc.hitgroup.moduleIS = static_cast<OptixModule>(is_entry.module);
+    prog_desc.hitgroup.entryFunctionNameIS = is_entry.func_name;
     OPTIX_CHECK_LOG(optixProgramGroupCreate(
         ctx,
         &prog_desc,
@@ -87,10 +87,10 @@ void ProgramGroup::createCallableProgram(
     size_t sizeof_log = sizeof( log );
     OptixProgramGroupDesc prog_desc = {};
     prog_desc.kind = m_program_kind;
-    prog_desc.callables.moduleDC = dc_entry.first;
-    prog_desc.callables.entryFunctionNameDC = dc_entry.second;
-    prog_desc.callables.moduleCC = cc_entry.first;
-    prog_desc.callables.entryFunctionNameCC = cc_entry.second; 
+    prog_desc.callables.moduleDC = static_cast<OptixModule>(dc_entry.module);
+    prog_desc.callables.entryFunctionNameDC = dc_entry.func_name;
+    prog_desc.callables.moduleCC = static_cast<OptixModule>(cc_entry.module);
+    prog_desc.callables.entryFunctionNameCC = cc_entry.func_name; 
 
     OPTIX_CHECK_LOG(optixProgramGroupCreate(
         ctx,
@@ -103,14 +103,14 @@ void ProgramGroup::createCallableProgram(
     ));   
 }
 
-ProgramGroup createRayGenProgram( const OptixDeviceContext& ctx, const OptixModule& module, const char* entry_name )
+ProgramGroup createRayGenProgram( const OptixDeviceContext& ctx, const Module& module, const char* entry_name )
 {
     ProgramGroup raygen_program(OPTIX_PROGRAM_GROUP_KIND_RAYGEN);
     raygen_program.createSingleProgram( ctx, ProgramEntry( module, entry_name ) );
     return raygen_program;
 }
 
-ProgramGroup createMissProgram( const OptixDeviceContext& ctx, const OptixModule& module, const char* entry_name )
+ProgramGroup createMissProgram( const OptixDeviceContext& ctx, const Module& module, const char* entry_name )
 {
     ProgramGroup miss_program(OPTIX_PROGRAM_GROUP_KIND_MISS);
     miss_program.createSingleProgram( ctx, ProgramEntry( module, entry_name ) );

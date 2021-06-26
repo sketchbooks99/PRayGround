@@ -2,6 +2,11 @@
 
 namespace oprt {
 
+void Scene::createOnDevice()
+{
+    
+}
+
 // --------------------------------------------------------------------------------
 void Scene::freeFromDevice()
 {
@@ -21,7 +26,7 @@ void Scene::createHitgroupPrograms(const OptixDeviceContext& ctx, const Module& 
     {
         for (auto& p : ps.primitives())
         {
-            p.createPrograms(ctx, static_cast<OptixModule>(module));
+            p.createPrograms( ctx, module );
         }
     }
 }

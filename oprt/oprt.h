@@ -75,7 +75,11 @@
 #include "material/dielectric.h"
 #include "material/diffuse.h"
 #include "material/disney.h"
-#include "material/emitter.h"
+// #include "material/emitter.h"
+
+// emitter include 
+// #include "emitter/area.h"
+#include "emitter/envmap.h"
 
 // texture include 
 #include "texture/constant.h"

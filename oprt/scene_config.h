@@ -5,10 +5,11 @@
 Scene my_scene() {
     Scene scene;
 
+    std::shared_ptr<Bitmap> film = std::make_shared<Bitmap>(Bitmap::Format::RGBA, 1024, 1024);
+    scene.setFilm(film);
+
     // シーンの一般的な設定    
-    scene.setEnvironment(make_float4(0.0f));
-    scene.setWidth(1024);
-    scene.setHeight(1024);
+    scene.setEnvironment(make_float3(0.0f));
     scene.setDepth(5);
     scene.setSamplesPerLaunch(1);
     scene.setNumSamples(1000);
@@ -36,7 +37,7 @@ Scene my_scene() {
     auto red_diffuse = std::make_shared<Diffuse>(make_float3(0.8f, 0.05f, 0.05f));
     auto green_diffuse = std::make_shared<Diffuse>(make_float3(0.05f, 0.8f, 0.05f));
     auto white_diffuse = std::make_shared<Diffuse>(make_float3(0.8f, 0.8f, 0.8f));
-    auto emitter = std::make_shared<Emitter>(make_float3(0.8f, 0.8f, 0.7f), 15.0f);
+    // auto emitter = std::make_shared<Emitter>(make_float3(0.8f, 0.8f, 0.7f), 15.0f);
     auto glass = std::make_shared<Dielectric>(make_float3(0.9f), 1.5f);
     auto floor_checker = std::make_shared<Diffuse>(checker1);
     auto plane_checker = std::make_shared<Diffuse>(checker2);

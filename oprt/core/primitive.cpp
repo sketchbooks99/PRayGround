@@ -182,8 +182,8 @@ void createMaterialPrograms(
         program_groups.push_back(ProgramGroup(OPTIX_PROGRAM_GROUP_KIND_CALLABLES));
         program_groups.back().createCallableProgram(
             ctx, 
-            ProgramEntry( static_cast<OptixModule>(module), dc_func_str( sample_func_map[mattype] ).c_str() ), 
-            ProgramEntry( static_cast<OptixModule>(module), cc_func_str( bsdf_func_map[mattype] ).c_str() )
+            ProgramEntry( module, dc_func_str( sample_func_map[mattype] ).c_str() ), 
+            ProgramEntry( module, cc_func_str( bsdf_func_map[mattype] ).c_str() )
         );
         callable_records.push_back(CallableRecord());
         program_groups.back().bindRecord(&callable_records.back());
@@ -192,8 +192,8 @@ void createMaterialPrograms(
         program_groups.push_back(ProgramGroup(OPTIX_PROGRAM_GROUP_KIND_CALLABLES));
         program_groups.back().createCallableProgram(
             ctx, 
-            ProgramEntry( static_cast<OptixModule>(module), dc_func_str( pdf_func_map[mattype] ).c_str() ),
-            ProgramEntry( nullptr, nullptr )
+            ProgramEntry( module, dc_func_str( pdf_func_map[mattype] ).c_str() ),
+            ProgramEntry( Module(), nullptr )
         );
         callable_records.push_back(CallableRecord());
         program_groups.back().bindRecord(&callable_records.back());
@@ -215,8 +215,8 @@ void createTexturePrograms(
         program_groups.push_back(ProgramGroup(OPTIX_PROGRAM_GROUP_KIND_CALLABLES));
         program_groups.back().createCallableProgram(
             ctx, 
-            ProgramEntry( static_cast<OptixModule>(module), dc_func_str( tex_eval_map[textype] ).c_str() ),
-            ProgramEntry( nullptr, nullptr )
+            ProgramEntry( module, dc_func_str( tex_eval_map[textype] ).c_str() ),
+            ProgramEntry( Module(), nullptr )
         );
         callable_records.push_back(CallableRecord());
         program_groups.back().bindRecord(&callable_records.back());

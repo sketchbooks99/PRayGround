@@ -38,7 +38,7 @@ public:
     }
 
     // Create programs based on shape type. 
-    void createPrograms(const OptixDeviceContext& ctx, const OptixModule& module) {
+    void createPrograms(const OptixDeviceContext& ctx, const Module& module) {
         Assert(!m_program_groups.empty(), "ProgramGroup is not allocated.");
         if (shapeType() == ShapeType::Mesh) {
             // Program for mesh is only a closest-hit program. 

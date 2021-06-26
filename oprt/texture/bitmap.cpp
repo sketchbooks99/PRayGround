@@ -6,37 +6,6 @@
 namespace oprt {
 
 // ---------------------------------------------------------------------
-template <>
-BitmapTexture_<float>::BitmapTexture_(const std::filesystem::path& filename)
-{
-    std::optional<std::filesystem::path> filepath = findDatapath(filename);
-    if (!filepath)
-    {
-        Message(MSG_ERROR, "The texture file '" + filename.string() + "' is not found.");
-        int width = 512;
-        int height = 512;
-        float4 magenta = make_float4(1.0f, 0.0f, 1.0f, 1.0f);
-        std::vector<float4> pixels(width * height, magenta);
-        m_bitmap = std::make_shared<Bitmap_<float>>(
-            BitmapFloat::Format::RGBA, width, height, reinterpret_cast<BitmapFloat::Type*>(pixels.data())
-        );
-    }
-    else
-    {
-        auto ext = getExtension(filepath.value());
-        if ( ext == ".exr" || ext == ".EXR" )
-        {
-            
-        }
-    }
-}
-
-template <>
-BitmapTexture_<unsigned char>::BitmapTexture_(const std::filesystem::path& filename)
-{
-
-}
-
 template <typename PixelType>
 BitmapTexture_<PixelType>::BitmapTexture_(const std::filesystem::path& filename)
 {
@@ -91,14 +60,14 @@ void BitmapTexture_<PixelType>::prepareData()
     res_desc.res.array.array = d_array;
 
     CUDA_CHECK( cudaCreateTextureObject( &d_texture, &res_desc, &m_tex_desc, nullptr ) );
-    BitmapTexture_Data texture_data = { 
+    BitmapTextureData texture_data = { 
         d_texture
     };
 
-    CUDA_CHECK( cudaMalloc( &d_data, sizeof(BitmapTexture_Data) ) );
+    CUDA_CHECK( cudaMalloc( &d_data, sizeof(BitmapTextureData) ) );
     CUDA_CHECK( cudaMemcpy(
         d_data, 
-        &texture_data, sizeof(BitmapTexture_Data), 
+        &texture_data, sizeof(BitmapTextureData), 
         cudaMemcpyHostToDevice
     ));
 }
@@ -113,6 +82,7 @@ void BitmapTexture_<PixelType>::freeData()
         CUDA_CHECK( cudaFreeArray( d_array ) );
 }
 
-
+template class BitmapTexture_<float>;
+template class BitmapTexture_<unsigned char>;
 
 }

@@ -299,8 +299,8 @@ int main(int argc, char* argv[]) {
         // Load the scene
         Scene scene = my_scene();
 
-        params.width                             = scene.width();
-        params.height                            = scene.height();
+        params.width                             = scene.film()->width();
+        params.height                            = scene.film()->height();
         params.samples_per_launch                = scene.samplesPerLaunch();
         params.max_depth                         = scene.depth();
 
@@ -387,7 +387,7 @@ int main(int argc, char* argv[]) {
          */
         std::vector<oprt::ProgramGroup> program_groups;
         // Raygen program
-        auto raygen_program = oprt::createRayGenProgram( optix_context, (OptixModule)module, RG_FUNC_STR("raygen") );
+        auto raygen_program = oprt::createRayGenProgram( optix_context, module, RG_FUNC_STR("raygen") );
         program_groups.push_back( raygen_program );
         // Create and bind sbt to raygen program
         oprt::CUDABuffer<oprt::RayGenRecord> d_raygen_record;
@@ -397,15 +397,15 @@ int main(int argc, char* argv[]) {
         
         // Miss program
         std::vector<oprt::ProgramGroup> miss_programs( RAY_TYPE_COUNT );
-        miss_programs[0] = oprt::createMissProgram( optix_context, (OptixModule)module, MS_FUNC_STR("radiance") );
-        miss_programs[1] = oprt::createMissProgram( optix_context, nullptr, nullptr );
+        miss_programs[0] = oprt::createMissProgram( optix_context, module, MS_FUNC_STR("radiance") );
+        miss_programs[1] = oprt::createMissProgram( optix_context, oprt::Module(), nullptr );
         std::copy( miss_programs.begin(), miss_programs.end(), std::back_inserter( program_groups ) );
         // Create sbt for miss programs
         oprt::CUDABuffer<oprt::MissRecord> d_miss_record;
         oprt::MissRecord ms_records[RAY_TYPE_COUNT];
         for (int i=0; i<RAY_TYPE_COUNT; i++) {
             miss_programs[i].bindRecord( &ms_records[i] );
-            ms_records[i].data.bg_color = scene.environment();  
+            ms_records[i].data.envdata = scene.environment()->devicePtr();  
         }
         d_miss_record.copyToDevice( ms_records, sizeof(oprt::MissRecord) * RAY_TYPE_COUNT );
 
@@ -531,9 +531,12 @@ int main(int argc, char* argv[]) {
             std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds>(render_time);
             printf("Render time: %dm %ds %dms\n", (int)m.count(), (int)s.count(), (int)ms.count());
             
-            Bitmap bitmap(Bitmap::Format::RGBA, output_buffer.width(), output_buffer.height(), 
-                reinterpret_cast<unsigned char*>(output_buffer.getHostPointer()));
-            bitmap.write(outfile);
+            // Bitmap bitmap(Bitmap::Format::RGBA, output_buffer.width(), output_buffer.height(), 
+            //     reinterpret_cast<unsigned char*>(output_buffer.getHostPointer()));
+            // bitmap.write(outfile);
+            scene.film()->fillData(reinterpret_cast<Bitmap::Type*>(output_buffer.getHostPointer()), 
+                scene.film()->width(), scene.film()->height(), 0, 0);
+            scene.film()->write(outfile);
 
             if( output_buffer_type == sutil::CUDAOutputBufferType::GL_INTEROP )
             {

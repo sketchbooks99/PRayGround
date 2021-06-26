@@ -84,7 +84,7 @@ public:
     OptixModuleCompileOptions compileOptions() const { return m_options; }
 
 private:
-    OptixModule m_module;
+    OptixModule m_module { nullptr };
     std::string m_ptx_path;
     OptixModuleCompileOptions m_options {};
 }; 

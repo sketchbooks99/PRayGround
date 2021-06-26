@@ -9,3 +9,6 @@
 #include <cstdlib>
 #endif
 
+#ifndef __CUDACC__
+
+#endif

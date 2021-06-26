@@ -31,7 +31,7 @@ public:
 
     void* devicePtr() const { return d_data; }
 protected:
-    void* d_data { 0 };
+    void* d_data { nullptr };
 };
 
 }

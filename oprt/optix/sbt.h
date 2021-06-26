@@ -9,7 +9,7 @@ namespace oprt {
 struct EmptyData {};
 
 struct MissData {
-    float4 bg_color;
+    void* envdata;
 };
 
 struct HitGroupData {

@@ -47,6 +47,10 @@ public:
     { 
         m_environment = std::make_shared<EnvironmentEmitter>(color);
     }
+    void setEnvironment(const std::shared_ptr<Texture>& texture)
+    {
+        m_environment = std::make_shared<EnvironmentEmitter>(texture);
+    }
     void setEnvironment(const std::shared_ptr<EnvironmentEmitter>& env) { m_environment = env; }
     void setEnvironment(const std::filesystem::path& filename)
     {

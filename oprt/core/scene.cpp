@@ -14,7 +14,9 @@ void Scene::freeFromDevice()
     {
         for (auto& p : ps.primitives())
         {
-            p.material()->freeData();
+            std::visit([](auto surface) {
+                surface->freeData();
+            }, p.surface());
         }
     }
 }
@@ -56,16 +58,32 @@ void Scene::createHitgroupSBT(OptixShaderBindingTable& sbt) {
                 {
                     hitgroup_records.push_back(HitGroupRecord());
                     p.bindRadianceRecord(&hitgroup_records.back());
-                    hitgroup_records.back().data.shapedata = p.shape()->devicePtr();
-                    hitgroup_records.back().data.matdata = p.material()->devicePtr();
-                    hitgroup_records.back().data.material_type = static_cast<unsigned int>(p.materialType());
+                    hitgroup_records.back().data.shape_data = p.shape()->devicePtr();
+                    hitgroup_records.back().data.surface_data = 
+                        std::visit([](auto surface) { return surface->devicePtr(); }, p.surface());
+
+                    if (p.surfaceType() == SurfaceType::Material)
+                    {
+                        std::shared_ptr<Material> material = std::get<std::shared_ptr<Material>>(p.surface());
+                        hitgroup_records.back().data.surface_func_base_id = 
+                            static_cast<uint32_t>(material->type()) * RAY_TYPE_COUNT;
+                    }
+                    else if (p.surfaceType() == SurfaceType::Emitter)
+                    {
+                        std::shared_ptr<AreaEmitter> area = std::get<std::shared_ptr<AreaEmitter>>(p.surface());
+                        hitgroup_records.back().data.surface_func_base_id = 
+                            static_cast<uint32_t>(MaterialType::Count) * RAY_TYPE_COUNT + 
+                            static_cast<uint32_t>(TextureType::Count) +
+                            static_cast<uint32_t>(area->type());
+                    }
+                    hitgroup_records.back().data.surface_type = p.surfaceType();
                 } 
                 // Bind sbt to occlusion program groups.
                 else if (i == 1) 
                 {
                     hitgroup_records.push_back(HitGroupRecord());
                     p.bindOcclusionRecord(&hitgroup_records.back());
-                    hitgroup_records.back().data.shapedata = p.shape()->devicePtr();
+                    hitgroup_records.back().data.shape_data = p.shape()->devicePtr();
                 }
             }
         }

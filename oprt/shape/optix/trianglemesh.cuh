@@ -28,7 +28,7 @@ struct MeshData {
 CALLABLE_FUNC void CH_FUNC(mesh)()
 {
     oprt::HitGroupData* data = reinterpret_cast<oprt::HitGroupData*>(optixGetSbtDataPointer());
-    const oprt::MeshData* mesh_data = reinterpret_cast<oprt::MeshData*>(data->shapedata);
+    const oprt::MeshData* mesh_data = reinterpret_cast<oprt::MeshData*>(data->shape_data);
 
     oprt::Ray ray = getWorldRay();
     
@@ -57,11 +57,17 @@ CALLABLE_FUNC void CH_FUNC(mesh)()
     si->wi = ray.d;
     si->uv = texcoords;
 
-    si->mat_property = {
-        data->matdata,              // matdata
-        data->material_type * 2,    // bsdf_sample_id
-        data->material_type * 2 + 1 // pdf_idq
+    si->surface_type = data->surface_type;
+    si->surface_property = {
+        data->surface_data,
+        data->surface_func_base_id
     };
+
+    // si->mat_property = {
+    //     data->matdata,              // matdata
+    //     data->material_type * 2,    // bsdf_sample_id
+    //     data->material_type * 2 + 1 // pdf_idq
+    // };
 }
 
 // -------------------------------------------------------------------------------

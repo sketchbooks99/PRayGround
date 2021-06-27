@@ -126,9 +126,9 @@ private:
 
 #else
 
-CALLABLE_FUNC void DC_FUNC(sample_disney)(SurfaceInteraction* si, void* matdata)
+CALLABLE_FUNC void DC_FUNC(sample_disney)(SurfaceInteraction* si, void* mat_data)
 {
-    const DisneyData* disney = reinterpret_cast<DisneyData*>(matdata);
+    const DisneyData* disney = reinterpret_cast<DisneyData*>(mat_data);
 
     if (disney->twosided)
         si->n = faceforward(si->n, -si->wi, si->n);
@@ -170,9 +170,9 @@ CALLABLE_FUNC void DC_FUNC(sample_disney)(SurfaceInteraction* si, void* matdata)
  * G : geometry function
  * D : NDF
  */
-CALLABLE_FUNC float3 CC_FUNC(bsdf_disney)(SurfaceInteraction* si, void* matdata)
+CALLABLE_FUNC float3 CC_FUNC(bsdf_disney)(SurfaceInteraction* si, void* mat_data)
 {   
-    const DisneyData* disney = reinterpret_cast<DisneyData*>(matdata);
+    const DisneyData* disney = reinterpret_cast<DisneyData*>(mat_data);
     si->emission = make_float3(0.0f);
 
     const float3 V = -si->wi;
@@ -239,9 +239,9 @@ CALLABLE_FUNC float3 CC_FUNC(bsdf_disney)(SurfaceInteraction* si, void* matdata)
  * 
  * @todo Search and consider correct evaluation of PDF.
  */
-CALLABLE_FUNC float DC_FUNC(pdf_disney)(SurfaceInteraction* si, void* matdata)
+CALLABLE_FUNC float DC_FUNC(pdf_disney)(SurfaceInteraction* si, void* mat_data)
 {
-    const DisneyData* disney = reinterpret_cast<DisneyData*>(matdata);
+    const DisneyData* disney = reinterpret_cast<DisneyData*>(mat_data);
 
     const float3 V = -si->wi;
     const float3 L = si->wo;

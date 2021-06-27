@@ -2,6 +2,7 @@
 
 #include "../core/emitter.h"
 #include "../texture/constant.h"
+#include "optix/envmap.cuh"
 
 /**
  * @brief Environment emitter. In general, emittance is evaluated at a miss program.
@@ -12,11 +13,6 @@
  */
 
 namespace oprt {
-
-struct EnvironmentEmitterData {
-    void* texdata;
-    unsigned int tex_func_id;
-};
 
 #ifndef __CUDACC__
 
@@ -29,6 +25,8 @@ public:
     : m_texture(texture) {}
 
     void prepareData() override;
+
+    void freeData() override {}
 
     EmitterType type() const override { return EmitterType::Envmap; }
 private:

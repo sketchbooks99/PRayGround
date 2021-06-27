@@ -72,6 +72,10 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 
 		int depth = 0;
 		for ( ;; ) {
+
+			if ( depth >= params.max_depth )
+				break;
+
 			trace(
 				params.handle,
 				ray_origin, 
@@ -81,41 +85,50 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 				&si 
 			);
 
-			// Miss radiance 
-			if ( si.trace_terminate || depth >= params.max_depth ) {
+			if ( si.trace_terminate )
+			{
 				result += si.emission * attenuation;
 				break;
 			}
-			
-			// Sampling scattered direction
-			optixDirectCall<void, SurfaceInteraction*, void*>(
-				si.mat_property.bsdf_sample_id, 
-				&si,  
-				si.mat_property.matdata
-			);
 
-			// Evaluate bsdf 
-			float3 bsdf_val = optixContinuationCall<float3, SurfaceInteraction*, void*>(
-				si.mat_property.bsdf_sample_id, 
-				&si,
-				si.mat_property.matdata
-			);
-			
-			// Evaluate pdf
-			float pdf_val = optixDirectCall<float, SurfaceInteraction*, void*>(
-				si.mat_property.pdf_id, 
-				&si,  
-				si.mat_property.matdata
-			);
-
-			if ( si.trace_terminate && !si.radiance_evaled ) {
+			if ( si.surface_type == SurfaceType::Emitter )
+			{
+				optixDirectCall<void, SurfaceInteraction*, void*>(
+					si.surface_property.func_base_id, 
+					&si, 
+					si.surface_property.data
+				);
 				result += si.emission * attenuation;
-				break;
+				if (si.trace_terminate)
+					break;
 			}
-			
-			// attenuation += si.emission;
-			attenuation *= (bsdf_val / pdf_val);
-			result += si.emission * attenuation;
+			else if ( si.surface_type == SurfaceType::Material )
+			{
+				// Sampling scattered direction
+				optixDirectCall<void, SurfaceInteraction*, void*>(
+					si.surface_property.func_base_id, 
+					&si,  
+					si.surface_property.data
+				);
+
+				// Evaluate bsdf 
+				float3 bsdf_val = optixContinuationCall<float3, SurfaceInteraction*, void*>(
+					si.surface_property.func_base_id, 
+					&si,
+					si.surface_property.data
+				);
+				
+				// Evaluate pdf
+				float pdf_val = optixDirectCall<float, SurfaceInteraction*, void*>(
+					si.surface_property.func_base_id + 1, 
+					&si,  
+					si.surface_property.data
+				);
+				
+				// attenuation += si.emission;
+				attenuation *= (bsdf_val * pdf_val) / pdf_val;
+				result += si.emission * attenuation;
+			}
 			
 			ray_origin = si.p;
 			ray_direction = si.wo;

@@ -21,12 +21,12 @@ void EnvironmentEmitter::prepareData()
     EnvironmentEmitterData data = 
     {
         m_texture->devicePtr(), 
-        static_cast<uint8_t>(m_texture->type()) + static_cast<uint8_t>(MaterialType::Count) * RAY_TYPE_COUNT
+        static_cast<uint32_t>(m_texture->type()) + static_cast<uint32_t>(MaterialType::Count) * 2
     };
 
-    CUDA_CHECK(cudaMalloc(&d_data, sizeof(EnvironmentEmitterData)));
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_data), sizeof(EnvironmentEmitterData)));
     CUDA_CHECK(cudaMemcpy(
-        d_data, 
+        reinterpret_cast<void*>(d_data), 
         &data, sizeof(EnvironmentEmitterData), 
         cudaMemcpyHostToDevice
     ));

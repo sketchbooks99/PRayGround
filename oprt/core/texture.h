@@ -23,7 +23,7 @@ enum class TextureType {
  * @brief A map connects TextureType with names of entry functions that evaluate texture albedo.
  */
 static std::map<TextureType, const char*> tex_eval_map = {
-    { TextureType::Constant, "eval_constant" }, 
+    { TextureType::Constant, "eval_constant" },
     { TextureType::Checker, "eval_checker" },
     { TextureType::Bitmap, "eval_bitmap" }
 };

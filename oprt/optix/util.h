@@ -14,18 +14,16 @@ enum RayType {
 
 namespace oprt {
 
-struct MaterialProperty
-{
-    void* matdata;
-    unsigned int bsdf_sample_id;
-    unsigned int pdf_id;
+struct SurfaceProperty {
+    void* data;
+    unsigned int func_base_id;
 };
 
-// enum class HitType {
-//     Geometry,   // Scene geometry
-//     Emitter,    // Emitter sampling
-//     Medium      // Future work
-// };
+enum class SurfaceType {
+    Material,   // Scene geometry
+    Emitter,    // Emitter sampling
+    Medium      // Future work
+};
 
 /// @note Currently \c spectrum is RGB representation, not spectrum. 
 struct SurfaceInteraction {
@@ -43,7 +41,6 @@ struct SurfaceInteraction {
     float3 spectrum;
 
     /** Radiance and attenuation computed by a material attached with a surface. */
-    float3 radiance;
     float3 attenuation;
     float3 emission;
 
@@ -57,9 +54,9 @@ struct SurfaceInteraction {
     /** Seed for random */
     unsigned int seed;
 
-    MaterialProperty mat_property;
+    SurfaceProperty surface_property;
 
-    HitType hit_type;
+    SurfaceType surface_type;
 
     int trace_terminate;
     int radiance_evaled;
@@ -108,7 +105,7 @@ static INLINE DEVICE void setPayloadOcclusion(bool occluded)
 
 INLINE DEVICE bool traceOcclusion(
     OptixTraversableHandle handle, float3 ro, float3 rd, float tmin, float tmax
-) 
+)
 {
     unsigned int occluded = 0u;
     optixTrace(

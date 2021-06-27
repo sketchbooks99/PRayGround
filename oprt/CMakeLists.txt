@@ -42,6 +42,7 @@ OPTIX_add_sample_executable( oprt target_name
   texture/bitmap.cpp
 
   emitter/envmap.cpp
+  emitter/area.cpp
   
   oprt.cpp
 

@@ -62,6 +62,8 @@ void Bitmap_<PixelType>::allocate(Format format, int width, int height)
             m_channels = 3;
             break;
         case Format::RGBA:
+        case Format::UNKNOWN:
+        default:
             m_channels = 4;
             break;
     }

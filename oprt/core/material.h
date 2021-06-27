@@ -32,8 +32,8 @@ enum class MaterialType {
     Conductor = 1,
     Dielectric = 2,
     Disney = 3,
-    Emitter = 4,
-    Count = 5
+    // Emitter = 4,
+    Count = 4
 };
 
 #ifndef __CUDACC__
@@ -45,7 +45,7 @@ static std::map<MaterialType, const char*> sample_func_map = {
     { MaterialType::Conductor, "sample_conductor" },    
     { MaterialType::Dielectric, "sample_dielectric" },    
     { MaterialType::Disney, "sample_disney"},
-    { MaterialType::Emitter, "sample_emitter" }
+    // { MaterialType::Emitter, "sample_emitter" }
 };
 
 static std::map<MaterialType, const char*> bsdf_func_map = {
@@ -53,7 +53,7 @@ static std::map<MaterialType, const char*> bsdf_func_map = {
     { MaterialType::Conductor, "bsdf_conductor" },    
     { MaterialType::Dielectric, "bsdf_dielectric" },    
     { MaterialType::Disney, "bsdf_disney"},
-    { MaterialType::Emitter, "bsdf_emitter" }
+    // { MaterialType::Emitter, "bsdf_emitter" }
 };
 
 static std::map<MaterialType, const char*> pdf_func_map = {
@@ -61,7 +61,7 @@ static std::map<MaterialType, const char*> pdf_func_map = {
     { MaterialType::Conductor, "pdf_conductor" },    
     { MaterialType::Dielectric, "pdf_dielectric" },    
     { MaterialType::Disney, "pdf_disney"},
-    { MaterialType::Emitter, "pdf_emitter" }
+    // { MaterialType::Emitter, "pdf_emitter" }
 };
 
 
@@ -72,7 +72,7 @@ inline std::ostream& operator<<(std::ostream& out, const MaterialType& type) {
     case MaterialType::Conductor:   return out << "MaterialType::Conductor";
     case MaterialType::Dielectric:  return out << "MaterialType::Sphere";
     case MaterialType::Disney:      return out << "MaterialType::Disney";
-    case MaterialType::Emitter:     return out << "MaterialType::Emitter";
+    // case MaterialType::Emitter:     return out << "MaterialType::Emitter";
     default:
         Throw("This MaterialType is not supported\n");
         return out << "";

@@ -18,6 +18,7 @@
 #include <optional>
 #include <map>
 #include <concepts>
+#include <variant>
 #include "../core/stream_helpers.h"
 
 #if defined(_WIN32) | defined(_WIN64)
@@ -60,14 +61,6 @@ struct Params
     OptixTraversableHandle handle; // unsigned long long
 };
 
-enum HitType
-{
-    HIT_OUTSIDE_FROM_OUTSIDE = 1u << 0,
-    HIT_OUTSIDE_FROM_INSIDE = 1u << 1,
-    HIT_INSIDE_FROM_OUTSIDE = 1u << 2,
-    HIT_INSIDE_FROM_INSIDE = 1u << 3
-};
-
 enum class Axis {
     X = 0, 
     Y = 1, 
@@ -84,17 +77,17 @@ enum MessageType
     MSG_ERROR
 };
 
-inline void Throw(const std::string& msg) {
-    throw std::runtime_error(msg);
-}
-
 template <class T>
-concept BoolConvertible = requires(T x)
+concept BoolConvertable = requires(T x)
 {
     (bool)x;
 };
 
-template <BoolConvertible T>
+inline void Throw(const std::string& msg) {
+    throw std::runtime_error(msg);
+}
+
+template <BoolConvertable T>
 inline void Assert(T condition, const std::string& msg) {
     if (!(bool)condition) Throw(msg);
 }

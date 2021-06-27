@@ -12,7 +12,7 @@ void loadObj(
     std::vector<float3>& vertices,
     std::vector<float3>& normals,
     std::vector<Face>& faces,
-    std::vector<float2>& coordinates
+    std::vector<float2>& texcoords
 )
 {
     std::vector<float3> temp_normals;
@@ -39,17 +39,21 @@ void loadObj(
         else if(header == "vn") {
             float x, y, z;
             iss >> x >> y >> z;
-            temp_normals.emplace_back(make_float3(x, y, z));
+            normals.emplace_back(make_float3(x, y, z));
+        }
+        else if (header == "vt")
+        {
+            float x, y;
+            iss >> x >> y;
+            texcoords.emplace_back(make_float2(x, y));
         }
         else if (header == "f")
         {
             // temporalily vector to store face information
             std::vector<int> temp_vert_indices;
             std::vector<int> temp_norm_indices;
+            std::vector<int> temp_tex_indices;
 
-            // Future work -----------------------------------
-            // std::vector<int> temp_tex_faces;
-            // ----------------------------------------------- 
             for (std::string buffer; iss >> buffer;)
             {
                 int vert_idx, tex_idx, norm_idx;
@@ -58,7 +62,7 @@ void loadObj(
                     // Input - index(vertex)/index(texture)/index(normal)
                     temp_vert_indices.emplace_back(vert_idx - 1);
                     temp_norm_indices.emplace_back(norm_idx - 1);
-                    // temp_tex_faces.emplace_back(tex_idx - 1);
+                    temp_tex_indices.emplace_back(tex_idx - 1);
                 }
                 else if (sscanf(buffer.c_str(), "%d//%d", &vert_idx, &norm_idx) == 2)
                 {
@@ -70,7 +74,7 @@ void loadObj(
                 {
                     // Input - index(vertex)/index(texture)
                     temp_vert_indices.emplace_back(vert_idx - 1);
-                    //temp_tex_faces.emplace_back(tex_idx - 1);
+                    temp_tex_indices.emplace_back(tex_idx - 1);
                 }
                 else if (sscanf(buffer.c_str(), "%d", &vert_idx) == 1)
                 {
@@ -88,6 +92,9 @@ void loadObj(
                 
                 if (!temp_norm_indices.empty())
                     face.normal_id = make_int3(temp_norm_indices[0], temp_norm_indices[1], temp_norm_indices[2]);
+                
+                if (!temp_tex_indices.empty())
+                    face.texcoord_id = make_int3(temp_tex_indices[0], temp_tex_indices[1], temp_tex_indices[2]);
 
                 faces.push_back(face);
             }
@@ -109,6 +116,12 @@ void loadObj(
                 {
                     face1.normal_id = make_int3(temp_norm_indices[0], temp_norm_indices[1], temp_norm_indices[2]);
                     face2.normal_id = make_int3(temp_norm_indices[2], temp_norm_indices[3], temp_norm_indices[0]);
+                }
+
+                if (!temp_tex_indices.empty())
+                {
+                    face1.texcoord_id = make_int3(temp_tex_indices[0], temp_tex_indices[1], temp_tex_indices[2]);
+                    face2.texcoord_id = make_int3(temp_tex_indices[2], temp_tex_indices[3], temp_tex_indices[0]);
                 }
                 faces.push_back(face1);
                 faces.push_back(face2);

@@ -56,8 +56,8 @@ private:
 };
 
 #else 
-CALLABLE_FUNC void DC_FUNC(sample_dielectric)(SurfaceInteraction* si, void* matdata) {
-    const DielectricData* dielectric = reinterpret_cast<DielectricData*>(matdata);
+CALLABLE_FUNC void DC_FUNC(sample_dielectric)(SurfaceInteraction* si, void* mat_data) {
+    const DielectricData* dielectric = reinterpret_cast<DielectricData*>(mat_data);
 
     float ni = 1.0f; // air
     float nt = dielectric->ior;  // ior specified 
@@ -83,14 +83,14 @@ CALLABLE_FUNC void DC_FUNC(sample_dielectric)(SurfaceInteraction* si, void* matd
     si->trace_terminate = false;
 }
 
-CALLABLE_FUNC float3 CC_FUNC(bsdf_dielectric)(SurfaceInteraction* si, void* matdata)
+CALLABLE_FUNC float3 CC_FUNC(bsdf_dielectric)(SurfaceInteraction* si, void* mat_data)
 {
-    const DielectricData* dielectric = reinterpret_cast<DielectricData*>(matdata);
+    const DielectricData* dielectric = reinterpret_cast<DielectricData*>(mat_data);
     si->emission = make_float3(0.0f);
     return optixDirectCall<float3, SurfaceInteraction*, void*>(dielectric->tex_func_id, si, dielectric->texdata);    
 }
 
-CALLABLE_FUNC float DC_FUNC(pdf_dielectric)(SurfaceInteraction* si, void* matdata)
+CALLABLE_FUNC float DC_FUNC(pdf_dielectric)(SurfaceInteraction* si, void* mat_data)
 {
     return 1.0f;
 }

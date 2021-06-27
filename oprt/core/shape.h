@@ -15,6 +15,8 @@ enum class ShapeType {
     Arbitrary = 4
 };
 
+#ifndef __CUDACC__
+
 /** 
  * \brief 
  * Map object to easily get string of shape via ShapeType, 
@@ -84,5 +86,7 @@ protected:
     void* d_data { 0 };
     CUdeviceptr d_aabb_buffer { 0 };
 };
+
+#endif // __CUDACC__
 
 }

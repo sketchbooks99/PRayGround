@@ -19,7 +19,7 @@ CALLABLE_FUNC void IS_FUNC(plane)()
 {
 
     const HitGroupData* data = reinterpret_cast<HitGroupData*>(optixGetSbtDataPointer());
-    const PlaneData* plane_data = reinterpret_cast<PlaneData*>(data->shapedata);
+    const PlaneData* plane_data = reinterpret_cast<PlaneData*>(data->shape_data);
 
     const float2 min = plane_data->min;
     const float2 max = plane_data->max;
@@ -58,10 +58,10 @@ CALLABLE_FUNC void CH_FUNC(plane)()
     si->wi = ray.d;
     si->uv = uv;
 
-    si->mat_property = {
-        data->matdata,              // material data
-        data->material_type * 2,    // bsdf_sample_id
-        data->material_type * 2 + 1 // pdf_id
+    si->surface_type = data->surface_type;
+    si->surface_property = {
+        data->surface_data,
+        data->surface_func_base_id
     };
 }
 

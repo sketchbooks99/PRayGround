@@ -37,7 +37,7 @@ void buildGas(
         unsigned int index_offset = 0;
         for (size_t i=0; i<primitives_subset.size(); i++) {
             primitives_subset[i].prepareShapeData();
-            primitives_subset[i].prepareMaterialData();
+            primitives_subset[i].prepareSurfaceData();
             primitives_subset[i].buildInput(build_inputs[i]);
 
             switch ( primitives_subset[i].shapeType() ) {
@@ -221,6 +221,23 @@ void createTexturePrograms(
         callable_records.push_back(CallableRecord());
         program_groups.back().bindRecord(&callable_records.back());
     }
+}
+
+void createEmitterPrograms(
+    const OptixDeviceContext& ctx, 
+    const Module& module, 
+    std::vector<ProgramGroup>& program_groups, 
+    std::vector<CallableRecord>& callable_records
+)
+{
+    program_groups.push_back(ProgramGroup(OPTIX_PROGRAM_GROUP_KIND_CALLABLES));
+    program_groups.back().createCallableProgram(
+        ctx, 
+        ProgramEntry( module, DC_FUNC_STR( "area_emitter" )),
+        ProgramEntry( Module(), nullptr )
+    );
+    callable_records.push_back(CallableRecord());
+    program_groups.back().bindRecord(&callable_records.back());
 }
 
 }

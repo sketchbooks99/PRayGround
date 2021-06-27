@@ -38,7 +38,7 @@ static INLINE DEVICE float2 getUV(
 CALLABLE_FUNC void IS_FUNC(cylinder)()
 {
     const HitGroupData* data = reinterpret_cast<HitGroupData*>(optixGetSbtDataPointer());
-    const CylinderData* cylinder = reinterpret_cast<CylinderData*>(data->shapedata);
+    const CylinderData* cylinder = reinterpret_cast<CylinderData*>(data->shape_data);
 
     const float radius = cylinder->radius;
     const float height = cylinder->height;
@@ -104,7 +104,7 @@ CALLABLE_FUNC void IS_FUNC(cylinder)()
 CALLABLE_FUNC void CH_FUNC(cylinder)()
 {
     const HitGroupData* data = reinterpret_cast<HitGroupData*>(optixGetSbtDataPointer());
-    const CylinderData* cylinder = reinterpret_cast<CylinderData*>(data->shapedata);
+    const CylinderData* cylinder = reinterpret_cast<CylinderData*>(data->shape_data);
 
     oprt::Ray ray = getWorldRay();
 
@@ -127,10 +127,10 @@ CALLABLE_FUNC void CH_FUNC(cylinder)()
     si->wi = ray.d;
     si->uv = uv;
 
-    si->mat_property = {
-        data->matdata,               // material data
-        data->material_type * 2,     // id of callable function to evaluate bsdf and for importance sampling
-        data->material_type * 2 + 1  // id of callable function to evaluate pdf
+    si->surface_type = data->surface_type;
+    si->surface_property = {
+        data->surface_data,
+        data->surface_func_base_id
     };
 }
 

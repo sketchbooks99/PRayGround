@@ -7,11 +7,13 @@
 namespace oprt {
 
 enum class EmitterType {
-    Point = 0,
-    Area = 1, 
+    Area = 0, 
+    Point = 1,
     Envmap = 2,
     Count = 3
 };
+
+#ifndef __CUDACC__
 
 inline std::ostream& operator<<(std::ostream& out, EmitterType type)
 {
@@ -29,9 +31,13 @@ public:
     virtual void prepareData() = 0;
     virtual EmitterType type() const = 0;
 
-    void* devicePtr() const { return d_data; }
+    virtual void freeData() = 0;
+
+    void* devicePtr() const { return reinterpret_cast<void*>(d_data); }
 protected:
     void* d_data { nullptr };
 };
+
+#endif // __CUDACC__
 
 }

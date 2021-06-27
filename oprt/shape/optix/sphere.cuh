@@ -24,7 +24,7 @@ static INLINE DEVICE float2 getUV(const float3& p) {
 
 CALLABLE_FUNC void IS_FUNC(sphere)() {
     const HitGroupData* data = reinterpret_cast<HitGroupData*>(optixGetSbtDataPointer());
-    const SphereData* sphere_data = reinterpret_cast<SphereData*>(data->shapedata);
+    const SphereData* sphere_data = reinterpret_cast<SphereData*>(data->shape_data);
 
     const float3 center = sphere_data->center;
     const float radius = sphere_data->radius;
@@ -59,7 +59,7 @@ CALLABLE_FUNC void IS_FUNC(sphere)() {
 
 CALLABLE_FUNC void CH_FUNC(sphere)() {
     const HitGroupData* data = reinterpret_cast<HitGroupData*>(optixGetSbtDataPointer());
-    const SphereData* sphere_data = reinterpret_cast<SphereData*>(data->shapedata);
+    const SphereData* sphere_data = reinterpret_cast<SphereData*>(data->shape_data);
 
     Ray ray = getWorldRay();
 
@@ -77,10 +77,10 @@ CALLABLE_FUNC void CH_FUNC(sphere)() {
     si->wi = ray.d;
     si->uv = getUV(local_n);
 
-    si->mat_property = {
-        data->matdata,              // matdata
-        data->material_type * 2,    // bsdf_sample_id
-        data->material_type * 2 + 1 // pdf_id
+    si->surface_type = data->surface_type;
+    si->surface_property = {
+        data->surface_data,
+        data->surface_func_base_id
     };
 }
 

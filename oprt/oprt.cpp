@@ -397,15 +397,16 @@ int main(int argc, char* argv[]) {
         
         // Miss program
         std::vector<oprt::ProgramGroup> miss_programs( RAY_TYPE_COUNT );
-        miss_programs[0] = oprt::createMissProgram( optix_context, module, MS_FUNC_STR("radiance") );
+        miss_programs[0] = oprt::createMissProgram( optix_context, module, MS_FUNC_STR("envmap") );
         miss_programs[1] = oprt::createMissProgram( optix_context, oprt::Module(), nullptr );
         std::copy( miss_programs.begin(), miss_programs.end(), std::back_inserter( program_groups ) );
         // Create sbt for miss programs
         oprt::CUDABuffer<oprt::MissRecord> d_miss_record;
         oprt::MissRecord ms_records[RAY_TYPE_COUNT];
+        scene.environment()->prepareData();
         for (int i=0; i<RAY_TYPE_COUNT; i++) {
             miss_programs[i].bindRecord( &ms_records[i] );
-            ms_records[i].data.envdata = scene.environment()->devicePtr();  
+            ms_records[i].data.env_data = i == 0 ? scene.environment()->devicePtr() : nullptr;  
         }
         d_miss_record.copyToDevice( ms_records, sizeof(oprt::MissRecord) * RAY_TYPE_COUNT );
 
@@ -428,6 +429,7 @@ int main(int argc, char* argv[]) {
         std::vector<oprt::CallableRecord> callable_records;
         createMaterialPrograms( optix_context, module, callable_programs, callable_records );
         createTexturePrograms( optix_context, module, callable_programs, callable_records );
+        createEmitterPrograms( optix_context, module, callable_programs, callable_records );
         oprt::CUDABuffer<oprt::CallableRecord> d_callable_records;
         d_callable_records.copyToDevice(callable_records);
         sbt.callablesRecordBase = d_callable_records.devicePtr();
@@ -488,7 +490,7 @@ int main(int argc, char* argv[]) {
                     t1 = std::chrono::steady_clock::now();
                     display_time += t1 - t0;
 
-                    sutil::displayStats( state_update_time, render_time, display_time );
+                    // sutil::displayStats( state_update_time, render_time, display_time );
 
                     glfwSwapBuffers( window );
 

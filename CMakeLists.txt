@@ -200,7 +200,7 @@ if(NOT PASSED_FIRST_CONFIGURE)
     endif()
   endif()
 
-  if(CMAKE_CXX_STANDARD EQUAL 17)
+  if(CMAKE_CXX_STANDARD GREATER 17)
     set(SAMPLES_NVRTC_CXX "-std=c++11")
   else()
     set(SAMPLES_NVRTC_CXX "")

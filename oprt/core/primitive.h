@@ -19,6 +19,7 @@
 #include "../optix/program.h"
 #include "../optix/sbt.h"
 #include "../optix/module.h"
+#include "../emitter/area.h"
 #include <algorithm>
 
 namespace oprt {
@@ -28,8 +29,19 @@ public:
     Primitive(const std::shared_ptr<Shape>& shape, const std::shared_ptr<Material>& material)
     : Primitive(shape, material, 0) {}
 
+    Primitive(const std::shared_ptr<Shape>& shape, const std::shared_ptr<AreaEmitter>& area)
+    : Primitive(shape, area, 0) {}
+
     Primitive(const std::shared_ptr<Shape>& shape, const std::shared_ptr<Material>& material, uint32_t sbt_index)
-    : m_shape(shape), m_material(material), m_sbt_index(sbt_index) 
+    : m_shape(shape), m_surface(material), m_sbt_index(sbt_index) 
+    {
+        m_program_groups.resize(RAY_TYPE_COUNT);
+        for (auto &pg : m_program_groups) {
+            pg = ProgramGroup(OPTIX_PROGRAM_GROUP_KIND_HITGROUP);
+        }
+    }
+    Primitive(const std::shared_ptr<Shape>& shape, const std::shared_ptr<AreaEmitter>& area, uint32_t sbt_index)
+    : m_shape(shape), m_surface(area), m_sbt_index(sbt_index)
     {
         m_program_groups.resize(RAY_TYPE_COUNT);
         for (auto &pg : m_program_groups) {
@@ -61,7 +73,10 @@ public:
 
     // Preparing (alloc and copy) shape data to the device. 
     void prepareShapeData() { m_shape->prepareData(); }
-    void prepareMaterialData() { m_material->prepareData(); }
+    void prepareSurfaceData() 
+    {
+        std::visit([](auto& surface) { surface->prepareData(); }, m_surface);
+    }
 
     // Configure the OptixBuildInput from shape data.
     void buildInput( OptixBuildInput& bi ) { m_shape->buildInput( bi, m_sbt_index ); }
@@ -91,17 +106,23 @@ public:
 
     // Getter 
     uint32_t sbtIndex() const { return m_sbt_index; }
-    std::shared_ptr<Material> material() const { return m_material; }
+    std::variant<std::shared_ptr<Material>, std::shared_ptr<AreaEmitter>> surface() const { return m_surface; }
     std::shared_ptr<Shape> shape() const { return m_shape; }
     ShapeType shapeType() const { return m_shape->type(); }
-    MaterialType materialType() const { return m_material->type(); }
+    SurfaceType surfaceType() const {
+        if (std::holds_alternative<std::shared_ptr<Material>>(m_surface))
+            return SurfaceType::Material;
+        else 
+            return SurfaceType::Emitter;
+    }
 
     std::vector<ProgramGroup> programGroups() const { return m_program_groups; }
 
 private:
     // Member variables.
     std::shared_ptr<Shape> m_shape;
-    std::shared_ptr<Material> m_material;
+    // std::shared_ptr<Material> m_material;
+    std::variant<std::shared_ptr<Material>, std::shared_ptr<AreaEmitter>> m_surface;
 
     /** 
      * \note
@@ -137,6 +158,10 @@ public:
     }
     void addPrimitive(const std::shared_ptr<Shape>& shape, const std::shared_ptr<Material>& material) {
         m_primitives.emplace_back(shape, material);
+        m_primitives.back().setSbtIndex(sbtIndexBase() + (numPrimitives() - 1) );
+    }
+    void addPrimitive(const std::shared_ptr<Shape>& shape, const std::shared_ptr<AreaEmitter>& area) {
+        m_primitives.emplace_back(shape, area);
         m_primitives.back().setSbtIndex(sbtIndexBase() + (numPrimitives() - 1) );
     }
 
@@ -191,6 +216,13 @@ void createTexturePrograms(
     const OptixDeviceContext& ctx, 
     const Module& module, 
     std::vector<ProgramGroup>& program_groups,
+    std::vector<CallableRecord>& callable_records
+);
+
+void createEmitterPrograms(
+    const OptixDeviceContext& ctx, 
+    const Module& module, 
+    std::vector<ProgramGroup>& program_groups, 
     std::vector<CallableRecord>& callable_records
 );
 

@@ -78,7 +78,7 @@
 // #include "material/emitter.h"
 
 // emitter include 
-// #include "emitter/area.h"
+#include "emitter/area.h"
 #include "emitter/envmap.h"
 
 // texture include 

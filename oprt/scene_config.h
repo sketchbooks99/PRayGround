@@ -5,18 +5,20 @@
 Scene my_scene() {
     Scene scene;
 
-    std::shared_ptr<Bitmap> film = std::make_shared<Bitmap>(Bitmap::Format::RGBA, 1024, 1024);
+    int width = 1920;
+    int height = 1080;
+    std::shared_ptr<Bitmap> film = std::make_shared<Bitmap>(Bitmap::Format::RGBA, width, height);
     scene.setFilm(film);
 
     // シーンの一般的な設定    
-    scene.setEnvironment("image/107_hdrmaps_com_free.exr");
+    scene.setEnvironment("image/016_hdrmaps_com_free.exr");
     scene.setDepth(5);
-    scene.setSamplesPerLaunch(1);
-    scene.setNumSamples(1000);
+    scene.setSamplesPerLaunch(4);
+    scene.setNumSamples(4096);
 
     // カメラの設定
     sutil::Camera camera;
-    camera.setEye(make_float3(0.0f, 0.0f, -1000.0f));
+    camera.setEye(make_float3(-333.0f, 80.0f, -800.0f));
     camera.setLookat(make_float3(0.0f, -225.0f, 0.0f));
     camera.setUp(make_float3(0.0f, 1.0f, 0.0f));
     camera.setFovY(35.0f);
@@ -92,7 +94,7 @@ Scene my_scene() {
     scene.addPrimitiveInstance(armadillo_ps);
 
     // Center bunny with lambert material
-    auto bunny2_matrix = sutil::Matrix4x4::translate(make_float3(-50.0f, -275.0f, 300.0f)) 
+    auto bunny2_matrix = sutil::Matrix4x4::translate(make_float3(-50.0f, -272.0f, 300.0f)) 
                        * sutil::Matrix4x4::rotate(M_PIf, make_float3(0.0f, 1.0f, 0.0f))
                        * sutil::Matrix4x4::scale(make_float3(1200.0f));
     auto bunny2_ps = PrimitiveInstance(bunny2_matrix);

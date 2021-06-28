@@ -17,6 +17,7 @@
 #include <filesystem>
 #include <optional>
 #include <map>
+#include <format>
 #include <concepts>
 #include <variant>
 #include "../core/stream_helpers.h"

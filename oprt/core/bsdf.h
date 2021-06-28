@@ -22,11 +22,10 @@
 
 namespace oprt {
 
-HOSTDEVICE INLINE float3 randomSampleHemisphere(unsigned int seed) {
-    // return make_float3(0.0f, 1.0f, 0.0f);
+HOSTDEVICE INLINE float3 randomSampleHemisphere(unsigned int& seed) {
     float a = rnd(seed) * 2.0f * M_PIf;
-    float z = rnd(seed);
-    auto r = sqrtf(fmaxf(0.0f, 1.0f - z * z));
+    float z = sqrtf(rnd(seed));
+    float r = sqrtf(fmaxf(0.0f, 1.0f - z * z));
     return make_float3(r * cosf(a), r * sinf(a), z);
 }
 

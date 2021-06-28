@@ -227,6 +227,23 @@ void initCameraState(sutil::Camera& camera)
     trackball.setGimbalLock(true);
 }
 
+void streamProgress(int current, int max, float elapsed_time, int progress_length)
+{
+    std::cout << "\rRendering: [";
+    int progress = static_cast<int>(((float)(current+1) / max) * progress_length);
+    for (int i = 0; i < progress; i++)
+        std::cout << "+";
+    for (int i = 0; i < progress_length - progress; i++)
+        std::cout << " ";
+    std::cout << "]";
+
+    std::cout << " [" << std::fixed << std::setprecision(2) << elapsed_time << "s]";
+
+    float percent = (float)(current) / max;
+    std::cout << " (" << std::fixed << std::setprecision(2) << (float)(percent * 100.0f) << "%, ";
+    std::cout << "Samples: " << current + 1 << " / " << max << ")" << std::flush;
+}
+
 // ========== Main ==========
 int main(int argc, char* argv[]) {
     oprt::Params params = {};
@@ -259,6 +276,7 @@ int main(int argc, char* argv[]) {
             if( i >= argc - 1 )
                 printUsageAndExit( argv[0] );
             outfile = oprt::pathJoin(OPRT_ROOT_DIR, argv[++i]).string();
+            output_buffer_type = sutil::CUDAOutputBufferType::CUDA_DEVICE;
         }
         else if( arg.substr( 0, 6 ) == "--dim=" )
         {
@@ -283,7 +301,6 @@ int main(int argc, char* argv[]) {
 
     try
     {
-
         // Initialize cuda 
         CUDA_CHECK(cudaFree(0));
 
@@ -490,7 +507,7 @@ int main(int argc, char* argv[]) {
                     t1 = std::chrono::steady_clock::now();
                     display_time += t1 - t0;
 
-                    // sutil::displayStats( state_update_time, render_time, display_time );
+                    sutil::displayStats( state_update_time, render_time, display_time );
 
                     glfwSwapBuffers( window );
 
@@ -526,16 +543,16 @@ int main(int argc, char* argv[]) {
             for (int i=0; i<num_launches; i++) {
                 launchSubframe( output_buffer, params, d_params, stream, pipeline, sbt );
                 params.subframe_index = i;
+                std::chrono::duration<float> elapsed_time = std::chrono::steady_clock::now() - start_time;
+                streamProgress(i * scene.samplesPerLaunch() + scene.samplesPerLaunch() - 1, scene.numSamples(), elapsed_time.count(), 20);
             }
+            std::cout << std::endl;
             auto render_time = std::chrono::steady_clock::now() - start_time;
             std::chrono::minutes m = std::chrono::duration_cast<std::chrono::minutes>(render_time);
             std::chrono::seconds s = std::chrono::duration_cast<std::chrono::seconds>(render_time);
             std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds>(render_time);
-            printf("Render time: %dm %ds %dms\n", (int)m.count(), (int)s.count(), (int)ms.count());
+            Message(MSG_NORMAL, std::format("Render time: {}m {}s {}ms", (int)m.count(), (int)s.count(), (int)ms.count() - (int)(s.count()*1000)) );
             
-            // Bitmap bitmap(Bitmap::Format::RGBA, output_buffer.width(), output_buffer.height(), 
-            //     reinterpret_cast<unsigned char*>(output_buffer.getHostPointer()));
-            // bitmap.write(outfile);
             scene.film()->fillData(reinterpret_cast<Bitmap::Type*>(output_buffer.getHostPointer()), 
                 scene.film()->width(), scene.film()->height(), 0, 0);
             scene.film()->write(outfile);

@@ -75,7 +75,7 @@ CALLABLE_FUNC void DC_FUNC(sample_diffuse)(SurfaceInteraction* si, void* mat_dat
         const float z1 = rnd(seed);
         const float z2 = rnd(seed);
 
-        float3 wi = cosineSampleHemisphere(z1, z2);
+        float3 wi = randomSampleHemisphere(seed);
         Onb onb(si->n);
         onb.inverseTransform(wi);
         si->wo = normalize(wi);

@@ -93,6 +93,7 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 
 			if ( si.surface_type == SurfaceType::Emitter )
 			{
+				// Evaluating emission from emitter
 				optixDirectCall<void, SurfaceInteraction*, void*>(
 					si.surface_property.func_base_id, 
 					&si, 
@@ -139,6 +140,11 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 
 	const uint3 launch_index = optixGetLaunchIndex();
 	const unsigned int image_index = launch_index.y * params.width + launch_index.x;
+
+	if (result.x != result.x) result.x = 0.0f;
+	if (result.y != result.y) result.y = 0.0f;
+	if (result.z != result.z) result.z = 0.0f;
+
 	float3 accum_color = result / static_cast<float>(params.samples_per_launch);
 
 	if (subframe_index > 0)
@@ -150,26 +156,6 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 	params.accum_buffer[image_index] = make_float4(accum_color, 1.0f);
 	uchar3 color = make_color(accum_color);
 	params.frame_buffer[image_index] = make_uchar4(color.x, color.y, color.z, 255);
-}
-
-// -------------------------------------------------------------------------------
-CALLABLE_FUNC void MS_FUNC(radiance)()
-{
-	MissData* rt_data = reinterpret_cast<MissData*>(optixGetSbtDataPointer());
-	SurfaceInteraction *si = getSurfaceInteraction();
-
-	Ray ray = getWorldRay();
-	float3 p = normalize(ray.at(ray.tmax - length(ray.o)));
-
-	float phi = atan2(p.z, p.x);
-	float theta = asin(p.y);
-	float u = 1.0f - (phi + M_PIf) / (2.0f * M_PIf);
-	float v = 1.0f - (theta + M_PIf/2.0f) / M_PIf;
-	si->emission = make_float3(u, v, 0.5f);
-
-	// si->radiance = make_float3(rt_data->bg_color);
-	// si->emission = make_float3(rt_data->bg_color);
-	si->trace_terminate = true;
 }
 
 }

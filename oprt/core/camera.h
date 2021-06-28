@@ -3,6 +3,10 @@
 
 namespace oprt {
 
+/**
+ * @brief 
+ * Standard pinhole camera.
+ */
 class Camera {
 public:
     enum class FovAxis
@@ -65,6 +69,11 @@ protected:
     FovAxis m_fovaxis;
 };
 
+/**
+ * @brief 
+ * Lens camera to realize a DoF (Depth of Field) effect.
+ * This class implemented based on \c Camera class and extend basic features of it.
+ */
 class LensCamera final : public Camera {
 public:
     LensCamera() : m_aperture(0.01f), m_focal_length(100.0f), Camera() {}
@@ -76,9 +85,11 @@ public:
     : m_aperture(aperture), m_focal_length(focal_length), Camera(origin, lookat, up, fov, aspect, nearclip, farclip, fovaxis)
     {}
 
+    /** @brief Aperture of lens */
     const float& aperture() const { return m_aperture; }
     void setAperture( const float& aperture ) { m_aperture = aperture; }
-    
+
+    /** @brief Focus length of lens */
     const float& focalLength() const { return m_focal_length; }
     void setFocalLength( const float& focal_length ) { m_focal_length = focal_length; }
 private:

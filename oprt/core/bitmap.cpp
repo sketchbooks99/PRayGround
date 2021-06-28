@@ -68,7 +68,7 @@ void Bitmap_<PixelType>::allocate(Format format, int width, int height)
             break;
     }
 
-    // ピクセルデータのゼロ初期化
+    // Zero-initialization of pixel data
     std::vector<PixelType> zero_arr(m_channels * m_width * m_height, static_cast<PixelType>(0));
     m_data = new PixelType[m_width * m_height * m_channels];
     memcpy(m_data, zero_arr.data(), zero_arr.size() * sizeof(PixelType));
@@ -95,6 +95,7 @@ void Bitmap_<PixelType>::fillData(PixelType* data, int width, int height, int of
     }
 }
 
+// --------------------------------------------------------------------
 template <typename PixelType>
 void Bitmap_<PixelType>::load(const std::filesystem::path& filename, Format format)
 {
@@ -102,12 +103,14 @@ void Bitmap_<PixelType>::load(const std::filesystem::path& filename, Format form
     load(filename);
 }
 
+// --------------------------------------------------------------------
 template <typename PixelType>
 void Bitmap_<PixelType>::load(const std::filesystem::path& filename)
 {
-    Message(MSG_WARNING, "Bitmap_<PixelType>::load() is only implemented when PixelType = unsigned char or float.");
+    Message(MSG_WARNING, "oprt::Bitmap_<PixelType>::load(): This function is only implemented for when PixelType is unsigned char or float.");
 }
 
+// --------------------------------------------------------------------
 template <>
 void Bitmap_<unsigned char>::load(const std::filesystem::path& filename)
 {
@@ -135,6 +138,7 @@ void Bitmap_<unsigned char>::load(const std::filesystem::path& filename)
     m_channels = type2channels[m_format];
 }
 
+// --------------------------------------------------------------------
 template <>
 void Bitmap_<float>::load(const std::filesystem::path& filename)
 {
@@ -181,69 +185,6 @@ void Bitmap_<float>::load(const std::filesystem::path& filename)
         stbi_image_free(raw_data);
     }
 }
-
-// --------------------------------------------------------------------
-// template <typename PixelType>
-// void Bitmap_<PixelType>::load(const std::filesystem::path& filename) {
-//     // 画像ファイルが存在するかのチェック
-//     Assert(std::filesystem::exists(filepath), "The image file '" + filepath.string() + "' is not found.");
-
-//     std::string file_extension = getExtension(filepath);
-
-//     unsigned char* data = nullptr;
-//     if (file_extension == ".png" || file_extension == ".PNG") {
-//         if (m_format == Format::UNKNOWN)
-//             m_format = Format::RGBA;
-//         data = stbi_load(filepath.string().c_str(), &m_width, &m_height, &m_channels, type2channels[m_format]);
-//     }
-//     else if (file_extension == ".jpg" || file_extension == ".JPG")
-//     {
-//         if (m_format == Format::UNKNOWN)
-//             m_format = Format::RGB;
-//         data = stbi_load(filepath.string().c_str(), &m_width, &m_height, &m_channels, type2channels[m_format]);
-//     }
-//     else if (file_extension == ".exr" || file_extension == ".EXR")
-//     {
-//         // Message(MSG_WARNING, "Sorry! Bitmap doesn't support to load HDR image currently.");
-//         return;
-//     }
-//     else 
-//     {
-//         Message(MSG_WARNING, "This format is not loadable with bitmap.");
-//         return;
-//     }
-
-//     m_data = new PixelType[m_width * m_height * type2channels[m_format]];
-
-//     // unsigned char の場合はそのままコピー
-//     if constexpr (std::is_same_v<PixelType, unsigned char>)
-//     {
-//         memcpy(m_data, data, sizeof(PixelType) * m_width * m_height * type2channels[m_format]);
-//     }
-//     /// PixelTypeが浮動小数点型の場合は [0, 255] -> [0, 1]で正規化する
-//     /// その他の方の場合は、警告を出し unsigned char -> PixelType で型変換するのみ
-//     else
-//     {
-//         PixelType denom = static_cast<PixelType>(255.0);
-//         if constexpr (!std::is_same_v<PixelType, float>)
-//         {
-//             Message(MSG_WARNING, "This PixelType is not recommended to load image (Recommended ... unsigned char or float).",
-//                              "It may use too large memory space to store pixel values and may degrade the performance of application.");
-//             denom = static_cast<PixelType>(1);
-//         }
-//         for (int x = 0; x < m_width; x++)
-//         {
-//             for (int y = 0; y < m_height; y++)
-//             {
-//                 for (int c = 0; c < type2channels[m_format]; c++)
-//                 {
-//                     int idx = (y * m_width + x) * m_channels + c;
-//                     m_data[idx] = static_cast<PixelType>(data[idx] / denom);
-//                 }
-//             }
-//         }
-//     }
-// }
 
 // --------------------------------------------------------------------
 template <typename PixelType>

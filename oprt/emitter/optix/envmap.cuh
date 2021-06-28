@@ -20,8 +20,16 @@ CALLABLE_FUNC void MS_FUNC(envmap)()
     SurfaceInteraction* si = getSurfaceInteraction();
 
     Ray ray = getWorldRay();
-    // float3 p = normalize(ray.at(ray.tmax - length(ray.o)));
-    float3 p = normalize(ray.at(1e8f - length(ray.o)));
+
+    const float a = dot(ray.d, ray.d);
+    const float half_b = dot(ray.o, ray.d);
+    const float c = dot(ray.o, ray.o) - 1e8f*1e8f;
+    const float discriminant = half_b * half_b - a*c;
+
+    float sqrtd = sqrtf(discriminant);
+    float t = (-half_b + sqrtd) / a;
+
+    float3 p = normalize(ray.at(t));
 
     float phi = atan2(p.z, p.x);
     float theta = asin(p.y);

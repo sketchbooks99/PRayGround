@@ -551,7 +551,8 @@ int main(int argc, char* argv[]) {
             std::chrono::minutes m = std::chrono::duration_cast<std::chrono::minutes>(render_time);
             std::chrono::seconds s = std::chrono::duration_cast<std::chrono::seconds>(render_time);
             std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds>(render_time);
-            Message(MSG_NORMAL, std::format("Render time: {}m {}s {}ms", (int)m.count(), (int)s.count(), (int)ms.count() - (int)(s.count()*1000)) );
+            // Message(MSG_NORMAL, std::format("Render time: {}m {}s {}ms", (int)m.count(), (int)s.count(), (int)ms.count() - (int)(s.count()*1000)) );
+            printf("Render time: %dm %ds %dms\n", (int)m.count(), (int)s.count(), (int)ms.count() - (int)(s.count()*1000));
             
             scene.film()->fillData(reinterpret_cast<Bitmap::Type*>(output_buffer.getHostPointer()), 
                 scene.film()->width(), scene.film()->height(), 0, 0);

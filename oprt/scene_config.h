@@ -11,7 +11,7 @@ Scene my_scene() {
     scene.setFilm(film);
 
     // シーンの一般的な設定    
-    scene.setEnvironment("image/016_hdrmaps_com_free.exr");
+    scene.setEnvironment("image/095_hdrmaps_com_free.exr");
     scene.setDepth(5);
     scene.setSamplesPerLaunch(4);
     scene.setNumSamples(4096);

@@ -3,13 +3,16 @@
 #include <optix.h>
 #include <sutil/sutil.h>
 #include "../core/util.h"
+#include "context.h"
 
 namespace oprt {
 
 /**
- * \brief Module object to easily manage OptixModule and its options. 
+ * @brief 
+ * Module object to easily manage OptixModule and its options. 
  * 
- * \note The compile options are set to specified value at default. 
+ * @note 
+ * The compile options are set to specified value at default. 
  * If you need to update them to appropriate values for your applications, 
  * please use copy constructor and setter effectively. 
  */
@@ -36,7 +39,7 @@ public:
         OPTIX_CHECK(optixModuleDestroy(m_module));
     }
     
-    void create( OptixDeviceContext ctx, OptixPipelineCompileOptions pipeline_options) {
+    void create( const Context& ctx, OptixPipelineCompileOptions pipeline_options) {
         Assert(!m_ptx_path.empty(), "Please configure the ptx module path.");
         
         char log[2048];
@@ -44,7 +47,7 @@ public:
     
         const std::string ptx = sutil::getPtxString(OPTIX_SAMPLE_NAME, OPTIX_SAMPLE_DIR, m_ptx_path.c_str());
         OPTIX_CHECK_LOG(optixModuleCreateFromPTX(
-            ctx,
+            static_cast<OptixDeviceContext>(ctx),
             &m_options,
             &pipeline_options, 
             ptx.c_str(),
@@ -58,16 +61,20 @@ public:
     void setPath( std::string ptx_path ) { m_ptx_path = ptx_path; } 
     std::string getPath() const { return m_ptx_path; }
 
-    /** \note At default, This is set to OPTIX_COMPILE_OPTIMIZATION_DEFAULT */
+    /** @note At default, This is set to OPTIX_COMPILE_OPTIMIZATION_DEFAULT */
     void setOptimizationLevel( OptixCompileOptimizationLevel optlevel ) { m_options.optLevel = optlevel; }
-    /** \note At default, This is set to OPTIX_COMPILE_DEBUG_LINEINFO */
+    /** @note At default, This is set to OPTIX_COMPILE_DEBUG_LINEINFO */
     void setDebugLevel( OptixCompileDebugLevel debuglevel ) { m_options.debugLevel = debuglevel; }
 
-    /** \brief For specifying specializations for pipelineParams as specified in 
-     *  OptixPipelineCompileOptions::pipelineLaunchParamsVariableName 
+    /** 
+     * @brief 
+     * For specifying specializations for pipelineParams as specified in 
+     * OptixPipelineCompileOptions::pipelineLaunchParamsVariableName 
      * 
-     *  \note Bound values are ignored if numBoundValues is set to 0, 
-     *  and numBoundValues is 0 at default. */
+     * @note 
+     * Bound values are ignored if numBoundValues is set to 0, 
+     * and numBoundValues is 0 at default. 
+     */
     void setBoundValues( size_t offset_in_bytes, size_t size_in_bytes, 
                           void* bound_value_ptr, char* annotation)
     {

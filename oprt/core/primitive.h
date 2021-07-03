@@ -16,6 +16,7 @@
 #include "../core/material.h"
 #include "../core/transform.h"
 #include "../core/cudabuffer.h"
+#include "../optix/context.h"
 #include "../optix/program.h"
 #include "../optix/sbt.h"
 #include "../optix/module.h"
@@ -50,7 +51,7 @@ public:
     }
 
     // Create programs based on shape type. 
-    void createPrograms(const OptixDeviceContext& ctx, const Module& module) {
+    void createPrograms(const Context& ctx, const Module& module) {
         Assert(!m_program_groups.empty(), "ProgramGroup is not allocated.");
         if (shapeType() == ShapeType::Mesh) {
             // Program for mesh is only a closest-hit program. 
@@ -196,9 +197,9 @@ private:
     unsigned int m_sbt_index_base { 0 };
 };
 
-void buildGas(const OptixDeviceContext& ctx, AccelData& accel_data, const PrimitiveInstance& ps);
+void buildGas(const Context& ctx, AccelData& accel_data, const PrimitiveInstance& ps);
 
-void buildInstances(const OptixDeviceContext& ctx, 
+void buildInstances(const Context& ctx, 
                const AccelData& accel_data,
                const PrimitiveInstance& primitive_instance, 
                unsigned int& sbt_base_offset,
@@ -206,21 +207,21 @@ void buildInstances(const OptixDeviceContext& ctx,
                std::vector<OptixInstance>& instances);
 
 void createMaterialPrograms(
-    const OptixDeviceContext& ctx,
+    const Context& ctx,
     const Module& module, 
     std::vector<ProgramGroup>& program_groups, 
     std::vector<CallableRecord>& callable_records
 );
 
 void createTexturePrograms(
-    const OptixDeviceContext& ctx, 
+    const Context& ctx, 
     const Module& module, 
     std::vector<ProgramGroup>& program_groups,
     std::vector<CallableRecord>& callable_records
 );
 
 void createEmitterPrograms(
-    const OptixDeviceContext& ctx, 
+    const Context& ctx, 
     const Module& module, 
     std::vector<ProgramGroup>& program_groups, 
     std::vector<CallableRecord>& callable_records

@@ -237,7 +237,7 @@ CALLABLE_FUNC float3 CC_FUNC(bsdf_disney)(SurfaceInteraction* si, void* mat_data
 /**
  * @ref (temporal) http://simon-kallweit.me/rendercompo2015/report/#adaptivesampling
  * 
- * @todo Search and consider correct evaluation of PDF.
+ * @todo Investigate correct evaluation of PDF.
  */
 CALLABLE_FUNC float DC_FUNC(pdf_disney)(SurfaceInteraction* si, void* mat_data)
 {

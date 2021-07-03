@@ -101,6 +101,27 @@ inline std::ostream& operator<<(std::ostream& out, const OptixCompileOptimizatio
     }
 }
 
+/**
+ * @enum OptixDeviceContextValidationMode
+ */
+inline std::ostream& operator<<(std::ostream& out, const OptixDeviceContextValidationMode& mode)
+{
+    switch (mode)
+    {
+        case OPTIX_DEVICE_CONTEXT_VALIDATION_MODE_OFF: return out << "OPTIX_DEVICE_CONTEXT_VALIDATION_MODE_OFF";
+        case OPTIX_DEVICE_CONTEXT_VALIDATION_MODE_ALL: return out << "OPTIX_DEVICE_CONTEXT_VALIDATION_MODE_ALL";
+    }
+}
+
+/**
+ * @struct OptixDeviceContextOptions
+ */
+inline std::ostream& operator<<(std::ostream& out, const OptixDeviceContextOptions& options)
+{
+            out << "logCallbackLevel: " << options.logCallbackLevel << std::endl;
+    return  out << "validationMode: "   << options.validationMode; 
+}
+
 /** 
  * @struct OptixCompileDebugLevel
  */

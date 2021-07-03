@@ -36,7 +36,7 @@ static void mouseButtonCallback( GLFWwindow* window, int button, int action, int
 
 static void cursorPosCallback( GLFWwindow* window, double xpos, double ypos )
 {
-    oprt::Params* params = static_cast<oprt::Params*>( glfwGetWindowUserPointer( window ));
+    Params* params = static_cast<Params*>( glfwGetWindowUserPointer( window ));
 
     if(mouse_button == GLFW_MOUSE_BUTTON_LEFT ) {
         trackball.setViewMode( sutil::Trackball::LookAtFixed );
@@ -58,7 +58,7 @@ static void windowSizeCallback( GLFWwindow* window, int32_t res_x, int32_t res_y
     
     sutil::ensureMinimumSize( res_x, res_y );
 
-    oprt::Params* params = static_cast<oprt::Params*>( glfwGetWindowUserPointer( window ));
+    Params* params = static_cast<Params*>( glfwGetWindowUserPointer( window ));
     params->width = res_x;
     params->height = res_y;
     camera_changed = true;
@@ -107,7 +107,7 @@ void printUsageAndExit( const char* argv0 )
 void initLaunchParams( 
     const OptixTraversableHandle& gas_handle,
     CUstream& stream,
-    oprt::Params& params,
+    Params& params,
     CUdeviceptr& d_params
 )
 {
@@ -122,10 +122,10 @@ void initLaunchParams(
     params.handle         = gas_handle;
 
     CUDA_CHECK( cudaStreamCreate( &stream) );
-    CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &d_params ), sizeof( oprt::Params ) ) );
+    CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &d_params ), sizeof( Params ) ) );
 }
 
-void handleCameraUpdate( oprt::Params& params, sutil::Camera& camera )
+void handleCameraUpdate( Params& params, sutil::Camera& camera )
 {
     if( !camera_changed )
         return;
@@ -136,7 +136,7 @@ void handleCameraUpdate( oprt::Params& params, sutil::Camera& camera )
     camera.UVWFrame( params.U, params.V, params.W );
 }
 
-void handleResize( sutil::CUDAOutputBuffer<uchar4>& output_buffer, oprt::Params& params)
+void handleResize( sutil::CUDAOutputBuffer<uchar4>& output_buffer, Params& params)
 {
     if( !resize_dirty )
         return;
@@ -152,7 +152,7 @@ void handleResize( sutil::CUDAOutputBuffer<uchar4>& output_buffer, oprt::Params&
     ));
 }
 
-void updateState( sutil::CUDAOutputBuffer<uchar4>& output_buffer, oprt::Params& params, sutil::Camera& camera )
+void updateState( sutil::CUDAOutputBuffer<uchar4>& output_buffer, Params& params, sutil::Camera& camera )
 {
     // Update params on device
     if( camera_changed || resize_dirty )
@@ -163,10 +163,10 @@ void updateState( sutil::CUDAOutputBuffer<uchar4>& output_buffer, oprt::Params& 
 }
 
 void launchSubframe( sutil::CUDAOutputBuffer<uchar4>& output_buffer,   // output buffer
-                     oprt::Params& params,                                // Launch parameters of OptiX
+                     Params& params,                                // Launch parameters of OptiX
                      const CUdeviceptr& d_params,                       // Device side pointer of launch params
                      const CUstream& stream,                            // CUDA stream
-                     const oprt::Pipeline& pipeline,                     // Pipeline of OptiX
+                     const Pipeline& pipeline,                     // Pipeline of OptiX
                      OptixShaderBindingTable& sbt                 // Shader binding table 
 ) {
     // Launch
@@ -174,7 +174,7 @@ void launchSubframe( sutil::CUDAOutputBuffer<uchar4>& output_buffer,   // output
     params.frame_buffer  = result_buffer_data;
     CUDA_CHECK( cudaMemcpyAsync(
         reinterpret_cast<void*>( d_params ),
-        &params, sizeof( oprt::Params ),
+        &params, sizeof( Params ),
         cudaMemcpyHostToDevice, stream
     ));
 
@@ -183,7 +183,7 @@ void launchSubframe( sutil::CUDAOutputBuffer<uchar4>& output_buffer,   // output
         (OptixPipeline)pipeline, 
         stream,
         d_params,
-        sizeof( oprt::Params ),
+        sizeof( Params ),
         &sbt,
         params.width,
         params.height,
@@ -246,7 +246,7 @@ void streamProgress(int current, int max, float elapsed_time, int progress_lengt
 
 // ========== Main ==========
 int main(int argc, char* argv[]) {
-    oprt::Params params = {};
+    Params params = {};
     CUdeviceptr d_params;
 
     sutil::CUDAOutputBufferType output_buffer_type = sutil::CUDAOutputBufferType::GL_INTEROP;
@@ -275,7 +275,7 @@ int main(int argc, char* argv[]) {
         {
             if( i >= argc - 1 )
                 printUsageAndExit( argv[0] );
-            outfile = oprt::pathJoin(OPRT_ROOT_DIR, argv[++i]).string();
+            outfile = pathJoin(OPRT_ROOT_DIR, argv[++i]).string();
             output_buffer_type = sutil::CUDAOutputBufferType::CUDA_DEVICE;
         }
         else if( arg.substr( 0, 6 ) == "--dim=" )
@@ -304,14 +304,10 @@ int main(int argc, char* argv[]) {
         // Initialize cuda 
         CUDA_CHECK(cudaFree(0));
 
-        // Create device context.
-        OptixDeviceContext optix_context;
-        CUcontext cu_context = 0;
         OPTIX_CHECK(optixInit());
-        OptixDeviceContextOptions options = {};
-        options.logCallbackFunction = &context_log_cb;
-        options.logCallbackLevel = 4;
-        OPTIX_CHECK(optixDeviceContextCreate(cu_context, &options, &optix_context));
+        Context context;
+        context.setDeviceId(0);
+        context.create();
 
         // Load the scene
         Scene scene = my_scene();
@@ -329,14 +325,14 @@ int main(int argc, char* argv[]) {
         std::vector<OptixInstance> instances;
         unsigned int sbt_base_offset = 0;
         unsigned int instance_id = 0;
-        std::vector<oprt::AccelData*> accels;
+        std::vector<AccelData*> accels;
         for ( auto ps : scene.primitiveInstances() ) {
-            accels.push_back( new oprt::AccelData() );
-            oprt::buildGas( optix_context, *accels.back(), ps );
-            oprt::buildInstances( optix_context, *accels.back(), ps, sbt_base_offset, instance_id, instances ); 
+            accels.push_back( new AccelData() );
+            buildGas( context, *accels.back(), ps );
+            buildInstances( context, *accels.back(), ps, sbt_base_offset, instance_id, instances ); 
         }
 
-        oprt::CUDABuffer<OptixInstance> d_instances;
+        CUDABuffer<OptixInstance> d_instances;
         d_instances.copyToDevice(instances);
 
         // Prepare build input for instances.
@@ -351,7 +347,7 @@ int main(int argc, char* argv[]) {
 
         OptixAccelBufferSizes ias_buffer_sizes;
         OPTIX_CHECK(optixAccelComputeMemoryUsage(
-            optix_context, 
+            static_cast<OptixDeviceContext>(context), 
             &accel_options, 
             &instance_input, 
             1,  // num build inputs
@@ -370,7 +366,7 @@ int main(int argc, char* argv[]) {
         OptixTraversableHandle ias_handle = 0;
         // Build instance AS contains all GASs to describe the scene.
         OPTIX_CHECK(optixAccelBuild(
-            optix_context, 
+            static_cast<OptixDeviceContext>(context), 
             0,                  // CUDA stream
             &accel_options, 
             &instance_input, 
@@ -384,79 +380,79 @@ int main(int argc, char* argv[]) {
             0                   // num emitted properties
         ));
 
-        oprt::cuda_free(d_temp_buffer);
+        cuda_free(d_temp_buffer);
         d_instances.free();
 
-        // createModule(optix_context, pipeline_compile_options, ptx_module);
+        // createModule(context, pipeline_compile_options, ptx_module);
         // Prepare the pipeline
         std::string params_name = "params";
-        oprt::Pipeline pipeline(params_name);
+        Pipeline pipeline(params_name);
         pipeline.setDirectCallableDepth(4);   // The maximum call depth of direct callable programs.
         pipeline.setContinuationCallableDepth(4);   // The maximum call depth of continuation callable programs.
         pipeline.setNumPayloads(5);
         pipeline.setNumAttributes(5);
         // Create module
-        oprt::Module module("optix/cuda/oprt.cu");
-        module.create(optix_context, pipeline.compileOptions());
+        Module module("optix/cuda/oprt.cu");
+        module.create(context, pipeline.compileOptions());
 
         /**
          * \brief Create programs
          */
-        std::vector<oprt::ProgramGroup> program_groups;
+        std::vector<ProgramGroup> program_groups;
         // Raygen program
-        auto raygen_program = oprt::createRayGenProgram( optix_context, module, RG_FUNC_STR("raygen") );
+        auto raygen_program = createRayGenProgram( context, module, RG_FUNC_STR("raygen") );
         program_groups.push_back( raygen_program );
         // Create and bind sbt to raygen program
-        oprt::CUDABuffer<oprt::RayGenRecord> d_raygen_record;
-        oprt::RayGenRecord rg_record = {};
+        CUDABuffer<RayGenRecord> d_raygen_record;
+        RayGenRecord rg_record = {};
         raygen_program.bindRecord( &rg_record );
-        d_raygen_record.copyToDevice( &rg_record, sizeof( oprt::RayGenRecord ) );
+        d_raygen_record.copyToDevice( &rg_record, sizeof( RayGenRecord ) );
         
         // Miss program
-        std::vector<oprt::ProgramGroup> miss_programs( RAY_TYPE_COUNT );
-        miss_programs[0] = oprt::createMissProgram( optix_context, module, MS_FUNC_STR("envmap") );
-        miss_programs[1] = oprt::createMissProgram( optix_context, oprt::Module(), nullptr );
+        std::vector<ProgramGroup> miss_programs( RAY_TYPE_COUNT );
+        miss_programs[0] = createMissProgram( context, module, MS_FUNC_STR("envmap") );
+        miss_programs[1] = createMissProgram( context, Module(), nullptr );
         std::copy( miss_programs.begin(), miss_programs.end(), std::back_inserter( program_groups ) );
         // Create sbt for miss programs
-        oprt::CUDABuffer<oprt::MissRecord> d_miss_record;
-        oprt::MissRecord ms_records[RAY_TYPE_COUNT];
+        CUDABuffer<MissRecord> d_miss_record;
+        MissRecord ms_records[RAY_TYPE_COUNT];
         scene.environment()->prepareData();
         for (int i=0; i<RAY_TYPE_COUNT; i++) {
             miss_programs[i].bindRecord( &ms_records[i] );
             ms_records[i].data.env_data = i == 0 ? scene.environment()->devicePtr() : nullptr;  
         }
-        d_miss_record.copyToDevice( ms_records, sizeof(oprt::MissRecord) * RAY_TYPE_COUNT );
+        d_miss_record.copyToDevice( ms_records, sizeof(MissRecord) * RAY_TYPE_COUNT );
 
         // Bind sbts to raygen and miss program
         sbt.raygenRecord = d_raygen_record.devicePtr();
         sbt.missRecordBase = d_miss_record.devicePtr();
-        sbt.missRecordStrideInBytes = static_cast<uint32_t>( sizeof( oprt::MissRecord ) );
+        sbt.missRecordStrideInBytes = static_cast<uint32_t>( sizeof( MissRecord ) );
         sbt.missRecordCount = RAY_TYPE_COUNT;
 
         // HitGroup programs
-        scene.createHitgroupPrograms( optix_context, module );
-        std::vector<oprt::ProgramGroup> hitgroup_programs = scene.hitgroupPrograms();
+        scene.createHitgroupPrograms( context, module );
+        std::vector<ProgramGroup> hitgroup_programs = scene.hitgroupPrograms();
         std::copy( hitgroup_programs.begin(), hitgroup_programs.end(), std::back_inserter( program_groups ) );
 
         // Create sbts and bind it to hitgroup programs.
         scene.createHitgroupSBT( sbt );
 
         // Callable programs for sampling bsdf properties.
-        std::vector<oprt::ProgramGroup> callable_programs;
-        std::vector<oprt::CallableRecord> callable_records;
-        createMaterialPrograms( optix_context, module, callable_programs, callable_records );
-        createTexturePrograms( optix_context, module, callable_programs, callable_records );
-        createEmitterPrograms( optix_context, module, callable_programs, callable_records );
-        oprt::CUDABuffer<oprt::CallableRecord> d_callable_records;
+        std::vector<ProgramGroup> callable_programs;
+        std::vector<CallableRecord> callable_records;
+        createMaterialPrograms( context, module, callable_programs, callable_records );
+        createTexturePrograms( context, module, callable_programs, callable_records );
+        createEmitterPrograms( context, module, callable_programs, callable_records );
+        CUDABuffer<CallableRecord> d_callable_records;
         d_callable_records.copyToDevice(callable_records);
         sbt.callablesRecordBase = d_callable_records.devicePtr();
         sbt.callablesRecordCount = static_cast<unsigned int>( callable_records.size() );
-        sbt.callablesRecordStrideInBytes = static_cast<unsigned int>( sizeof(oprt::CallableRecord ) ); 
+        sbt.callablesRecordStrideInBytes = static_cast<unsigned int>( sizeof(CallableRecord ) ); 
 
         std::copy( callable_programs.begin(), callable_programs.end(), std::back_inserter( program_groups ) );
 
         // Create pipeline
-        pipeline.create( optix_context, program_groups );
+        pipeline.create( context, program_groups );
         // Initialize pipeline launch parameters.
         initLaunchParams( ias_handle, stream, params, d_params );
 
@@ -536,7 +532,7 @@ int main(int argc, char* argv[]) {
             handleResize( output_buffer, params );
 
             int num_launches = scene.numSamples() / scene.samplesPerLaunch();
-            oprt::Assert(scene.numSamples() % scene.samplesPerLaunch() == 0, 
+            Assert(scene.numSamples() % scene.samplesPerLaunch() == 0, 
                 "The number of total samples must be a multiple of the number of sampler per launch.");
 
             auto start_time = std::chrono::steady_clock::now();
@@ -569,13 +565,13 @@ int main(int argc, char* argv[]) {
         pipeline.destroy();
         module.destroy();
         for ( auto& pg : program_groups ) OPTIX_CHECK( optixProgramGroupDestroy(static_cast<OptixProgramGroup>(pg)) );
-        OPTIX_CHECK( optixDeviceContextDestroy( optix_context ) );
-        oprt::cuda_frees(sbt.raygenRecord, sbt.missRecordBase, sbt.hitgroupRecordBase, 
+        OPTIX_CHECK( optixDeviceContextDestroy( static_cast<OptixDeviceContext>(context) ) );
+        cuda_frees(sbt.raygenRecord, sbt.missRecordBase, sbt.hitgroupRecordBase, 
                        params.accum_buffer,
                        d_params);
         scene.freeFromDevice();
-
     }
+
     catch( std::exception& e )
     {
         std::cerr << "Caught exception: " << e.what() << "\n";

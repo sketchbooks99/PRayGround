@@ -62,12 +62,6 @@ CALLABLE_FUNC void CH_FUNC(mesh)()
         data->surface_data,
         data->surface_func_base_id
     };
-
-    // si->mat_property = {
-    //     data->matdata,              // matdata
-    //     data->material_type * 2,    // bsdf_sample_id
-    //     data->material_type * 2 + 1 // pdf_idq
-    // };
 }
 
 // -------------------------------------------------------------------------------

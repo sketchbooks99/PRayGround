@@ -1,33 +1,21 @@
 #pragma once
 
 #include <optix.h>
+#include <optix_stubs.h>
 #include "../core/util.h"
 
 namespace oprt {
 
-static void contextLogCallback( unsigned int level, const char* tag, const char* msg, void* cbdata)
-{
-    std::cerr << "[" << std::setw( 2 ) << level << "][" << std::setw( 12 ) << tag << "]: "
-            << msg << "\n";
-}
-
-static OptixDeviceContextOptions default_options = 
-{
-    &contextLogCallback,                     // logCallbackFunction
-    nullptr,                                 // logCallbackData
-    4,                                       // logCallbackLevel
-    OPTIX_DEVICE_CONTEXT_VALIDATION_MODE_OFF // validationMode
-};
+static void contextLogCallback( unsigned int level, const char* tag, const char* msg, void* cbdata);
 
 class Context {
 public:
-    explicit Context() : Context(0, default_options) {}
+    explicit Context();
 
     explicit Context(const OptixDeviceContextOptions& options)
     : Context(0, options) {}
 
-    explicit Context(unsigned int device_id)
-    : Context(device_id, default_options) {}
+    explicit Context(unsigned int device_id);
 
     explicit Context(unsigned int device_id, const OptixDeviceContextOptions& options)
     : m_device_id(device_id), m_options(options) {}
@@ -58,6 +46,7 @@ public:
     }
     
     unsigned int deviceId() const { return m_device_id; }
+    void setDeviceId(unsigned int device_id) { m_device_id = device_id; }
 private:
     unsigned int m_device_id { 0 };
     OptixDeviceContext m_ctx;

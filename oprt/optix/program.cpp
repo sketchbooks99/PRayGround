@@ -2,7 +2,7 @@
 
 namespace oprt {
 
-void ProgramGroup::createSingleProgram( const OptixDeviceContext& ctx, const ProgramEntry& entry )
+void ProgramGroup::createSingleProgram( const Context& ctx, const ProgramEntry& entry )
 {
     Assert( m_program_kind == OPTIX_PROGRAM_GROUP_KIND_RAYGEN || 
             m_program_kind == OPTIX_PROGRAM_GROUP_KIND_MISS   || 
@@ -32,7 +32,7 @@ void ProgramGroup::createSingleProgram( const OptixDeviceContext& ctx, const Pro
     }
 
     OPTIX_CHECK_LOG(optixProgramGroupCreate(
-        ctx,
+        static_cast<OptixDeviceContext>(ctx),
         &prog_desc,
         1,
         &m_program_options,
@@ -43,7 +43,7 @@ void ProgramGroup::createSingleProgram( const OptixDeviceContext& ctx, const Pro
 }
 
 void ProgramGroup::createHitgroupProgram( 
-    const OptixDeviceContext& ctx, 
+    const Context& ctx, 
     const ProgramEntry& ch_entry, 
     const ProgramEntry& ah_entry, 
     const ProgramEntry& is_entry
@@ -64,7 +64,7 @@ void ProgramGroup::createHitgroupProgram(
     prog_desc.hitgroup.moduleIS = static_cast<OptixModule>(is_entry.module);
     prog_desc.hitgroup.entryFunctionNameIS = is_entry.func_name;
     OPTIX_CHECK_LOG(optixProgramGroupCreate(
-        ctx,
+        static_cast<OptixDeviceContext>(ctx),
         &prog_desc,
         1,
         &m_program_options,
@@ -75,7 +75,7 @@ void ProgramGroup::createHitgroupProgram(
 }
 
 void ProgramGroup::createCallableProgram( 
-    const OptixDeviceContext& ctx, 
+    const Context& ctx, 
     const ProgramEntry& dc_entry, 
     const ProgramEntry& cc_entry
 ) 
@@ -93,7 +93,7 @@ void ProgramGroup::createCallableProgram(
     prog_desc.callables.entryFunctionNameCC = cc_entry.func_name; 
 
     OPTIX_CHECK_LOG(optixProgramGroupCreate(
-        ctx,
+        static_cast<OptixDeviceContext>(ctx),
         &prog_desc, 
         1,
         &m_program_options,
@@ -103,14 +103,14 @@ void ProgramGroup::createCallableProgram(
     ));   
 }
 
-ProgramGroup createRayGenProgram( const OptixDeviceContext& ctx, const Module& module, const char* entry_name )
+ProgramGroup createRayGenProgram( const Context& ctx, const Module& module, const char* entry_name )
 {
     ProgramGroup raygen_program(OPTIX_PROGRAM_GROUP_KIND_RAYGEN);
     raygen_program.createSingleProgram( ctx, ProgramEntry( module, entry_name ) );
     return raygen_program;
 }
 
-ProgramGroup createMissProgram( const OptixDeviceContext& ctx, const Module& module, const char* entry_name )
+ProgramGroup createMissProgram( const Context& ctx, const Module& module, const char* entry_name )
 {
     ProgramGroup miss_program(OPTIX_PROGRAM_GROUP_KIND_MISS);
     miss_program.createSingleProgram( ctx, ProgramEntry( module, entry_name ) );

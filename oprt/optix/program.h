@@ -4,6 +4,7 @@
 #include <optix.h>
 #include <optix_stubs.h>
 #include "module.h"
+#include "context.h"
 
 namespace oprt { 
 
@@ -33,7 +34,7 @@ public:
 
     /** @brief create program groups depends on OptixProgramGroupKind */
     template <typename ...Entries>
-    void create( const OptixDeviceContext& ctx, const Entries&... entries)
+    void create( const Context& ctx, const Entries&... entries)
     {   
         const size_t num_entries = sizeof...(entries); 
 
@@ -56,33 +57,33 @@ public:
     }
 
     /** @brief Creation of a single-call program (Raygen, Miss, Exception) */
-    void createSingleProgram( const OptixDeviceContext& ctx, 
+    void createSingleProgram( const Context& ctx, 
                                 const ProgramEntry& entry );
 
     /** 
      * @brief Creation of hitgroup programs 
      * @note Only the closest-hit program is used to create hitgroup program. 
      */
-    void createHitgroupProgram( const OptixDeviceContext& ctx, 
+    void createHitgroupProgram( const Context& ctx, 
                                 const ProgramEntry& ch_entry ) 
     {
         createHitgroupProgram(ctx, ch_entry, ProgramEntry(Module(), nullptr), ProgramEntry(Module(), nullptr));
     }
     /** @brief Closest-hit and intersection program are used to create hitgroup program. */
-    void createHitgroupProgram( const OptixDeviceContext& ctx,
+    void createHitgroupProgram( const Context& ctx,
                                 const ProgramEntry& ch_entry,
                                 const ProgramEntry& is_entry)
     {
         createHitgroupProgram(ctx, ch_entry, ProgramEntry(Module(), nullptr), is_entry);
     }
     /** @brief All of programs are used to create hitgroup program. */
-    void createHitgroupProgram( const OptixDeviceContext& ctx,
+    void createHitgroupProgram( const Context& ctx,
                                 const ProgramEntry& ch_entry,
                                 const ProgramEntry& ah_entry,
                                 const ProgramEntry& is_entry);
 
     /** Creation of callable programs */
-    void createCallableProgram( const OptixDeviceContext& ctx, 
+    void createCallableProgram( const Context& ctx, 
                                   const ProgramEntry& dc_entry, 
                                   const ProgramEntry& cc_entry);
 
@@ -96,7 +97,7 @@ private:
     OptixProgramGroupOptions m_program_options {};
 }; 
 
-ProgramGroup createRayGenProgram(const OptixDeviceContext& ctx, const Module& module, const char* entry_name);
-ProgramGroup createMissProgram(const OptixDeviceContext& ctx, const Module& module, const char* entry_name);
+ProgramGroup createRayGenProgram(const Context& ctx, const Module& module, const char* entry_name);
+ProgramGroup createMissProgram(const Context& ctx, const Module& module, const char* entry_name);
 
 }

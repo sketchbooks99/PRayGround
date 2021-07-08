@@ -4,6 +4,7 @@
 #include <optix_stack_size.h>
 #include "../core/util.h"
 #include "program.h"
+#include "context.h"
 
 namespace oprt {
 
@@ -48,7 +49,7 @@ public:
     OptixPipelineLinkOptions link_options() const { return m_link_options; }
 
     /** Create pipeline object and calculate the stack sizes of pipeline. */
-    void create( const OptixDeviceContext& ctx, const std::vector<ProgramGroup>& prg_groups) {
+    void create( const Context& ctx, const std::vector<ProgramGroup>& prg_groups) {
 
         std::vector<OptixProgramGroup> optix_prg_groups;
         std::transform(prg_groups.begin(), prg_groups.end(), std::back_inserter(optix_prg_groups),
@@ -59,7 +60,7 @@ public:
         size_t sizeof_log = sizeof(log);
 
         OPTIX_CHECK_LOG(optixPipelineCreate(
-            ctx,
+            static_cast<OptixDeviceContext>(ctx),
             &m_compile_options,
             &m_link_options,
             optix_prg_groups.data(),

@@ -1,7 +1,8 @@
 #pragma once
 
-#include "../core/primitive.h"
-#include "../core/bitmap.h"
+#include "primitive.h"
+#include "bitmap.h"
+#include "../optix/context.h"
 #include "../emitter/envmap.h"
 #include <sutil/Camera.h>
 // #include "../oprt.h"
@@ -20,7 +21,7 @@ public:
     /** 
      * @brief Create programs associated with primitives.
      */
-    void createHitgroupPrograms(const OptixDeviceContext& ctx, const Module& module);
+    void createHitgroupPrograms(const Context& ctx, const Module& module);
 
     /**
      * @brief Return all hitgroup programs contained in Scene

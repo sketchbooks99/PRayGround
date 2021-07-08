@@ -6,7 +6,9 @@ namespace oprt
 {
 
 void oprtEnvironment(const float3&);
-// void oprtEnvironment(const std::shared_ptr<EnvironmentEmitter>& env);
+void oprtEnvironment(const std::shared_ptr<EnvironmentEmitter>& env);
+uint32_t oprtGetNumBuildInMaterials();
+uint32_t oprtGetNumBuildInTextures();
 
 ProgramGroup oprtCreateProgram(OptixProgramGroupKind kind, const Context& ctx, OptixProgramGroupDesc desc);
 ProgramGroup oprtCreateRaygenProgram(const Context& ctx, const Module& module, const char* func_name);

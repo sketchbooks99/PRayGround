@@ -6,7 +6,7 @@ namespace oprt {
 
 // ---------------------------------------------------------------------------
 void buildGas(
-    const OptixDeviceContext& ctx, 
+    const Context& ctx, 
     AccelData& accel_data, 
     const PrimitiveInstance& ps
 ) 
@@ -58,7 +58,7 @@ void buildGas(
 
         OptixAccelBufferSizes gas_buffer_sizes;
         OPTIX_CHECK(optixAccelComputeMemoryUsage(
-            ctx,
+            static_cast<OptixDeviceContext>(ctx),
             &accel_options,
             build_inputs.data(),
             static_cast<unsigned int>(build_inputs.size()),
@@ -82,7 +82,7 @@ void buildGas(
         emitProperty.result = (CUdeviceptr)((char*)d_buffer_temp_output_gas_and_compacted_size + compactedSizeOffset);
 
         OPTIX_CHECK(optixAccelBuild(
-            ctx, 
+            static_cast<OptixDeviceContext>(ctx), 
             0,                      // CUDA stream
             &accel_options,
             build_inputs.data(),
@@ -106,7 +106,7 @@ void buildGas(
 
         if (compacted_gas_size < gas_buffer_sizes.outputSizeInBytes) {
             CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&handle.d_buffer), compacted_gas_size));
-            OPTIX_CHECK(optixAccelCompact(ctx, 0, handle.handle, handle.d_buffer, compacted_gas_size, &handle.handle));
+            OPTIX_CHECK(optixAccelCompact(static_cast<OptixDeviceContext>(ctx), 0, handle.handle, handle.d_buffer, compacted_gas_size, &handle.handle));
             cuda_free(d_buffer_temp_output_gas_and_compacted_size);
         }
         else {
@@ -120,7 +120,7 @@ void buildGas(
 
 // ---------------------------------------------------------------------------
 void buildInstances(
-    const OptixDeviceContext& ctx, 
+    const Context& ctx, 
     const AccelData& accel_data,
     const PrimitiveInstance& primitive_instance,
     unsigned int& sbt_base_offset,
@@ -167,7 +167,7 @@ void buildInstances(
 
 // ---------------------------------------------------------------------------
 void createMaterialPrograms(
-    const OptixDeviceContext& ctx,
+    const Context& ctx,
     const Module& module, 
     std::vector<ProgramGroup>& program_groups, 
     std::vector<CallableRecord>& callable_records
@@ -202,7 +202,7 @@ void createMaterialPrograms(
 
 // ---------------------------------------------------------------------------
 void createTexturePrograms(
-    const OptixDeviceContext& ctx, 
+    const Context& ctx, 
     const Module& module, 
     std::vector<ProgramGroup>& program_groups,
     std::vector<CallableRecord>& callable_records
@@ -224,7 +224,7 @@ void createTexturePrograms(
 }
 
 void createEmitterPrograms(
-    const OptixDeviceContext& ctx, 
+    const Context& ctx, 
     const Module& module, 
     std::vector<ProgramGroup>& program_groups, 
     std::vector<CallableRecord>& callable_records

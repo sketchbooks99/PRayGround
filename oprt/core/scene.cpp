@@ -22,7 +22,7 @@ void Scene::freeFromDevice()
 }
 
 // --------------------------------------------------------------------------------
-void Scene::createHitgroupPrograms(const OptixDeviceContext& ctx, const Module& module)
+void Scene::createHitgroupPrograms(const Context& ctx, const Module& module)
 {
     for (auto& ps : m_primitive_instances)
     {

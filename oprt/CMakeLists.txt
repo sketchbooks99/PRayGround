@@ -36,6 +36,7 @@ OPTIX_add_sample_executable( oprt target_name
   # core/exception.cpp
 
   optix/program.cpp
+  optix/context.cpp
 
   shape/trianglemesh.cpp
 

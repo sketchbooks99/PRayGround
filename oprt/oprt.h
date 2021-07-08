@@ -55,7 +55,6 @@
 
 #include <sutil/CUDAOutputBuffer.h>
 #include <sutil/Camera.h>
-#include <sutil/Exception.h>
 #include <sutil/GLDisplay.h>
 #include <sutil/Matrix.h>
 #include <sutil/Trackball.h>
@@ -75,7 +74,6 @@
 #include "material/dielectric.h"
 #include "material/diffuse.h"
 #include "material/disney.h"
-// #include "material/emitter.h"
 
 // emitter include 
 #include "emitter/area.h"

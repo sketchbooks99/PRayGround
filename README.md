@@ -10,7 +10,7 @@ This is a ray tracer based on OptiX 7. Basically, this allows you to render just
 
 ![output.png](result/016_env.jpg)
 
-# Requirements
+# :computer: Requirements
 Before building our codes, please be sure to check requirements and your environment, especially please make sure that your version of the C++ compiler supports C++20 features such as `<concepts>` header of the C++ standard libraries.
 
 - CUDA Toolkit (Tested : 11.1, 11.2)
@@ -27,7 +27,7 @@ cd OptiX-Raytracer
 git submodule update --init --recursive 
 ```
 
-# How to build
+# :hammer: How to build
 ## Linux
 ---
 Before compiling, please be sure to export two environment variables `CC` and `CXX`. We recommend you to add them to your `~/.bashrc` file as follows so that they are automatically exported when the terminal are launched.

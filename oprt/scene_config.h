@@ -11,7 +11,9 @@ Scene my_scene() {
     scene.setFilm(film);
 
     // シーンの一般的な設定    
-    scene.setEnvironment("image/016_hdrmaps_com_free.exr");
+    // scene.setEnvironment("image/016_hdrmaps_com_free.exr");
+    auto checker_env_texture = std::make_shared<CheckerTexture>(make_float3(1.0f), make_float3(0.3f), 20.0f);
+    scene.setEnvironment(checker_env_texture);
     scene.setDepth(5);
     scene.setSamplesPerLaunch(4);
     scene.setNumSamples(4096);

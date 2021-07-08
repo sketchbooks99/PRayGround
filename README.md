@@ -76,3 +76,8 @@ Building steps are as follows.
 
 ## Mac
 Not supported.
+
+# :memo: Modifying the scene
+Currently, you can change scene parameters such as materials, geometries, textures and sensors by modifying `scene_config.h` or including the custom header file you created that describes the scene. 
+
+In the future, we'd like to implement runtime loading of scene configuration as like implemented in pbrt or mitsuba2. Further, we plan to allow users to choose whether to load the scene from a separate file such as xml file or write the scene directly in code using the API.

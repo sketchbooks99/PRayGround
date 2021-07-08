@@ -20,7 +20,7 @@ Before building our codes, please be sure to check requirements and your environ
 - OptiX 7 (Tested : 7.1, 7.2)
 - CMake 3.0 minimum (Tested : cmake 3.16.3)
 
-# Cloning
+# :inbox_tray: Cloning
 ```
 git clone https://github.com/uec-media-design-lab/OptiX-Raytracer.git
 cd OptiX-Raytracer

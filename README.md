@@ -29,7 +29,6 @@ git submodule update --init --recursive
 
 # :hammer: How to build
 ## Linux
----
 Before compiling, please be sure to export two environment variables `CC` and `CXX`. We recommend you to add them to your `~/.bashrc` file as follows so that they are automatically exported when the terminal are launched.
 ```
 export CC=gcc-10
@@ -55,7 +54,6 @@ cd bin
 ```
 
 ## Windows
----
 On Windows, a recent version of **Visual Studio 2019** which supports C++20 features is required.
 
 For configuring sources, please use cmake-gui to generate the solution files.
@@ -79,5 +77,4 @@ Building steps are as follows.
 8. Execute `Build Solution` in the IDE. When compile succeeded, executive file will be created in `build/bin/Debug or Release`. You also can run the ray tracer by setting the `oprt` project as start up project.
 
 ## Mac
----
 Not supported.

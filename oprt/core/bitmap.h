@@ -4,14 +4,6 @@
 
 namespace oprt {
 
-/**
- * @note
- * Currently, Bitmap supports following image formats (char4, char3, float4, float3).
- * 
- * @todo
- * Implement manager for HDR format (.hdr, .exr)
- */
-
 template <typename PixelType>
 class Bitmap_ {
 public:

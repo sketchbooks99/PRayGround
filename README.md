@@ -73,7 +73,7 @@ Building steps are as follows.
 7. Open the `OptiX-Raytracer.sln` solution file in the build directory.
 
 8. Execute `Build Solution` in the IDE. When compile succeeded, the execution file will be created in the `build/bin/Debug or Release` directory. You also can run the ray tracer by setting the `oprt` project as start up project.
-    - ⚠️ Japanese comments included in our sources may cause errors during compliation due to the encoding. So, please add `source-charset:utf-8` for **Additional Options of Command Line**. (`Project` tab -> `Properties` -> `C/C++` -> `Command Line`) 
+    - ⚠️ Japanese comments included in our sources may cause errors during compliation due to the encoding. So, please add `/source-charset:utf-8` for **Additional Options of Command Line**. (`Project` tab -> `Properties` -> `C/C++` -> `Command Line`) 
 
 ## Mac
 Not supported.

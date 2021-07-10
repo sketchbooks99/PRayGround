@@ -3,6 +3,16 @@
 
 namespace oprt {
 
+struct CameraData
+{
+    float3 origin;
+    float3 lookat;
+    float3 up;
+    float aperture;
+    float nearclip;
+    float farclip;
+};
+
 /**
  * @brief 
  * Standard pinhole camera.

@@ -5,6 +5,13 @@
 namespace oprt
 {
 
+// APIs for core apps
+void oprtFrameRate(const uint32_t framerate);
+uint32_t oprtGetWidth();
+uint32_t oprtGetHeight();
+float2 oprtGetMousePosition();
+
+// APIs for rnedeirng
 void oprtEnvironment(const float3&);
 void oprtEnvironment(const std::shared_ptr<EnvironmentEmitter>& env);
 uint32_t oprtGetNumBuildInMaterials();

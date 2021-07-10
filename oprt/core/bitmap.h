@@ -6,10 +6,7 @@ namespace oprt {
 
 /**
  * @note
- * Currently, Bitmap supports following image formats (char4, char3, float4, float3).
- * 
- * @todo
- * Implement manager for HDR format (.hdr, .exr)
+ * Change management of PixelType for allowing @c film store the multiple bitmap with various formats.
  */
 
 template <typename PixelType>

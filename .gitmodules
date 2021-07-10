@@ -13,3 +13,6 @@
 [submodule "oprt/ext/tinyexr"]
 	path = oprt/ext/tinyexr
 	url = https://github.com/syoyo/tinyexr.git
+[submodule "oprt/ext/glfw"]
+	path = oprt/ext/glfw
+	url = https://github.com/glfw/glfw.git

@@ -16,6 +16,11 @@ struct CameraData
 /**
  * @brief 
  * Standard pinhole camera.
+ * 
+ * @note
+ * Still isn't used our ray tracer. 
+ * We plan to replace sutil::Camera to our Camera class 
+ * for allowing to switch any type of cameras such as pinhole and lens. 
  */
 class Camera {
 public:

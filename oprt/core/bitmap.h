@@ -4,11 +4,6 @@
 
 namespace oprt {
 
-/**
- * @note
- * Change management of PixelType for allowing @c film store the multiple bitmap with various formats.
- */
-
 template <typename PixelType>
 class Bitmap_ {
 public:

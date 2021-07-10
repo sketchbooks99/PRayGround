@@ -24,7 +24,7 @@ public:
         CUDA_CHECK( cudaMalloc( &d_data, sizeof(PlaneData) ) );
         CUDA_CHECK( cudaMemcpy(
             d_data, 
-            &data, sizeof(SphereData), 
+            &data, sizeof(PlaneData), 
             cudaMemcpyHostToDevice
         ));
     }

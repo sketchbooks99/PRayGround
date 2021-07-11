@@ -4,12 +4,34 @@ namespace oprt {
 
 // ----------------------------------------------------------------
 Window::Window() 
+: Window("", 0, 0)
 {
-    states = { false, false, false, false };
+
+}
+
+Window::Window(const std::string& name) 
+: Window(name, 0, 0)
+{
+
+}
+
+Window::Window(int32_t width, int32_t height) 
+: Window("", width, height)
+{
+
+}
+
+Window::Window(const std::string& name, int32_t width, int32_t height)
+: m_name(name), m_width(width), m_height(height) 
+{
+
 }
 
 // ----------------------------------------------------------------
-Window::~Window() {}
+Window::~Window() 
+{
+
+}
 
 // ----------------------------------------------------------------
 void Window::setup()
@@ -48,14 +70,67 @@ void Window::update()
 
 }
 
-// ----------------------------------------------------------------
 void Window::draw()
 {
 
 }
 
 // ----------------------------------------------------------------
-void Window::mousePressed();
+void Window::setSize(int32_t width, int32_t height)
+{
+    m_width = width; m_height = height;
+}
+void Window::setWidth(int32_t width)
+{
+    m_width = width;
+}
+void Window::setHeight(int32_t height)
+{
+    m_height = height;
+}
+int32_t Window::width() const 
+{
+    return m_width;
+}
+int32_t Window::height() const
+{
+    return m_height;
+}
+
+// ----------------------------------------------------------------
+void Window::setName(const std::string& name)
+{
+    m_name = name;
+}
+std::string name() const
+{
+    return m_name;
+}
+
+// ----------------------------------------------------------------
+void Window::setGLVersion(int32_t major, int32_t minor)
+{
+    m_gl_version_major = major; 
+    m_gl_version_minor = minor;
+}
+int32_t Window::major() const 
+{ 
+    return m_gl_version_major;
+}
+int32_t Window::minor() const
+{
+    return m_gl_version_minor;
+}
+std::tuple<int32_t, int32_t> Window::glVersion() const
+{
+    return { m_gl_version_major, m_gl_version_minor };
+}
+
+// ----------------------------------------------------------------
+WindowEvents& events()
+{
+    return *m_events;
+}
 
 // ----------------------------------------------------------------
 void Window::_mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
@@ -76,7 +151,7 @@ void Window::_keyCallback(GLFWwindow* window, int32_t key, int32_t scancode, int
 }
 
 // ----------------------------------------------------------------
-static void Window::_scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
+void Window::_scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 {
 
 }

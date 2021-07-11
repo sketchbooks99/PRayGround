@@ -16,9 +16,12 @@ public:
     virtual void draw();
 
     virtual void mousePressed(float x, float y, int button);
-    virtual void mouseDragged();
-    virtual void mouseMoved();
-    virtual void keyPressed();
+    virtual void mouseDragged(float x, float y, int button);
+    virtual void mouseMoved(float x, float y);
+    virtual void mouseScrolled(float xoffset, float yoffset);
+    
+    virtual void keyPressed(int key);
+    virtual void keyReleased(int key);
 };
 
 void runApp(std::shared_ptr<Window> window, std::shared_ptr<BaseApp> app);

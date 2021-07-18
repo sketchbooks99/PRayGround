@@ -190,7 +190,7 @@ void Bitmap_<float>::load(const std::filesystem::path& filename)
 template <typename PixelType>
 void Bitmap_<PixelType>::write(const std::filesystem::path& filepath, int quality) const
 {
-    std::string file_extension = getExtension(filepath);
+    std::string ext = getExtension(filepath);
 
     unsigned char* data = new unsigned char[m_width * m_height * m_channels];
     if constexpr (std::is_same_v<PixelType, unsigned char>)
@@ -224,19 +224,19 @@ void Bitmap_<PixelType>::write(const std::filesystem::path& filepath, int qualit
         }
     }
     
-    if (file_extension == ".png" || file_extension == ".PNG")
+    if (ext == ".png" || ext == ".PNG")
     {
         stbi_flip_vertically_on_write(true);
         stbi_write_png(filepath.string().c_str(), m_width, m_height, m_channels, data, m_width * m_channels);
         delete[] data;
     }
-    else if (file_extension == ".jpg" || file_extension == ".JPG")
+    else if (ext == ".jpg" || ext == ".JPG")
     {
         stbi_flip_vertically_on_write(true);
         stbi_write_jpg(filepath.string().c_str(), m_width, m_height, m_channels, data, quality);
         delete[] data;
     }
-    else if (file_extension == ".exr" || file_extension == ".EXR")
+    else if (ext == ".exr" || ext == ".EXR")
     {
         Message(MSG_WARNING, "Sorry! Bitmap doesn't support to write out image with .exr format currently.");
         return;
@@ -246,6 +246,52 @@ void Bitmap_<PixelType>::write(const std::filesystem::path& filepath, int qualit
         Message(MSG_WARNING, "This format is not writable with bitmap.");
         return;
     }
+}
+
+// --------------------------------------------------------------------
+const std::string vert_source = R"(
+#version 330 core
+layout(location = 0) in vec3 position;
+layout(location = 1) in vec2 texcoord;
+out vec2 vTexCoord;
+
+void main()
+{
+    gl_Position(position, 1.0);
+    vTexCoord = texcoord;
+}
+)";
+
+const std::string frag_source = R"(
+#version 330 core
+
+in vec2 vTexCoord;
+out vec4 fragColor;
+
+uniform sampler2D tex;
+
+void main()
+{
+    fragColor = texture( tex, vTexCoord );
+}
+)";
+
+template <typename PixelType>
+void Bitmap_<PixelType>::draw() const
+{
+    draw(0, 0, m_width, m_height);
+}
+
+template <typename PixelType>
+void Bitmap_<PixelType>::draw(int32_t x, int32_t y) const
+{
+    draw(x, y, m_width, m_height);
+}
+
+template <typename PixelType>
+void Bitmap_<PixelType>::draw(int32_t x, int32_t y, int32_t width, int32_t height) const
+{
+
 }
 
 // --------------------------------------------------------------------

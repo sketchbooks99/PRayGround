@@ -569,7 +569,7 @@ int main(int argc, char* argv[]) {
         cuda_frees(sbt.raygenRecord, sbt.missRecordBase, sbt.hitgroupRecordBase, 
                        params.accum_buffer,
                        d_params);
-        scene.freeFromDevice();
+        scene.cleanUp();
     }
 
     catch( std::exception& e )

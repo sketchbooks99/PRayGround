@@ -44,8 +44,8 @@ void Window::setup()
         exit(EXIT_FAILURE);
     }
     
-    Assert( (m_gl_version_major == 3 && m_gl_version_minor >= 2) || m_gl_version_major >= 4, 
-        "oprt::Window::setup(): The version of OpenGL must supports the programmable renderer (OpenGL 3.2 ~).");
+    if ((m_gl_version_major == 3 && m_gl_version_minor < 2) || m_gl_version_major < 3)
+        Message( MSG_ERROR, "oprt::Window::setup(): The version of OpenGL must supports the programmable renderer (OpenGL 3.2 ~)." );
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, m_gl_version_major);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, m_gl_version_minor);
@@ -55,24 +55,33 @@ void Window::setup()
     m_window_ptr = glfwCreateWindow(m_width, m_height, m_name.c_str(), nullptr, nullptr);
     Assert(m_window_ptr, "oprt::Window::setup(): Failed to create GLFW window.");
 
+    // Set current window context
     glfwMakeContextCurrent(m_window_ptr);
 
-    // Register the callback functions.
+    // Register the callback functions
     glfwSetMouseButtonCallback(m_window_ptr, _mouseButtonCallback);
     glfwSetCurposCallback(m_window_ptr, _cursorPosCallback);
     glfwSetKeyCallback(m_window_ptr, _keyCallback);
     glfwSetScrollCallback(m_window_ptr, _scrollCallback);
+
+    // Register oprt::Window pointer
+    glfwSetWindowUserPointer(m_window_ptr, this);
+
+    /// No vsync
+    /// @note For future work, enable to control frame rate specifying this for the suitable value.
+    glfwSwapInterval( 0 ); 
 }
 
 // ----------------------------------------------------------------
 void Window::update()
 {
-
+    
 }
 
+// ----------------------------------------------------------------
 void Window::draw()
 {
-
+    glfwSwapBuffers( m_window_ptr );
 }
 
 // ----------------------------------------------------------------
@@ -132,28 +141,78 @@ WindowEvents& events()
     return *m_events;
 }
 
+/*****************************************************************
+ Static functions 
+*****************************************************************/
+
+// ----------------------------------------------------------------
+Window* Window::_getCurrent(GLFWwindow* window)
+{
+    return static_cast<Window*>(glfwGetWindowUserPointer(window));
+}
+
 // ----------------------------------------------------------------
 void Window::_mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 {
+    Window* current_window = _getCurrent(window);
 
+    float mouse_x, mouse_y;
+    glfwGetCursorPos(window, &mouse_x, &mouse_y);
+
+    current_window->events().inputStates.mousePosition = make_float2(mouse_x, mouse_y);
+    current_window->events().inputStates.mouseButton = button;
+
+    if (action == GLFW_PRESS)
+    {
+        current_window->events().mousePressed.invoke(mouse_x, mouse_y, button);
+        current_window->events().inputStates.mouseButtonPressed = true;
+    }
+    else if (action == GLFW_RELEASE)
+    {
+        current_window->events().mouseReleased.invoke(mouse_x, mouse_y, button);
+        current_window->events().inputStates.mouseButtonPressed = false;
+    }
 }
 
 // ----------------------------------------------------------------
 void Window::_cursorPosCallback(GLFWwindow* window, double xpos, double ypos)
 {
+    Window* current_window = _getCurrent(window);
 
+    if (current_window->events().mouseButtonPressed)
+        current_window->events().mouseDragged.invoke(xpos, ypos);
+    else 
+        current_window->events().mouseMoved.invoke(xpos, ypos);
 }
 
 // ----------------------------------------------------------------
 void Window::_keyCallback(GLFWwindow* window, int32_t key, int32_t scancode, int32_t action, int32_t mods)
 {
+    Window* current_window = _getCurrent(window);
+    
+    current_window->events().inputStates.key = key;
 
+    if (action == GLFW_PRESS)
+    {
+        current_window->events().inputStates.keyButtonPressed = true;
+        current_window->events().keyPressed.invoke(key);
+    }
+    else if (action == GLFW_REPEAT)
+    {
+        /** Not implemented */
+    }
+    else if (action == GLFW_RELEASE)
+    {
+        /** Not implemented */
+    }
 }
 
 // ----------------------------------------------------------------
 void Window::_scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 {
+    Window* current_window = _getCurrent(window);
 
+    current_window->events().mouseScrolled(xoffset, yoffset);
 }
 
 }

@@ -22,6 +22,9 @@ void runApp(std::shared_ptr<Window> window, std::shared_ptr<BaseApp> app)
     window->events().mouseScrolled.bindFunction( [&](float xoffset, float yoffset) { return app->mouseScrolled(xoffset, yoffset); } );
     window->events().keyPressed.bindFunction( [&](int key) { return app->keyPressed(key); } );
     window->events().keyReleased.bindFunction( [&](int key) { return app->keyReleased(key); } );
+
+    /** @todo Implement main loop system */
+    
 }
 
 }

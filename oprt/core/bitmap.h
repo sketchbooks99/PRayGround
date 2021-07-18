@@ -1,6 +1,7 @@
 #pragma once
 
 #include "util.h"
+#include <glad/glad.h>
 
 namespace oprt {
 
@@ -33,6 +34,10 @@ public:
     void load(const std::filesystem::path& filename);
     void load(const std::filesystem::path& filename, Format format);
     void write(const std::filesystem::path& filename, int quality=100) const;
+
+    void draw() const;
+    void draw(int32_t x, int32_t y) const;
+    void draw(int32_t x, int32_t y, int32_t width, int32_t height) const;
 
     void copyToDevice();
     void copyFromDevice();

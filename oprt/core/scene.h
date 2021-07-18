@@ -14,7 +14,7 @@ public:
     Scene() {}
 
     void createOnDevice();
-    void freeFromDevice();
+    void cleanUp();
 
     void render();
 

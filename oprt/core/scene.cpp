@@ -8,7 +8,7 @@ void Scene::createOnDevice()
 }
 
 // --------------------------------------------------------------------------------
-void Scene::freeFromDevice()
+void Scene::cleanUp()
 {
     for (auto& ps : m_primitive_instances)
     {

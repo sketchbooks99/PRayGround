@@ -12,10 +12,30 @@ namespace oprt {
  * Window manager using GLFW.
  */
 
+float   oprtGetMouseX();
+float   oprtGetMouseY();
+float   oprtGetPreviousMouseX();
+float   oprtGetpreviousMouseY();
+float2  oprtGetMousePosition();
+int32_t oprtGetMouseButton();
+
 struct WindowEvents
 {
+    struct InputStates 
+    {
+        float2 mousePosition;
+        float2 mousePreviousPosition;
+        int32_t mouseButton;
+        bool mouseButtonPressed;
+        int32_t key;
+        bool keyButtonPressed;
+    };
+
+    InputStates inputStates;
+
     Event<void, float, float, int>  mousePressed;
     Event<void, float, float, int>  mouseDragged;
+    Event<void, float, float, int>  mouseReleased;
     Event<void, float, float>       mouseMoved;
     Event<void, float, float>       mouseScrolled;
 
@@ -25,6 +45,7 @@ struct WindowEvents
 
 class Window {
 public:
+
     /** @brief Construct a window with the name and the size. */
     Window();
     Window(const std::string& name);
@@ -58,6 +79,8 @@ public:
     WindowEvents& events();
 
 private:
+    /** @brief Get current window context from GLFWwindow pointer. */
+    static Window* _getCurrent(GLFWwindow* window);
 
     /** 
      * @brief Callback functions to be binded with the GLFW callback. 

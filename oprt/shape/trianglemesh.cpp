@@ -14,7 +14,7 @@ TriangleMesh::TriangleMesh(
     if (relative_path.string().substr(relative_path.string().length() - 4) == ".obj") {
         std::optional<std::filesystem::path> filepath = findDatapath(relative_path);
         if (!filepath)
-            Message(MSG_ERROR, "The OBJ file '" + filepath.value().string() + "' is not found.");
+            Message(MSG_ERROR, "The OBJ file '" + relative_path.string() + "' is not found.");
 
         Message(MSG_NORMAL, "Loading OBJ file '" + filepath.value().string() + "' ...");
         loadObj(filepath.value(), m_vertices, m_normals, m_faces, m_texcoords);
@@ -22,7 +22,7 @@ TriangleMesh::TriangleMesh(
     else if (relative_path.string().substr(relative_path.string().length() - 4) == ".ply") {
         std::optional<std::filesystem::path> filepath = findDatapath(relative_path);
         if (!filepath)
-            Message(MSG_ERROR, "The PLY file '" + filepath.value().string() + "' is not found.");
+            Message(MSG_ERROR, "The PLY file '" + relative_path.string() + "' is not found.");
             
         Message(MSG_NORMAL, "Loading PLY file '" + filepath.value().string() + "' ...");
         loadPly(filepath.value(), m_vertices, m_normals, m_faces, m_texcoords);

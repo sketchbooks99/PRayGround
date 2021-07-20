@@ -1,7 +1,9 @@
 #include "shader.h"
 
-namespace oprt
+namespace gl
 {
+
+namespace fs = std::filesystem;
 
 // --------------------------------------------------------------------
 Shader::Shader()
@@ -9,9 +11,9 @@ Shader::Shader()
 
 }
 
-Shader::Shader(const std::filesystem::path& vert_name, const std::filesystem::path& frag_name, const std::filesystem::path& geom_name)
+Shader::Shader(const fs::path& vert_name, const fs::path& frag_name, const fs::path& geom_name)
 {
-
+    load(vert_name, frag_name, geom_name);
 }
 
 // --------------------------------------------------------------------
@@ -26,9 +28,35 @@ void Shader::end() const
 }
 
 // --------------------------------------------------------------------
+void Shader::load(const fs::path& vert_name, const fs::path& frag_name, const fs::path& geom_name)
+{
+    m_program = glCreateProgram();
+
+    {
+        auto vert_path = findDataPath(vert_name);
+        Assert(vert_path, "The shader file '" + vert_name.string() + "' is not found.");
+
+        GLuint vert_shader = glCreateShader(GL_VERTEX_SHADER);
+    }
+
+    {
+        auto frag_path = findDataPath(frag_name);
+        Assert(frag_path, "The shader file '" + frag_name.string() + "' is not found.");
+
+        GLuint frag_shader = glCreateShader(GL_FRAGMENT_SHADER);
+    }
+
+    if (geom_name != "")
+    {
+        auto geom_path = findDataPath(geom_name);
+        Assert(geom_path, "The shader file '" + geom_name.string() + "' is not found.");
+    }
+}
+
+// --------------------------------------------------------------------
 void Shader::addSource(const std::string& source, GLuint type)
 {
-    
+    m_sources.emplace(type, source);
 }
 
 // --------------------------------------------------------------------

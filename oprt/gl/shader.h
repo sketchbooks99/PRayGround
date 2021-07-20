@@ -4,8 +4,14 @@
 #include "../math/matrix.h"
 #include <glad/glad.h>
 
-namespace oprt
+namespace gl
 {
+
+
+/**
+ * @brief 
+ * Wrapper class for OpenGL shader
+ */
 
 class Shader 
 {
@@ -16,6 +22,9 @@ public:
     /** Specify the range to apply the shader in a C++ code. */ 
     void begin() const;
     void end() const;
+
+    /** Load shader sources from files. */
+    void load(const std::filesystem::path& vert_name, const std::filesystem::path& frag_name, const std::filesystem::path& geom_name = "");
 
     /**
      * @brief
@@ -54,11 +63,14 @@ public:
     void setUniform3iv(const std::string& name, const int32_t* v) const;
     void setUniform4iv(const std::string& name, const int32_t* v) const;
 
-    void setUniformMatrix2fv(const std::string& name, const Matrix2f& m) const;
-    void setUniformMatrix3fv(const std::string& name, const Matrix3f& m) const;
-    void setUniformMatrix4fv(const std::string& name, const Matrix4f& m) const;
+    void setUniformMatrix2fv(const std::string& name, const oprt::Matrix2f& m) const;
+    void setUniformMatrix3fv(const std::string& name, const oprt::Matrix3f& m) const;
+    void setUniformMatrix4fv(const std::string& name, const oprt::Matrix4f& m) const;
 
 private:
+    GLuint _createGLShaderFromSource( const std::string& source, GLuint type );
+    GLuint _createGLShaderFromFile( const std::filesystem::path& file_name, GLuint type );
+
     std::unordered_map<GLuint, std::string> m_sources;
     GLuint m_program;
 };
@@ -94,4 +106,4 @@ private:
 
 // #endif
 
-}
+} // ::gl

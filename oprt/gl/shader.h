@@ -13,6 +13,34 @@ namespace gl
  * Wrapper class for OpenGL shader
  */
 
+inline std::string getGLErrorTypeString(GLenum err)
+{
+    switch (err)
+    {
+        case GL_NO_ERROR:           return "No error";
+        case GL_INVALID_ENUM:       return "Invalid enum";
+        case GL_INVALID_VALUE:      return "Invalid value";
+        case GL_INVALID_OPERATION:  return "Invalid operation";
+        case GL_STACK_OVERFLOW:     return "Stack overflow";
+        case GL_STACK_UNDERFLOW:    return "Stack underflow";
+        case GL_OUT_OF_MEMORY:      return "Out of memory";
+        case GL_TABLE_TOO_LARGE:    return "Table too large";
+        default                     return "Unkwown GL error";
+    }
+}
+
+inline std::string getGLShaderTypeString(GLuint type)
+{
+    switch (type)
+    {
+        case GL_VERTEX_SHADER:      return "Vertex shader";
+        case GL_FRAGMENT_SHADER:    return "Fragment shader";
+        case GL_GEOMETRY_SHADER:    return "Geometry shader";
+        case GL_COMPUTE_SHADER:     return "Compute shader";
+        default:                    return "Unknown shader type";
+    }
+}
+
 class Shader 
 {
 public: 
@@ -37,6 +65,8 @@ public:
 
     void create();
     GLuint program() const;
+
+    void bindDefaultAttributes();
 
     /** Setter of uniform variables */
     void setUniform1f(const std::string& name, float v1) const;
@@ -67,17 +97,18 @@ public:
     void setUniformMatrix3fv(const std::string& name, const oprt::Matrix3f& m) const;
     void setUniformMatrix4fv(const std::string& name, const oprt::Matrix4f& m) const;
 
-private:
-    GLuint _createGLShaderFromSource( const std::string& source, GLuint type );
-    GLuint _createGLShaderFromFile( const std::filesystem::path& file_name, GLuint type );
+protected:
+    static GLuint _createGLShaderFromSource( const std::string& source, GLuint type );
+    static GLuint _createGLShaderFromFile( const std::filesystem::path& relative_path, GLuint type );
 
+private:
     std::unordered_map<GLuint, std::string> m_sources;
-    GLuint m_program;
+    GLuint m_program { 0 };
 };
 
 // #ifdef glDispatchCompute
 
-class ComputeShader 
+class ComputeShader : public Shader
 {
 public:
     ComputeShader();
@@ -87,7 +118,7 @@ public:
     void begin();
     void end();
 
-    /** Dispatch kernel with the specified block size. */
+    /** Dispatch a kernel with the specified block size. */
     void dispatchCompute(GLuint x, GLuint y, GLuint z) const;
 
     /**

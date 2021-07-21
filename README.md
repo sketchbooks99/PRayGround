@@ -41,6 +41,7 @@ cd build
 ccmake .. -DOptiX_INCLUDE=<path/to/OptiX>/include
 or 
 ccmake .. # and set OptiX_INCLUDE to the path of OptiX library include.
+# You can generate a makefile with an ordinary step of CMake ( [C] Configure -> [G] Generate ).
 
 make
 ```

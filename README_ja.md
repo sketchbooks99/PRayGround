@@ -42,6 +42,7 @@ cd build
 ccmake .. -DOptiX_INCLUDE=<path/to/OptiX>/include
 or 
 ccmake .. # and set OptiX_INCLUDE to the path of OptiX library include.
+# You can generate a makefile with a standard step of CMake ( [C] Configure -> [G] Generate ).
 
 make
 ```
@@ -74,6 +75,8 @@ CMakeの実行では、[cmake-gui](https://cmake.org/download/)を使用して�
 7. `build/` ディレクトリにある `OptiX-Raytracer.sln` というソリューションファイルを開いてください。
 
 8. IDEで `ソリューションのビルド` を実行します。コンパイルが成功すると、実行ファイルが `build/bin/Debug or Release` に作成されます。また、`oprt` プロジェクトをスタートアッププロジェクトとして設定し、`ローカル Windows デバッガー` を実行することで、レイトレーサーを簡単に実行できます。
+    - :warning: Japanese comments included in our sources may cause errors during compliation due to the encoding. So, please add /source-charset:utf-8 for Additional Options of Command Line. (Project tab -> Properties -> C/C++ -> Command Line) 
+    - :warning: ソースに含まれる日本語コメントのエンコーディングによってエラーが発生しコンパイルが通らない場合があります。その場合には /source-charset:utf-8 オプションを Additional Options of Command Line に追加してください。 (Project tab -> Properties -> C/C++ -> Command Line) 
 
 ## Mac
 サポートしていません。

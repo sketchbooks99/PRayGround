@@ -24,7 +24,14 @@ void runApp(std::shared_ptr<Window> window, std::shared_ptr<BaseApp> app)
     window->events().keyReleased.bindFunction( [&](int key) { return app->keyReleased(key); } );
 
     /** @todo Implement main loop system */
-    
+    while(!glfwWindowShouldClose(window->windowPtr()))
+    {
+        window->update();
+        app->update();
+
+        window->draw();
+        app->draw();
+    }
 }
 
 }

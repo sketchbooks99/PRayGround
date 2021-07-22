@@ -78,6 +78,8 @@ public:
     /** @brief Get window events */
     WindowEvents& events();
 
+    GLFWwindow* windowPtr();
+
 private:
     /** @brief Get current window context from GLFWwindow pointer. */
     static Window* _getCurrent(GLFWwindow* window);
@@ -88,8 +90,9 @@ private:
      * */
     static void _mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
     static void _cursorPosCallback(GLFWwindow* window, double xpos, double ypos);
-    static void _keyCallback(GLFWwindow* window, int32_t key, int32_t scancode, int32_t action, int32_t mods);
+    static void _keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
     static void _scrollCallback(GLFWwindow* window, double xoffset, double yoffset);
+    static void _resizeCallback(GLFWwindow* window, int width, int height);
 
     GLFWwindow* m_window_ptr = nullptr;
 

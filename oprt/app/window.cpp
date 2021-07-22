@@ -53,7 +53,12 @@ void Window::setup()
     glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
 
     m_window_ptr = glfwCreateWindow(m_width, m_height, m_name.c_str(), nullptr, nullptr);
-    Assert(m_window_ptr, "oprt::Window::setup(): Failed to create GLFW window.");
+    // Assert(m_window_ptr, "oprt::Window::setup(): Failed to create GLFW window.");
+    if (window == nullptr)
+    {
+        glfwTerminate();
+        Throw("oprt::Window::setup(): Failed to create GLFW window.");
+    }
 
     // Set current window context
     glfwMakeContextCurrent(m_window_ptr);
@@ -63,6 +68,7 @@ void Window::setup()
     glfwSetCurposCallback(m_window_ptr, _cursorPosCallback);
     glfwSetKeyCallback(m_window_ptr, _keyCallback);
     glfwSetScrollCallback(m_window_ptr, _scrollCallback);
+    glfwSetFramebufferSizeCallback(m_window_ptr, _resizeCallback);
 
     // Register oprt::Window pointer
     glfwSetWindowUserPointer(m_window_ptr, this);
@@ -136,9 +142,15 @@ std::tuple<int32_t, int32_t> Window::glVersion() const
 }
 
 // ----------------------------------------------------------------
-WindowEvents& events()
+WindowEvents& Window::events()
 {
     return *m_events;
+}
+
+// ----------------------------------------------------------------
+GLFWwindow* Window::windowPtr()
+{
+    return m_window_ptr;
 }
 
 /*****************************************************************
@@ -186,7 +198,7 @@ void Window::_cursorPosCallback(GLFWwindow* window, double xpos, double ypos)
 }
 
 // ----------------------------------------------------------------
-void Window::_keyCallback(GLFWwindow* window, int32_t key, int32_t scancode, int32_t action, int32_t mods)
+void Window::_keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     Window* current_window = _getCurrent(window);
     
@@ -213,6 +225,15 @@ void Window::_scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
     Window* current_window = _getCurrent(window);
 
     current_window->events().mouseScrolled(xoffset, yoffset);
+}
+
+// ----------------------------------------------------------------
+void Window::_resizeCallback(GLFWwindow* window, int width, int height)
+{
+    Window* current_window = _getCurrent(window);
+
+    current_window->setWidth(width);
+    current_window->setHeight(height);
 }
 
 }

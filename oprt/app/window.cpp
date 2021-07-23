@@ -36,13 +36,14 @@ Window::~Window()
 // ----------------------------------------------------------------
 void Window::setup()
 {
-    if (!glfwInit())
-    {
-        const char* description;
-        glfwGetError(&description);
-        Message(MSG_ERROR, description);
-        exit(EXIT_FAILURE);
-    }
+    glfwInit();
+    // if (!glfwInit())
+    // {
+    //     const char* description;
+    //     glfwGetError(&description);
+    //     Message(MSG_ERROR, description);
+    //     exit(EXIT_FAILURE);
+    // }
     
     if ((m_gl_version_major == 3 && m_gl_version_minor < 2) || m_gl_version_major < 3)
         Message( MSG_ERROR, "oprt::Window::setup(): The version of OpenGL must supports the programmable renderer (OpenGL 3.2 ~)." );
@@ -54,7 +55,7 @@ void Window::setup()
 
     m_window_ptr = glfwCreateWindow(m_width, m_height, m_name.c_str(), nullptr, nullptr);
     // Assert(m_window_ptr, "oprt::Window::setup(): Failed to create GLFW window.");
-    if (window == nullptr)
+    if (m_window_ptr == nullptr)
     {
         glfwTerminate();
         Throw("oprt::Window::setup(): Failed to create GLFW window.");
@@ -65,7 +66,7 @@ void Window::setup()
 
     // Register the callback functions
     glfwSetMouseButtonCallback(m_window_ptr, _mouseButtonCallback);
-    glfwSetCurposCallback(m_window_ptr, _cursorPosCallback);
+    glfwSetCursorPosCallback(m_window_ptr, _cursorPosCallback);
     glfwSetKeyCallback(m_window_ptr, _keyCallback);
     glfwSetScrollCallback(m_window_ptr, _scrollCallback);
     glfwSetFramebufferSizeCallback(m_window_ptr, _resizeCallback);
@@ -123,7 +124,7 @@ void Window::setName(const std::string& name)
 {
     m_name = name;
 }
-std::string name() const
+std::string Window::name() const
 {
     return m_name;
 }
@@ -134,11 +135,11 @@ void Window::setGLVersion(int32_t major, int32_t minor)
     m_gl_version_major = major; 
     m_gl_version_minor = minor;
 }
-int32_t Window::major() const 
+int32_t Window::glVersionMajor() const 
 { 
     return m_gl_version_major;
 }
-int32_t Window::minor() const
+int32_t Window::glVersionMinor() const
 {
     return m_gl_version_minor;
 }
@@ -174,7 +175,7 @@ void Window::_mouseButtonCallback(GLFWwindow* window, int button, int action, in
 {
     Window* current_window = _getCurrent(window);
 
-    float mouse_x, mouse_y;
+    double mouse_x, mouse_y;
     glfwGetCursorPos(window, &mouse_x, &mouse_y);
 
     current_window->events().inputStates.mousePosition = make_float2(mouse_x, mouse_y);
@@ -197,8 +198,8 @@ void Window::_cursorPosCallback(GLFWwindow* window, double xpos, double ypos)
 {
     Window* current_window = _getCurrent(window);
 
-    if (current_window->events().mouseButtonPressed)
-        current_window->events().mouseDragged.invoke(xpos, ypos);
+    if (current_window->events().inputStates.mouseButtonPressed)
+        current_window->events().mouseDragged.invoke(xpos, ypos, current_window->events().inputStates.mouseButton);
     else 
         current_window->events().mouseMoved.invoke(xpos, ypos);
 }
@@ -230,7 +231,7 @@ void Window::_scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 {
     Window* current_window = _getCurrent(window);
 
-    current_window->events().mouseScrolled(xoffset, yoffset);
+    current_window->events().mouseScrolled.invoke(xoffset, yoffset);
 }
 
 // ----------------------------------------------------------------

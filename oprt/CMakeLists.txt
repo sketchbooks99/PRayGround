@@ -35,6 +35,9 @@ OPTIX_add_sample_executable( oprt target_name
   core/bitmap.cpp
   # core/exception.cpp
 
+  app/window.cpp
+  app/baseapp.cpp
+
   optix/program.cpp
   optix/context.cpp
 
@@ -45,7 +48,7 @@ OPTIX_add_sample_executable( oprt target_name
   emitter/envmap.cpp
   emitter/area.cpp
   
-  oprt.cpp
+  oprt_dev.cpp
 
   # ===== CUDA =====
   optix/cuda/oprt.cu

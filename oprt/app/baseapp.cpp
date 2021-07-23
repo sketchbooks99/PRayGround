@@ -1,4 +1,4 @@
-#include "app.h"
+#include "baseapp.h"
 #include "event.h"
 
 namespace oprt {
@@ -31,7 +31,11 @@ void runApp(std::shared_ptr<Window> window, std::shared_ptr<BaseApp> app)
 
         window->draw();
         app->draw();
+
+        glfwSwapBuffers(window->windowPtr());
     }
+
+    window->close();
 }
 
 }

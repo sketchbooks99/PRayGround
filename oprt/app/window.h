@@ -57,6 +57,7 @@ public:
     void setup();
     void update();
     void draw();
+    void close();
 
     /** @brief Setting for the window size. */
     void setSize(int32_t width, int32_t height);

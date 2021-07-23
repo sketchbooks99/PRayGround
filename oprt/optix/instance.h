@@ -10,4 +10,9 @@
 
 namespace oprt {
 
+class Instance
+{
+
+};
+
 }

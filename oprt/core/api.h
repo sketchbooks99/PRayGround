@@ -11,13 +11,17 @@ uint32_t oprtGetWidth();
 uint32_t oprtGetHeight();
 float2 oprtGetMousePosition();
 
-// APIs for rnedeirng
+// APIs for rendeirng
 void oprtEnvironment(const float3&);
 void oprtEnvironment(const std::shared_ptr<EnvironmentEmitter>& env);
 void oprtCreateSceneOnDevice(Scene scene, unsigned int device_id=0);
 
 uint32_t oprtGetNumBuiltInMaterials();
 uint32_t oprtGetNumBuiltInTextures();
+ 
+OptixTraversableHandle oprtBuildGAS(const std::shared_ptr<Shape>& shape);
+OptiXTraversableHandle oprtBuildGAS(const std::vector<std:shared_ptr<Shape>>& shapes);
+OptixTraversableHandle oprtBuildIAS();
 
 ProgramGroup oprtCreateProgram(OptixProgramGroupKind kind, const Context& ctx, OptixProgramGroupDesc desc);
 ProgramGroup oprtCreateRaygenProgram(const Context& ctx, const Module& module, const char* func_name);

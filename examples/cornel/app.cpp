@@ -16,5 +16,5 @@ void App::update()
 // ----------------------------------------------------------------
 void App::draw()
 {
-
+    Message(MSG_NORMAL, "Application is running.");
 }

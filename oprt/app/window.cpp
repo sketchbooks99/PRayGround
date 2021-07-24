@@ -36,14 +36,16 @@ Window::~Window()
 // ----------------------------------------------------------------
 void Window::setup()
 {
-    glfwInit();
-    // if (!glfwInit())
-    // {
-    //     const char* description;
-    //     glfwGetError(&description);
-    //     Message(MSG_ERROR, description);
-    //     exit(EXIT_FAILURE);
-    // }
+    m_events = std::make_unique<WindowEvents>();
+
+    if (!glfwInit())
+    {
+        // const char* description;
+        // glfwGetError(&description);
+        // Message(MSG_ERROR, description);
+        // exit(EXIT_FAILURE);
+        Throw("oprt::Window::setup(): Failed to initialize GLFW.");
+    }
     
     if ((m_gl_version_major == 3 && m_gl_version_minor < 2) || m_gl_version_major < 3)
         Message( MSG_ERROR, "oprt::Window::setup(): The version of OpenGL must supports the programmable renderer (OpenGL 3.2 ~)." );
@@ -51,7 +53,6 @@ void Window::setup()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, m_gl_version_major);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, m_gl_version_minor);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
 
     m_window_ptr = glfwCreateWindow(m_width, m_height, m_name.c_str(), nullptr, nullptr);
     // Assert(m_window_ptr, "oprt::Window::setup(): Failed to create GLFW window.");
@@ -77,6 +78,14 @@ void Window::setup()
     /// No vsync
     /// @note For future work, enable to control frame rate specifying this for the suitable value.
     glfwSwapInterval( 0 ); 
+
+    Message(MSG_NORMAL, "oprt::Window::setup(): window info", m_width, m_height, m_name);
+
+    // Initialize glad
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+    {
+        Throw("oprt::Window::setup(): Failed to initialize GLAD.");
+    }
 }
 
 // ----------------------------------------------------------------
@@ -241,6 +250,8 @@ void Window::_resizeCallback(GLFWwindow* window, int width, int height)
 
     current_window->setWidth(width);
     current_window->setHeight(height);
+
+    glViewport(0, 0, width, height);
 }
 
 }

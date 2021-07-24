@@ -67,6 +67,11 @@ public:
         Message(MSG_NORMAL, "App::mouseDragged(): Mouse info:", x, y, button);
     }
 
+    void mouseReleased(float x, float y, int button)
+    {
+        Message(MSG_NORMAL, "App::mouseReleased(): Mouse info", x, y, button);
+    }
+
     void mouseMoved(float x, float y)
     {
         Message(MSG_NORMAL, "App::mouseMoved(): Mouse info:", x, y);

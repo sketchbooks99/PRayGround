@@ -77,7 +77,7 @@ void Window::setup()
 
     /// No vsync
     /// @note For future work, enable to control frame rate specifying this for the suitable value.
-    glfwSwapInterval( 0 ); 
+    // glfwSwapInterval( 0 ); 
 
     Message(MSG_NORMAL, "oprt::Window::setup(): window info", m_width, m_height, m_name);
 

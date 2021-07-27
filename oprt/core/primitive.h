@@ -1,9 +1,9 @@
 /** 
- * \file primitive.h
- * \brief Management of primitives include shape and material.
- * \author Shunji Kiuchi
+ * @file primitive.h
+ * @brief Management of primitives include shape and material.
+ * @author Shunji Kiuchi
  * 
- * \details 
+ * @details 
  * Primitive has shape, material and its program on CUDA 
  * to describe primitive behaivior during rendering. 
  * PrimitiveInstance has the array of primitives and transform
@@ -25,6 +25,47 @@
 
 namespace oprt {
 
+// APIs
+void buildGas(const Context& ctx, AccelData& accel_data, const PrimitiveInstance& ps);
+
+void buildInstances(const Context& ctx, 
+               const AccelData& accel_data,
+               const PrimitiveInstance& primitive_instance, 
+               unsigned int& sbt_base_offset,
+               unsigned int& instance_id,
+               std::vector<OptixInstance>& instances);
+    
+AccelData oprtBuildGAS(const Context& ctx, const Primitive& p);
+AccelData oprtBuildIAS(const Context& ctx, const Primitive& p, const Transform& transform);
+OptixInstance oprtBuildInstance(const Context& ctx, const AccelData& accel, const Transform& transform);
+
+void createMaterialPrograms(
+    const Context& ctx,
+    const Module& module, 
+    std::vector<ProgramGroup>& program_groups, 
+    std::vector<CallableRecord>& callable_records
+);
+
+void createTexturePrograms(
+    const Context& ctx, 
+    const Module& module, 
+    std::vector<ProgramGroup>& program_groups,
+    std::vector<CallableRecord>& callable_records
+);
+
+void createEmitterPrograms(
+    const Context& ctx, 
+    const Module& module, 
+    std::vector<ProgramGroup>& program_groups, 
+    std::vector<CallableRecord>& callable_records
+);
+
+/**
+ * @class Primitive
+ * @brief 
+ * Primitive store an array of shape, array of material, 
+ * and closest-hit program to describe the shape behavior on the device.
+ */
 class Primitive {
 public:
     Primitive(const std::shared_ptr<Shape>& shape, const std::shared_ptr<Material>& material)
@@ -137,10 +178,10 @@ private:
 
 // ---------------------------------------------------------------------
 /** 
- * \brief
+ * @brief
  * This class store the primitives with same transformation.
  * 
- * \note 
+ * @note 
  * - Transform stored in this class must not be modified from outside.
  * - I decided to store primitives with the order of meshes -> custom primitves, 
  *   to set the sbt indices in the correct order.
@@ -196,35 +237,5 @@ private:
     std::vector<Primitive> m_primitives;
     unsigned int m_sbt_index_base { 0 };
 };
-
-void buildGas(const Context& ctx, AccelData& accel_data, const PrimitiveInstance& ps);
-
-void buildInstances(const Context& ctx, 
-               const AccelData& accel_data,
-               const PrimitiveInstance& primitive_instance, 
-               unsigned int& sbt_base_offset,
-               unsigned int& instance_id,
-               std::vector<OptixInstance>& instances);
-
-void createMaterialPrograms(
-    const Context& ctx,
-    const Module& module, 
-    std::vector<ProgramGroup>& program_groups, 
-    std::vector<CallableRecord>& callable_records
-);
-
-void createTexturePrograms(
-    const Context& ctx, 
-    const Module& module, 
-    std::vector<ProgramGroup>& program_groups,
-    std::vector<CallableRecord>& callable_records
-);
-
-void createEmitterPrograms(
-    const Context& ctx, 
-    const Module& module, 
-    std::vector<ProgramGroup>& program_groups, 
-    std::vector<CallableRecord>& callable_records
-);
 
 }

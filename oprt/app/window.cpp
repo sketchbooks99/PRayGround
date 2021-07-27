@@ -38,14 +38,9 @@ void Window::setup()
 {
     m_events = std::make_unique<WindowEvents>();
 
+    // Initialize GLFW
     if (!glfwInit())
-    {
-        // const char* description;
-        // glfwGetError(&description);
-        // Message(MSG_ERROR, description);
-        // exit(EXIT_FAILURE);
         Throw("oprt::Window::setup(): Failed to initialize GLFW.");
-    }
     
     if ((m_gl_version_major == 3 && m_gl_version_minor < 2) || m_gl_version_major < 3)
         Message( MSG_ERROR, "oprt::Window::setup(): The version of OpenGL must supports the programmable renderer (OpenGL 3.2 ~)." );
@@ -77,11 +72,11 @@ void Window::setup()
 
     /// No vsync
     /// @note For future work, enable to control frame rate specifying this for the suitable value.
-    // glfwSwapInterval( 0 ); 
+    glfwSwapInterval( 0 ); 
 
     Message(MSG_NORMAL, "oprt::Window::setup(): window info", m_width, m_height, m_name);
 
-    // Initialize glad
+    // Initialize GLAD
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
         Throw("oprt::Window::setup(): Failed to initialize GLAD.");

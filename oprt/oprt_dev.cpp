@@ -50,47 +50,26 @@ class App : public BaseApp
 {
 public:
     App() {}
-    void setup() {}
-    void update() {}
+    void setup() 
+    {
+
+    }
+    void update() 
+    {
+
+    }
     void draw() 
     {
         // Message(MSG_NORMAL, "Application is running.");
     }
 
-    void mousePressed(float x, float y, int button)
-    {
-        Message(MSG_NORMAL, "App::mousePressed(): Mouse info:", x, y, button);
-    }
-
-    void mouseDragged(float x, float y, int button)
-    {
-        Message(MSG_NORMAL, "App::mouseDragged(): Mouse info:", x, y, button);
-    }
-
-    void mouseReleased(float x, float y, int button)
-    {
-        Message(MSG_NORMAL, "App::mouseReleased(): Mouse info", x, y, button);
-    }
-
-    void mouseMoved(float x, float y)
-    {
-        Message(MSG_NORMAL, "App::mouseMoved(): Mouse info:", x, y);
-    }
-
-    void mouseScrolled(float xoffset, float yoffset)
-    {
-        Message(MSG_NORMAL, "App::mouseScrolled(): Mouse info", xoffset, yoffset);
-    }
-
-    void keyPressed(int key)
-    {
-        Message(MSG_NORMAL, "App::keyPressed(): Key info:", key);
-    }
-
-    void keyReleased(int key)
-    {
-        Message(MSG_NORMAL, "App::keyReleased(): Key info:", key);
-    }
+    void mousePressed(float x, float y, int button){}
+    void mouseDragged(float x, float y, int button){}
+    void mouseReleased(float x, float y, int button){}
+    void mouseMoved(float x, float y){}
+    void mouseScrolled(float xoffset, float yoffset){}
+    void keyPressed(int key) {}
+    void keyReleased(int key) {}
     
 private:
 };

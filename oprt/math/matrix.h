@@ -4,6 +4,7 @@
 
 namespace oprt {
 
+// Forward declarations
 template <typename T, unsigned int N> class Matrix;
 using Matrix4f = Matrix<float, 4>;
 using Matrix3f = Matrix<float, 3>;
@@ -26,6 +27,7 @@ template <typename T, unsigned int N> Matrix<T, N>& operator*=(const Matrix<T, N
 template <typename T, unsigned int N> Matrix<T, N>  operator/(const Matrix<T, N>&, const Matrix<T, N>&);
 template <typename T, unsigned int N> typename Vector<T, N>::Type operator*(const Matrix<T, N>&, const typename Vector<T, N>::Type&);
 
+// Class definition
 template <typename T, unsigned int N>
 class Matrix
 {
@@ -35,16 +37,16 @@ public:
     explicit HOSTDEVICE Matrix(const T data[N*N]);
     explicit HOSTDEVICE Matrix(const std::initializer_list<T>& list);
 
-    HOSTDEVICE T  operator[](int i) const { return m_data[i]; }
-    HOSTDEVICE T& operator[](int i)       { return m_data[i]; }
+    HOSTDEVICE T  operator[](int i) const;
+    HOSTDEVICE T& operator[](int i);
 
     HOSTDEVICE Matrix& operator=( const Matrix& a );
 
     HOSTDEVICE T  get(int i, int j) const;
     HOSTDEVICE T& get(int i, int j);
 
-    HOSTDEVICE       T* data()       { return m_data; }
-    HOSTDEVICE const T* data() const { return m_data; }
+    HOSTDEVICE       T* data();
+    HOSTDEVICE const T* data() const;
 
     HOSTDEVICE bool isIdentity();
 
@@ -64,6 +66,9 @@ private:
     T m_data[N*N];
 };
 
+// Implementations
+
+// ----------------------------------------------------------------------------
 template <typename T, unsigned int N>
 HOSTDEVICE Matrix<T, N>::Matrix() : Matrix(Matrix::zero()) { }
 
@@ -89,6 +94,7 @@ HOSTDEVICE Matrix<T, N>::Matrix(const std::initializer_list<T>& list)
         m_data[ i++ ] = *it;
 }
 
+// ----------------------------------------------------------------------------
 template <typename T, unsigned int N>
 HOSTDEVICE Matrix<T, N>& Matrix<T, N>::operator=( const Matrix<T, N>& a )
 {
@@ -96,6 +102,20 @@ HOSTDEVICE Matrix<T, N>& Matrix<T, N>::operator=( const Matrix<T, N>& a )
         m_data[i] = a[i];
 }
 
+// ----------------------------------------------------------------------------
+template <typename T, unsigned int N>
+HOSTDEVICE T Matrix<T, N>::operator[](const int i) const 
+{
+    return m_data[i];
+}
+
+template <typename T, unsigned int N>
+HOSTDEVICE T& Matrix<T, N>::operator[](const int i)
+{
+    return m_data[i];
+}
+
+// ----------------------------------------------------------------------------
 template <typename T, unsigned int N>
 HOSTDEVICE T Matrix<T, N>::get(int i, int j) const
 {
@@ -108,6 +128,66 @@ HOSTDEVICE T& Matrix<T, N>::get(int i, int j)
 {
     unsigned int idx = i * N + j;
     return m_data[idx];
+}
+
+// ----------------------------------------------------------------------------
+template <typename T, unsigned int N>
+HOSTDEVICE T* Matrix<T, N>::data()
+{
+    return m_data;
+}
+
+template <typenmae T, unsigned int N>
+HOSTDEVICE const T* Matrix<T, N>::data() const
+{
+    return m_data;
+}
+
+// ----------------------------------------------------------------------------
+template <typaneme T, unsigned int N>
+HOSTDEVICE Matrix<T, N> Matrix<T, N>::rotate(const float radians, const float3& axis)
+{
+    float3 a = normalize(axis);
+    float s = sinf(radians);
+    float c = cosf(radians);
+}
+
+template <typename T, unsigned int N>
+HOSTDEVICE Matrix<T, N> Matrix<T, N>::translate(const float3& t)
+{
+
+}
+
+template <typename T, unsigned int N>
+HOSTDEVICE Matrix<T, N> Matrix<T, N>::scale(const float3& s)
+{
+    
+}
+
+template <typename T, unsigned int N>
+HOSTDEVICE Matrix<T, N> Matrix<T, N>::scale(const float s)
+{
+    
+}
+
+// ----------------------------------------------------------------------------
+template <typename T, unsigned int N>
+HOSTDEVICE Matrix<T, N> Matrix<T, N>::zero()
+{
+    T zero_data[N*N] = {};
+    return zero_data;
+}
+
+template <typename T, unsigned int N>
+HOSTDEVICE Matrix<T, N> Matrix<T, N>::identity()
+{
+    T data[N*N] = {};
+    for (int i=0; i<N; i++)
+    {
+        auto idx = i * N + i;
+        data[idx] = static_cast<T>(1);
+    }
+    return data;
 }
 
 }

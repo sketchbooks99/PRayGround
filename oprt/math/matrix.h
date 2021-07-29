@@ -11,9 +11,9 @@ using Matrix3f = Matrix<float, 3>;
 using Matrix2f = Matrix<float, 2>;
 
 template <typename T, unsigned int N> struct Vector { };
-template <> struct Vector<float, 2> { using Type = float2; };
-template <> struct Vector<float, 3> { using Type = float3; };
-template <> struct Vector<float, 4> { using Type = float4; };
+template <> struct Vector<float, 2> { using Type = float2; using TransformType = float2; };
+template <> struct Vector<float, 3> { using Type = float3; using TransformType = float3; };
+template <> struct Vector<float, 4> { using Type = float4; using TransformType = float3; };
 
 template <typename T, unsigned int N> bool          operator==(const Matrix<T, N>&, const Matrix<T, N>&);
 template <typename T, unsigned int N> bool          operator!=(const Matrix<T, N>&, const Matrix<T, N>&);
@@ -55,9 +55,9 @@ public:
      * [JP] 以下の変換行列関数は \c N に応じて特殊化されます。
      * [EN] The following transformation functions specilized depending on \c N.
      */
-    static HOSTDEVICE Matrix<T, N> rotate(const float radians, const float3& axis);
-    static HOSTDEVICE Matrix<T, N> translate(const float3& t);
-    static HOSTDEVICE Matrix<T, N> scale(const float3& s);
+    static HOSTDEVICE Matrix<T, N> rotate(const float radians, const Vector<T, N>::TransformType& axis);
+    static HOSTDEVICE Matrix<T, N> translate(const Vector<T, N>::TransformType& t);
+    static HOSTDEVICE Matrix<T, N> scale(const Vector<T, N>::TransformType& s);
     static HOSTDEVICE Matrix<T, N> scale(const float s);
 
     static HOSTDEVICE Matrix<T, N> zero();
@@ -145,11 +145,9 @@ HOSTDEVICE const T* Matrix<T, N>::data() const
 
 // ----------------------------------------------------------------------------
 template <typaneme T, unsigned int N>
-HOSTDEVICE Matrix<T, N> Matrix<T, N>::rotate(const float radians, const float3& axis)
+HOSTDEVICE Matrix<T, N> Matrix<T, N>::rotate(const float radians, const Vector<T, N>::TransformType& axis)
 {
-    float3 a = normalize(axis);
-    float s = sinf(radians);
-    float c = cosf(radians);
+     
 }
 
 template <typename T, unsigned int N>

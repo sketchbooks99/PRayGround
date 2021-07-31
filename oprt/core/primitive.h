@@ -25,6 +25,9 @@
 
 namespace oprt {
 
+class Primitive;
+class PrimitiveInstance;
+
 // APIs
 void buildGas(const Context& ctx, AccelData& accel_data, const PrimitiveInstance& ps);
 

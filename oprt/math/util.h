@@ -8,9 +8,11 @@
 #endif
 
 namespace oprt {
+namespace constant{
 
 constexpr double PI = 3.14159265358979323846f;
 constexpr double INF = std::numeric_limits<double>::infinity();
 constexpr double EPS = 1e-10f;
 
-}
+} // ::constant
+} // ::oprt

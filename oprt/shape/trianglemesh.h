@@ -1,6 +1,6 @@
 #pragma once
 
-#include "optix/trianglemesh.cuh"
+#include "cuda/trianglemesh.cuh"
 
 #ifndef __CUDACC__
 #include "../core/shape.h"

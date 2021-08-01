@@ -1,6 +1,6 @@
 #pragma once 
 
-#include "optix/sphere.cuh"
+#include "cuda/sphere.cuh"
 
 #ifndef __CUDACC__
 #include "../core/shape.h"

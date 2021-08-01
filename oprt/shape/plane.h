@@ -1,6 +1,6 @@
 #pragma once
 
-#include "optix/plane.cuh"
+#include "cuda/plane.cuh"
 
 #ifndef __CUDACC__
 #include "../core/shape.h"

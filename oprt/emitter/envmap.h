@@ -2,7 +2,7 @@
 
 #include "../core/emitter.h"
 #include "../texture/constant.h"
-#include "optix/envmap.cuh"
+#include "cuda/envmap.cuh"
 
 /**
  * @brief Environment emitter. In general, emittance is evaluated at a miss program.

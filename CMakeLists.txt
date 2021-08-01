@@ -298,7 +298,7 @@ set(SAMPLES_CUDA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/cuda)
 # Convience function for adding samples to the code.  You can copy the contents of this
 # funtion into your individual project if you wish to customize the behavior.  Note that
 # in CMake, functions have their own scope, whereas macros use the scope of the caller.
-function(OPTIX_add_sample_executable target_name_base target_name_var)
+function(OPRT_add_executable target_name_base target_name_var)
 
   set( target_name ${target_name_base} )
   set( ${target_name_var} ${target_name} PARENT_SCOPE )

@@ -19,7 +19,7 @@ void BaseApp::mouseScrolled(float xoffset, float yoffset) {}
 void BaseApp::keyPressed(int key) {}
 void BaseApp::keyReleased(int key) {}
 
-void runApp(const std::shared_ptr<Window>& window, const std::shared_ptr<BaseApp>& app)
+void oprtRunApp(const std::shared_ptr<Window>& window, const std::shared_ptr<BaseApp>& app)
 {
     window->setup();
     app->setup();

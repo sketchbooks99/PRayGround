@@ -26,32 +26,95 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-OPTIX_add_sample_executable( oprt target_name
+OPRT_add_executable( oprt target_name
 
-  # ===== SOURCE =====  
-  core/file_util.cpp
+  # Core libraries ==========
+  core/aabb.h 
+  # core/api.h 
+  # core/api.cpp 
+  core/bitmap.cpp 
+  core/bitmap.h 
+  core/bsdf.h 
+  core/camera.h 
+  core/color.h 
+  core/cudabuffer.h 
+  core/emitter.h 
+  core/file_util.h 
+  core/file_util.cpp 
+  # core/film.h 
+  # core/film.cpp
+  core/load3d.h 
+  core/material.h 
+  core/onb.h 
+  core/primitive.h 
   core/primitive.cpp 
-  core/scene.cpp
-  core/bitmap.cpp
-  # core/exception.cpp
+  core/ray.h 
+  core/scene.h 
+  core/scene.cpp 
+  core/shape.h 
+  core/stream_helpers.h 
+  core/texture.h 
+  core/transform.h 
+  core/util.h
 
+  # App libraries ==========
+  app/baseapp.h 
+  app/baseapp.cpp 
+  app/event.h 
+  app/window.h
   app/window.cpp
-  app/baseapp.cpp
 
-  optix/program.cpp
-  optix/context.cpp
+  # Optix wrapper libraries ==========
+  # optix/accel.h 
+  # optix/accel.cpp
+  optix/context.h 
+  optix/context.cpp 
+  optix/helpers.h 
+  # optix/instance.h 
+  optix/macros.h 
+  optix/module.h 
+  optix/pipeline.h 
+  optix/program.h 
+  optix/program.cpp 
+  optix/sbt.h 
+  optix/util.h 
+  optix/cuda/oprt.cu 
+  optix/cuda/texture.cuh
 
+  # Shapes
+  shape/cylinder.h 
+  shape/plane.h 
+  shape/sphere.h 
+  shape/trianglemesh.h
   shape/trianglemesh.cpp
+  shape/cuda/cylinder.cuh 
+  shape/cuda/plane.cuh 
+  shape/cuda/sphere.cuh 
+  shape/cuda/trianglemesh.cuh
+ 
+  # Materials 
+  material/conductor.h 
+  material/dielectric.h 
+  material/diffuse.h 
+  material/disney.h
 
+  # Textures
+  texture/bitmap.h
   texture/bitmap.cpp
+  texture/checker.h 
+  texture/constant.h  
 
+  # Emitter
+  emitter/area.h 
+  emitter/area.cpp 
+  emitter/envmap.h
   emitter/envmap.cpp
-  emitter/area.cpp
+  emitter/cuda/area.cuh 
+  emitter/cuda/envmap.cuh
   
   oprt_dev.cpp
-
-  # ===== CUDA =====
-  optix/cuda/oprt.cu
+  oprt.h 
+  scene_config.h
 
   # OPTIONS -rdc true
 )

@@ -351,8 +351,8 @@ HOSTDEVICE Matrix<T, N> Matrix<T, N>::translate(const typename Matrix<T, N>::Tfl
     static_assert(1 < N && N <= 4, "Matrix::translate(): The dimension of matrix must be 2x2, 3x3 or 4x4.");
 
     Matrix<T, N> result{};
-    const T* t_ptr = reinterpret_cast<const T*>(&t);
-    for (size_t row = 0; row < static_cast<size_t>((sizeof(t) / sizeof(T))); row++)
+    const float* t_ptr = reinterpret_cast<const float*>(&t);
+    for (size_t row = 0; row < static_cast<size_t>((sizeof(t) / sizeof(float))); row++)
         result[row * N + (N-1)] = t_ptr[row];
     return result;
 }
@@ -363,8 +363,8 @@ HOSTDEVICE Matrix<T, N> Matrix<T, N>::scale(const typename Matrix<T, N>::TfloatN
     static_assert(1 < N && N <= 4, "Matrix::scale(): The dimension of matrix must be 2x2, 3x3 or 4x4.");
 
     Matrix<T, N> result{};
-    const T* s_ptr = reinterpret_cast<const T*>(&s);
-    for (size_t i = 0; i < static_cast<size_t>((sizeof(t) / sizeof(T)); i++)
+    const float* s_ptr = reinterpret_cast<const float*>(&s);
+    for (size_t i = 0; i < static_cast<size_t>((sizeof(s) / sizeof(float)); i++)
         result[i * N + i] = s_ptr[i];
     return result;
 }
@@ -375,7 +375,7 @@ HOSTDEVICE Matrix<T, N> Matrix<T, N>::scale(const float s)
     static_assert(1 < N && N <= 4, "Matrix::scale(): The dimension of matrix must be 2x2, 3x3 or 4x4.");
 
     Matrix<T, N> result{};
-    for (size_t i = 0; i < static_cast<size_t>((sizeof(t) / sizeof(T)); i++)
+    for (size_t i = 0; i < static_cast<size_t>(sizeof(Matrix<T, N>::TfloatN) / sizeof(float)); i++)
         result[i * N + i] = s;
     return result;
 }

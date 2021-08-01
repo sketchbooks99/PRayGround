@@ -4,7 +4,7 @@
 #include "../core/texture.h"
 #include "../core/emitter.h"
 #include "../texture/constant.h"
-#include "optix/area.cuh"
+#include "cuda/area.cuh"
 
 namespace oprt {
 

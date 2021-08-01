@@ -1,6 +1,6 @@
 #pragma once 
 
-#include "optix/cylinder.cuh"
+#include "cuda/cylinder.cuh"
 
 #ifndef __CUDACC__
 #include "../core/shape.h"

@@ -10,3 +10,6 @@
 [submodule "oprt/ext/glfw"]
 	path = oprt/ext/glfw
 	url = https://github.com/glfw/glfw.git
+[submodule "oprt/ext/imgui"]
+	path = oprt/ext/imgui
+	url = https://github.com/ocornut/imgui.git

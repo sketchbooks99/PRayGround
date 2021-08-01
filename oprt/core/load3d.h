@@ -3,7 +3,7 @@
 #include <sutil/vec_math.h>
 #include "../ext/happly/happly.h"
 #include <algorithm>
-#include "../shape/optix/trianglemesh.cuh"
+#include "../shape/cuda/trianglemesh.cuh"
 
 namespace oprt {
 

@@ -99,7 +99,7 @@ private:
 int main(int argc, char* argv[]) {
     std::shared_ptr<Window> window = std::make_shared<Window>("Path tracer", 1024, 768);
     std::shared_ptr<App> app = std::make_shared<App>();
-    runApp(window, app);
+    oprtRunApp(window, app);
 
     return 0;
 }

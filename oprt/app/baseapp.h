@@ -25,6 +25,6 @@ public:
     virtual void keyReleased(int key);
 };
 
-void runApp(const std::shared_ptr<Window>& window, const std::shared_ptr<BaseApp>& app);
+void oprtRunApp(const std::shared_ptr<Window>& window, const std::shared_ptr<BaseApp>& app);
 
 }

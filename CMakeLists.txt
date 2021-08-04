@@ -261,7 +261,7 @@ endif (WIN32)
 
 set(SAMPLES_CUDA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../cuda")
 
-set(SAMPLES_SUPPORT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../support")
+set(SAMPLES_SUPPORT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../oprt/ext")
 
 # NVRTC include paths relative to the sample path
 set(SAMPLES_RELATIVE_INCLUDE_DIRS "\\
@@ -378,10 +378,9 @@ add_subdirectory(oprt)
 
 # Our sutil library.  The rules to build it are found in the subdirectory.
 add_subdirectory(sutil)
-# Our other libraries.
-# add_subdirectory(lib/optixPaging)
-# Third-party support libraries.
-add_subdirectory(support)
+
+# External libraries
+add_subdirectory(oprt/ext)
 
 #################################################################
 

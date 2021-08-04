@@ -42,11 +42,12 @@ if( WARNINGS_AS_ERRORS AND (USING_GNU_CXX OR USING_CLANG_CXX))
 endif()
 
 add_subdirectory(glfw)
-
-set_property(TARGET glfw PROPERTY C_STANDARD C99)
+set_property(TARGET glfw PROPERTY C_STANDARD 99)
 if (WARNING_AS_ERRORS AND (USING_GNU_CXX OR USING_CLANG_CXX))
     pop_variable(CMAKE_C_FLAGS)
 endif()
+
+add_subdirectory(imgui)
 
 add_library(glad SHARED 
     KHR/khrplatform.h 
@@ -59,4 +60,8 @@ target_compile_definitions( glad
 )
 target_include_directories(glad PUBLIC .)
 target_link_libraries(glad PUBLIC ${OPENGL_LIBRARIES})
+
+set_property( TARGET glad PROPERTY FOLDER ${OPTIX_IDE_FOLDER} )
+set_property( TARGET glfw PROPERTY FOLDER ${OPTIX_IDE_FOLDER} )
+set_property( TARGET imgui PROPERTY FOLDER ${OPTIX_IDE_FOLDER} )
 

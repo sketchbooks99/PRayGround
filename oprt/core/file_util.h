@@ -29,7 +29,8 @@ inline std::filesystem::path pathJoin(
  */
 std::optional<std::filesystem::path> findDatapath( const std::filesystem::path& relative_path );
 
-std::filesystem::path rootDir();
+std::filesystem::path oprtRootDir();
+std::filesystem::path oprtAppDir();
 
 /**
  * @brief Get the extension of file.

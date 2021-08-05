@@ -13,6 +13,7 @@ float2 oprtGetMousePosition();
 
 // APIs for rendeirng
 void oprtEnvironment(const float3&);
+void oprtEnvironment(const std::filesystem::path& filepath);
 void oprtEnvironment(const std::shared_ptr<EnvironmentEmitter>& env);
 void oprtCreateSceneOnDevice(Scene scene, unsigned int device_id=0);
 
@@ -20,7 +21,7 @@ uint32_t oprtGetNumBuiltInMaterials();
 uint32_t oprtGetNumBuiltInTextures();
  
 OptixTraversableHandle oprtBuildGAS(const std::shared_ptr<Shape>& shape);
-OptiXTraversableHandle oprtBuildGAS(const std::vector<std:shared_ptr<Shape>>& shapes);
+OptixTraversableHandle oprtBuildGAS(const std::vector<std::shared_ptr<Shape>>& shapes);
 OptixTraversableHandle oprtBuildIAS();
 
 ProgramGroup oprtCreateProgram(OptixProgramGroupKind kind, const Context& ctx, OptixProgramGroupDesc desc);

@@ -92,6 +92,7 @@ void Bitmap_<PixelType>::allocate(Format format, int width, int height)
     std::vector<PixelType> zero_arr(m_channels * m_width * m_height, static_cast<PixelType>(0));
     m_data = new PixelType[m_channels * m_width * m_height];
     memcpy(m_data, zero_arr.data(), m_channels * m_width * m_height * sizeof(PixelType));
+
     m_gltex = prepareGL(m_shader);
 }
 
@@ -120,95 +121,6 @@ template <typename PixelType>
 void Bitmap_<PixelType>::setData(PixelType* data, const int2& res, const int2& offset)
 {
     setData(data, res.x, res.y, offset.x, offset.y); 
-}
-
-// --------------------------------------------------------------------
-template <typename PixelType>
-void Bitmap_<PixelType>::draw() const
-{
-    draw(0, 0, m_width, m_height);
-}
-
-template <typename PixelType>
-void Bitmap_<PixelType>::draw(int32_t x, int32_t y) const
-{
-    draw(x, y, m_width, m_height);
-}
-
-template <typename PixelType>
-void Bitmap_<PixelType>::draw(int32_t x, int32_t y, int32_t width, int32_t height) const
-{
-    // Prepare vertices data
-    int window_width = oprtGetWidth(), window_height = oprtGetHeight();
-    GLfloat x0 = -1.0f + (static_cast<float>(x) / window_width) * 2.0f;
-    GLfloat x1 = -1.0f + (static_cast<float>(x + width) / window_width) * 2.0f;
-    GLfloat y0 =  1.0f - (static_cast<float>(y + height) / window_height) * 2.0f;
-    GLfloat y1 =  1.0f - (static_cast<float>(y) / window_height) * 2.0f;
-    GLfloat vertices[] = {
-        // position     // texcoord (vertically flipped)
-        x0, y0, 0.0f,   0.0f, 1.0f,
-        x0, y1, 0.0f,   0.0f, 0.0f, 
-        x1, y0, 0.0f,   1.0f, 1.0f, 
-        x1, y1, 0.0f,   1.0f, 0.0f
-    };
-    GLuint indices[] = {
-        0, 1, 2, 
-        2, 1, 3
-    };
-
-    // Prepare vertex array object
-    GLuint vertex_buffer, vertex_array, element_buffer;
-    glGenVertexArrays(1, &vertex_array);
-    glGenBuffers(1, &vertex_buffer); 
-    glGenBuffers(1, &element_buffer);
-
-    glBindVertexArray(vertex_array);
-
-    glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, element_buffer);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)0);
-    glEnableVertexAttribArray(0);
-
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
-    glEnableVertexAttribArray(1);
-
-    GLenum texture_data_type;
-    if constexpr (std::is_same_v<PixelType, float>)
-        texture_data_type = GL_FLOAT;
-    else if constexpr (std::is_same_v<PixelType, unsigned char>)
-        texture_data_type = GL_UNSIGNED_BYTE;
-    
-    glBindTexture(GL_TEXTURE_2D, m_gltex);
-    switch (m_format)
-    {
-    case Format::GRAY:
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_R, m_width, m_height, 0, GL_R, texture_data_type, m_data);
-        break;
-    case Format::GRAY_ALPHA:
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RG, m_width, m_height, 0, GL_RG, texture_data_type, m_data);
-        break;
-    case Format::RGB:
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_width, m_height, 0, GL_RGB, texture_data_type, m_data);
-        break;
-    case Format::RGBA:
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_RGBA, texture_data_type, m_data);
-        break;
-    case Format::UNKNOWN:
-    default:
-        return;
-    }
-
-    m_shader.begin();
-    glUniform1i(glGetUniformLocation(m_shader.program(), "tex"), 0);
-
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, m_gltex);
-    glBindVertexArray(vertex_array);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 }
 
 // --------------------------------------------------------------------
@@ -366,6 +278,95 @@ void Bitmap_<PixelType>::write(const std::filesystem::path& filepath, int qualit
         Message(MSG_WARNING, "This format is not writable with bitmap.");
         return;
     }
+}
+
+// --------------------------------------------------------------------
+template <typename PixelType>
+void Bitmap_<PixelType>::draw() const
+{
+    draw(0, 0, m_width, m_height);
+}
+
+template <typename PixelType>
+void Bitmap_<PixelType>::draw(int32_t x, int32_t y) const
+{
+    draw(x, y, m_width, m_height);
+}
+
+template <typename PixelType>
+void Bitmap_<PixelType>::draw(int32_t x, int32_t y, int32_t width, int32_t height) const
+{
+    // Prepare vertices data
+    int window_width = oprtGetWidth(), window_height = oprtGetHeight();
+    GLfloat x0 = -1.0f + (static_cast<float>(x) / window_width) * 2.0f;
+    GLfloat x1 = -1.0f + (static_cast<float>(x + width) / window_width) * 2.0f;
+    GLfloat y0 =  1.0f - (static_cast<float>(y + height) / window_height) * 2.0f;
+    GLfloat y1 =  1.0f - (static_cast<float>(y) / window_height) * 2.0f;
+    GLfloat vertices[] = {
+        // position     // texcoord (vertically flipped)
+        x0, y0, 0.0f,   0.0f, 1.0f,
+        x0, y1, 0.0f,   0.0f, 0.0f, 
+        x1, y0, 0.0f,   1.0f, 1.0f, 
+        x1, y1, 0.0f,   1.0f, 0.0f
+    };
+    GLuint indices[] = {
+        0, 1, 2, 
+        2, 1, 3
+    };
+
+    // Prepare vertex array object
+    GLuint vertex_buffer, vertex_array, element_buffer;
+    glGenVertexArrays(1, &vertex_array);
+    glGenBuffers(1, &vertex_buffer); 
+    glGenBuffers(1, &element_buffer);
+
+    glBindVertexArray(vertex_array);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, element_buffer);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
+    glEnableVertexAttribArray(1);
+
+    GLenum texture_data_type;
+    if constexpr (std::is_same_v<PixelType, float>)
+        texture_data_type = GL_FLOAT;
+    else if constexpr (std::is_same_v<PixelType, unsigned char>)
+        texture_data_type = GL_UNSIGNED_BYTE;
+    
+    glBindTexture(GL_TEXTURE_2D, m_gltex);
+    switch (m_format)
+    {
+    case Format::GRAY:
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_R, m_width, m_height, 0, GL_R, texture_data_type, m_data);
+        break;
+    case Format::GRAY_ALPHA:
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RG, m_width, m_height, 0, GL_RG, texture_data_type, m_data);
+        break;
+    case Format::RGB:
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_width, m_height, 0, GL_RGB, texture_data_type, m_data);
+        break;
+    case Format::RGBA:
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_RGBA, texture_data_type, m_data);
+        break;
+    case Format::UNKNOWN:
+    default:
+        return;
+    }
+
+    m_shader.begin();
+    glUniform1i(glGetUniformLocation(m_shader.program(), "tex"), 0);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_gltex);
+    glBindVertexArray(vertex_array);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 }
 
 // --------------------------------------------------------------------

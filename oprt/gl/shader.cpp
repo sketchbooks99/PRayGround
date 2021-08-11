@@ -22,12 +22,12 @@ Shader::Shader(const fs::path& vert_name, const fs::path& frag_name, const fs::p
 // --------------------------------------------------------------------
 void Shader::begin() const 
 {
-
+    glUseProgram(m_program);
 }
 
 void Shader::end() const
 {
-
+    glUseProgram(0);
 }
 
 // --------------------------------------------------------------------
@@ -42,7 +42,7 @@ void Shader::load(const fs::path& vert_name, const fs::path& frag_name, const fs
         std::optional<fs::path> vert_path = findDataPath(vert_name);
         Assert(vert_path, "The shader file '" + vert_name.string() + "' is not found.");
 
-        vert_shader = _createGLShaderFromFile(vert_name, GL_VERTEX_SHADER);
+        vert_shader = _createGLShaderFromFile(vert_path.value(), GL_VERTEX_SHADER);
         glAttachShader(m_program, vert_shader);
     }
 
@@ -51,7 +51,7 @@ void Shader::load(const fs::path& vert_name, const fs::path& frag_name, const fs
         std::optional<fs::path> frag_path = findDataPath(frag_name);
         Assert(frag_path, "The shader file '" + frag_name.string() + "' is not found.");
 
-        vert_shader = _createGLShaderFromFile(vert_name, GL_FRAGMENT_SHADER);
+        frag_shader = _createGLShaderFromFile(frag_path.value(), GL_FRAGMENT_SHADER);
         glAttachShader(m_program, frag_shader);
     }
 
@@ -61,7 +61,7 @@ void Shader::load(const fs::path& vert_name, const fs::path& frag_name, const fs
         std::optional<fs::path> geom_path = findDataPath(geom_name);
         Assert(geom_path, "The shader file '" + geom_name.string() + "' is not found.");
 
-        geom_shader = _createGLShaderFromFile(geom_path, GL_GEOMETRY_SHADER);
+        geom_shader = _createGLShaderFromFile(geom_path.value(), GL_GEOMETRY_SHADER);
         glAttachShader(m_program, geom_shader);
     }
 
@@ -72,11 +72,11 @@ void Shader::load(const fs::path& vert_name, const fs::path& frag_name, const fs
     if (linked == GL_FALSE)
     {
         GLint bufsize;
-        glGetProgramiv(m_program, GL_INFO_LOG_LENGTH, bufsize);
+        glGetProgramiv(m_program, GL_INFO_LOG_LENGTH, &bufsize);
 
         GLsizei length;
         GLchar* infolog = (GLchar*)malloc(bufsize);
-        glProgrmaInfoLog(m_program, bufsize, &length, infolog);
+        glGetProgramInfoLog(m_program, bufsize, &length, infolog);
 
         glDeleteProgram(m_program);
         Message(MSG_ERROR, "Shader::load(): Linking of program failed:", infolog);
@@ -117,10 +117,10 @@ void Shader::bindDefaultAttributes()
     }
     else 
     {
-        glBindAttributeLocation(m_program, 0, "vertex");
-        glBindAttributeLocation(m_program, 1, "color");
-        glBindAttributeLocation(m_program, 2, "normal");
-        glBindAttributeLocation(m_program, 3, "texcoord");
+        glBindAttribLocation(m_program, 0, "vertex");
+        glBindAttribLocation(m_program, 1, "color");
+        glBindAttribLocation(m_program, 2, "normal");
+        glBindAttribLocation(m_program, 3, "texcoord");
         return;
     }
 }
@@ -128,11 +128,11 @@ void Shader::bindDefaultAttributes()
 // --------------------------------------------------------------------
 void Shader::setUniform1f(const std::string& name, float v1) const
 {
-    
+    glUniform1f(glGetUniformLocation(m_program, name.c_str()), v1);
 }
 void Shader::setUniform2f(const std::string& name, float v1, float v2) const
 {
-    
+
 }
 void Shader::setUniform3f(const std::string& name, float v1, float v2, float v3) const
 {
@@ -226,7 +226,7 @@ GLuint Shader::_createGLShaderFromSource(const std::string& source, GLuint type)
     GLenum err = glGetError();
     if (err != GL_NO_ERROR)
     {
-        Message(MSG_ERROR, "Shader::_createGLShaderFromSource(): OpenGL generated error: " << getGLErrorTypeString(err) << ".";
+        Message(MSG_ERROR, "Shader::_createGLShaderFromSource(): OpenGL generated error: " + toString(getGLErrorTypeString(err)) + ".");
         return 0;
     }
 
@@ -251,20 +251,23 @@ GLuint Shader::_createGLShaderFromSource(const std::string& source, GLuint type)
 
 GLuint Shader::_createGLShaderFromFile(const fs::path& relative_path, GLuint type)
 {
-    std::optinal<fs::path> filepath = findDataPath(relative_path);
+    std::optional<fs::path> filepath = findDataPath(relative_path);
     Assert(filepath, "The shader file '" + relative_path.string() + "' is not found.");
 
     std::string source;
-    std::ifstream file_stream(filepath.value(), std::ios::in);
-    
-    std::string buffer = "";
-    while (!file_stream.eof())
+    std::ifstream file_stream;
+    try 
     {
-        std::getline(file_stream, buffer);
-        source.append(line + "\n");
+        file_stream.open(filepath.value());
+        std::stringstream source_stream;
+        source_stream << file_stream.rdbuf();
+        file_stream.close();
+        source = source_stream.str();
     }
-
-    file_stream.close();
+    catch (std::istream::failure e)
+    {
+        Message(MSG_ERROR, "gl::Shader::_createGLShaderFromFile(): Failed to create shader from file.");
+    }
 
     return _createGLShaderFromSource(source, type);
 }

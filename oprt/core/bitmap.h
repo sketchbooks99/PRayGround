@@ -25,11 +25,8 @@ public:
     explicit Bitmap_(const std::filesystem::path& filename, Format format);
 
     void allocate(Format format, int width, int height);
-    void fillData(PixelType* data, int width, int height, int offset_x, int offset_y);
-    void fillData(PixelType* data, int2 res, int2 offset) 
-    { 
-        fillData(data, res.x, res.y, offset.x, offset.y); 
-    }
+    void setData(PixelType* data, int width, int height, int offset_x, int offset_y);
+    void setData(PixelType* data, const int2& res, const int2& offset);
 
     void load(const std::filesystem::path& filename);
     void load(const std::filesystem::path& filename, Format format);
@@ -65,6 +62,8 @@ private:
     int m_width { 0 };
     int m_height { 0 };
     int m_channels { 0 };
+
+    GLuint m_gltex; // Texture for drawing image via OpenGL
 };
 
 using Bitmap = Bitmap_<unsigned char>;

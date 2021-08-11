@@ -550,7 +550,7 @@ int main(int argc, char* argv[]) {
             // Message(MSG_NORMAL, std::format("Render time: {}m {}s {}ms", (int)m.count(), (int)s.count(), (int)ms.count() - (int)(s.count()*1000)) );
             printf("Render time: %dm %ds %dms\n", (int)m.count(), (int)s.count(), (int)ms.count() - (int)(s.count()*1000));
             
-            scene.film()->fillData(reinterpret_cast<Bitmap::Type*>(output_buffer.getHostPointer()), 
+            scene.film()->setData(reinterpret_cast<Bitmap::Type*>(output_buffer.getHostPointer()), 
                 scene.film()->width(), scene.film()->height(), 0, 0);
             scene.film()->write(outfile);
 

@@ -50,8 +50,8 @@ set(sources
     Preprocessor.h
     Quaternion.h
     Record.h
-    Scene.cpp
-    Scene.h
+    # Scene.cpp
+    # Scene.h
     sutilapi.h
     sutil.cpp
     sutil.h

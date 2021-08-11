@@ -27,7 +27,7 @@ inline std::filesystem::path pathJoin(
  * If the file exists, return the absolute path to the file, 
  * but if not, throw the runtime error that file is not found.
  */
-std::optional<std::filesystem::path> findDatapath( const std::filesystem::path& relative_path );
+std::optional<std::filesystem::path> findDataPath( const std::filesystem::path& relative_path );
 
 std::filesystem::path rootDir();
 

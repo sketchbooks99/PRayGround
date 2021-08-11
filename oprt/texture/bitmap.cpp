@@ -9,7 +9,7 @@ namespace oprt {
 template <typename PixelType>
 BitmapTexture_<PixelType>::BitmapTexture_(const std::filesystem::path& filename)
 {
-    std::optional<std::filesystem::path> filepath = findDatapath(filename);
+    std::optional<std::filesystem::path> filepath = findDataPath(filename);
     if (!filepath)
     {
         Message(MSG_ERROR, "The texture file '" + filename.string() + "' is not found.");

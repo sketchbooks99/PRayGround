@@ -37,6 +37,11 @@ public:
      */
     AABB bound() const override { return AABB(); } 
 
+    void addVertex(const float3& v);
+    void addFace(const Face& face);
+    void addNormal(const float3& n);
+    void addTexcoord(const float2& texcoord);
+
     std::vector<float3> vertices() const { return m_vertices; } 
     std::vector<Face> faces() const { return m_faces; } 
     std::vector<float3> normals() const { return m_normals; }

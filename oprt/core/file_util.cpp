@@ -4,7 +4,7 @@
 namespace oprt {
 
 // -------------------------------------------------------------------------------s
-std::optional<std::filesystem::path> findDatapath( const std::filesystem::path& relative_path )
+std::optional<std::filesystem::path> findDataPath( const std::filesystem::path& relative_path )
 {
     std::array<std::string, 2> parent_dirs = 
     {
@@ -19,7 +19,6 @@ std::optional<std::filesystem::path> findDatapath( const std::filesystem::path& 
             return filepath;
     }
     return std::nullopt;
-    // Throw("Failed to find datapath '" + relative_path.string() + "'.");
 }
 
 // -------------------------------------------------------------------------------

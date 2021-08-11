@@ -1,7 +1,8 @@
 #pragma once 
 
 #include "../core/util.h"
-#include "../math/matrix.h"
+#include <unordered_map>
+//#include "../math/matrix.h"
 #include <glad/glad.h>
 
 namespace gl
@@ -24,8 +25,8 @@ inline std::string getGLErrorTypeString(GLenum err)
         case GL_STACK_OVERFLOW:     return "Stack overflow";
         case GL_STACK_UNDERFLOW:    return "Stack underflow";
         case GL_OUT_OF_MEMORY:      return "Out of memory";
-        case GL_TABLE_TOO_LARGE:    return "Table too large";
-        default                     return "Unkwown GL error";
+        //case GL_TABLE_TOO_LARGE:    return "Table too large";
+        default:                    return "Unkwown GL error";
     }
 }
 
@@ -93,9 +94,9 @@ public:
     void setUniform3iv(const std::string& name, const int32_t* v) const;
     void setUniform4iv(const std::string& name, const int32_t* v) const;
 
-    void setUniformMatrix2fv(const std::string& name, const oprt::Matrix2f& m) const;
-    void setUniformMatrix3fv(const std::string& name, const oprt::Matrix3f& m) const;
-    void setUniformMatrix4fv(const std::string& name, const oprt::Matrix4f& m) const;
+    //void setUniformMatrix2fv(const std::string& name, const oprt::Matrix2f& m) const;
+    //void setUniformMatrix3fv(const std::string& name, const oprt::Matrix3f& m) const;
+    //void setUniformMatrix4fv(const std::string& name, const oprt::Matrix4f& m) const;
 
 protected:
     static GLuint _createGLShaderFromSource( const std::string& source, GLuint type );

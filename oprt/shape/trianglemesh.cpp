@@ -12,7 +12,7 @@ TriangleMesh::TriangleMesh(
     const std::filesystem::path& relative_path, bool is_smooth)
 {
     if (relative_path.string().substr(relative_path.string().length() - 4) == ".obj") {
-        std::optional<std::filesystem::path> filepath = findDatapath(relative_path);
+        std::optional<std::filesystem::path> filepath = findDataPath(relative_path);
         if (!filepath)
             Message(MSG_ERROR, "The OBJ file '" + relative_path.string() + "' is not found.");
 
@@ -20,7 +20,7 @@ TriangleMesh::TriangleMesh(
         loadObj(filepath.value(), m_vertices, m_normals, m_faces, m_texcoords);
     }
     else if (relative_path.string().substr(relative_path.string().length() - 4) == ".ply") {
-        std::optional<std::filesystem::path> filepath = findDatapath(relative_path);
+        std::optional<std::filesystem::path> filepath = findDataPath(relative_path);
         if (!filepath)
             Message(MSG_ERROR, "The PLY file '" + relative_path.string() + "' is not found.");
             

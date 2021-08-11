@@ -3,6 +3,8 @@
 #include "cudabuffer.h"
 #include "file_util.h"
 
+#include <glad/glad.h>
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "../ext/stb/stb_image.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -12,10 +14,16 @@
 
 namespace oprt {
 
+void prepareGLTexture(GLuint& gltex)
+{
+    glGenTextures(1, &gltex);
+    glBindTexture(GL_TEXTURE_2D, gltex);
+}
+
 template <typename PixelType>
 Bitmap_<PixelType>::Bitmap_() 
 {
-
+    glGenTextures(1, &m_gltex);
 }
 
 // --------------------------------------------------------------------
@@ -25,6 +33,7 @@ Bitmap_<PixelType>::Bitmap_(Format format, int width, int height, PixelType* dat
     allocate(format, width, height);
     if (data)
         memcpy(m_data, data, sizeof(PixelType) * m_width * m_height * m_channels);
+    glGenTextures(1, &m_gltex);
 }
 
 // --------------------------------------------------------------------
@@ -32,6 +41,7 @@ template <typename PixelType>
 Bitmap_<PixelType>::Bitmap_(const std::filesystem::path& filename)
 {
     load(filename);
+    glGenTextures(1, &m_gltex);
 }
 
 // --------------------------------------------------------------------
@@ -39,13 +49,14 @@ template <typename PixelType>
 Bitmap_<PixelType>::Bitmap_(const std::filesystem::path& filename, Format format)
 {
     load(filename, format);
+    glGenTextures(1, &m_gltex);
 }
 
 // --------------------------------------------------------------------
 template <typename PixelType>
 void Bitmap_<PixelType>::allocate(Format format, int width, int height)
 {
-    Assert(!this->m_data, "Image data in the host side is already allocated. Please use fillData() if you'd like to override bitmap data with your specified range.");
+    Assert(!this->m_data, "Image data in the host side is already allocated. Please use setData() if you'd like to override bitmap data with your specified range.");
 
     m_width = width; 
     m_height = height;
@@ -70,13 +81,13 @@ void Bitmap_<PixelType>::allocate(Format format, int width, int height)
 
     // Zero-initialization of pixel data
     std::vector<PixelType> zero_arr(m_channels * m_width * m_height, static_cast<PixelType>(0));
-    m_data = new PixelType[m_width * m_height * m_channels];
-    memcpy(m_data, zero_arr.data(), zero_arr.size() * sizeof(PixelType));
+    m_data = new PixelType[m_channels * m_width * m_height];
+    memcpy(m_data, zero_arr.data(), m_channels * m_width * m_height * sizeof(PixelType));
 }
 
 // --------------------------------------------------------------------
 template <typename PixelType>
-void Bitmap_<PixelType>::fillData(PixelType* data, int width, int height, int offset_x, int offset_y)
+void Bitmap_<PixelType>::setData(PixelType* data, int width, int height, int offset_x, int offset_y)
 {
     Assert(m_data, "Please allocate the bitmap before filling data with specified range.");
 
@@ -93,6 +104,31 @@ void Bitmap_<PixelType>::fillData(PixelType* data, int width, int height, int of
         int src_base = ((y - offset_y) * width) * m_channels;
         memcpy(&m_data[dst_base], &data[src_base], sizeof(PixelType) * width * m_channels);
     }
+}
+
+template <typename PixelType>
+void Bitmap_<PixelType>::setData(PixelType* data, const int2& res, const int2& offset)
+{
+    setData(data, res.x, res.y, offset.x, offset.y); 
+}
+
+// --------------------------------------------------------------------
+template <typename PixelType>
+void Bitmap_<PixelType>::draw() const
+{
+    draw(0, 0, m_width, m_height);
+}
+
+template <typename PixelType>
+void Bitmap_<PixelType>::draw(int32_t x, int32_t y) const
+{
+    draw(x, y, m_width, m_height);
+}
+
+template <typename PixelType>
+void Bitmap_<PixelType>::draw(int32_t x, int32_t y, int32_t width, int32_t height) const
+{
+    
 }
 
 // --------------------------------------------------------------------
@@ -114,7 +150,7 @@ void Bitmap_<PixelType>::load(const std::filesystem::path& filename)
 template <>
 void Bitmap_<unsigned char>::load(const std::filesystem::path& filename)
 {
-    std::optional<std::filesystem::path> filepath = findDatapath(filename);
+    std::optional<std::filesystem::path> filepath = findDataPath(filename);
     Assert(filepath, "oprt::Bitmap_<unsigned char>::load(): The input file for bitmap '" + filename.string() + "' is not found.");
 
     auto ext = getExtension(filepath.value());
@@ -142,7 +178,7 @@ void Bitmap_<unsigned char>::load(const std::filesystem::path& filename)
 template <>
 void Bitmap_<float>::load(const std::filesystem::path& filename)
 {
-    std::optional<std::filesystem::path> filepath = findDatapath(filename);
+    std::optional<std::filesystem::path> filepath = findDataPath(filename);
     Assert(filepath, "oprt::Bitmap_<float>::load(): The input file for bitmap '" + filename.string() + "' is not found.");
 
     auto ext = getExtension(filepath.value());
@@ -275,24 +311,6 @@ void main()
     fragColor = texture( tex, vTexCoord );
 }
 )";
-
-template <typename PixelType>
-void Bitmap_<PixelType>::draw() const
-{
-    draw(0, 0, m_width, m_height);
-}
-
-template <typename PixelType>
-void Bitmap_<PixelType>::draw(int32_t x, int32_t y) const
-{
-    draw(x, y, m_width, m_height);
-}
-
-template <typename PixelType>
-void Bitmap_<PixelType>::draw(int32_t x, int32_t y, int32_t width, int32_t height) const
-{
-
-}
 
 // --------------------------------------------------------------------
 template <typename PixelType>

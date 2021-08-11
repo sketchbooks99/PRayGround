@@ -64,6 +64,10 @@ OPRT_add_executable( oprt target_name
   app/window.h
   app/window.cpp
 
+  # OpenGL libraries ==========
+  gl/shader.h 
+  gl/shader.cpp
+
   # Optix wrapper libraries ==========
   # optix/accel.h 
   # optix/accel.cpp
@@ -81,7 +85,7 @@ OPRT_add_executable( oprt target_name
   optix/cuda/oprt.cu 
   optix/cuda/texture.cuh
 
-  # Shapes
+  # Shapes ==========
   shape/cylinder.h 
   shape/plane.h 
   shape/sphere.h 
@@ -92,19 +96,19 @@ OPRT_add_executable( oprt target_name
   shape/cuda/sphere.cuh 
   shape/cuda/trianglemesh.cuh
  
-  # Materials 
+  # Materials ==========
   material/conductor.h 
   material/dielectric.h 
   material/diffuse.h 
   material/disney.h
 
-  # Textures
+  # Textures ==========
   texture/bitmap.h
   texture/bitmap.cpp
   texture/checker.h 
   texture/constant.h  
 
-  # Emitter
+  # Emitter ==========
   emitter/area.h 
   emitter/area.cpp 
   emitter/envmap.h

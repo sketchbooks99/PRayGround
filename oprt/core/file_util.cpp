@@ -8,7 +8,7 @@ std::optional<std::filesystem::path> findDataPath( const std::filesystem::path& 
 {
     std::array<std::string, 2> parent_dirs = 
     {
-        rootDir().string(),
+        oprtRootDir().string(),
         pathJoin(OPRT_ROOT_DIR, "data").string()
     };
 
@@ -22,8 +22,12 @@ std::optional<std::filesystem::path> findDataPath( const std::filesystem::path& 
 }
 
 // -------------------------------------------------------------------------------
-std::filesystem::path rootDir() {
+std::filesystem::path oprtRootDir() {
     return std::filesystem::path(OPRT_ROOT_DIR);
+}
+std::filesystem::path oprtAppDir()
+{
+    return std::filesystem::path("");
 }
 
 // -------------------------------------------------------------------------------

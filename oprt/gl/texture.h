@@ -2,6 +2,8 @@
 
 #include <glad/glad.h>
 
+namespace oprt {
+
 namespace gl {
 
 class Texture 
@@ -19,3 +21,5 @@ private:
 };
 
 } // ::gl
+
+} // ::oprt

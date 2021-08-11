@@ -86,19 +86,19 @@ void Window::setup()
 // ----------------------------------------------------------------
 void Window::update()
 {
-    
-}
-
-// ----------------------------------------------------------------
-void Window::draw()
-{
-
+    glfwPollEvents();
+    glfwSwapBuffers(m_window_ptr);
 }
 
 // ----------------------------------------------------------------
 void Window::close()
 {
     glfwTerminate();
+}
+
+bool Window::shouldClose() const
+{
+    return glfwWindowShouldClose(m_window_ptr);
 }
 
 // ----------------------------------------------------------------

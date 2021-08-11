@@ -1,7 +1,8 @@
 #pragma once
 
 #include "util.h"
-#include <glad/glad.h>
+#include "../gl/shader.h"
+//#include <glad/glad.h>
 
 namespace oprt {
 
@@ -63,7 +64,10 @@ private:
     int m_height { 0 };
     int m_channels { 0 };
 
-    GLuint m_gltex; // Texture for drawing image via OpenGL
+    // Member variables to draw Bitmap on OpenGL context
+    GLint m_gltex; 
+    // GLuint m_gl_vertex_array;
+    gl::Shader m_shader;
 };
 
 using Bitmap = Bitmap_<unsigned char>;

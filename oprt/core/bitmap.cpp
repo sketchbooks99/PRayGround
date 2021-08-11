@@ -2,6 +2,7 @@
 #include "color.h"
 #include "cudabuffer.h"
 #include "file_util.h"
+#include "../app/app_runner.h"
 
 #include <glad/glad.h>
 
@@ -14,16 +15,27 @@
 
 namespace oprt {
 
-void prepareGLTexture(GLuint& gltex)
+GLuint prepareGL(gl::Shader& shader)
 {
+    // Preparing texture
+    GLuint gltex = 0;
     glGenTextures(1, &gltex);
     glBindTexture(GL_TEXTURE_2D, gltex);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    shader.load("oprt/core/shaders/bitmap.vert", "oprt/core/shaders/bitmap.frag");
+
+    return gltex;
 }
 
 template <typename PixelType>
-Bitmap_<PixelType>::Bitmap_() 
+Bitmap_<PixelType>::Bitmap_()
 {
-    glGenTextures(1, &m_gltex);
+    
 }
 
 // --------------------------------------------------------------------
@@ -33,7 +45,6 @@ Bitmap_<PixelType>::Bitmap_(Format format, int width, int height, PixelType* dat
     allocate(format, width, height);
     if (data)
         memcpy(m_data, data, sizeof(PixelType) * m_width * m_height * m_channels);
-    glGenTextures(1, &m_gltex);
 }
 
 // --------------------------------------------------------------------
@@ -41,7 +52,6 @@ template <typename PixelType>
 Bitmap_<PixelType>::Bitmap_(const std::filesystem::path& filename)
 {
     load(filename);
-    glGenTextures(1, &m_gltex);
 }
 
 // --------------------------------------------------------------------
@@ -49,7 +59,6 @@ template <typename PixelType>
 Bitmap_<PixelType>::Bitmap_(const std::filesystem::path& filename, Format format)
 {
     load(filename, format);
-    glGenTextures(1, &m_gltex);
 }
 
 // --------------------------------------------------------------------
@@ -83,6 +92,7 @@ void Bitmap_<PixelType>::allocate(Format format, int width, int height)
     std::vector<PixelType> zero_arr(m_channels * m_width * m_height, static_cast<PixelType>(0));
     m_data = new PixelType[m_channels * m_width * m_height];
     memcpy(m_data, zero_arr.data(), m_channels * m_width * m_height * sizeof(PixelType));
+    m_gltex = prepareGL(m_shader);
 }
 
 // --------------------------------------------------------------------
@@ -128,7 +138,77 @@ void Bitmap_<PixelType>::draw(int32_t x, int32_t y) const
 template <typename PixelType>
 void Bitmap_<PixelType>::draw(int32_t x, int32_t y, int32_t width, int32_t height) const
 {
+    // Prepare vertices data
+    int window_width = oprtGetWidth(), window_height = oprtGetHeight();
+    GLfloat x0 = -1.0f + (static_cast<float>(x) / window_width) * 2.0f;
+    GLfloat x1 = -1.0f + (static_cast<float>(x + width) / window_width) * 2.0f;
+    GLfloat y0 =  1.0f - (static_cast<float>(y + height) / window_height) * 2.0f;
+    GLfloat y1 =  1.0f - (static_cast<float>(y) / window_height) * 2.0f;
+    GLfloat vertices[] = {
+        // position     // texcoord (vertically flipped)
+        x0, y0, 0.0f,   0.0f, 1.0f,
+        x0, y1, 0.0f,   0.0f, 0.0f, 
+        x1, y0, 0.0f,   1.0f, 1.0f, 
+        x1, y1, 0.0f,   1.0f, 0.0f
+    };
+    GLuint indices[] = {
+        0, 1, 2, 
+        2, 1, 3
+    };
+
+    // Prepare vertex array object
+    GLuint vertex_buffer, vertex_array, element_buffer;
+    glGenVertexArrays(1, &vertex_array);
+    glGenBuffers(1, &vertex_buffer); 
+    glGenBuffers(1, &element_buffer);
+
+    glBindVertexArray(vertex_array);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
     
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, element_buffer);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
+    glEnableVertexAttribArray(1);
+
+    GLenum texture_data_type;
+    if constexpr (std::is_same_v<PixelType, float>)
+        texture_data_type = GL_FLOAT;
+    else if constexpr (std::is_same_v<PixelType, unsigned char>)
+        texture_data_type = GL_UNSIGNED_BYTE;
+    
+    glBindTexture(GL_TEXTURE_2D, m_gltex);
+    switch (m_format)
+    {
+    case Format::GRAY:
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_R, m_width, m_height, 0, GL_R, texture_data_type, m_data);
+        break;
+    case Format::GRAY_ALPHA:
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RG, m_width, m_height, 0, GL_RG, texture_data_type, m_data);
+        break;
+    case Format::RGB:
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_width, m_height, 0, GL_RGB, texture_data_type, m_data);
+        break;
+    case Format::RGBA:
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_RGBA, texture_data_type, m_data);
+        break;
+    case Format::UNKNOWN:
+    default:
+        return;
+    }
+
+    m_shader.begin();
+    glUniform1i(glGetUniformLocation(m_shader.program(), "tex"), 0);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_gltex);
+    glBindVertexArray(vertex_array);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 }
 
 // --------------------------------------------------------------------
@@ -172,6 +252,8 @@ void Bitmap_<unsigned char>::load(const std::filesystem::path& filename)
     }
     m_data = stbi_load(filepath.value().string().c_str(), &m_width, &m_height, &m_channels, type2channels[m_format]);
     m_channels = type2channels[m_format];
+
+    m_gltex = prepareGL(m_shader);
 }
 
 // --------------------------------------------------------------------
@@ -220,6 +302,8 @@ void Bitmap_<float>::load(const std::filesystem::path& filename)
         }
         stbi_image_free(raw_data);
     }
+
+    m_gltex = prepareGL(m_shader);
 }
 
 // --------------------------------------------------------------------
@@ -283,34 +367,6 @@ void Bitmap_<PixelType>::write(const std::filesystem::path& filepath, int qualit
         return;
     }
 }
-
-// --------------------------------------------------------------------
-const std::string vert_source = R"(
-#version 330 core
-layout(location = 0) in vec3 position;
-layout(location = 1) in vec2 texcoord;
-out vec2 vTexCoord;
-
-void main()
-{
-    gl_Position(position, 1.0);
-    vTexCoord = texcoord;
-}
-)";
-
-const std::string frag_source = R"(
-#version 330 core
-
-in vec2 vTexCoord;
-out vec4 fragColor;
-
-uniform sampler2D tex;
-
-void main()
-{
-    fragColor = texture( tex, vTexCoord );
-}
-)";
 
 // --------------------------------------------------------------------
 template <typename PixelType>

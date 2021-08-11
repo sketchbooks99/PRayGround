@@ -14,6 +14,7 @@ public:
     virtual void setup();
     virtual void update();
     virtual void draw();
+    virtual void close();
 
     virtual void mousePressed(float x, float y, int button);
     virtual void mouseDragged(float x, float y, int button);
@@ -24,7 +25,5 @@ public:
     virtual void keyPressed(int key);
     virtual void keyReleased(int key);
 };
-
-void oprtRunApp(const std::shared_ptr<Window>& window, const std::shared_ptr<BaseApp>& app);
 
 }

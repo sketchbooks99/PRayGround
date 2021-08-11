@@ -5,8 +5,9 @@
 //#include "../math/matrix.h"
 #include <glad/glad.h>
 
-namespace gl
-{
+namespace oprt {
+
+namespace gl {
 
 
 /**
@@ -139,3 +140,5 @@ private:
 // #endif
 
 } // ::gl
+
+} // ::oprt

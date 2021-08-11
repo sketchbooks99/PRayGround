@@ -2,6 +2,8 @@
 
 #include <glad/glad.h>
 
+namespace oprt {
+
 namespace gl
 {
 
@@ -30,3 +32,5 @@ private:
 };
 
 } // ::gl
+
+} // ::oprt

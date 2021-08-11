@@ -1,12 +1,12 @@
 #include "shader.h"
 #include "../core/file_util.h"
 
+namespace oprt {
+
 namespace gl
 {
 
 namespace fs = std::filesystem;
-
-using namespace oprt;
 
 // --------------------------------------------------------------------
 Shader::Shader()
@@ -117,7 +117,7 @@ void Shader::bindDefaultAttributes()
     }
     else 
     {
-        glBindAttribLocation(m_program, 0, "vertex");
+        glBindAttribLocation(m_program, 0, "position");
         glBindAttribLocation(m_program, 1, "color");
         glBindAttribLocation(m_program, 2, "normal");
         glBindAttribLocation(m_program, 3, "texcoord");
@@ -272,4 +272,6 @@ GLuint Shader::_createGLShaderFromFile(const fs::path& relative_path, GLuint typ
     return _createGLShaderFromSource(source, type);
 }
 
-}
+} // ::gl
+
+} // ::oprt

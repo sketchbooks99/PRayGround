@@ -2,8 +2,10 @@
 
 #include <sutil/vec_math.h>
 #include "../core/util.h"
-#include "../ext/glfw/include/GLFW/glfw3.h"
-#include "../ext/glad/glad.h"
+// #include "../ext/glfw/include/GLFW/glfw3.h"
+// #include <glfw/include/GLFW/glfw3.h>
+#include <GLFW/glfw3.h>
+#include <glad/glad.h>
 #include "event.h"
 
 namespace oprt {
@@ -12,13 +14,6 @@ namespace oprt {
  * @brief 
  * Window manager using GLFW.
  */
-
-float   oprtGetMouseX();
-float   oprtGetMouseY();
-float   oprtGetPreviousMouseX();
-float   oprtGetpreviousMouseY();
-float2  oprtGetMousePosition();
-int32_t oprtGetMouseButton();
 
 struct WindowEvents
 {
@@ -57,8 +52,8 @@ public:
     /** @brief Basical functions of the window. */
     void setup();
     void update();
-    void draw();
     void close();
+    bool shouldClose() const;
 
     /** @brief Setting for the window size. */
     void setSize(int32_t width, int32_t height);

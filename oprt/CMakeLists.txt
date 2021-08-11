@@ -56,6 +56,8 @@ OPRT_add_executable( oprt target_name
   core/texture.h 
   core/transform.h 
   core/util.h
+  core/shaders/bitmap.vert
+  core/shaders/bitmap.frag
 
   # App libraries ==========
   app/baseapp.h 
@@ -63,6 +65,8 @@ OPRT_add_executable( oprt target_name
   app/event.h 
   app/window.h
   app/window.cpp
+  app/app_runner.h 
+  app/app_runner.cpp
 
   # OpenGL libraries ==========
   gl/shader.h 

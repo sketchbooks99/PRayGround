@@ -308,7 +308,8 @@ function(OPRT_add_executable target_name_base target_name_var)
   if (NOT CUDA_NVRTC_ENABLED)
     source_group("PTX Files"  REGULAR_EXPRESSION ".+\\.ptx$")
   endif()
-  source_group("CUDA Files" REGULAR_EXPRESSION ".+\\.cu$")
+  source_group("CUDA Files" REGULAR_EXPRESSION ".+\\.cuh?$")
+  source_group("Shader Files" REGULAR_EXPRESSION ".+\\.(vert|frag|geom|glsl|compute|comp)$")
 
   # Separate the sources from the CMake and CUDA options fed to the macro.  This code
   # comes from the CUDA_COMPILE_PTX macro found in FindCUDA.cmake.  We are copying the

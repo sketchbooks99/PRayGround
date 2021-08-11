@@ -5,8 +5,7 @@
 // Header file describe the scene
 #include "scene_config.h"
 
-#include "app/baseapp.h"
-#include "app/window.h"
+#include "app/app_runner.h"
 
 #include "gl/shader.h"
 
@@ -54,38 +53,9 @@ public:
     App() {}
     void setup() 
     {
-        shader.load("shaders/debug.vert", "shaders/debug.frag");
-
-        /// @note debug texture
-        vertices = {
-            // vertices          // texcoords
-            -1.0f, -1.0f, 0.0f,  0.0f, 0.0f, 
-            -1.0f,  1.0f, 0.0f,  0.0f, 1.0f,
-            1.0f,  -1.0f, 0.0f,  1.0f, 0.0f,
-            1.0f,  1.0f, 0.0f,  1.0f, 1.0f
-        };
-        indices = {
-            0, 1, 2, 
-            2, 1, 3
-        };
-        glGenVertexArrays(1, &VAO);
-        glGenBuffers(1, &VBO);
-        glGenBuffers(1, &EBO);
-
-        glBindVertexArray(VAO);
-
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * vertices.size(), vertices.data(), GL_STATIC_DRAW);
-
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint) * indices.size(), indices.data(), GL_STATIC_DRAW);
-
-        // position attribute
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(0);
-        // texcoords attribute
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-        glEnableVertexAttribArray(1);
+        bitmap.load("result/016_env.jpg");
+        bitmap_draw_w = bitmap.width();
+        bitmap_draw_h = bitmap.height();
     }
     void update() 
     {
@@ -93,56 +63,25 @@ public:
     }
     void draw() 
     {
-        shader.begin();
-
-        glBindVertexArray(VAO); 
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        bitmap.draw(0, 0, bitmap_draw_w, bitmap_draw_h);
     }
 
-    void mousePressed(float x, float y, int button)
-    {
-        Message(MSG_NORMAL, "App::mousePressed(): Mouse info:", x, y, button);
-    }
     void mouseDragged(float x, float y, int button)
     {
-        Message(MSG_NORMAL, "App::mouseDragged(): Mouse info:", x, y, button);
-    }
-    void mouseReleased(float x, float y, int button)
-    {
-        Message(MSG_NORMAL, "App::mouseReleased(): Mouse info", x, y, button);
-    }
-    void mouseMoved(float x, float y)
-    {
-        Message(MSG_NORMAL, "App::mouseMoved(): Mouse info:", x, y);
-    }
-    void mouseScrolled(float xoffset, float yoffset)
-    {
-        Message(MSG_NORMAL, "App::mouseScrolled(): Mouse info", xoffset, yoffset);
-    }
-    void keyPressed(int key)
-    {
-        Message(MSG_NORMAL, "App::keyPressed(): Key info:", key);
-    }
-    void keyReleased(int key)
-    {
-        Message(MSG_NORMAL, "App::keyReleased(): Key info:", key);
+        bitmap_draw_w = x;
+        bitmap_draw_h = y;
     }
     
 private:
-    gl::Shader shader;
-
-    std::array<GLfloat, 4*5> vertices;
-    std::array<GLuint, 6> indices; 
-
-    GLuint VBO, VAO, EBO;
-    GLuint texture;
+    Bitmap bitmap;
+    int32_t bitmap_draw_w, bitmap_draw_h;
 };
 
 // ========== Main ==========
 int main(int argc, char* argv[]) {
-    std::shared_ptr<Window> window = std::make_shared<Window>("Path tracer", 1024, 768);
+    std::shared_ptr<Window> window = std::make_shared<Window>("Path tracer", 1920, 1080);
     std::shared_ptr<App> app = std::make_shared<App>();
-    oprtRunApp(window, app);
+    oprtRunApp(app, window);
 
     return 0;
 }

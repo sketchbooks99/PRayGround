@@ -82,8 +82,8 @@ public:
     }
 
     /// @todo
-    void attachMaterial(const std::shared_ptr<Material>& mat_ptr);
-    void setProgram(const ProgramGroup& program);
+    void attachSurface(const std::shared_ptr<Material>& mat_ptr);
+    void addProgram(const ProgramGroup& program);
 
     /// @todo
     void translate(const float3& t);
@@ -97,9 +97,12 @@ protected:
     CUdeviceptr d_aabb_buffer { 0 };
 
     /// @todo 
-    std::vector<ProgramGroup> m_program;
     Transform m_transform;
+    std::shared_ptr<ProgramGroup> m_programs;
+    std::variant<std::shared_ptr<Material>, std::shared_ptr<AreaEmitter>> m_surface;
 };
+
+using ShapePtr = std::shared_ptr<Shape>;
 
 #endif // __CUDACC__
 

@@ -53,4 +53,6 @@ protected:
     void* d_data;
 };
 
-}
+using TexturePtr = std::shared_ptr<Texture>;
+
+} // ::oprt

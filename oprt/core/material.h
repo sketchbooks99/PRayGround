@@ -95,4 +95,6 @@ protected:
     void* d_data { 0 };
 };
 
+using MaterialPtr = std::shared_ptr<Material>;
+
 }

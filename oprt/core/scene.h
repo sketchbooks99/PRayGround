@@ -84,4 +84,15 @@ private:
     std::shared_ptr<Bitmap> m_film;                         // Film of rendering
 };
 
+/// @todo 
+class RTScene {
+public:
+
+private:
+    std::shared_ptr<EnvironmentEmitter> m_enviroment;
+    std::vector<std::shared_ptr<Shape>> shapes;
+    sutil::Camera m_camera;
+    std::vector<std::shared_ptr<Bitmap_<PixelType>>> m_films;
+};
+
 }

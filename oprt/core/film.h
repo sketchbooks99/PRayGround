@@ -25,7 +25,8 @@ public:
     Bitmap_<PixelType>> bitmap() const;
 
 private:
-    std::shared_ptr<Bitmap_<PixelType>> m_bitmap;
+    // std::shared_ptr<Bitmap_<PixelType>> m_bitmap;
+    std::shared_ptr<Bitmap_<PixelType>> m_bitmaps;
     float m_gamma;
     float m_exposure;
 };

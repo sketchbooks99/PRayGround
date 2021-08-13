@@ -81,10 +81,24 @@ public:
         if (d_aabb_buffer) cuda_free( d_aabb_buffer ); 
     }
 
+    /// @todo
+    void attachMaterial(const std::shared_ptr<Material>& mat_ptr);
+    void setProgram(const ProgramGroup& program);
+
+    /// @todo
+    void translate(const float3& t);
+    void scale(const float3& scale);
+    void scale(const float s);
+    void rotate(const float radians, const float3& axis);
+
     void* devicePtr() const { return d_data; }
 protected:
     void* d_data { 0 };
     CUdeviceptr d_aabb_buffer { 0 };
+
+    /// @todo 
+    std::vector<ProgramGroup> m_program;
+    Transform m_transform;
 };
 
 #endif // __CUDACC__

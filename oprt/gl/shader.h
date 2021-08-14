@@ -1,6 +1,7 @@
 #pragma once 
 
 #include "../core/util.h"
+#include "../math/matrix.h"
 #include <unordered_map>
 //#include "../math/matrix.h"
 #include <glad/glad.h>
@@ -95,9 +96,9 @@ public:
     void setUniform3iv(const std::string& name, const int32_t* v) const;
     void setUniform4iv(const std::string& name, const int32_t* v) const;
 
-    //void setUniformMatrix2fv(const std::string& name, const oprt::Matrix2f& m) const;
-    //void setUniformMatrix3fv(const std::string& name, const oprt::Matrix3f& m) const;
-    //void setUniformMatrix4fv(const std::string& name, const oprt::Matrix4f& m) const;
+    void setUniformMatrix2fv(const std::string& name, const Matrix2f& m) const;
+    void setUniformMatrix3fv(const std::string& name, const Matrix3f& m) const;
+    void setUniformMatrix4fv(const std::string& name, const Matrix4f& m) const;
 
 protected:
     static GLuint _createGLShaderFromSource( const std::string& source, GLuint type );

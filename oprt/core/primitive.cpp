@@ -34,22 +34,10 @@ void buildGas(
         handle.count = static_cast<unsigned int>(primitives_subset.size());
 
         std::vector<OptixBuildInput> build_inputs(primitives_subset.size());
-        unsigned int index_offset = 0;
         for (size_t i=0; i<primitives_subset.size(); i++) {
             primitives_subset[i].prepareShapeData();
             primitives_subset[i].prepareSurfaceData();
             primitives_subset[i].buildInput(build_inputs[i]);
-
-            switch ( primitives_subset[i].shapeType() ) {
-            case ShapeType::Mesh:
-                index_offset += build_inputs[i].triangleArray.numIndexTriplets;
-                break;
-            case ShapeType::Sphere:
-                index_offset += build_inputs[i].customPrimitiveArray.numPrimitives;
-                break;
-            default:
-                break;
-            }
         }
 
         OptixAccelBuildOptions accel_options = {};

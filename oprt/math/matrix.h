@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vec.h"
+#include <sutil/vec_math.h>
 
 namespace oprt {
 

@@ -32,7 +32,7 @@ static void mouseButtonCallback( GLFWwindow* window, int button, int action, int
     {
         mouse_button = -1;
     }  
-} 
+}
 
 static void cursorPosCallback( GLFWwindow* window, double xpos, double ypos )
 {

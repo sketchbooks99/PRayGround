@@ -10,9 +10,13 @@
 
 namespace oprt {
 
-class Instance
-{
+class Instance {
+public: 
+    Instance();
+    void build(const Context& ctx, );
 
+private:
+    OptixInstance m_instance;
 };
 
 }

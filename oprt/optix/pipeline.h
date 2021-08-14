@@ -10,110 +10,43 @@ namespace oprt {
 
 class Pipeline {
 public:
-    explicit Pipeline(const std::string& params_name) {
-        _initCompileOptions();
-        m_compile_options.pipelineLaunchParamsVariableName = params_name.c_str();
-        _initLinkOptions();
-    }
-    
-    explicit Pipeline(const OptixPipelineCompileOptions& op) : m_compile_options(op) 
-    { 
-        _initLinkOptions();
-    }
-    
-    explicit Pipeline(const OptixPipelineCompileOptions& c_op, const OptixPipelineLinkOptions& l_op)
-    : m_compile_options(c_op), m_link_options(l_op) { }
-
-    void destroy() {
-        OPTIX_CHECK(optixPipelineDestroy(m_pipeline));
-    }
+    explicit Pipeline(const std::string& params_name);
+    explicit Pipeline(const OptixPipelineCompileOptions& op);
+    explicit Pipeline(const OptixPipelineCompileOptions& c_op, const OptixPipelineLinkOptions& l_op);
 
     explicit operator OptixPipeline() const { return m_pipeline; }
     explicit operator OptixPipeline&() { return m_pipeline; }
 
-    /** Compile options. */
-    void setCompileOptions( const OptixPipelineCompileOptions& op ) { m_compile_options = op; }
-    void useMotionBlur( bool is_use ) { m_compile_options.usesMotionBlur = is_use; }
-    void setTraversableGraphFlags( unsigned int flags ) { m_compile_options.traversableGraphFlags = flags; }
-    void setNumPayloads( int num_payloads ) { m_compile_options.numPayloadValues = num_payloads; }
-    void setNumAttributes( int num_attributes ) { m_compile_options.numAttributeValues = num_attributes; }
-    void setLaunchVariableName( const std::string& params_name ) { m_compile_options.pipelineLaunchParamsVariableName = params_name.c_str(); }
-    void setExceptionFlags( const OptixExceptionFlags& flags ) { m_compile_options.exceptionFlags = flags; }
+    /** Create pipeline object and calculate the stack sizes of pipeline. */
+    void create( const Context& ctx, const std::vector<ProgramGroup>& prg_groups);
+    void destroy();
 
-    OptixPipelineCompileOptions compileOptions() const { return m_compile_options; }
+    /** Compile options. */
+    void setCompileOptions( const OptixPipelineCompileOptions& op );
+    void useMotionBlur(const bool is_use);
+    void setTraversableGraphFlags(const uint32_t flags);
+    void setNumPayloads(const int num_payloads);
+    void setNumAttributes(const int num_attributes);
+    void setLaunchVariableName(const std::string& params_name);
+    void setExceptionFlags(const OptixExceptionFlags& flags);
+    OptixPipelineCompileOptions compileOptions() const;
 
     /** Link options */
-    void setLinkOptions( const OptixPipelineLinkOptions& op ) { m_link_options = op; }
-    void setLinkTraceDepth( unsigned int depth ) { m_link_options.maxTraceDepth = depth; }
-    void setLinkDebugLevel( const OptixCompileDebugLevel& debug_level ) { m_link_options.debugLevel = debug_level; }
-    OptixPipelineLinkOptions link_options() const { return m_link_options; }
-
-    /** Create pipeline object and calculate the stack sizes of pipeline. */
-    void create( const Context& ctx, const std::vector<ProgramGroup>& prg_groups) {
-
-        std::vector<OptixProgramGroup> optix_prg_groups;
-        std::transform(prg_groups.begin(), prg_groups.end(), std::back_inserter(optix_prg_groups),
-            [](ProgramGroup pg){ return static_cast<OptixProgramGroup>(pg); });
-
-        // Create pipeline from program groups.
-        char log[2048];
-        size_t sizeof_log = sizeof(log);
-
-        OPTIX_CHECK_LOG(optixPipelineCreate(
-            static_cast<OptixDeviceContext>(ctx),
-            &m_compile_options,
-            &m_link_options,
-            optix_prg_groups.data(),
-            static_cast<unsigned int>(optix_prg_groups.size()),
-            log, 
-            &sizeof_log, 
-            &m_pipeline
-        ));
-
-        // Specify the max traversal depth and calculate the stack sizes.
-        OptixStackSizes stack_sizes = {};
-        for (auto& optix_prg_group : optix_prg_groups) {
-            OPTIX_CHECK(optixUtilAccumulateStackSizes(optix_prg_group, &stack_sizes));
-        }
-        
-        uint32_t dc_stacksize_from_traversal;
-        uint32_t dc_stacksize_from_state;
-        uint32_t cc_stacksize;
-
-        OPTIX_CHECK(optixUtilComputeStackSizes(
-            &stack_sizes,
-            m_trace_depth,
-            m_cc_depth,
-            m_dc_depth,
-            &dc_stacksize_from_traversal,
-            &dc_stacksize_from_state,
-            &cc_stacksize
-        ));
-
-        const uint32_t max_traversal_depth = 5; 
-        OPTIX_CHECK(optixPipelineSetStackSize(
-            m_pipeline,
-            dc_stacksize_from_traversal, 
-            dc_stacksize_from_state, 
-            cc_stacksize, 
-            max_traversal_depth
-        ));
-    }
+    void setLinkOptions(const OptixPipelineLinkOptions& op);
+    void setLinkDebugLevel( const OptixCompileDebugLevel& debug_level );
+    OptixPipelineLinkOptions linkOptions() const;
 
     /** Depth of traversal */
-    void setTraceDepth(uint32_t depth) { 
-        m_trace_depth = depth;
-        m_link_options.maxTraceDepth = m_trace_depth;
-    }
-    uint32_t traceDepth() const { return m_trace_depth; }
+    void setTraceDepth(const uint32_t depth);
+    uint32_t traceDepth() const;
 
     /** Depth of continuation-callable */
-    void setContinuationCallableDepth(uint32_t depth) { m_cc_depth = depth; }
-    uint32_t continuationCallableDepth() const { return m_cc_depth; }
+    void setContinuationCallableDepth(const uint32_t depth);
+    uint32_t continuationCallableDepth() const;
 
     /** Depth of direct-callable */
-    void setDirectCallableDepth(uint32_t depth) { m_dc_depth = depth; }
-    uint32_t directCallableDepth() const { return m_dc_depth; }
+    void setDirectCallableDepth(const uint32_t depth);
+    uint32_t directCallableDepth() const;
 
 private:
     void _initCompileOptions() { 

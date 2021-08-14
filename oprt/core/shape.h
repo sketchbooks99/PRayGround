@@ -102,8 +102,6 @@ protected:
     std::variant<std::shared_ptr<Material>, std::shared_ptr<AreaEmitter>> m_surface;
 };
 
-using ShapePtr = std::shared_ptr<Shape>;
-
 #endif // __CUDACC__
 
 }

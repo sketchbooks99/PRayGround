@@ -13,22 +13,6 @@
 
 // ========== Helper functions ==========
 
-void printUsageAndExit( const char* argv0 )
-{
-    std::cerr << "Usage : " << argv0 << " [options]\n";
-    std::cerr << "Options: --file | -f <filename>       File for image output\n";
-    std::cerr << "         --launch-samples | -s        Numper of samples per pixel per launch (default 16)\n";
-    std::cerr << "         --no-gl-interop              Disable GL interop for display\n";
-    std::cerr << "         --dim=<width>x<height>       Set image dimensions; defautlt to 768x768\n";
-    std::cerr << "         --help | -h                  Print this usage message\n";
-    exit( 0 );
-}
-
-static void context_log_cb( unsigned int level, const char* tag, const char* message, void* /*cbdata*/ )
-{
-    std::cerr << "[" << std::setw( 2 ) << level << "][" << std::setw( 12 ) << tag << "]: " << message << "\n";
-}
-
 void streamProgress(int current, int max, float elapsed_time, int progress_length)
 {
     std::cout << "\rRendering: [";
@@ -50,12 +34,16 @@ void streamProgress(int current, int max, float elapsed_time, int progress_lengt
 class App : public BaseApp 
 {
 public:
-    App() {}
     void setup() 
     {
-        bitmap.load("result/016_env.jpg");
-        bitmap_draw_w = bitmap.width();
-        bitmap_draw_h = bitmap.height();
+        CUDA_CHECK(cudaFree(0));
+        OPTIX_CHECK(optixInit());
+
+        Context context;
+        context.setDeviceId(0);
+        context.create(); 
+
+        
     }
     void update() 
     {
@@ -63,18 +51,10 @@ public:
     }
     void draw() 
     {
-        bitmap.draw(0, 0, bitmap_draw_w, bitmap_draw_h);
+        
     }
-
-    void mouseDragged(float x, float y, int button)
-    {
-        bitmap_draw_w = x;
-        bitmap_draw_h = y;
-    }
-    
 private:
-    Bitmap bitmap;
-    int32_t bitmap_draw_w, bitmap_draw_h;
+  
 };
 
 // ========== Main ==========

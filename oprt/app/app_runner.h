@@ -13,6 +13,7 @@ float2  oprtGetMousePosition();
 int32_t oprtGetMouseButton();
 int32_t oprtGetWidth();
 int32_t oprtGetHeight();
+void oprtSetWindowName(const std::string& name);
 void oprtRunApp(const std::shared_ptr<BaseApp>& app, const std::shared_ptr<Window>& window);
 
 class AppRunner

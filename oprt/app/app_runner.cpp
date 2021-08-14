@@ -16,6 +16,11 @@ int32_t oprtGetHeight()
     return current_window->height();
 }
 
+void oprtSetWindowName(const std::string& name)
+{
+    current_window->setName(name);
+}
+
 void oprtRunApp(const std::shared_ptr<BaseApp>& app, const std::shared_ptr<Window>& window)
 {
     std::shared_ptr<AppRunner> app_runner = std::make_shared<AppRunner>(app, window);

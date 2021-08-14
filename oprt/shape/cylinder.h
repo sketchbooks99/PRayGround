@@ -12,7 +12,7 @@ class Cylinder final : public Shape {
 public:
     explicit Cylinder(float radius, float height) : m_radius(radius), m_height(height) {}
 
-    ShapeType type() const override { return ShapeType::Cylinder; }
+    OptixBuildInputType buildInputType() const override { return OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES; }
 
     void prepareData() override
     {

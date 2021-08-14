@@ -27,6 +27,11 @@ namespace oprt {
  * 例) Diffuse関数のインデックス = (int)MaterialType::Diffuse = 0
  */
 
+/**
+ * @todo
+ * @c MaterialType will be deprecated for extendability of the oprt app
+ */
+
 enum class MaterialType {
     Diffuse = 0,
     Conductor = 1,

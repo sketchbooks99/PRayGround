@@ -22,7 +22,7 @@ public:
         std::vector<float2> texcoords,
         bool is_smooth=true);
 
-    ShapeType type() const override { return ShapeType::Mesh; }
+    OptixBuildInputType buildInputType() const override { return OPTIX_BUILD_INPUT_TYPE_TRIANGLES; }
 
     void prepareData() override;
     void buildInput( OptixBuildInput& bi, uint32_t sbt_idx ) override;

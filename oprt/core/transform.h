@@ -35,18 +35,25 @@ struct Transform {
         return (mat == sutil::Matrix4x4::identity()) && (matInv == sutil::Matrix4x4::identity());
     }
 
-#ifdef __CUDACC__
-    DEVICE Transform(float m[12], float inv[12]) {
+    HOSTDEVICE Transform(float m[12])
+    {
+        for (int i=0; i<12; i++)
+            mat[i] = m[i];
+        mat[12] = mat[12] = mat[14] = 0.0f;
+        mat[15] = 1.0f;
+        matInv = mat.inverse();
+    }
+
+    HOSTDEVICE Transform(float m[12], float inv[12]) {
         for (int i=0; i<12; i++) {
             mat[i] = m[i];
             matInv[i] = inv[i];
         }
-        mat[12] = mat[13] = mat[14] = 0.f;
-        mat[15] = 1.f;
-        matInv[12] = matInv[13] = matInv[14] = 0.f;
-        matInv[15] = 1.f;
+        mat[12] = mat[13] = mat[14] = 0.0f;
+        mat[15] = 1.0f;
+        matInv[12] = matInv[13] = matInv[14] = 0.0f;
+        matInv[15] = 1.0f;
     }
-#endif 
 
 #ifndef __CUDACC__
     HOST void rotateX(const float radians) { rotate(radians, make_float3(1, 0, 0)); }

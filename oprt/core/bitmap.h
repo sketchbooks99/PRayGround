@@ -71,7 +71,6 @@ private:
 };
 
 using Bitmap = Bitmap_<unsigned char>;
-using BitmapFloat = Bitmap_<float>;
-using BitmapDouble = Bitmap_<double>;
+using FloatBitmap = Bitmap_<float>;
 
 }

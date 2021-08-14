@@ -2,6 +2,7 @@
 
 #include "util.h"
 #include "bitmap.h"
+#include <unordered_map>
 
 namespace oprt {
 
@@ -12,21 +13,16 @@ public:
     Film();
     ~Film();
 
-    /** @brief Apply postprocess to the bitmap. */
-    void postProcess();
+    void addBitmap(const std::string& name, const std::shared_ptr<Bitmap>& bitmap);
+    Bitmap getBitmap(const std::string& name) const;
+    std::vector<std::shared_ptr<Bitmap>> bitmaps() const;
 
-    void setGamma(const float gamma);
-    float gamma() const;
-
-    void setExposure(const float exposure);
-    float exposure() const;
-
-    std::shared_ptr<Bitmap_<PixelType>> bitmapPtr();
-    Bitmap_<PixelType>> bitmap() const;
-
+    void addBitmapFloat(const std::string& name, const BitmapFloat bitmap);
+    Bitmap getBitmapFloat(const std::string& name);
+    std::vector<std::shared_ptr<BitmapFloat>> bitmapFloats() const;
 private:
-    // std::shared_ptr<Bitmap_<PixelType>> m_bitmap;
-    std::shared_ptr<Bitmap_<PixelType>> m_bitmaps;
+    std::unordered_map<std::string, std::shared_ptr<Bitmap>> m_bitmaps;
+    std::unordered_map<std::string, std::shared_ptr<BitmapFloat>> m_bitmap_floats;
     float m_gamma;
     float m_exposure;
 };

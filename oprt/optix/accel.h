@@ -13,7 +13,7 @@ public:
     ~GeometryAccel();
 
     void build(const Context& ctx, const std::shared_ptr<Shape>& shape);
-    void build(const Context& ctx, const std::vector<std::shared_ptr<Shape>>& shape);
+    void build(const Context& ctx, const std::vector<std::shared_ptr<Shape>>& shapes);
     void free();
 
     uint32_t count() const;
@@ -31,7 +31,9 @@ public:
     InstanceAccel(const OptixAccelBuildOptions& options);
 
     void build(const Context& ctx, const Instance& instance);
+    void build(const Context& ctx, const OptixInstance& optix_instance);
     void build(const Context& ctx, const std::vector<Instance>& instances);
+    void build(const Context& ctx, const std::vector<OptixInstance>& optix_instances);
     void free();
 
     uint32_t count() const;

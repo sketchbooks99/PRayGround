@@ -11,7 +11,7 @@ class Sphere final : public Shape {
 public:
     explicit Sphere(float3 c, float r) : m_center(c), m_radius(r) {}
 
-    ShapeType type() const override { return ShapeType::Sphere; }
+    OptixBuildInputType buildInputType() const override { return OPTIX_BUILD_INPUT_CUSTOM_PRIMIITVES; }
 
     void prepareData() override 
     {

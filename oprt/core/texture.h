@@ -11,6 +11,9 @@
 
 namespace oprt {
 
+/** 
+ * @todo @c TextureType will be deprecated for extendability of the oprt app
+ */
 enum class TextureType {
     Constant = 0,
     Checker = 1, 
@@ -32,7 +35,7 @@ inline std::ostream& operator<<(std::ostream& out, TextureType type) {
     switch (type) {
     case TextureType::Constant: return out << "TextureType::Constant";
     case TextureType::Checker:  return out << "TextureType::Checker";
-    case TextureType::Bitmap:    return out << "TextureType::Bitmap";
+    case TextureType::Bitmap:   return out << "TextureType::Bitmap";
     default:                    return out << "";
     }
 }

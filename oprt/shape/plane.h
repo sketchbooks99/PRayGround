@@ -12,7 +12,7 @@ class Plane final : public Shape {
 public:
     explicit Plane(float2 min, float2 max) : m_min(min), m_max(max) {}
 
-    ShapeType type() const override { return ShapeType::Plane; }
+    OptixBuildInputType buildInputType() const override { return OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES; }
 
     void prepareData() override
     {

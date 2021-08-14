@@ -49,22 +49,9 @@ public:
     uint32_t directCallableDepth() const;
 
 private:
-    void _initCompileOptions() { 
-        m_compile_options.usesMotionBlur = false;
-        m_compile_options.traversableGraphFlags = OPTIX_TRAVERSABLE_GRAPH_FLAG_ALLOW_ANY;
-        m_compile_options.numPayloadValues = 2;
-        m_compile_options.numAttributeValues = 3;
-        m_compile_options.pipelineLaunchParamsVariableName = "";
-#ifdef DEBUG
-        m_compile_options.exceptionFlags = OPTIX_EXCEPTION_FLAG_DEBUG | OPTIX_EXCEPTION_FLAG_TRACE_DEPTH | OPTIX_EXCEPTION_FLAG_STACK_OVERFLOW;
-#else   
-        m_compile_options.exceptionFlags = OPTIX_EXCEPTION_FLAG_NONE;
-#endif
-    }
-    void _initLinkOptions() {
-        m_link_options.maxTraceDepth = 5;
-        m_link_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_FULL;
-    }
+    void _initCompileOptions();
+    void _initLinkOptions();
+    
     OptixPipelineCompileOptions m_compile_options = {};
     OptixPipelineLinkOptions m_link_options = {};
     OptixPipeline m_pipeline { nullptr };

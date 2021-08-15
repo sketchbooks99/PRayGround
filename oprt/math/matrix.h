@@ -43,6 +43,7 @@ public:
     explicit HOSTDEVICE Matrix();
     explicit HOSTDEVICE Matrix(const Matrix& m);
     explicit HOSTDEVICE Matrix(const T data[N*N]);
+    explicit HOSTDEVICE Matrix(const float data[12]);
     explicit HOSTDEVICE Matrix(const std::initializer_list<T>& list);
 
     HOSTDEVICE T  operator[](int i) const;
@@ -235,6 +236,18 @@ HOSTDEVICE Matrix<T, N>::Matrix(const T data[N*N])
 {
     for (int i = 0; i < N*N; i++)
         m_data[i] = data[i];
+}
+
+template <typename T, unsigned int N>
+HOSTDEVICE Matrix<T, N>::Matrix(const float data[12])
+{
+    static_assert(std::is_same_v<T, float> && N == 4
+        "This constructor is only allowed for Matrix4f");
+
+    for (int i = 0; i < 12; i++)
+        m_data[i] = data[i];
+    m_data[12] = m_data[13] = m_data[14] = 0.0f;
+    m_data[15] = 1.0f;
 }
 
 template <typename T, unsigned int N>

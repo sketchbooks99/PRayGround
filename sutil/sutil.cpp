@@ -166,7 +166,7 @@ std::string getSampleDir()
         // TODO: Remove the environment variable OPTIX_EXP_SAMPLES_SDK_DIR once SDK 6/7 packages are split
         getenv( "OPTIX_EXP_SAMPLES_SDK_DIR" ),
         getenv( "OPTIX_SAMPLES_SDK_DIR" ),
-        SAMPLES_DIR,
+        OPRT_DIR,
         "."
     };
     for( const char* directory : directories )
@@ -188,7 +188,7 @@ const char* sampleFilePath( const char* relativeSubDir, const char* relativePath
         // TODO: Remove the environment variable OPTIX_EXP_SAMPLES_SDK_DIR once SDK 6/7 packages are split
         getenv( "OPTIX_EXP_SAMPLES_SDK_DIR" ),
         getenv( "OPTIX_SAMPLES_SDK_DIR" ),
-        SAMPLES_DIR,
+        OPRT_DIR,
         "."
     };
     for( const char* directory : directories )
@@ -872,8 +872,8 @@ static void getPtxFromCuString( std::string& ptx, const char* sample_name, const
 
     // Collect include dirs
     std::vector<std::string> include_dirs;
-    const char*              abs_dirs[] = {SAMPLES_ABSOLUTE_INCLUDE_DIRS};
-    const char*              rel_dirs[] = {SAMPLES_RELATIVE_INCLUDE_DIRS};
+    const char*              abs_dirs[] = {OPRT_ABSOLUTE_INCLUDE_DIRS};
+    const char*              rel_dirs[] = {OPRT_RELATIVE_INCLUDE_DIRS};
 
     for( const char* dir : abs_dirs )
     {
@@ -928,7 +928,7 @@ static std::string samplePTXFilePath( const char* sampleName, const char* fileNa
         // TODO: Remove the environment variable OPTIX_EXP_SAMPLES_SDK_PTX_DIR once SDK 6/7 packages are split
         getenv( "OPTIX_EXP_SAMPLES_SDK_PTX_DIR" ),
         getenv( "OPTIX_SAMPLES_SDK_PTX_DIR" ),
-        SAMPLES_PTX_DIR,
+        OPRT_PTX_DIR,
         "."
     };
 

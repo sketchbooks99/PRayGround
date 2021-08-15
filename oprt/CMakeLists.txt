@@ -41,8 +41,8 @@ OPRT_add_executable( oprt target_name
   core/emitter.h 
   core/file_util.h 
   core/file_util.cpp 
-  # core/film.h 
-  # core/film.cpp
+  core/film.h 
+  core/film.cpp
   core/load3d.h 
   core/material.h 
   core/onb.h 
@@ -81,7 +81,9 @@ OPRT_add_executable( oprt target_name
   # optix/instance.h 
   optix/macros.h 
   optix/module.h 
+  optix/module.cpp
   optix/pipeline.h 
+  optix/pipeline.cpp
   optix/program.h 
   optix/program.cpp 
   optix/sbt.h 

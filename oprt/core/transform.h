@@ -1,7 +1,8 @@
 #pragma once 
 
-#include <sutil/Matrix.h>
-#include <sutil/vec_math.h>
+// #include <sutil/Matrix.h>
+// #include <sutil/vec_math.h>
+#include "../math/matrix.h"
 #include "../core/util.h"
 #include "../core/ray.h"
 #include "../optix/macros.h"
@@ -39,7 +40,7 @@ struct Transform {
     {
         for (int i=0; i<12; i++)
             mat[i] = m[i];
-        mat[12] = mat[12] = mat[14] = 0.0f;
+        mat[12] = mat[13] = mat[14] = 0.0f;
         mat[15] = 1.0f;
         matInv = mat.inverse();
     }
@@ -112,4 +113,4 @@ struct Transform {
 #endif
 };
 
-}
+} // ::oprt

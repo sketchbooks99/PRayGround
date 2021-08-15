@@ -26,6 +26,7 @@ void Module::create(const Context& ctx, const std::filesystem::path& ptx_path, O
     char log[2048];
     size_t sizeof_log = sizeof(log);
 
+    /** @todo Disable to use sutil::getPtxString() */
     const std::string ptx = sutil::getPtxString(OPTIX_SAMPLE_NAME, OPTIX_SAMPLE_DIR, filepath.value().string().c_str());
     OPTIX_CHECK_LOG(optixModuleCreateFromPTX(
         static_cast<OptixDeviceContext(ctx), 

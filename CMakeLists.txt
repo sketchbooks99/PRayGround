@@ -201,11 +201,11 @@ if(NOT PASSED_FIRST_CONFIGURE)
   endif()
 
   if(CMAKE_CXX_STANDARD GREATER 17)
-    set(SAMPLES_NVRTC_CXX "-std=c++17")
+    set(OPRT_NVRTC_CXX "-std=c++17")
   else()
-    set(SAMPLES_NVRTC_CXX "")
+    set(OPRT_NVRTC_CXX "")
   endif()
-  set(CUDA_NVRTC_FLAGS ${SAMPLES_NVRTC_CXX} -arch compute_60 -use_fast_math -lineinfo -default-device -rdc true -D__x86_64 CACHE STRING "Semi-colon delimit multiple arguments." FORCE)
+  set(CUDA_NVRTC_FLAGS ${OPRT_NVRTC_CXX} -arch compute_60 -use_fast_math -lineinfo -default-device -rdc true -D__x86_64 CACHE STRING "Semi-colon delimit multiple arguments." FORCE)
 endif(NOT PASSED_FIRST_CONFIGURE)
 
 mark_as_advanced(CUDA_NVRTC_FLAGS)
@@ -246,31 +246,31 @@ set(CUDA_NVRTC_ENABLED ON CACHE BOOL "Use NVRTC to compile PTX at run-time inste
 ##################################################################
 # SUtil compilation
 
-set(SAMPLES_PTX_DIR "${CMAKE_BINARY_DIR}/lib/ptx")
-set(SAMPLES_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+set(OPRT_PTX_DIR "${CMAKE_BINARY_DIR}/lib/ptx")
+set(OPRT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 
-set(CUDA_GENERATED_OUTPUT_DIR ${SAMPLES_PTX_DIR})
+set(CUDA_GENERATED_OUTPUT_DIR ${OPRT_PTX_DIR})
 
 if (WIN32)
-  string(REPLACE "/" "\\\\" SAMPLES_PTX_DIR ${SAMPLES_PTX_DIR})
+  string(REPLACE "/" "\\\\" OPRT_PTX_DIR ${OPRT_PTX_DIR})
 else (WIN32)
   if ( USING_GNU_C AND NOT APPLE)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DM_PI=3.14159265358979323846" )
   endif()
 endif (WIN32)
 
-set(SAMPLES_CUDA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../cuda")
+set(OPRT_CUDA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../cuda")
 
-set(SAMPLES_SUPPORT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../oprt/ext")
+set(OPRT_SUPPORT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../oprt/ext")
 
 # NVRTC include paths relative to the sample path
-set(SAMPLES_RELATIVE_INCLUDE_DIRS "\\
+set(OPRT_RELATIVE_INCLUDE_DIRS "\\
   \"cuda\", \\
   \"sutil\", \\
   \".\", ")
 
 # NVRTC absolute include paths to the headers used to build the samples
-set(SAMPLES_ABSOLUTE_INCLUDE_DIRS "\\
+set(OPRT_ABSOLUTE_INCLUDE_DIRS "\\
   \"${OptiX_INCLUDE}\", \\
   \"${CUDA_INCLUDE_DIRS}\", ")
 
@@ -290,7 +290,7 @@ include_directories( ${CMAKE_CURRENT_SOURCE_DIR}
                      ${CUDA_INCLUDE_DIRS}
                      )
 
-set(SAMPLES_CUDA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/cuda)
+set(OPRT_CUDA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/cuda)
 
 #########################################################
 # OPTIX_add_sample_executable

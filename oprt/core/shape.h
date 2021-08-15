@@ -67,7 +67,6 @@ inline std::ostream& operator<<(std::ostream& out, const AccelData& accel) {
     return out << "AccelData::customs: " << accel.customs.handle << ", " << accel.customs.d_buffer << ", " << accel.customs.count << std::endl;
 }
 
-// Abstract class for readability
 class Shape {
 public:
     virtual ~Shape() {}
@@ -96,6 +95,7 @@ protected:
     std::variant<std::shared_ptr<Material>, std::shared_ptr<AreaEmitter>> m_surface;
 };
 
+// Function definitions
 void Shape::attachSurface(const std::shared_ptr<Material>& material)
 {
     m_surface = material;
@@ -110,7 +110,7 @@ void Shape::addProgram(const ProgramGroup& program)
 {
     if (program.kind() != OPTIX_PROGRAM_GROUP_KIND_HITGROUP)
     {
-        Message(MSG_ERROR, "Shape::addProgram(): The kind of input program is not a OPTIX_PROGRAM_GROUP_KIND_HITGROUP.");
+        Message(MSG_ERROR, "oprt::Shape::addProgram(): The kind of input program is not a OPTIX_PROGRAM_GROUP_KIND_HITGROUP.");
         return;
     }
     m_programs.push_back(program);
@@ -124,8 +124,10 @@ void Shape::free()
 template <class SBTRecord>
 void Shape::bindRecord(SBTRecord* record, int idx)
 {
-    if (m_programs.size() <= idx)
-        Message(MSG_ERROR, "Shape::bindRecord(): The index to bind SBT record exceeds the number of programs.");
+    if (m_programs.size() <= idx) {
+        Message(MSG_ERROR, "oprt::Shape::bindRecord(): The index to bind SBT record exceeds the number of programs.");
+        return;
+    }
     m_programs[idx].bindRecord(record);
 }
 

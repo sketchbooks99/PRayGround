@@ -6,9 +6,7 @@
 // #include "scene_config.h"
 
 #include "app/app_runner.h"
-
 #include "gl/shader.h"
-
 #include "oprt.h"
 
 // ========== Helper functions ==========
@@ -54,7 +52,7 @@ public:
         
     }
 private:
-  
+    
 };
 
 // ========== Main ==========

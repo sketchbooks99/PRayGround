@@ -37,6 +37,7 @@ set(sources
     ${OPRT_CUDA_DIR}/MaterialData.h
     ${OPRT_CUDA_DIR}/util.h
     ${OPRT_CUDA_DIR}/helpers.h
+    ${OPRT_CUDA_DIR}/random.h
     Aabb.h
     Camera.cpp
     Camera.h

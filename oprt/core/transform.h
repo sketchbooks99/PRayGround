@@ -13,7 +13,7 @@ struct Transform {
     Matrix4f mat, matInv;
 
     explicit HOSTDEVICE Transform() : mat(Matrix4f::identity()), matInv(Matrix4f::identity()) {}
-    explicit HOSTDEVICE Transform(const Matrix4f& m) : mat(m), matInv(m.inverse()) {}
+    explicit HOSTDEVICE Transform(Matrix4f m) : mat(m), matInv(m.inverse()) {}
     explicit HOSTDEVICE Transform(const Matrix4f& m, const Matrix4f& mInv) : mat(m), matInv(mInv) {}
 
     explicit HOSTDEVICE Transform(const float m[12])

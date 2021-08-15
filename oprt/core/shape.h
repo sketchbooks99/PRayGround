@@ -5,7 +5,7 @@
 #include "../core/material.h"
 #include "../emitter/area.h"
 #include "../optix/macros.h"
-#include "../optix/program.h
+#include "../optix/program.h"
 #include <sutil/vec_math.h>
 #include <optix_types.h>
 

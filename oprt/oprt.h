@@ -35,6 +35,8 @@
 #include "optix/program.h"
 #include "optix/macros.h"
 #include "optix/context.h"
+#include "optix/accel.h"
+#include "optix/instance.h"
 
 // application utilities
 #include "core/util.h"

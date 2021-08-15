@@ -42,6 +42,7 @@ public:
 
     explicit HOSTDEVICE Matrix();
     explicit HOSTDEVICE Matrix(const Matrix& m);
+    explicit HOSTDEVICE Matrix(const T data[N*N]);
     explicit HOSTDEVICE Matrix(const T (&data)[N*N]);
     explicit HOSTDEVICE Matrix(const float (&data)[12]);
     explicit HOSTDEVICE Matrix(const std::initializer_list<T>& list);
@@ -135,7 +136,8 @@ Matrix<T, N>& operator-=(Matrix<T, N>& m1, const Matrix<T, N>& m2)
 template <typename T, unsigned int N>
 Matrix<T, N> operator*(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
 {
-    Matrix<T, N> result = Matrix<T, N>::zero();
+    //Matrix<T, N> result = Matrix<T, N>::zero();
+    T data[N * N];
     for (int row = 0; row < N; row++)
     {
         for (int col = 0; col < N; col++)
@@ -145,11 +147,11 @@ Matrix<T, N> operator*(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
                 int i = row * N + col;
                 int m1_i = row * N + tmp;
                 int m2_i = tmp * N + col;
-                result[i] += m1[m1_i] * m2[m2_i];
+                data[i] += m1[m1_i] * m2[m2_i];
             }
         }
     }
-    return result;
+    return Matrix<T, N>(data);
 }
 
 template <typename T, unsigned int N>
@@ -166,6 +168,7 @@ Matrix<T, N>& operator*=(Matrix<T, N>& m1, const Matrix<T, N>& m2)
 {
     for (int i = 0; i < N*N; i++)
         m1[i] *= m2[i];
+    return m1;
 }
 
 template <typename T, unsigned int N>
@@ -234,6 +237,13 @@ HOSTDEVICE Matrix<T, N>::Matrix(const Matrix<T, N>& m)
 }
 
 template <typename T, unsigned int N>
+HOSTDEVICE Matrix<T, N>::Matrix(const T data[N*N])
+{
+    for (int i = 0; i < N * N; i++)
+        m_data[i] = data[i];
+}
+
+template <typename T, unsigned int N>
 HOSTDEVICE Matrix<T, N>::Matrix(const T (&data)[N*N])
 {
     for (int i = 0; i < N*N; i++)
@@ -262,10 +272,11 @@ HOSTDEVICE Matrix<T, N>::Matrix(const std::initializer_list<T>& list)
 
 // ----------------------------------------------------------------------------
 template <typename T, unsigned int N>
-HOSTDEVICE Matrix<T, N>& Matrix<T, N>::operator=( const Matrix<T, N>& a )
+HOSTDEVICE Matrix<T, N>& Matrix<T, N>::operator=(const Matrix<T, N>& a)
 {
-    for (int i = 0; i < N*N; i++)
+    for (int i = 0; i < N * N; i++)
         m_data[i] = a[i];
+    return *this;
 }
 
 // ----------------------------------------------------------------------------
@@ -326,7 +337,7 @@ HOSTDEVICE bool Matrix<T, N>::isIdentity() const
 template <typename T, unsigned int N>
 HOSTDEVICE Matrix<T, N> Matrix<T, N>::inverse()
 {
-    Matrix<T, N> inv_mat;
+    T inv_data[N*N];
     Matrix<T, N> current_mat(*this);
     float tmp;
     for (int i = 0; i < N; i++)
@@ -335,7 +346,7 @@ HOSTDEVICE Matrix<T, N> Matrix<T, N>::inverse()
         for (int j = 0; j < N; j++)
         {
             current_mat[j * N + i] *= tmp;
-            inv_mat[j * N + i] *= tmp;
+            inv_data[j * N + i] *= tmp;
         }
         for (int j = 0; j < N; j++)
         {
@@ -345,12 +356,12 @@ HOSTDEVICE Matrix<T, N> Matrix<T, N>::inverse()
                 for (int k = 0; k < N; k++)
                 {
                     current_mat[k * N + j] -= current_mat[k * N + i] * tmp;
-                    inv_mat[k * N + j] -= inv_mat[k * N + i] * tmp;
+                    inv_data[k * N + j] -= inv_data[k * N + i] * tmp;
                 }
             }
         }
     }
-    return inv_mat;
+    return Matrix<T, N>(inv_data);
 }
 
 // ----------------------------------------------------------------------------
@@ -362,32 +373,34 @@ HOSTDEVICE Matrix<T, N> Matrix<T, N>::rotate(const float radians, const typename
     const float s = sinf(radians);
     const float c = cosf(radians);
 
-    Matrix<T, N> result;
+    T data[N * N];
 
     if constexpr (N == 2)
     {
-        const T data[N*N] = { c, -s, s, c };
-        result.setData(data);
+        //const T data[N*N] = { c, -s, s, c };
+        data[0] = c; data[1] = -s; 
+        data[2] = s; data[3] = c;
+        return Matrix<T, N>(data);
     }
     else if constexpr (N == 3 || N == 4)
     {
         float3 a = normalize(axis);
         // 1st row
-        result[0] = a.x * a.x + (1.0 - a.x * a.x) * c;
-        result[1] = a.x * a.y + (1.0 - c) - a.z * s;
-        result[2] = a.x * a.z + (1.0 - c) + a.y * s;
+        data[0] = a.x * a.x + (1.0 - a.x * a.x) * c;
+        data[1] = a.x * a.y + (1.0 - c) - a.z * s;
+        data[2] = a.x * a.z + (1.0 - c) + a.y * s;
 
         // 2nd row
-        result[1 * N + 0] = a.x * a.y * (1.0 - c) + a.z * s;
-        result[1 * N + 1] = a.y * a.y + (1.0 - a.y * a.y) * c;
-        result[1 * N + 2] = a.y * a.z * (1.0 - c) - a.x * s;
+        data[1 * N + 0] = a.x * a.y * (1.0 - c) + a.z * s;
+        data[1 * N + 1] = a.y * a.y + (1.0 - a.y * a.y) * c;
+        data[1 * N + 2] = a.y * a.z * (1.0 - c) - a.x * s;
 
         // 3rd row
-        result[2 * N + 0] = a.x * a.z * (1.0 - c) - a.y * s;  
-        result[2 * N + 1] = a.y * a.z * (1.0 - c) - a.y * s;
-        result[2 * N + 2] = a.z * a.z + (1.0 - a.z * a.z) * c;
+        data[2 * N + 0] = a.x * a.z * (1.0 - c) - a.y * s;  
+        data[2 * N + 1] = a.y * a.z * (1.0 - c) - a.y * s;
+        data[2 * N + 2] = a.z * a.z + (1.0 - a.z * a.z) * c;
     }
-    return result;
+    return Matrix<T, N>(data);
 }
 
 template <typename T, unsigned int N>
@@ -395,11 +408,12 @@ HOSTDEVICE Matrix<T, N> Matrix<T, N>::translate(const typename Matrix<T, N>::Tfl
 {
     static_assert(1 < N && N <= 4, "Matrix::translate(): The dimension of matrix must be 2x2, 3x3 or 4x4.");
 
-    Matrix<T, N> result;
+    Matrix<T, N> mat = Matrix<T, N>::identity();
+    float* data = mat.data();
     const float* t_ptr = reinterpret_cast<const float*>(&t);
     for (size_t row = 0; row < static_cast<size_t>((sizeof(t) / sizeof(float))); row++)
-        result[row * N + (N-1)] = t_ptr[row];
-    return result;
+        data[row * N + (N-1)] = t_ptr[row];
+    return Matrix<T, N>(data);
 }
 
 template <typename T, unsigned int N>
@@ -407,11 +421,12 @@ HOSTDEVICE Matrix<T, N> Matrix<T, N>::scale(const typename Matrix<T, N>::TfloatN
 {
     static_assert(1 < N && N <= 4, "Matrix::scale(): The dimension of matrix must be 2x2, 3x3 or 4x4.");
 
-    Matrix<T, N> result;
+    Matrix<T, N> mat = Matrix<T, N>::identity();
+    float* data = mat.data();
     const float* s_ptr = reinterpret_cast<const float*>(&s);
     for (size_t i = 0; i < static_cast<size_t>(sizeof(s) / sizeof(float)); i++)
-        result[i * N + i] = s_ptr[i];
-    return result;
+        data[i * N + i] = s_ptr[i];
+    return Matrix<T, N>(data);
 }
 
 template <typename T, unsigned int N>
@@ -419,10 +434,11 @@ HOSTDEVICE Matrix<T, N> Matrix<T, N>::scale(const float s)
 {
     static_assert(1 < N && N <= 4, "Matrix::scale(): The dimension of matrix must be 2x2, 3x3 or 4x4.");
 
-    Matrix<T, N> result{};
+    Matrix<T, N> mat = Matrix<T, N>::identity();
+    float* data = mat.data();
     for (size_t i = 0; i < static_cast<size_t>(sizeof(Matrix<T, N>::TfloatN) / sizeof(float)); i++)
-        result[i * N + i] = s;
-    return result;
+        data[i * N + i] = s;
+    return Matrix<T, N>(data);
 }
 
 // ----------------------------------------------------------------------------
@@ -430,7 +446,7 @@ template <typename T, unsigned int N>
 HOSTDEVICE Matrix<T, N> Matrix<T, N>::zero()
 {
     T data[N*N] = {};
-    return Matrix(data);
+    return Matrix<T, N>(data);
 }
 
 template <typename T, unsigned int N>
@@ -442,7 +458,7 @@ HOSTDEVICE Matrix<T, N> Matrix<T, N>::identity()
         auto idx = i * N + i;
         data[idx] = static_cast<T>(1);
     }
-    return Matrix(data);
+    return Matrix<T, N>(data);
 }
 
 }

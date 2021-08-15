@@ -42,8 +42,6 @@ public:
         Context context;
         context.setDeviceId(0);
         context.create(); 
-
-        
     }
     void update() 
     {

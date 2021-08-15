@@ -46,8 +46,8 @@ OPRT_add_executable( oprt target_name
   core/load3d.h 
   core/material.h 
   core/onb.h 
-  core/primitive.h 
-  core/primitive.cpp 
+  # core/primitive.h 
+  # core/primitive.cpp 
   core/ray.h 
   core/scene.h 
   core/scene.cpp 
@@ -73,12 +73,13 @@ OPRT_add_executable( oprt target_name
   gl/shader.cpp
 
   # Optix wrapper libraries ==========
-  # optix/accel.h 
-  # optix/accel.cpp
+  optix/accel.h 
+  optix/accel.cpp
   optix/context.h 
   optix/context.cpp 
   optix/helpers.h 
-  # optix/instance.h 
+  optix/instance.h 
+  optix/instance.cpp
   optix/macros.h 
   optix/module.h 
   optix/module.cpp

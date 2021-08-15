@@ -29,7 +29,7 @@ void Module::create(const Context& ctx, const std::filesystem::path& ptx_path, O
     /** @todo Disable to use sutil::getPtxString() */
     const std::string ptx = sutil::getPtxString(OPTIX_SAMPLE_NAME, OPTIX_SAMPLE_DIR, filepath.value().string().c_str());
     OPTIX_CHECK_LOG(optixModuleCreateFromPTX(
-        static_cast<OptixDeviceContext(ctx), 
+        static_cast<OptixDeviceContext>(ctx), 
         &m_options, 
         &pipeline_options, 
         ptx.c_str(), 
@@ -57,7 +57,7 @@ void Module::setDebugLevel(OptixCompileDebugLevel debugLevel)
 }
 
 // ------------------------------------------------------------------
-void Module::setBoundValues(size_t offset_in_bytes, size_t size_in_bytes, void* bound_value_ptr, char* annotation)
+void Module::setBoundValues(size_t offset_in_bytes, size_t size_in_bytes, void* bound_value_ptr, const char* annotation)
 {
     OptixModuleCompileBoundValueEntry* bound_values = new OptixModuleCompileBoundValueEntry();
     bound_values->pipelineParamOffsetInBytes = offset_in_bytes;

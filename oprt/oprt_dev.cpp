@@ -3,7 +3,7 @@
 #include <GLFW/glfw3.h>
 
 // Header file describe the scene
-#include "scene_config.h"
+// #include "scene_config.h"
 
 #include "app/app_runner.h"
 
@@ -42,6 +42,8 @@ public:
         Context context;
         context.setDeviceId(0);
         context.create(); 
+
+        
     }
     void update() 
     {

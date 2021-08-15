@@ -19,7 +19,7 @@ namespace oprt {
 class Module {
 public:
     explicit Module();
-    explicit Module(const OptixModuleCompileOptions& options)
+    explicit Module(const OptixModuleCompileOptions& options);
 
     explicit operator OptixModule() const { return m_module; }
     explicit operator OptixModule&() { return m_module; }
@@ -45,7 +45,7 @@ public:
     void setBoundValues( OptixModuleCompileBoundValueEntry* bound_values);
     void setNumBounds( unsigned int num_bound );
 
-    OptixModuleCompileOptions compileOptions() const { return m_options; }
+    OptixModuleCompileOptions compileOptions() const;
 
 private:
     OptixModule m_module { nullptr };

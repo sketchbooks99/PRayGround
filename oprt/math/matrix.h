@@ -42,8 +42,8 @@ public:
 
     explicit HOSTDEVICE Matrix();
     explicit HOSTDEVICE Matrix(const Matrix& m);
-    explicit HOSTDEVICE Matrix(const T data[N*N]);
-    explicit HOSTDEVICE Matrix(const float data[12]);
+    explicit HOSTDEVICE Matrix(const T (&data)[N*N]);
+    explicit HOSTDEVICE Matrix(const float (&data)[12]);
     explicit HOSTDEVICE Matrix(const std::initializer_list<T>& list);
 
     HOSTDEVICE T  operator[](int i) const;
@@ -63,6 +63,8 @@ public:
     HOSTDEVICE const T* data() const;
 
     HOSTDEVICE bool isIdentity() const;
+
+    HOSTDEVICE Matrix inverse();
 
     /**
      * @note
@@ -91,7 +93,7 @@ bool operator==(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
     return is_equal;
 }
 
-template <typaname T, unsigned int N>
+template <typename T, unsigned int N>
 bool operator!=(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
 {
     return !(m1 == m2);
@@ -127,7 +129,7 @@ template <typename T, unsigned int N>
 Matrix<T, N>& operator-=(Matrix<T, N>& m1, const Matrix<T, N>& m2)
 {
     for (int i = 0; i < N*N; i++)
-        m1[idx] -= m2[idx];
+        m1[i] -= m2[i];
 }
 
 template <typename T, unsigned int N>
@@ -183,7 +185,7 @@ Matrix<T, N> operator/(const Matrix<T, N>& m1, const float t)
 }
 
 template <typename T, unsigned int N>
-typename Vector<T, N>::Type operator*(const Matrix<T, N>& m, const Matrix<T, N>::floatN& v)
+typename Vector<T, N>::Type operator*(const Matrix<T, N>& m, const typename Matrix<T, N>::floatN& v)
 {
     using vec_t = typename Vector<T, N>::Type;
     vec_t result;
@@ -232,16 +234,16 @@ HOSTDEVICE Matrix<T, N>::Matrix(const Matrix<T, N>& m)
 }
 
 template <typename T, unsigned int N>
-HOSTDEVICE Matrix<T, N>::Matrix(const T data[N*N])
+HOSTDEVICE Matrix<T, N>::Matrix(const T (&data)[N*N])
 {
     for (int i = 0; i < N*N; i++)
         m_data[i] = data[i];
 }
 
 template <typename T, unsigned int N>
-HOSTDEVICE Matrix<T, N>::Matrix(const float data[12])
+HOSTDEVICE Matrix<T, N>::Matrix(const float (&data)[12])
 {
-    static_assert(std::is_same_v<T, float> && N == 4
+    static_assert(std::is_same_v<T, float> && N == 4,
         "This constructor is only allowed for Matrix4f");
 
     for (int i = 0; i < 12; i++)
@@ -308,7 +310,7 @@ HOSTDEVICE T* Matrix<T, N>::data()
     return m_data;
 }
 
-template <typenmae T, unsigned int N>
+template <typename T, unsigned int N>
 HOSTDEVICE const T* Matrix<T, N>::data() const
 {
     return m_data;
@@ -321,8 +323,38 @@ HOSTDEVICE bool Matrix<T, N>::isIdentity() const
     return *this == Matrix<T, N>::identity();
 }
 
+template <typename T, unsigned int N>
+HOSTDEVICE Matrix<T, N> Matrix<T, N>::inverse()
+{
+    Matrix<T, N> inv_mat;
+    Matrix<T, N> current_mat(*this);
+    float tmp;
+    for (int i = 0; i < N; i++)
+    {
+        tmp = 1.0f / m_data[i * N + i];
+        for (int j = 0; j < N; j++)
+        {
+            current_mat[j * N + i] *= tmp;
+            inv_mat[j * N + i] *= tmp;
+        }
+        for (int j = 0; j < N; j++)
+        {
+            if (i != j)
+            {
+                tmp = current_mat[i * N + j];
+                for (int k = 0; k < N; k++)
+                {
+                    current_mat[k * N + j] -= current_mat[k * N + i] * tmp;
+                    inv_mat[k * N + j] -= inv_mat[k * N + i] * tmp;
+                }
+            }
+        }
+    }
+    return inv_mat;
+}
+
 // ----------------------------------------------------------------------------
-template <typaneme T, unsigned int N>
+template <typename T, unsigned int N>
 HOSTDEVICE Matrix<T, N> Matrix<T, N>::rotate(const float radians, const typename Matrix<T, N>::TfloatN& axis)
 {
     static_assert(1 < N && N <= 4, "Matrix::rotate(): The dimension of matrix must be 2x2, 3x3 or 4x4.");
@@ -330,7 +362,7 @@ HOSTDEVICE Matrix<T, N> Matrix<T, N>::rotate(const float radians, const typename
     const float s = sinf(radians);
     const float c = cosf(radians);
 
-    Matrix<T, N> result{};
+    Matrix<T, N> result;
 
     if constexpr (N == 2)
     {
@@ -363,7 +395,7 @@ HOSTDEVICE Matrix<T, N> Matrix<T, N>::translate(const typename Matrix<T, N>::Tfl
 {
     static_assert(1 < N && N <= 4, "Matrix::translate(): The dimension of matrix must be 2x2, 3x3 or 4x4.");
 
-    Matrix<T, N> result{};
+    Matrix<T, N> result;
     const float* t_ptr = reinterpret_cast<const float*>(&t);
     for (size_t row = 0; row < static_cast<size_t>((sizeof(t) / sizeof(float))); row++)
         result[row * N + (N-1)] = t_ptr[row];
@@ -375,9 +407,9 @@ HOSTDEVICE Matrix<T, N> Matrix<T, N>::scale(const typename Matrix<T, N>::TfloatN
 {
     static_assert(1 < N && N <= 4, "Matrix::scale(): The dimension of matrix must be 2x2, 3x3 or 4x4.");
 
-    Matrix<T, N> result{};
+    Matrix<T, N> result;
     const float* s_ptr = reinterpret_cast<const float*>(&s);
-    for (size_t i = 0; i < static_cast<size_t>((sizeof(s) / sizeof(float)); i++)
+    for (size_t i = 0; i < static_cast<size_t>(sizeof(s) / sizeof(float)); i++)
         result[i * N + i] = s_ptr[i];
     return result;
 }

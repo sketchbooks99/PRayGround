@@ -10,15 +10,35 @@
 namespace oprt {
 
 struct Transform {
-    sutil::Matrix4x4 mat, matInv;
+    Matrix4f mat, matInv;
 
-    explicit HOSTDEVICE Transform() : mat(sutil::Matrix4x4::identity()), matInv(sutil::Matrix4x4::identity()) {}
-    explicit HOSTDEVICE Transform(sutil::Matrix4x4 m) : mat(m), matInv(m.inverse()) {}
-    explicit HOSTDEVICE Transform(sutil::Matrix4x4 m, sutil::Matrix4x4 mInv) : mat(m), matInv(mInv) {}
+    explicit HOSTDEVICE Transform() : mat(Matrix4f::identity()), matInv(Matrix4f::identity()) {}
+    explicit HOSTDEVICE Transform(const Matrix4f& m) : mat(m), matInv(m.inverse()) {}
+    explicit HOSTDEVICE Transform(const Matrix4f& m, const Matrix4f& mInv) : mat(m), matInv(mInv) {}
+
+    explicit HOSTDEVICE Transform(const float m[12])
+    {
+        for (int i = 0; i < 12; i++)
+            mat[i] = m[i];
+        mat[12] = mat[13] = mat[14] = 0.0f;
+        mat[15] = 1.0f;
+        matInv = mat.inverse();
+    }
+
+    explicit HOSTDEVICE Transform(float m[12], float inv[12]) {
+        for (int i = 0; i < 12; i++) {
+            mat[i] = m[i];
+            matInv[i] = inv[i];
+        }
+        mat[12] = mat[13] = mat[14] = 0.0f;
+        mat[15] = 1.0f;
+        matInv[12] = matInv[13] = matInv[14] = 0.0f;
+        matInv[15] = 1.0f;
+    }
 
     HOSTDEVICE Transform operator*(const Transform& t) {
-        sutil::Matrix4x4 m = mat * t.mat;
-        sutil::Matrix4x4 mInv = t.matInv * matInv;
+        Matrix4f m = mat * t.mat;
+        Matrix4f mInv = t.matInv * matInv;
         return Transform(m, mInv);
     }
 
@@ -33,27 +53,7 @@ struct Transform {
     }
 
     HOSTDEVICE bool isIdentity() {
-        return (mat == sutil::Matrix4x4::identity()) && (matInv == sutil::Matrix4x4::identity());
-    }
-
-    HOSTDEVICE Transform(float m[12])
-    {
-        for (int i=0; i<12; i++)
-            mat[i] = m[i];
-        mat[12] = mat[13] = mat[14] = 0.0f;
-        mat[15] = 1.0f;
-        matInv = mat.inverse();
-    }
-
-    HOSTDEVICE Transform(float m[12], float inv[12]) {
-        for (int i=0; i<12; i++) {
-            mat[i] = m[i];
-            matInv[i] = inv[i];
-        }
-        mat[12] = mat[13] = mat[14] = 0.0f;
-        mat[15] = 1.0f;
-        matInv[12] = matInv[13] = matInv[14] = 0.0f;
-        matInv[15] = 1.0f;
+        return (mat == Matrix4f::identity()) && (matInv == Matrix4f::identity());
     }
 
 #ifndef __CUDACC__
@@ -61,21 +61,21 @@ struct Transform {
     HOST void rotateY(const float radians) { rotate(radians, make_float3(0, 1, 0)); }
     HOST void rotateZ(const float radians) { rotate(radians, make_float3(0, 0, 1)); }
     HOST void rotate(const float radians, const float3& axis) {
-        sutil::Matrix4x4 rotateMat = sutil::Matrix4x4::rotate(radians, axis);
-        sutil::Matrix4x4 rotateMatInv = rotateMat.inverse();
+        Matrix4f rotateMat = Matrix4f::rotate(radians, axis);
+        Matrix4f rotateMatInv = rotateMat.inverse();
         *this *= Transform(rotateMat, rotateMatInv);
     }
     
     HOST void translate(const float3& v) {
-        sutil::Matrix4x4 translateMat = sutil::Matrix4x4::translate(v);
-        sutil::Matrix4x4 translateMatInv = translateMat.inverse();
+        Matrix4f translateMat = Matrix4f::translate(v);
+        Matrix4f translateMatInv = translateMat.inverse();
         *this *= Transform(translateMat, translateMatInv);
     }
 
     HOST void scale(const float s) { this->scale(make_float3(s)); }
     HOST void scale(const float3& s) {
-        sutil::Matrix4x4 scaleMat = sutil::Matrix4x4::scale(s);
-        sutil::Matrix4x4 scaleMatInv = scaleMat.inverse();
+        Matrix4f scaleMat = Matrix4f::scale(s);
+        Matrix4f scaleMatInv = scaleMat.inverse();
         *this *= Transform(scaleMat, scaleMatInv);
     }
 #else

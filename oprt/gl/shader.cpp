@@ -212,17 +212,17 @@ void Shader::setUniform4iv(const std::string& name, const int32_t* v) const
 }
 
 // --------------------------------------------------------------------
-void Shader::setUniformMatrix2fv(const std::string& name, const Matrix2f& m)
+void Shader::setUniformMatrix2fv(const std::string& name, const Matrix2f& m) const
 {
 
 }
 
-void Shader::setUniformMatrix3fv(const std::string& name, const Matrix3f& m)
+void Shader::setUniformMatrix3fv(const std::string& name, const Matrix3f& m) const
 {
 
 }
 
-void Shader::setUniformMatrix4fv(const std::string& name, const Matrix4f& m)
+void Shader::setUniformMatrix4fv(const std::string& name, const Matrix4f& m) const
 {
     
 }

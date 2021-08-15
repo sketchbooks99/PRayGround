@@ -85,9 +85,9 @@ void Pipeline::setCompileOptions(const OptixPipelineCompileOptions& c_op)
     m_compile_options = c_op;
 }
 
-void Pipeline::useMotionBlur(const bool is_use)
+void Pipeline::usesMotionBlur(const bool is_use)
 {
-    m_compile_options.useMotionBlur = is_use;
+    m_compile_options.usesMotionBlur = is_use;
 }
 
 void Pipeline::setTraversableGraphFlags(const uint32_t flags)

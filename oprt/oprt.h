@@ -40,8 +40,8 @@
 #include "core/util.h"
 #include "core/file_util.h"
 #include "core/cudabuffer.h"
-#include "core/primitive.h"
-#include "core/scene.h"
+// #include "core/primitive.h"
+// #include "core/scene.h"
 #include "core/bitmap.h"
 
 #include <cuda_gl_interop.h>

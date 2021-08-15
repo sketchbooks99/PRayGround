@@ -1,8 +1,6 @@
 #pragma once
 
 #include "util.h"
-#include "shape.h"
-#include "texture.h"
 
 namespace oprt {
 
@@ -40,4 +38,4 @@ protected:
 
 #endif // __CUDACC__
 
-}
+} // ::oprt

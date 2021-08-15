@@ -38,7 +38,7 @@ public:
 
         OptixAabb aabb = static_cast<OptixAabb>(bound());
 
-        if (d_aabb_buffer) freeAabbBuffer();
+        if (d_aabb_buffer) free();
 
         CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>(&d_aabb_buffer), sizeof(OptixAabb) ) );
         CUDA_CHECK( cudaMemcpy(

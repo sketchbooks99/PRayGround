@@ -2,8 +2,12 @@
 
 #include "../core/util.h"
 #include "../core/aabb.h"
+#include "../core/material.h"
+#include "../emitter/area.h"
 #include "../optix/macros.h"
+#include "../optix/program.h
 #include <sutil/vec_math.h>
+#include <optix_types.h>
 
 namespace oprt {
 
@@ -136,7 +140,7 @@ void* Shape::devicePtr() const
     return d_data;
 }
 
-std::vector<ProgramGroup> programs() const 
+std::vector<ProgramGroup> Shape::programs() const 
 {
     return m_programs;
 }

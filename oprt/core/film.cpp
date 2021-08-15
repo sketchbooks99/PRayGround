@@ -21,7 +21,7 @@ Film::~Film()
 }
 
 // ------------------------------------------------------------------
-void Film::addBitmap(const std::string& name, Bitmap::Float format)
+void Film::addBitmap(const std::string& name, Bitmap::Format format)
 {
     if (format == Bitmap::Format::UNKNOWN)
     {
@@ -60,7 +60,7 @@ size_t Film::numBitmaps() const
 // ------------------------------------------------------------------
 void Film::addFloatBitmap(const std::string& name, FloatBitmap::Format format)
 {
-    if (format == Bitmap::Format::UNKNOWN)
+    if (format == FloatBitmap::Format::UNKNOWN)
     {
         Message(MSG_ERROR, "oprt::Film::addFloatBitmap(): The unknown format.");
         return;
@@ -84,14 +84,14 @@ std::shared_ptr<FloatBitmap> Film::floatBitmapAt(const std::string& name)
 
 std::vector<std::shared_ptr<FloatBitmap>> Film::floatBitmaps() const 
 {
-    std::vector<std::shared_ptr<BitmapFloat>> tmp(m_float_bitmaps.size()); 
+    std::vector<std::shared_ptr<FloatBitmap>> tmp(m_float_bitmaps.size()); 
     std::transform(m_float_bitmaps.begin(), m_float_bitmaps.end(), tmp.begin(), [](auto pair) { return pair.second; });
     return tmp;
 }
 
 size_t Film::numFloatBitmaps() const 
 {
-    return m_float_bitmaps;
+    return m_float_bitmaps.size();
 }
 
 // ------------------------------------------------------------------

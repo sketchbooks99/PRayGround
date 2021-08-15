@@ -49,8 +49,8 @@ OPRT_add_executable( oprt target_name
   # core/primitive.h 
   # core/primitive.cpp 
   core/ray.h 
-  core/scene.h 
-  core/scene.cpp 
+  # core/scene.h 
+  # core/scene.cpp 
   core/shape.h 
   core/stream_helpers.h 
   core/texture.h 
@@ -58,6 +58,9 @@ OPRT_add_executable( oprt target_name
   core/util.h
   core/shaders/bitmap.vert
   core/shaders/bitmap.frag
+
+  # Math libraries ==========
+  math/matrix.h
 
   # App libraries ==========
   app/baseapp.h 
@@ -125,7 +128,7 @@ OPRT_add_executable( oprt target_name
   
   oprt_dev.cpp
   oprt.h 
-  scene_config.h
+  # scene_config.h
 
   # OPTIONS -rdc true
 )

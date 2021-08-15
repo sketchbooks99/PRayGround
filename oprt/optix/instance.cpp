@@ -45,9 +45,9 @@ void Instance::setTraversableHandle(OptixTraversableHandle handle)
     m_instance.traversableHandle = handle;
 }
 
-void Instance::setPadding(const uint32_t pad[2])
+void Instance::setPadding(uint32_t pad[2])
 {
-    m_instance.pad = pad;
+    memcpy(m_instance.pad, pad, sizeof(uint32_t) * 2);
 }
 
 void Instance::setFlags(const uint32_t flags)
@@ -58,7 +58,7 @@ void Instance::setFlags(const uint32_t flags)
 // ------------------------------------------------------------------
 void Instance::setTransform(const Transform& transform)
 {
-    memcpy(m_instance.transform, transform.mat.getData(), sizeof(float)*12);
+    memcpy(m_instance.transform, transform.mat.data(), sizeof(float)*12);
 }
 
 void Instance::setTransform(const Matrix4f& matrix)
@@ -83,7 +83,7 @@ void Instance::scale(const float3& s)
 void Instance::scale(const float s)
 {
     Matrix4f current_mat(m_instance.transform);
-    current_mat *= Matrix4f::scake(s);
+    current_mat *= Matrix4f::scale(s);
     setTransform(current_mat);
 }
 

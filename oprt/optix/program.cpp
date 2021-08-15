@@ -136,6 +136,17 @@ void ProgramGroup::createHitgroup(const Context& ctx, const ProgramEntry& ch_ent
 }
 
 // ---------------------------------------------------------------------------
+void ProgramGroup::createException(const Context& ctx, const Module& module, const std::string& func_name)
+{
+
+}
+
+void ProgramGroup::createException(const Context& ctx, const ProgramEntry& entry)
+{
+
+}
+
+// ---------------------------------------------------------------------------
 void ProgramGroup::createCallables(const Context& ctx, const Module& module, const std::string& dc_name, const std::string& cc_name)
 {
     ProgramEntry dc_entry{module, dc_name};

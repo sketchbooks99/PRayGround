@@ -27,7 +27,7 @@ public:
 
     void freeData() override { }
 
-    EmitterType type() const { return EmitterType::Area; }
+    EmitterType type() const override { return EmitterType::Area; }
 private:
     std::shared_ptr<Texture> m_texture;
     float m_intensity;

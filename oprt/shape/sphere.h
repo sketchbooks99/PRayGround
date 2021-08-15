@@ -11,7 +11,7 @@ class Sphere final : public Shape {
 public:
     explicit Sphere(float3 c, float r) : m_center(c), m_radius(r) {}
 
-    OptixBuildInputType buildInputType() const override { return OPTIX_BUILD_INPUT_CUSTOM_PRIMIITVES; }
+    OptixBuildInputType buildInputType() const override { return OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES; }
 
     void prepareData() override 
     {
@@ -38,7 +38,7 @@ public:
         // Prepare bounding box information on the device.
         OptixAabb aabb = static_cast<OptixAabb>(bound());
 
-        if (d_aabb_buffer) freeAabbBuffer();
+        if (d_aabb_buffer) free();
 
         CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_aabb_buffer), sizeof(OptixAabb)));
         CUDA_CHECK(cudaMemcpy(

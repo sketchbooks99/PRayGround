@@ -26,7 +26,7 @@ public:
     void setSBTOffset(const uint32_t sbt_offset);
     void setVisibilityMask(const uint32_t visibility_mask);
     void setTraversableHandle(OptixTraversableHandle handle);
-    void setPadding(const uint32_t pad[2]);
+    void setPadding(uint32_t pad[2]);
     void setFlags(const uint32_t flags);
 
     /** Transformation of instance */

@@ -40,7 +40,7 @@ Context::Context(unsigned int device_id)
     };
 }
 
-explicit Context(unsigned int device_id, const OptixDeviceContextOptions& options)
+Context::Context(unsigned int device_id, const OptixDeviceContextOptions& options)
 : m_device_id(device_id), m_options(options)
 {
 
@@ -93,7 +93,7 @@ OptixDeviceContextOptions Context::options() const
 }
 
 // --------------------------------------------------------------------
-void setDeviceId(const unsigned int device_id)
+void Context::setDeviceId(const unsigned int device_id)
 {
     m_device_id = device_id;
 }

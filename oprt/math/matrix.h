@@ -104,9 +104,8 @@ bool operator!=(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
 template <typename T, unsigned int N>
 Matrix<T, N> operator+(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
 {
-    Matrix<T, N> result;
-    for (int i = 0; i < N*N; i++)
-        result[i] = m1[i] + m2[i];
+    Matrix<T, N> result(m1);
+    result += m2;
     return result;
 }
 
@@ -115,14 +114,14 @@ Matrix<T, N>& operator+=(Matrix<T, N>& m1, const Matrix<T, N>& m2)
 {
     for (int i = 0; i < N*N; i++)
         m1[i] += m2[i];
+    return m1;
 }
 
 template <typename T, unsigned int N>
 Matrix<T, N> operator-(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
 {
-    Matrix<T, N> result;
-    for (int i = 0; i < N*N; i++)
-        result[i] = m1[i] - m2[i];
+    Matrix<T, N> result(m1);
+    result -= m2;
     return result;
 }
 
@@ -131,6 +130,7 @@ Matrix<T, N>& operator-=(Matrix<T, N>& m1, const Matrix<T, N>& m2)
 {
     for (int i = 0; i < N*N; i++)
         m1[i] -= m2[i];
+    return m1;
 }
 
 template <typename T, unsigned int N>

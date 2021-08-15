@@ -6,7 +6,7 @@
 
 namespace oprt {
 
-static void contextLogCallback( unsigned int level, const char* tag, const char* msg, void* cbdata);
+// static void contextLogCallback( unsigned int level, const char* tag, const char* msg, void* cbdata);
 
 class Context {
 public:

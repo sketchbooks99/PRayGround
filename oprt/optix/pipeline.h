@@ -1,7 +1,6 @@
 #pragma once
 
 #include <optix.h>
-#include <optix_stack_size.h>
 #include "../core/util.h"
 #include "program.h"
 #include "context.h"

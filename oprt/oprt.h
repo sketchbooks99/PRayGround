@@ -62,7 +62,7 @@
 #include <sutil/Trackball.h>
 #include <sutil/sutil.h>
 #include <sutil/vec_math.h>
-#include <optix_stack_size.h>
+// #include <optix_stack_size.h>
 #endif
 
 // shape include

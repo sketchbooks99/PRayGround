@@ -1,4 +1,5 @@
 #include "pipeline.h"
+#include <optix_stack_size.h>
 
 namespace oprt {
 

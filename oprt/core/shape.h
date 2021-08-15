@@ -81,16 +81,46 @@ public:
     virtual void prepareData() = 0;
     virtual void buildInput( OptixBuildInput& bi, uint32_t sbt_idx ) = 0;
 
-    void attachSurface(const std::shared_ptr<Material>& material);
-    void attachSurface(const std::shared_ptr<AreaEmitter>& area_emitter);
-    void addProgram(const ProgramGroup& program);
-    void free();
+    void attachSurface(const std::shared_ptr<Material>& material)
+    {
+        m_surface = material;
+    }
+    void attachSurface(const std::shared_ptr<AreaEmitter>& area_emitter)
+    {
+        m_surface = area_emitter;
+    }
+    void addProgram(const ProgramGroup& program)
+    {
+        if (program.kind() != OPTIX_PROGRAM_GROUP_KIND_HITGROUP)
+        {
+            Message(MSG_ERROR, "oprt::Shape::addProgram(): The kind of input program is not a OPTIX_PROGRAM_GROUP_KIND_HITGROUP.");
+            return;
+        }
+        m_programs.push_back(program);
+    }
+    void free()
+    {
+        if (d_aabb_buffer) cuda_free( d_aabb_buffer );  
+    }
 
     template <class SBTRecord>
-    void bindRecord(SBTRecord* record, int idx);
+    void bindRecord(SBTRecord* record, int idx)
+    {
+        if (m_programs.size() <= idx) {
+            Message(MSG_ERROR, "oprt::Shape::bindRecord(): The index to bind SBT record exceeds the number of programs.");
+            return;
+        }
+        m_programs[idx].bindRecord(record);
+    }
 
-    void* devicePtr() const;
-    std::vector<ProgramGroup> programs() const;
+    void* devicePtr() const
+    {
+        return d_data;
+    }
+    std::vector<ProgramGroup> programs() const
+    {
+        return m_programs;
+    }
 protected:
     void* d_data { 0 };
     CUdeviceptr d_aabb_buffer { 0 };
@@ -100,50 +130,50 @@ protected:
 };
 
 // Function definitions
-void Shape::attachSurface(const std::shared_ptr<Material>& material)
-{
-    m_surface = material;
-}
+// void Shape::attachSurface(const std::shared_ptr<Material>& material)
+// {
+//     m_surface = material;
+// }
 
-void Shape::attachSurface(const std::shared_ptr<AreaEmitter>& area_emitter)
-{
-    m_surface = area_emitter;
-}
+// void Shape::attachSurface(const std::shared_ptr<AreaEmitter>& area_emitter)
+// {
+//     m_surface = area_emitter;
+// }
 
-void Shape::addProgram(const ProgramGroup& program)
-{
-    if (program.kind() != OPTIX_PROGRAM_GROUP_KIND_HITGROUP)
-    {
-        Message(MSG_ERROR, "oprt::Shape::addProgram(): The kind of input program is not a OPTIX_PROGRAM_GROUP_KIND_HITGROUP.");
-        return;
-    }
-    m_programs.push_back(program);
-}
+// void Shape::addProgram(const ProgramGroup& program)
+// {
+//     if (program.kind() != OPTIX_PROGRAM_GROUP_KIND_HITGROUP)
+//     {
+//         Message(MSG_ERROR, "oprt::Shape::addProgram(): The kind of input program is not a OPTIX_PROGRAM_GROUP_KIND_HITGROUP.");
+//         return;
+//     }
+//     m_programs.push_back(program);
+// }
 
-void Shape::free()
-{
-    if (d_aabb_buffer) cuda_free( d_aabb_buffer ); 
-}
+// void Shape::free()
+// {
+//     if (d_aabb_buffer) cuda_free( d_aabb_buffer ); 
+// }
 
-template <class SBTRecord>
-void Shape::bindRecord(SBTRecord* record, int idx)
-{
-    if (m_programs.size() <= idx) {
-        Message(MSG_ERROR, "oprt::Shape::bindRecord(): The index to bind SBT record exceeds the number of programs.");
-        return;
-    }
-    m_programs[idx].bindRecord(record);
-}
+// template <class SBTRecord>
+// void Shape::bindRecord(SBTRecord* record, int idx)
+// {
+//     if (m_programs.size() <= idx) {
+//         Message(MSG_ERROR, "oprt::Shape::bindRecord(): The index to bind SBT record exceeds the number of programs.");
+//         return;
+//     }
+//     m_programs[idx].bindRecord(record);
+// }
 
-void* Shape::devicePtr() const
-{
-    return d_data;
-}
+// void* Shape::devicePtr() const
+// {
+//     return d_data;
+// }
 
-std::vector<ProgramGroup> Shape::programs() const 
-{
-    return m_programs;
-}
+// std::vector<ProgramGroup> Shape::programs() const 
+// {
+//     return m_programs;
+// }
 
 #endif // __CUDACC__
 

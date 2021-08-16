@@ -53,7 +53,7 @@ public:
         camera.setFovAxis(Camera::FovAxis::Vertical);
 
         env = make_shared<EnvironmentEmitter>("image/earth.jpg");
-        env->preparaData();
+        env->prepareData();
 
         // Preparing textures
         textures.emplace("checker_texture", make_shared<CheckerTexture>(make_float3(0.9f), make_float3(0.3f)));
@@ -87,13 +87,55 @@ public:
         cornel.at("left")->attachSurface(materials.at("green_diffuse"));
         cornel.at("floor")->attachSurface(materials.at("checker_diffuse"));
         cornel.at("back")->attachSurface(materials.at("white_diffuse"));
+        
+        // Prepare pipeline
+        Pipeline pipeline("params");
+        pipeline.setDirectCallableDepth(4);
+        pipeline.setContinuationCallableDepth(4);
+        pipeline.setNumPayloads(5);
+        pipeline.setNumAttributes(5);
+
+        // Create modules
+        Module raygen_module, miss_module, hitgroups_module, textures_module, materials_module;
+        raygen_module.create(context, "cuda/raygen.cu", pipeline.compileOptions());
+        miss_module.create(context, "cuda/miss.cu", pipeline.compileOptions());
+        hitgroups_module.create(context, "cuda/hitgroups.cu", pipeline.compileOptions());
+        textures_module.create(context, "cuda/textures.cu", pipeline.compileOptions());
+        materials_module.create(context, "cuda/materials.cu", pipeline.compileOptions());
+
+        std::vector<ProgramGroup> program_groups;
+        // Create raygen program and bind record;
+        raygen.createRaygen(context, raygen_module, "__raygen__pinhole");
+        program_groups.push_back(raygen);
+        RaygenRecord raygen_record;
+        raygen.bindRecord(&raygen_record);
+        raygen_record.data.camera.origin = camera.origin();
+        raygen_record.data.camera.lookat = camera.lookat();
+        raygen_record.data.camera.up = camera.up();
+        raygen_record.data.camera.fov = camera.fov();
+        CUDABuffer<RaygenRecord> d_raygen_record;
+        d_raygen_record.copyToDevice(&raygen_record, sizeof(RaygenRecord));
+
+        miss.createMiss(context, miss_module, "__miss__env");
+        program_groups.push_back(miss);
+        MissRecord miss_record;
+        miss.bindRecord(&miss_record);
+        miss_record.data.env_data = env->devicePtr();
+        CUDABuffer<MissRecord> d_miss_record;
+        d_miss_record.copyToDevice(&miss_record, sizeof(MissRecord));
+
+        ProgramGroup mesh_program, plane_program;
+        mesh_program.createHitgroup(context, hitgroups_module, "__closesthit__mesh");
+        plane_program.createHitgroup(context, hitgroups_module, "__closesthit__plane", "__intesection__plane");
+
+        ProgramGroup diffuse_program, glass_program;
 
         // Build GAS for cornel box
         uint32_t sbt_base_index = 0;
         unordered_map<string, GeometryAccel> cornel_gases;
         for (auto& plane : cornel)
         {
-            cornel.second->prepareData();
+            plane.second->prepareData();
             GeometryAccel gas;
             gas.build(context, plane.second, sbt_base_index);
             cornel_gases.emplace(plane.first, gas);
@@ -101,7 +143,14 @@ public:
             instance.setSBTOffset(sbt_base_index);
             instance.setTraversableHandle(gas.handle());
             instance.setVisibilityMask(255);
-            cornel_instance.emplace(plane.first, instance);
+            cornel_instances.emplace(plane.first, instance);
+
+            plane.second->addProgram(plane_program);
+            HitgroupRecord hitgroup_record;
+            plane.second->bindRecord(&hitgroup_record, sbt_base_index);
+            hitgroup_record.data.shape_data = plane.second->devicePtr();
+            hitgroup_record.data.surface_data = 
+                std::visit([](auto surface) { return surface->devicePtr(); }, plane.second->surface());
             sbt_base_index++;
         }
         // Configuration of instances for cornel box
@@ -133,46 +182,6 @@ public:
         InstanceAccel ias;
         ias.build(context, instances);
         params.handle = ias.handle();
-        
-        // Prepare pipeline
-        Pipeline pipeline("params");
-        pipeline.setDirectCallableDepth(4);
-        pipeline.setContinuationCallableDepth(4);
-        pipeline.setNumPayloads(5);
-        pipeline.setNumAttributes(5);
-
-        // Create modules
-        Module raygen_module, miss_module, hitgroups_module, textures_module, materials_module;
-        raygen_module.create(context, "cuda/raygen.cu", pipeline.compileOptions());
-        miss_module.create(context, "cuda/miss.cu", pipeline.compileOptions());
-        hitgroups_module.create(context, "cuda/hitgroups.cu", pipeline.compileOptions());
-        textures_module.create(context, "cuda/textures.cu", pipeline.compileOptions());
-        materials_module.create(context, "cuda/materials.cu", pipeline.compileOptions());
-
-        std::vector<ProgramGroup> program_groups;
-        // Create raygen program and bind record;
-        raygen.createRaygen(context, module, "__raygen__pinhole");
-        program_groups.push_back(raygen);
-        RaygenRecord raygen_record;
-        raygen.bindRecord(&raygen_record);
-        raygen_record.data.camera_data.origin = camera.origin();
-        raygen_record.data.camera_data.lookat = camera.lookat();
-        raygen_record.data.camera_data.up = camera.up();
-        raygen_record.data.camera_data.fov = camera.fov();
-        CUDABuffer<RaygenRecord> d_raygen_record;
-        d_raygen_record.copyToDevice(&raygen_record, sizeof(RaygenRecord));
-
-        miss.createMiss(context, module, "__miss__env");
-        program_groups.push_back(miss);
-        MissRecord miss_record;
-        miss.bindRecord(&miss_record);
-        miss_record.data.env_data = env->devicePtr();
-        CUDABuffer<MissRecord> d_miss_record;
-        d_miss_record.copyToDevice(&miss_record, sizeof(MissRecord));
-
-        ProgramGroup mesh_program, plane_program;
-        mesh_program.createHitgroup(context, module, "__closesthit__mesh");
-        plane_program.createHitgroup(context, module, "__closesthit__plane", "__intesection__plane");
     }
     void update() 
     {

@@ -9,19 +9,19 @@ namespace oprt {
 
 struct EmptyData {};
 
-struct MissData {
-    void* env_data;
-};
+// struct MissData {
+//     void* env_data;
+// };
 
-struct HitGroupData {
-    /// Pointer that stores geometries data (e.g. \c oprt::MeshData )
-    void* shape_data;
-    void* surface_data;
+// struct HitGroupData {
+//     /// Pointer that stores geometries data (e.g. \c oprt::MeshData )
+//     void* shape_data;
+//     void* surface_data;
 
-    // Index of direct callables function to sample bsdf properties.
-    unsigned int surface_func_base_id;
-    SurfaceType surface_type;
-};
+//     // Index of direct callables function to sample bsdf properties.
+//     unsigned int surface_func_base_id;
+//     SurfaceType surface_type;
+// };
 
 #ifndef __CUDACC__
 template <typename T>
@@ -31,10 +31,10 @@ struct Record
     T data;
 };
 
-using RayGenRecord = Record<EmptyData>;
-using MissRecord = Record<MissData>;
-using HitGroupRecord = Record<HitGroupData>;
-using CallableRecord = Record<EmptyData>;
+// using RayGenRecord = Record<EmptyData>;
+// using MissRecord = Record<MissData>;
+// using HitGroupRecord = Record<HitGroupData>;
+// using CallableRecord = Record<EmptyData>;
 
 #endif
 

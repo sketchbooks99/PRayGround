@@ -20,7 +20,7 @@ struct DiffuseData {
 class Diffuse final : public Material {
 public:
     explicit Diffuse(const float3& a, bool twosided=true)
-    : m_texture(new ConstantTexture(a)), m_twosided(twosided) { }
+    : m_texture(std::make_shared<ConstantTexture>(a)), m_twosided(twosided) { }
 
     explicit Diffuse(const std::shared_ptr<Texture>& texture, bool twosided=true)
     : m_texture(texture), m_twosided(twosided) {}
@@ -28,7 +28,8 @@ public:
     ~Diffuse() { }
 
     void prepareData() override {
-        m_texture->prepareData();
+        if (!m_texture->devicePtr())
+            m_texture->prepareData();
 
         DiffuseData data {
             m_texture->devicePtr(),

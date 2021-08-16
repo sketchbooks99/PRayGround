@@ -179,15 +179,72 @@ void InstanceAccel::build(const Context& ctx, const OptixInstance& instance)
 
 void InstanceAccel::build(const Context& ctx, const std::vector<Instance>& instances)
 {
-    std::vector<OptixInstance> optix_instances(instances.size());
-    std::transform(instances.begin(), instances.end(), optix_instances.begin(), 
-        [](auto instance){ return static_cast<OptixInstance>(instance); });
-    build(ctx, optix_instances);
+    /**
+     * @todo
+     * oprt::Instance manages device pointer itself, so building instances 
+     * should not be realized by using build(ctx, optix_instances);
+     */
+    // std::vector<OptixInstance> optix_instances(instances.size());
+    std::vector<CUdeviceptr> d_instance_array;
+    std::transform(instances.begin(), instances.end(), std::back_inserter(d_instances), 
+        [](Instance instance) {
+            if (!instance.isDataOnDevice())
+                instance.copyToDevice();
+            return instance.devicePtr();
+        });
+    CUDABuffer<CUdeviceptr> d_instances;
+    d_instances.copyToDevice(d_instance_array);
+
+    OptixBuildInput instance_input = {};
+    instance_input.type = static_cast<OptixBuildInputType>(m_type);
+    instance_input.instanceArray.instances = d_instances.devicePtr();
+    instance_input.instanceArray.numInstances = static_cast<uint32_t>(optix_instances.size());
+
+    m_options.operation = OPTIX_BUILD_OPERATION_BUILD;
+
+    OptixAccelBufferSizes ias_buffer_sizes;
+    OPTIX_CHECK(optixAccelComputeMemoryUsage(
+        static_cast<OptixDeviceContext>(ctx), 
+        &m_options, 
+        &instance_input, 
+        1,  // num build inputs
+        &ias_buffer_sizes ));
+
+    // Allocate buffer to build acceleration structure
+    CUdeviceptr d_temp_buffer;
+    CUDA_CHECK(cudaMalloc(
+        reinterpret_cast<void**>(&d_temp_buffer), 
+        ias_buffer_sizes.tempSizeInBytes ));
+    CUdeviceptr d_ias_output_buffer; 
+    CUDA_CHECK(cudaMalloc(
+        reinterpret_cast<void**>(&d_ias_output_buffer), 
+        ias_buffer_sizes.outputSizeInBytes ));
+    
+    OptixTraversableHandle ias_handle = 0;
+    // Build instance AS contains all GASs to describe the scene.
+    OPTIX_CHECK(optixAccelBuild(
+        static_cast<OptixDeviceContext>(ctx), 
+        0,                  // CUDA stream
+        &m_options, 
+        &instance_input, 
+        1,                  // num build inputs
+        d_temp_buffer, 
+        ias_buffer_sizes.tempSizeInBytes, 
+        d_ias_output_buffer, 
+        ias_buffer_sizes.outputSizeInBytes, 
+        &ias_handle, 
+        nullptr,            // emitted property list
+        0                   // num emitted properties
+    ));
+
+    cuda_free(d_temp_buffer);
+    /// @note Is this release of pointer needed?
+    // d_instances.free();  
 }
 
 void InstanceAccel::build(const Context& ctx, const std::vector<OptixInstance>& optix_instances)
 {
-    CUDABuffer<OptixInstance> d_instances; 
+    CUDABuffer<OptixInstance> d_instances;
     d_instances.copyToDevice(optix_instances);
 
     OptixBuildInput instance_input = {};

@@ -26,7 +26,8 @@ public:
     ~Dielectric() { }
 
     void prepareData() override {
-        m_texture->prepareData();
+        if (!m_texture->devicePtr())
+            m_texture->prepareData();
 
         DielectricData data = {
             m_texture->devicePtr(), 

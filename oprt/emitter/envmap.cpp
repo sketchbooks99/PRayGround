@@ -16,7 +16,8 @@ EnvironmentEmitter::EnvironmentEmitter(const std::filesystem::path& filename)
 
 void EnvironmentEmitter::prepareData()
 {
-    m_texture->prepareData();
+    if (!m_texture->devicePtr())
+        m_texture->prepareData();
 
     EnvironmentEmitterData data = 
     {

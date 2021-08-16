@@ -16,6 +16,14 @@ Instance::Instance(const Transform& transform)
 // ------------------------------------------------------------------
 void Instance::copyToDevice()
 {
+    if (!isDataOnDevice())
+    {
+        // Allocate region on device
+        CUDA_CHECK(cudaMalloc(
+            reinterpret_cast<void*>(&d_instance), 
+            sizeof(OptixInstance)
+        ));
+    }
     CUDA_CHECK(cudaMemcpy(
         reinterpret_cast<OptixInstance*>(d_instance), 
         &m_instance, 

@@ -25,7 +25,8 @@ public:
     ~Conductor() {}
 
     void prepareData() override {
-        m_texture->prepareData();
+        if (!m_texture->devicePtr())
+            m_texture->prepareData();
 
         ConductorData data = {
             m_texture->devicePtr(), 

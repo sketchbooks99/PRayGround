@@ -47,7 +47,8 @@ public:
     ~Disney() {}
 
     void prepareData() override {
-        m_base->prepareData();
+        if (!m_base->devicePtr())
+            m_base->prepareData();
 
         DisneyData data = {
             m_base->devicePtr(),

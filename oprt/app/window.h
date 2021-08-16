@@ -1,11 +1,9 @@
 #pragma once
 
 #include <sutil/vec_math.h>
-#include "../core/util.h"
-// #include "../ext/glfw/include/GLFW/glfw3.h"
-// #include <glfw/include/GLFW/glfw3.h>
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
+#include "../core/util.h"
 #include "event.h"
 
 namespace oprt {

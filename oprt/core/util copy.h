@@ -31,6 +31,36 @@
 
 namespace oprt {
 
+struct CameraData {
+    float3 eye;
+    float3 U;
+    float3 V;
+    float3 W;
+    float aperture;
+};
+
+// Parameters are configured when ray tracing on device is launched. 
+struct Params
+{
+    unsigned int subframe_index;
+    float4* accum_buffer;
+    uchar4* frame_buffer;
+    unsigned int width;
+    unsigned int height;
+    unsigned int samples_per_launch;
+
+    unsigned int max_depth;
+
+    // CameraData camera;
+    float3 eye;
+    float3 U;
+    float3 V; 
+    float3 W; 
+    float aperture;
+
+    OptixTraversableHandle handle; // unsigned long long
+};
+
 enum class Axis {
     X = 0, 
     Y = 1, 

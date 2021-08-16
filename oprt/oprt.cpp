@@ -1,9 +1,4 @@
-#include <glad/glad.h>
-
-#include <GLFW/glfw3.h>
-
 // Header file describe the scene
-#include "scene_config.h"
 #include "oprt.h"
 
 bool resize_dirty = false;

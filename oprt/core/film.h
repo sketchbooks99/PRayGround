@@ -27,8 +27,8 @@ public:
     void setResolution(int2 resolution);
     void setWidth(int32_t width);
     void setHeight(int32_t height);
-    int32_t getWidth() const;
-    int32_t getHeight() const;
+    int32_t width() const;
+    int32_t height() const;
 private:
     std::unordered_map<std::string, std::shared_ptr<Bitmap>> m_bitmaps;
     std::unordered_map<std::string, std::shared_ptr<FloatBitmap>> m_float_bitmaps;

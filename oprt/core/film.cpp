@@ -110,12 +110,12 @@ void Film::setHeight(int32_t height)
     m_height = height;
 }
 
-int32_t Film::getWidth() const 
+int32_t Film::width() const 
 {
     return m_width;
 }
 
-int32_t Film::getHeight() const 
+int32_t Film::height() const 
 {
     return m_height;
 }

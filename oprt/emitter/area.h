@@ -12,20 +12,11 @@ namespace oprt {
 
 class AreaEmitter final : public Emitter {
 public:
-    AreaEmitter(
-        const float3& color, 
-        float intensity = 1.0f,
-        bool twosided = true
-    ) : m_texture(std::make_shared<ConstantTexture>(color)), m_intensity(intensity), m_twosided(twosided) {}
-    AreaEmitter(
-        const std::shared_ptr<Texture>& texture, 
-        float intensity = 1.0f,
-        bool twosided = true
-    ) : m_texture(texture), m_intensity(intensity), m_twosided(twosided) {}
+    AreaEmitter(const float3& color, float intensity=1.0f, bool twosided=true);
+    AreaEmitter(const std::shared_ptr<Texture>& texture, float intensity = 1.0f, bool twosided = true);
 
     void prepareData() override;
-
-    void freeData() override { }
+    void freeData() override;
 
     EmitterType type() const override { return EmitterType::Area; }
 private:

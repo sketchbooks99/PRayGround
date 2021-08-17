@@ -4,6 +4,12 @@
 namespace oprt {
 
 // --------------------------------------------------------------------
+Pipeline::Pipeline()
+{
+    _initCompileOptions();
+    _initLinkOptions();
+}
+
 Pipeline::Pipeline(const std::string& params_name)
 {
     _initCompileOptions();

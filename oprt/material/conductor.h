@@ -1,16 +1,22 @@
 #pragma once
 
 #include "../core/material.h"
-#include "../core/bsdf.h"
 #include "../texture/constant.h"
 
 namespace oprt {
+
+struct ConductorData {
+    void* texdata;
+    float fuzz;
+    bool twosided;
+    uint32_t tex_func_id;
+};
 
 #ifndef __CUDACC__
 class Conductor final : public Material {
 public:
     Conductor(const float3& a, float f, bool twosided=true) 
-    : m_texture(new ConstantTexture(a)), m_fuzz(f), m_twosided(twosided) {}
+    : m_texture(std::make_shared<ConstantTexture>(a)), m_fuzz(f), m_twosided(twosided) {}
 
     Conductor(const std::shared_ptr<Texture>& texture, float f, bool twosided=true)
     : m_texture(texture), m_fuzz(f), m_twosided(twosided) {}
@@ -25,7 +31,7 @@ public:
             m_texture->devicePtr(), 
             m_fuzz,
             m_twosided,
-            m_texture->funcId();
+            m_texture->programId()
         };
 
         CUDA_CHECK(cudaMalloc(&d_data, sizeof(ConductorData)));
@@ -47,8 +53,6 @@ private:
     float m_fuzz;
     bool m_twosided;
 };
-
-#else 
 
 #endif
 

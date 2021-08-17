@@ -1,5 +1,6 @@
 #include "accel.h"
 #include "../core/cudabuffer.h"
+#include <algorithm>
 
 namespace oprt {
 
@@ -32,7 +33,7 @@ void GeometryAccel::build(const Context& ctx, const std::vector<std::shared_ptr<
     bool is_all_same_type = true;
     OptixBuildInputType zeroth_input_type = shapes[0]->buildInputType();
 
-    if (zeroth_input_type == OPTIX_BUILD_INPUT_TYPE_INSTANCES || OPTIX_BUILD_INPUT_TYPE_INSTANCE_POINTERS)
+    if (zeroth_input_type == OPTIX_BUILD_INPUT_TYPE_INSTANCES || zeroth_input_type == OPTIX_BUILD_INPUT_TYPE_INSTANCE_POINTERS)
     {
         Message(MSG_ERROR, "oprt::GeometryAccel::build(): The OptixBuildInputType of","OPTIX_BUILD_INPUT_TYPE_INSTANCES or OPTIX_BUILD_INPUT_TYPE_INSTANCE_POINTERS cannot be used as an input type of geometry acceleration structure.");
         return;
@@ -164,6 +165,11 @@ InstanceAccel::InstanceAccel(Type type)
 
 }
 
+InstanceAccel::~InstanceAccel()
+{
+
+}
+
 // ---------------------------------------------------------------------------
 void InstanceAccel::build(const Context& ctx, const Instance& instance)
 {
@@ -186,7 +192,7 @@ void InstanceAccel::build(const Context& ctx, const std::vector<Instance>& insta
      */
     // std::vector<OptixInstance> optix_instances(instances.size());
     std::vector<CUdeviceptr> d_instance_array;
-    std::transform(instances.begin(), instances.end(), std::back_inserter(d_instances), 
+    std::transform(instances.begin(), instances.end(), std::back_inserter(d_instance_array), 
         [](Instance instance) {
             if (!instance.isDataOnDevice())
                 instance.copyToDevice();
@@ -198,7 +204,7 @@ void InstanceAccel::build(const Context& ctx, const std::vector<Instance>& insta
     OptixBuildInput instance_input = {};
     instance_input.type = static_cast<OptixBuildInputType>(m_type);
     instance_input.instanceArray.instances = d_instances.devicePtr();
-    instance_input.instanceArray.numInstances = static_cast<uint32_t>(optix_instances.size());
+    instance_input.instanceArray.numInstances = static_cast<uint32_t>(instances.size());
 
     m_options.operation = OPTIX_BUILD_OPERATION_BUILD;
 

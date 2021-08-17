@@ -10,6 +10,7 @@ struct LaunchParams
 {
     uint32_t width, height;
     uint32_t samples_per_launch;
+    int32_t subframe_index;
     uchar4* result_buffer;
     OptixTraversableHandle handle;
 };
@@ -20,6 +21,7 @@ struct CameraData
     float3 lookat; 
     float3 up;
     float fov;
+    float aspect;
 };
 
 struct RaygenData

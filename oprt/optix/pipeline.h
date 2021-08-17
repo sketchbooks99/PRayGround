@@ -9,6 +9,7 @@ namespace oprt {
 
 class Pipeline {
 public:
+    Pipeline();
     explicit Pipeline(const std::string& params_name);
     explicit Pipeline(const OptixPipelineCompileOptions& op);
     explicit Pipeline(const OptixPipelineCompileOptions& c_op, const OptixPipelineLinkOptions& l_op);

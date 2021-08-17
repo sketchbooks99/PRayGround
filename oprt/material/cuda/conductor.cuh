@@ -2,15 +2,10 @@
 
 #include <sutil/vec_math.h>
 #include "../../optix/util.h"
+#include "../../core/bsdf.h"
+#include "../conductor.h"
 
 namespace oprt {
-
-struct ConductorData {
-    void* texdata;
-    float fuzz;
-    bool twosided;
-    unsigned int tex_func_id;
-};
 
 CALLABLE_FUNC void DC_FUNC(sample_conductor)(SurfaceInteraction* si, void* mat_data) {
     const ConductorData* conductor = reinterpret_cast<ConductorData*>(mat_data);

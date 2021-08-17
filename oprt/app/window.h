@@ -1,8 +1,8 @@
 #pragma once
 
 #include <sutil/vec_math.h>
-#include <GLFW/glfw3.h>
 #include <glad/glad.h>
+#include <GLFW/glfw3.h>
 #include "../core/util.h"
 #include "event.h"
 

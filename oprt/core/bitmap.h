@@ -2,7 +2,6 @@
 
 #include "util.h"
 #include "../gl/shader.h"
-//#include <glad/glad.h>
 
 namespace oprt {
 

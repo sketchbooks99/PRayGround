@@ -99,10 +99,10 @@ public:
 
     void addProgramId(const uint32_t idx)
     {
-        m_func_ids.push_back(idx);
+        m_prg_ids.push_back(idx);
     }
 
-    int32_t programIdAt(const int32_t idx) const;
+    int32_t programIdAt(const int32_t idx) const
     {
         if (idx >= m_prg_ids.size())
         {

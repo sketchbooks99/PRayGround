@@ -144,10 +144,6 @@ public:
     {
         return d_data;
     }
-    std::variant<std::shared_ptr<Material>, std::shared_ptr<AreaEmitter>> surface() const
-    {
-        return m_surface;
-    }
     std::vector<ProgramGroup> programs() const
     {
         return m_programs;

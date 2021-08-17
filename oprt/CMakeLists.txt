@@ -128,6 +128,7 @@ OPRT_add_executable( oprt target_name
   
   oprt_dev.cpp
   oprt.h 
+  params.h
   # scene_config.h
 
   # OPTIONS -rdc true

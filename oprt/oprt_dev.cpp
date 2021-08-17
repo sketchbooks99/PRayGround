@@ -1,5 +1,4 @@
 #include <glad/glad.h>
-
 #include <GLFW/glfw3.h>
 
 #include "oprt.h"
@@ -28,6 +27,8 @@ void streamProgress(int current, int max, float elapsed_time, int progress_lengt
 class App : public BaseApp 
 {
 public:
+    App() {}
+
     void setup() 
     {
         // Initialization of device context.
@@ -45,7 +46,7 @@ public:
         pipeline.setNumAttributes(5);
 
         // Create modules
-        Module raygen_module, miss_module, hitgroups_module, textures_module, materials_module;
+        Module raygen_module, miss_module, hitgroups_module, textures_module, surfaces_module;
         raygen_module.create(context, "cuda/raygen.cu", pipeline.compileOptions());
         miss_module.create(context, "cuda/miss.cu", pipeline.compileOptions());
         hitgroups_module.create(context, "cuda/hitgroups.cu", pipeline.compileOptions());
@@ -60,7 +61,9 @@ public:
         film.bitmapAt("result")->copyToDevice();
         params.width = film.width();
         params.height = film.height();
+        params.samples_per_launch = 10;
         params.result_buffer = reinterpret_cast<uchar4*>(film.bitmapAt("result")->devicePtr());
+        params.subframe_index = 0;
 
         camera.setOrigin(make_float3(0.0f, 0.0f, 50.0f));
         camera.setLookat(make_float3(0.0f, 0.0f, 0.0f));
@@ -100,7 +103,7 @@ public:
         EmptyRecord callable_record;
         CUDABuffer<EmptyRecord> d_callable_record;
         d_callable_record.copyToDevice(&callable_record, sizeof(EmptyRecord));
-        sbt.callablesRecordBase = d_callable_records.devicePtr();
+        sbt.callablesRecordBase = d_callable_record.devicePtr();
         sbt.callablesRecordCount = 1;
         sbt.callablesRecordStrideInBytes = static_cast<uint32_t>(sizeof(EmptyRecord));
 
@@ -147,7 +150,7 @@ public:
         materials.emplace("green_diffuse", make_shared<Diffuse>(textures.at("green_constant")));
         materials.emplace("checker_diffuse", make_shared<Diffuse>(textures.at("checker_texture")));
         materials.emplace("glass", make_shared<Dielectric>(make_float3(1.0f), 1.5f));
-        ceiling_light->addProgramId(area_emitter_prg_id);
+        ceiling_light->setProgramId(area_emitter_prg_id);
         materials.at("white_diffuse")->addProgramId(diffuse_prg_id);
         materials.at("red_diffuse")->addProgramId(diffuse_prg_id);
         materials.at("green_diffuse")->addProgramId(diffuse_prg_id);
@@ -253,14 +256,14 @@ public:
         Instance bunny_instance;
         bunny_instance.setSBTOffset(sbt_base_index);
         bunny_instance.setTraversableHandle(bunny_gas.handle());
-        instances.emplace("bunny", bunny_instances);
+        instances.emplace("bunny", bunny_instance);
 
         std::vector<Instance> instance_arr;
         std::transform(instances.begin(), instances.end(), std::back_inserter(instance_arr), 
             [](auto& plane) { return plane.second; } );
 
         // Build IAS
-        ias.build(context, instances);
+        ias.build(context, instance_arr);
         params.handle = ias.handle();
 
         pipeline.create(context, program_groups);
@@ -297,7 +300,6 @@ public:
     {
 
     }
-
 private:
     Film film;
     Camera camera;

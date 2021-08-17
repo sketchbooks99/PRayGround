@@ -102,13 +102,13 @@ void CUDABuffer<T>::copyToDevice(const T* data, size_t size)
 
 // --------------------------------------------------------------------
 template <class T>
-void copyToDeviceAsync(const std::vector<T>& vec, const CUstream& stream)
+void CUDABuffer<T>::copyToDeviceAsync(const std::vector<T>& vec, const CUstream& stream)
 {
     copyToDeviceAsync(vec.data(), sizeof(T) * vec.size(), stream);
 }
 
 template <class T>
-void copyToDeviceAsync(const T* data, size_t size, const CUstream& stream)
+void CUDABuffer<T>::copyToDeviceAsync(const T* data, size_t size, const CUstream& stream)
 {
     if (!isAllocated())
         allocate(size);
@@ -116,7 +116,7 @@ void copyToDeviceAsync(const T* data, size_t size, const CUstream& stream)
     CUDA_CHECK(cudaMemcpyAsync(
         reinterpret_cast<void*>(d_ptr), 
         data, size, 
-        cudaMemcpyHostDevice, stream
+        cudaMemcpyHostToDevice, stream
     )); 
 }
 

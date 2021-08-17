@@ -1,4 +1,5 @@
 #include "instance.h"
+#include "../core/cudabuffer.h"
 
 namespace oprt {
 
@@ -16,20 +17,9 @@ Instance::Instance(const Transform& transform)
 // ------------------------------------------------------------------
 void Instance::copyToDevice()
 {
-    if (!isDataOnDevice())
-    {
-        // Allocate region on device
-        CUDA_CHECK(cudaMalloc(
-            reinterpret_cast<void*>(&d_instance), 
-            sizeof(OptixInstance)
-        ));
-    }
-    CUDA_CHECK(cudaMemcpy(
-        reinterpret_cast<OptixInstance*>(d_instance), 
-        &m_instance, 
-        sizeof(OptixInstance), 
-        cudaMemcpyHostToDevice
-    ));
+    CUDABuffer<OptixInstance> d_instance_buffer;
+    d_instance_buffer.copyToDevice(&m_instance, sizeof(OptixInstance));
+    d_instance = d_instance_buffer.devicePtr();
 }
 
 // ------------------------------------------------------------------

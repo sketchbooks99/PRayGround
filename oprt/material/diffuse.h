@@ -34,7 +34,7 @@ public:
         DiffuseData data {
             m_texture->devicePtr(),
             m_twosided,
-            static_cast<unsigned int>(m_texture->type()) + static_cast<unsigned int>(MaterialType::Count) * 2
+            m_texture->funcId()
         };
 
         CUDA_CHECK(cudaMalloc(&d_data, sizeof(DiffuseData)));

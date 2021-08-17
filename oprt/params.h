@@ -32,7 +32,7 @@ struct HitgroupData
     void* shape_data;
     void* surface_data;
 
-    unsigned int surface_callable_func_id;   
+    unsigned int surface_program_id;   
 };
 
 struct MissData
@@ -40,8 +40,14 @@ struct MissData
     void* env_data;
 };
 
+struct EmptyData
+{
+
+};
+
 using RaygenRecord = Record<RaygenData>;
 using HitgroupRecord = Record<HitgroupData>;
 using MissRecord = Record<MissData>;
+using EmptyRecord = Record<EmptyData>;
 
 } // ::oprt

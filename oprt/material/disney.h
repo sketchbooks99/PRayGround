@@ -1,11 +1,14 @@
 #pragma once
 
-#include <cuda/random.h>
+// For cuda
+#ifdef __CUDACC__
+    #include <cuda/random.h>
+    #include "../core/bsdf.h"
+    #include "../core/onb.h"
+    #include "../core/color.h"
+#endif
+
 #include "../core/material.h"
-#include "../core/bsdf.h"
-#include "../core/onb.h"
-#include "../core/color.h"
-#include "../optix/sbt.h"
 #include "../texture/constant.h"
 
 namespace oprt {
@@ -23,7 +26,7 @@ struct DisneyData {
     float clearcoat;
     float clearcoat_gloss;   
     bool twosided;  
-    unsigned int tex_func_id;  
+    unsigned int base_func_id;  
 };
 
 #ifndef __CUDACC__
@@ -63,7 +66,7 @@ public:
             m_clearcoat,
             m_clearcoat_gloss,
             m_twosided,
-            static_cast<unsigned int>(m_base->type()) + static_cast<unsigned int>(MaterialType::Count) * 2
+            m_base->funcId()
         };
 
         CUDA_CHECK(cudaMalloc(&d_data, sizeof(DisneyData)));
@@ -123,6 +126,7 @@ private:
     float m_sheen, m_sheen_tint;
     float m_clearcoat, m_clearcoat_gloss;
     bool m_twosided;
+    
 };
 
 #else
@@ -192,7 +196,7 @@ CALLABLE_FUNC float3 CC_FUNC(bsdf_disney)(SurfaceInteraction* si, void* mat_data
     const float LdotH /* = VdotH */ = dot(L, H);
 
     const float3 base_color = optixDirectCall<float3, SurfaceInteraction*, void*>(
-        disney->tex_func_id, si, disney->base_tex
+        disney->base_func_id, si, disney->base_tex
     );
 
     // Diffuse term (diffuse, subsurface, sheen) ======================

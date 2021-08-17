@@ -32,8 +32,8 @@ public:
     void createHitgroup(const Context& ctx, const ProgramEntry& ch_entry, const ProgramEntry& is_entry, const ProgramEntry& ah_entry);
     void createException(const Context& ctx, const Module& module, const std::string& func_name);
     void createException(const Context& ctx, const ProgramEntry& entry);
-    void createCallables(const Context& ctx, const Module& module, const std::string& dc_name, const std::string& cc_name);
-    void createCallables(const Context& ctx, const ProgramEntry& dc_entry, const ProgramEntry& cc_entry);
+    [[nodiscard]] int32_t createCallables(const Context& ctx, const Module& module, const std::string& dc_name, const std::string& cc_name);
+    [[nodiscard]] int32_t createCallables(const Context& ctx, const ProgramEntry& dc_entry, const ProgramEntry& cc_entry);
 
     void destroy();
 

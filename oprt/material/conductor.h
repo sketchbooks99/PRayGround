@@ -6,13 +6,6 @@
 
 namespace oprt {
 
-struct ConductorData {
-    void* texdata;
-    float fuzz;
-    bool twosided;
-    unsigned int tex_func_id;
-};
-
 #ifndef __CUDACC__
 class Conductor final : public Material {
 public:
@@ -32,7 +25,7 @@ public:
             m_texture->devicePtr(), 
             m_fuzz,
             m_twosided,
-            static_cast<unsigned int>(m_texture->type()) + static_cast<unsigned int>(MaterialType::Count) * 2
+            m_texture->funcId();
         };
 
         CUDA_CHECK(cudaMalloc(&d_data, sizeof(ConductorData)));
@@ -48,8 +41,7 @@ public:
         m_texture->freeData();
     }
 
-    MaterialType type() const override { return MaterialType::Conductor; }
-    
+    MaterialType type() const override { return MaterialType::Conductor; }    
 private:
     std::shared_ptr<Texture> m_texture;
     float m_fuzz;
@@ -57,28 +49,6 @@ private:
 };
 
 #else 
-
-CALLABLE_FUNC void DC_FUNC(sample_conductor)(SurfaceInteraction* si, void* mat_data) {
-    const ConductorData* conductor = reinterpret_cast<ConductorData*>(mat_data);
-    if (conductor->twosided) 
-        si->n = faceforward(si->n, -si->wi, si->n);
-
-    si->wo = reflect(si->wi, si->n);
-    si->trace_terminate = false;
-    si->radiance_evaled = false;
-}
-
-CALLABLE_FUNC float3 CC_FUNC(bsdf_conductor)(SurfaceInteraction* si, void* mat_data)
-{
-    const ConductorData* conductor = reinterpret_cast<ConductorData*>(mat_data);
-    si->emission = make_float3(0.0f);
-    return optixDirectCall<float3, SurfaceInteraction*, void*>(conductor->tex_func_id, si, conductor->texdata);
-}
-
-CALLABLE_FUNC float DC_FUNC(pdf_conductor)(SurfaceInteraction* si, void* mat_data)
-{
-    return 1.0f;
-}
 
 #endif
 

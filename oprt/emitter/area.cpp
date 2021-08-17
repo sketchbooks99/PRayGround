@@ -37,6 +37,16 @@ void AreaEmitter::prepareData()
     ));
 }
 
+void AreaEmitter::setProgramId(const int32_t prg_id)
+{
+    m_prg_id = prg_id;
+}
+
+int32_t AreaEmitter::programId() const 
+{
+    return m_prg_id;
+}
+
 void AreaEmitter::freeData()
 {
 

@@ -2,6 +2,10 @@
 
 namespace oprt {
 
+namespace { // nonamed namespace
+    int32_t num_callables = 0;
+} // ::nonamed namespace
+
 // ---------------------------------------------------------------------------
 ProgramGroup::ProgramGroup()
 {
@@ -138,23 +142,25 @@ void ProgramGroup::createHitgroup(const Context& ctx, const ProgramEntry& ch_ent
 // ---------------------------------------------------------------------------
 void ProgramGroup::createException(const Context& ctx, const Module& module, const std::string& func_name)
 {
-
+    /** Future work */
 }
 
 void ProgramGroup::createException(const Context& ctx, const ProgramEntry& entry)
 {
-
+    /** Future work */
 }
 
 // ---------------------------------------------------------------------------
-void ProgramGroup::createCallables(const Context& ctx, const Module& module, const std::string& dc_name, const std::string& cc_name)
+[[nodiscard]]
+int32_t ProgramGroup::createCallables(const Context& ctx, const Module& module, const std::string& dc_name, const std::string& cc_name)
 {
     ProgramEntry dc_entry{module, dc_name};
     ProgramEntry cc_entry{module, cc_name};
-    createCallables(ctx, dc_entry, cc_entry);
+    return createCallables(ctx, dc_entry, cc_entry);
 }
 
-void ProgramGroup::createCallables(const Context& ctx, const ProgramEntry& dc_entry, const ProgramEntry& cc_entry) 
+[[nodiscard]]
+int32_t ProgramGroup::createCallables(const Context& ctx, const ProgramEntry& dc_entry, const ProgramEntry& cc_entry) 
 {
     m_kind = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
     
@@ -179,7 +185,9 @@ void ProgramGroup::createCallables(const Context& ctx, const ProgramEntry& dc_en
         log,
         &sizeof_log,
         &m_program
-    ));   
+    ));
+
+    return num_callables++;
 }
 
 // ---------------------------------------------------------------------------

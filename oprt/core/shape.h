@@ -27,6 +27,11 @@ enum class ShapeType {
  * ex) 
  *  const char* shape_str = shape_map[ShapeType::Mesh] -> "mesh"
  **/
+
+/**
+ * @todo
+ * Enum and maps associated with shape type will be deprecated.
+ */
 static std::map<ShapeType, const char*> shape_map = {
     { ShapeType::Mesh, "mesh" },
     { ShapeType::Sphere, "sphere" },
@@ -51,25 +56,32 @@ inline std::ostream& operator<<(std::ostream& out, ShapeType type) {
     }
 }
 
-struct AccelData {
-    struct HandleData {
-        OptixTraversableHandle handle { 0 };
-        CUdeviceptr d_buffer { 0 };
-        unsigned int count { 0 };
-    };
-    HandleData meshes {};
-    HandleData customs {};
+/** @todo @c AccelData will be deprecated. GeometryAccel in accel.h/cpp is implemented instead of this. */
+// struct AccelData {
+//     struct HandleData {
+//         OptixTraversableHandle handle { 0 };
+//         CUdeviceptr d_buffer { 0 };
+//         unsigned int count { 0 };
+//     };
+//     HandleData meshes {};
+//     HandleData customs {};
 
-    ~AccelData() {
-        if (meshes.d_buffer)  cudaFree( reinterpret_cast<void*>( meshes.d_buffer ) );
-        if (customs.d_buffer) cudaFree( reinterpret_cast<void*>( customs.d_buffer ) );
-    }
-};
+//     ~AccelData() {
+//         if (meshes.d_buffer)  cudaFree( reinterpret_cast<void*>( meshes.d_buffer ) );
+//         if (customs.d_buffer) cudaFree( reinterpret_cast<void*>( customs.d_buffer ) );
+//     }
+// };
 
-inline std::ostream& operator<<(std::ostream& out, const AccelData& accel) {
-    out << "AccelData::meshes: " << accel.meshes.handle << ", " << accel.meshes.d_buffer << ", " << accel.meshes.count << std::endl;
-    return out << "AccelData::customs: " << accel.customs.handle << ", " << accel.customs.d_buffer << ", " << accel.customs.count << std::endl;
-}
+// inline std::ostream& operator<<(std::ostream& out, const AccelData& accel) {
+//     out << "AccelData::meshes: " << accel.meshes.handle << ", " << accel.meshes.d_buffer << ", " << accel.meshes.count << std::endl;
+//     return out << "AccelData::customs: " << accel.customs.handle << ", " << accel.customs.d_buffer << ", " << accel.customs.count << std::endl;
+// }
+
+/**
+ * @note 
+ * Should I change @c AreaEmitter to a class constrained 
+ * by the condition that it must be able to call programId()?
+ */
 
 class Shape {
 public:
@@ -88,6 +100,21 @@ public:
     void attachSurface(const std::shared_ptr<AreaEmitter>& area_emitter)
     {
         m_surface = area_emitter;
+    }
+    void* surfaceDevicePtr() const 
+    {
+        return std::visit([](const auto& surface) { return surface->devicePtr(); }, m_surface);
+    }
+    SurfaceType surfaceType() const
+    {
+        if (std::holds_alternative<std::shared_ptr<Material>>(m_surface))
+            return SurfaceType::Material;
+        else 
+            return SurfaceType::AreaEmitter;
+    }
+    std::variant<std::shared_ptr<Material>, std::shared_ptr<AreaEmitter>> surface() const 
+    {
+        return m_surface;
     }
     void addProgram(const ProgramGroup& program)
     {
@@ -124,6 +151,10 @@ public:
     std::vector<ProgramGroup> programs() const
     {
         return m_programs;
+    }
+    ProgramGroup programAt(int idx) const
+    {
+        return m_programs[idx];
     }
 protected:
     void* d_data { 0 };

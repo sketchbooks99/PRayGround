@@ -25,9 +25,9 @@ struct SurfaceProperty {
 };
 
 enum class SurfaceType {
-    Material,   // Scene geometry
-    Emitter,    // Emitter sampling
-    Medium      // Future work
+    Material,    // Scene geometry
+    AreaEmitter, // Emitter sampling
+    Medium       // Future work
 };
 
 /// @note Currently \c spectrum is RGB representation, not spectrum. 

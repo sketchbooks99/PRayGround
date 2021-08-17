@@ -26,7 +26,11 @@ public:
     // To allocate memory and to copy data from the host to the device.
     void copyToDevice(const std::vector<T>& vec);
     void copyToDevice(const T* data, size_t size);
+    void copyToDeviceAsync(const std::vector<T>& vec, const CUstream& stream);
+    void copyToDeviceAsync(const T* data, size_t size, const CUstream& stream);
     T* copyFromDevice();
+    /** @todo */
+    // T* copyFromDeviceAsync(const CUstream& stream);
 
     // Get states of the buffer.
     bool isAllocated() const;
@@ -86,7 +90,9 @@ void CUDABuffer<T>::copyToDevice(const std::vector<T>& vec)
 template <class T>
 void CUDABuffer<T>::copyToDevice(const T* data, size_t size)
 {
-    allocate(size);
+    if (!isAllocated())
+        allocate(size);
+    
     CUDA_CHECK(cudaMemcpy(
         reinterpret_cast<void*>(d_ptr), 
         data, m_size, 
@@ -94,6 +100,27 @@ void CUDABuffer<T>::copyToDevice(const T* data, size_t size)
     ));
 }
 
+// --------------------------------------------------------------------
+template <class T>
+void copyToDeviceAsync(const std::vector<T>& vec, const CUstream& stream)
+{
+    copyToDeviceAsync(vec.data(), sizeof(T) * vec.size(), stream);
+}
+
+template <class T>
+void copyToDeviceAsync(const T* data, size_t size, const CUstream& stream)
+{
+    if (!isAllocated())
+        allocate(size);
+    
+    CUDA_CHECK(cudaMemcpyAsync(
+        reinterpret_cast<void*>(d_ptr), 
+        data, size, 
+        cudaMemcpyHostDevice, stream
+    )); 
+}
+
+// --------------------------------------------------------------------
 template <class T>
 T* CUDABuffer<T>::copyFromDevice()
 {
@@ -108,6 +135,12 @@ T* CUDABuffer<T>::copyFromDevice()
     ));
     return h_ptr;
 }
+
+// template <class T>
+// T* CUDABuffer<T>::copyFromDeviceAsync()
+// {
+
+// }
 
 // --------------------------------------------------------------------
 template <class T>

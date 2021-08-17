@@ -50,10 +50,23 @@ public:
     virtual void freeData() {}
 
     // Get data pointer on the device.
-    void* devicePtr() const { return d_data; }
+    void* devicePtr() const 
+    {
+        return d_data;
+    }
+
+    void setProgramId(const int32_t prg_id)
+    {
+        m_prg_id = prg_id;
+    }
+    int32_t programId() const 
+    {
+        return m_prg_id;
+    }
 protected:
     // CUdeviceptr d_data { 0 };
     void* d_data;
+    int32_t m_prg_id { -1 };
 };
 
 } // ::oprt

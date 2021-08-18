@@ -1,8 +1,5 @@
 #pragma once
 
-#include "../core/util.h"
-#include "window.h"
-
 namespace oprt {
 
 class BaseApp

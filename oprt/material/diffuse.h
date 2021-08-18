@@ -1,11 +1,11 @@
 #pragma once
 
 #include <cuda/random.h>
-#include "../core/material.h"
-#include "../core/bsdf.h"
-#include "../core/onb.h"
-#include "../optix/sbt.h"
-#include "../texture/constant.h"
+#include <oprt/core/material.h>
+#include <oprt/core/bsdf.h>
+#include <oprt/core/onb.h>
+#include <oprt/optix/sbt.h>
+#include <oprt/texture/constant.h>
 
 namespace oprt {
 

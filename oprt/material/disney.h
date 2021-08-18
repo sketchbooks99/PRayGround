@@ -3,13 +3,13 @@
 // For cuda
 #ifdef __CUDACC__
     #include <cuda/random.h>
-    #include "../core/bsdf.h"
-    #include "../core/onb.h"
-    #include "../core/color.h"
+    #include <oprt/core/bsdf.h>
+    #include <oprt/core/onb.h>
+    #include <oprt/core/color.h>
 #endif
 
-#include "../core/material.h"
-#include "../texture/constant.h"
+#include <oprt/core/material.h>
+#include <oprt/texture/constant.h>
 
 namespace oprt {
 

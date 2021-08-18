@@ -1,9 +1,9 @@
 #pragma once 
 
 #include <cuda/random.h>
-#include "../core/material.h"
-#include "../core/bsdf.h"
-#include "../texture/constant.h"
+#include <oprt/core/material.h>
+#include <oprt/core/bsdf.h>
+#include <oprt/texture/constant.h>
 
 namespace oprt {
 

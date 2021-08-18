@@ -1,5 +1,5 @@
 #include "area.h"
-#include "../core/material.h"
+#include <oprt/core/material.h>
 
 namespace oprt {
 

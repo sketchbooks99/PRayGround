@@ -1,10 +1,9 @@
 #pragma once 
 
-#include "../core/util.h"
-#include "../math/matrix.h"
-#include <unordered_map>
-//#include "../math/matrix.h"
 #include <glad/glad.h>
+#include <oprt/core/util.h>
+#include <oprt/math/matrix.h>
+#include <unordered_map>
 
 namespace oprt {
 
@@ -32,7 +31,7 @@ inline std::string getGLErrorTypeString(GLenum err)
     }
 }
 
-inline std::string getGLShaderTypeString(GLuint type)
+inline std::string getGLShaderTypeString(uint32_t type)
 {
     switch (type)
     {
@@ -48,14 +47,16 @@ class Shader
 {
 public: 
     Shader();
-    Shader(const std::filesystem::path& vert_name, const std::filesystem::path& frag_name, const std::filesystem::path& geom_name = "");
+    Shader(const std::filesystem::path& vert_name, const std::filesystem::path& frag_name);
+    Shader(const std::filesystem::path& vert_name, const std::filesystem::path& frag_name, const std::filesystem::path& geom_name);
 
     /** Specify the range to apply the shader in a C++ code. */ 
     void begin() const;
     void end() const;
 
     /** Load shader sources from files. */
-    void load(const std::filesystem::path& vert_name, const std::filesystem::path& frag_name, const std::filesystem::path& geom_name = "");
+    void load(const std::filesystem::path& vert_name, const std::filesystem::path& frag_name);
+    void load(const std::filesystem::path& vert_name, const std::filesystem::path& frag_name, const std::filesystem::path& geom_name);
 
     /**
      * @brief
@@ -64,10 +65,10 @@ public:
      * If the shader of the same type as the one specified in the argument already exists, 
      * the shader with that type will be overwritten.
      */
-    void addSource(const std::string& source, GLuint type);
+    void addSource(const std::string& source, uint32_t type);
 
     void create();
-    GLuint program() const;
+    uint32_t program() const;
 
     void bindDefaultAttributes();
 
@@ -101,12 +102,12 @@ public:
     void setUniformMatrix4fv(const std::string& name, const Matrix4f& m) const;
 
 protected:
-    static GLuint _createGLShaderFromSource( const std::string& source, GLuint type );
-    static GLuint _createGLShaderFromFile( const std::filesystem::path& relative_path, GLuint type );
+    static uint32_t _createGLShaderFromSource( const std::string& source, uint32_t type );
+    static uint32_t _createGLShaderFromFile( const std::filesystem::path& relative_path, uint32_t type );
 
 private:
-    std::unordered_map<GLuint, std::string> m_sources;
-    GLuint m_program { 0 };
+    std::unordered_map<uint32_t, std::string> m_sources;
+    uint32_t m_program { 0 };
 };
 
 // #ifdef glDispatchCompute
@@ -122,7 +123,7 @@ public:
     void end();
 
     /** Dispatch a kernel with the specified block size. */
-    void dispatchCompute(GLuint x, GLuint y, GLuint z) const;
+    void dispatchCompute(uint32_t x, uint32_t y, uint32_t z) const;
 
     /**
      * @brief
@@ -135,7 +136,7 @@ public:
     void create();
 private:
     std::string m_source;
-    GLuint m_program;
+    uint32_t m_program;
 };
 
 // #endif

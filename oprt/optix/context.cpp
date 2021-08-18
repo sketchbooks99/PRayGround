@@ -1,4 +1,9 @@
 #include "context.h"
+#include <iomanip>
+#include <iostream>
+#include <cuda_runtime.h>
+#include <oprt/core/util.h>
+#include <oprt/optix/macros.h>
 
 namespace oprt {
 

@@ -1,7 +1,7 @@
 #include "trianglemesh.h"
-#include "../core/cudabuffer.h"
-#include "../core/load3d.h"
-#include "../core/file_util.h"
+#include <oprt/core/cudabuffer.h>
+#include <oprt/core/load3d.h>
+#include <oprt/core/file_util.h>
 #include <sutil/sutil.h>
 
 namespace oprt {

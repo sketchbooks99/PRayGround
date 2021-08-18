@@ -1,4 +1,4 @@
-add_executable(empty-app 
+OPRT_add_executalbe(empty-app target_name
     main.cpp 
     app.cpp 
     app.h
@@ -7,10 +7,8 @@ add_executable(empty-app
 target_compile_definitions(
     empty-app
     PRIVATE
-    OPRT_ROOT_DIR="${PROJECT_SOURCE_DIR}"
     OPRT_APP_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+    OPRT_ROOT_DIR="${OPRT_DIR}"
 )
 
-target_link_libraries( 
-    empty-app oprt
-)
+target_link_libraries(${target_name} ${CUDA_LIBRARIES})

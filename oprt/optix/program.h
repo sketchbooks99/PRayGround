@@ -1,8 +1,9 @@
 #pragma once 
 
-#include "../core/util.h"
 #include <optix.h>
 #include <optix_stubs.h>
+#include <oprt/optix/macros.h>
+#include <utility>
 #include "module.h"
 #include "context.h"
 

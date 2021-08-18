@@ -1,5 +1,7 @@
 #include "file_util.h"
-#include <sutil/sutil.h>
+#include <optional>
+#include <array>
+#include <oprt/core/util.h>
 
 namespace oprt {
 

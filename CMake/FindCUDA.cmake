@@ -358,7 +358,7 @@
 #   Scientific Computing and Imaging Institute, University of Utah
 #
 #   This code is licensed under the MIT License.  See the FindCUDA.cmake script
-#   for the text of the license.
+#   for the text of the license.f
 
 # The MIT License
 #

@@ -1,9 +1,15 @@
 #include "module.h"
-#include "../core/file_util.h"
+#include <nvrtc.h>
+#include <oprt/core/file_util.h>
+#include <oprt/core/util.h>
+#include <oprt/optix/macros.h>
 
 namespace oprt {
 
 namespace fs = std::filesystem;
+
+// NVRTC error handles
+#define NVRTC_CHECK(call)
 
 // ------------------------------------------------------------------
 Module::Module()
@@ -19,35 +25,24 @@ Module::Module(const OptixModuleCompileOptions& options)
 
 }
 
-// #if CUDA_NVRTC_ENABLED
+ #ifdef CUDA_NVRTC_ENABLED
 // ------------------------------------------------------------------
 void Module::createFromCudaFile(const Context& ctx, const fs::path& filename, OptixPipelineCompileOptions pipeline_options)
 {
     auto filepath = findDataPath(filename);
-    Assert(filepath, "The CUDA file to create module of '" + filename.string() + "' is not found.");
+    Assert(filepath, "oprt::Module::createFromModule(): The CUDA file to create module of '" + filename.string() + "' is not found.");
 
     char log[2048];
     size_t sizeof_log = sizeof(log);
 
-    /** @todo Disable to use sutil::getPtxString() */
-    const std::string ptx = sutil::getPtxString(OPTIX_SAMPLE_NAME, OPTIX_SAMPLE_DIR, filepath.value().string().c_str());
-    OPTIX_CHECK_LOG(optixModuleCreateFromPTX(
-        static_cast<OptixDeviceContext>(ctx), 
-        &m_options, 
-        &pipeline_options, 
-        ptx.c_str(), 
-        ptx.size(), 
-        log, 
-        &sizeof_log, 
-        &m_module
-    ));
+    std::string source = getTextFromFile(filepath.value());
 }
 
 void Module::createFromCudaSource(const Context& ctx, const std::string& source, OptixPipelineCompileOptions pipeline_options)
 {
-    TODO_MESSAGE();
+    nvrtcProgram prog = 0;
 }
-// #endif
+#endif
 
 void Module::createFromPtxFile(const Context& ctx, const fs::path& filename, OptixPipelineCompileOptions pipeline_options)
 {
@@ -56,7 +51,19 @@ void Module::createFromPtxFile(const Context& ctx, const fs::path& filename, Opt
 
 void Module::createFromPtxSource(const Context& ctx, const std::string& source, OptixPipelineCompileOptions pipeline_options)
 {
-    TODO_MESSAGE();
+    char log[2048];
+    size_t sizeof_log = sizeof(log);
+
+    OPTIX_CHECK_LOG(optixModuleCreateFromPTX(
+        static_cast<OptixDeviceContext>(ctx),
+        &m_options,
+        &pipeline_options,
+        source.c_str(),
+        source.size(),
+        log,
+        &sizeof_log,
+        &m_module
+    ));
 }
 
 void Module::destroy()

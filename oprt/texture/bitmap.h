@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../core/texture.h"
+#include <oprt/core/texture.h>
 
 #ifndef __CUDACC__
-    #include "../core/bitmap.h"
+    #include <oprt/core/bitmap.h>
 #endif
 
 namespace oprt {

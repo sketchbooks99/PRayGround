@@ -1,7 +1,7 @@
 #include "envmap.h"
-#include "../core/file_util.h"
-#include "../core/material.h"
-#include "../texture/bitmap.h"
+#include <oprt/core/file_util.h>
+#include <oprt/core/material.h>
+#include <oprt/texture/bitmap.h>
 
 namespace oprt {
 
@@ -19,10 +19,10 @@ void EnvironmentEmitter::prepareData()
     if (!m_texture->devicePtr())
         m_texture->prepareData();
 
-    EnvironmentEmitterData data = 
+    EnvironmentEmitterData data =
     {
-        m_texture->devicePtr(), 
-        static_cast<uint32_t>(m_texture->type()) + static_cast<uint32_t>(MaterialType::Count) * 2
+        m_texture->devicePtr(),
+        m_texture->programId()
     };
 
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_data), sizeof(EnvironmentEmitterData)));

@@ -1,5 +1,5 @@
 #include "instance.h"
-#include "../core/cudabuffer.h"
+#include <oprt/core/cudabuffer.h>
 
 namespace oprt {
 

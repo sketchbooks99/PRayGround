@@ -1,10 +1,10 @@
 #pragma once
 
-#include <sutil/vec_math.h>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#include "../core/util.h"
-#include "event.h"
+#include <sutil/vec_math.h>
+#include <oprt/core/util.h>
+#include <oprt/app/event.h>
 
 namespace oprt {
 

@@ -2,7 +2,6 @@
 
 #include <optix.h>
 #include <optix_stubs.h>
-#include "../core/util.h"
 
 namespace oprt {
 

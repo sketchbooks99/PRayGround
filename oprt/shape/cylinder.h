@@ -3,8 +3,8 @@
 #include "cuda/cylinder.cuh"
 
 #ifndef __CUDACC__
-#include "../core/shape.h"
-#include "../core/cudabuffer.h"
+#include <oprt/core/shape.h>
+#include <oprt/core/cudabuffer.h>
 
 namespace oprt {
 

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../core/util.h"
-#include "../core/texture.h"
-#include "../core/emitter.h"
-#include "../texture/constant.h"
+#include <memory>
+#include <oprt/core/texture.h>
+#include <oprt/core/emitter.h>
+#include <oprt/texture/constant.h>
 #include "cuda/area.cuh"
 
 namespace oprt {

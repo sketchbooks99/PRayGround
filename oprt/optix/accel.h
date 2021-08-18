@@ -1,6 +1,6 @@
 #pragma once
 #include <optix.h>
-#include "../core/shape.h"
+#include <oprt/core/shape.h>
 #include "context.h"
 #include "instance.h"
 

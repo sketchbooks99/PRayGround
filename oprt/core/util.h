@@ -1,41 +1,27 @@
 #pragma once 
 
 #ifndef __CUDACC__
-#include <sutil/Exception.h>
 #include <string>
 #include <cuda_runtime.h>
 #include <stdexcept>
-#include <array>
-#include <regex>
 #include <cstring>
 #include <fstream>
-#include <iomanip>
 #include <sstream>
-#include <random>
-#include <vector>
-#include <utility>
-#include <filesystem>
-#include <optional>
-#include <map>
 #include <concepts>
-#include <variant>
-#include "../core/stream_helpers.h"
+#include <vector>
+#include <array>
+#include <iostream>
+#include <oprt/core/stream_helpers.h>
 
 #if defined(_WIN32) | defined(_WIN64)
-    #include <windows.h>
-#endif
+#include <windows.h>
+#endif // _WIN32 | _WIN64
 
-#endif
+#endif // __CUDACC__
 
-#include "../optix/macros.h"
+#include <oprt/optix/macros.h>
 
 namespace oprt {
-
-enum class Axis {
-    X = 0, 
-    Y = 1, 
-    Z = 2
-};
 
 /** Error handling at the host side. */
 #ifndef __CUDACC__
@@ -126,13 +112,15 @@ inline void Message(MessageType type, Head head, Args... args) {
     if constexpr (num_args == 0) std::cout << std::endl;
 }
 
-/** 実装してない関数が多すぎるので、マクロ設定で簡略化する。横着です。 */
-#define TODO_MESSAGE()                                  \
-    std::stringstream ss;                               \
-    ss << "Sorry! The function you called at "          \
-       << "' (" __FILE__ << ":" << __LINE__ << ")"      \
-       << " is still under development! ";              \
-    Message(MSG_WARNING, ss.str());
+/** 実装してない関数が多すぎるので、マクロ設定で簡略化する */
+#define TODO_MESSAGE()                                      \
+    do {                                                    \
+        std::stringstream ss;                               \
+        ss << "Sorry! The function you called at "          \
+           << "' (" __FILE__ << ":" << __LINE__ << ")"      \
+           << " is still under development! ";              \
+        Message(MSG_WARNING, ss.str());                     \
+    } while (0)
 
 #endif // __CUDACC__
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <optix.h>
-#include "../core/util.h"
+#include <oprt/core/util.h>
 #include "program.h"
 #include "context.h"
 

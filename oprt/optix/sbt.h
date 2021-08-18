@@ -1,9 +1,6 @@
 #pragma once
 
 #include <optix.h>
-#include "../core/material.h"
-#include "../core/util.h"
-#include "../optix/util.h"
 
 namespace oprt {
 

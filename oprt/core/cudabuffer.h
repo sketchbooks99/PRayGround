@@ -1,7 +1,6 @@
 #pragma once
 
-#include <sutil/Exception.h>
-#include "../optix/util.h"
+#include <oprt/optix/macros.h>
 
 namespace oprt {
 

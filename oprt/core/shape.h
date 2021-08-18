@@ -1,11 +1,13 @@
 #pragma once
 
-#include "../core/util.h"
-#include "../core/aabb.h"
-#include "../core/material.h"
-#include "../emitter/area.h"
-#include "../optix/macros.h"
-#include "../optix/program.h"
+#include <variant>
+#include <memory>
+#include <oprt/core/util.h>
+#include <oprt/core/aabb.h>
+#include <oprt/core/material.h>
+#include <oprt/emitter/area.h>
+#include <oprt/optix/macros.h>
+#include <oprt/optix/program.h>
 #include <sutil/vec_math.h>
 #include <optix_types.h>
 
@@ -55,33 +57,6 @@ inline std::ostream& operator<<(std::ostream& out, ShapeType type) {
     default:                    return out << "";
     }
 }
-
-/** @todo @c AccelData will be deprecated. GeometryAccel in accel.h/cpp is implemented instead of this. */
-// struct AccelData {
-//     struct HandleData {
-//         OptixTraversableHandle handle { 0 };
-//         CUdeviceptr d_buffer { 0 };
-//         unsigned int count { 0 };
-//     };
-//     HandleData meshes {};
-//     HandleData customs {};
-
-//     ~AccelData() {
-//         if (meshes.d_buffer)  cudaFree( reinterpret_cast<void*>( meshes.d_buffer ) );
-//         if (customs.d_buffer) cudaFree( reinterpret_cast<void*>( customs.d_buffer ) );
-//     }
-// };
-
-// inline std::ostream& operator<<(std::ostream& out, const AccelData& accel) {
-//     out << "AccelData::meshes: " << accel.meshes.handle << ", " << accel.meshes.d_buffer << ", " << accel.meshes.count << std::endl;
-//     return out << "AccelData::customs: " << accel.customs.handle << ", " << accel.customs.d_buffer << ", " << accel.customs.count << std::endl;
-// }
-
-/**
- * @note 
- * Should I change @c AreaEmitter to a class constrained 
- * by the condition that it must be able to call programId()?
- */
 
 class Shape {
 public:

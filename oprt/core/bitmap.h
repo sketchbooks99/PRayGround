@@ -1,7 +1,8 @@
 #pragma once
 
-#include "util.h"
-#include "../gl/shader.h"
+#include <filesystem>
+#include <oprt/gl/shader.h>
+#include <map>
 
 namespace oprt {
 

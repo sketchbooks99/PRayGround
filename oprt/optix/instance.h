@@ -1,9 +1,8 @@
 #pragma once 
 
-#include "../core/util.h"
-#include "../core/shape.h"
-#include "../core/transform.h"
-#include "util.h"
+#include <oprt/core/util.h>
+#include <oprt/core/shape.h>
+#include <oprt/core/transform.h>
 
 /**
  * @todo

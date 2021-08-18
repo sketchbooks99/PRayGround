@@ -1,39 +1,40 @@
 #pragma once
 
+/// @todo <sutil/vec_math.h> -> <oprt/math/vec.h>
 #include <sutil/vec_math.h>
 
 namespace oprt {
 
 // Forward declarations
-template <typename T, unsigned int N> class Matrix;
+template <typename T, uint32_t N> class Matrix;
 using Matrix4f = Matrix<float, 4>;
 using Matrix3f = Matrix<float, 3>;
 using Matrix2f = Matrix<float, 2>;
 
-template <typename T, unsigned int N> struct Vector { };
+template <typename T, uint32_t N> struct Vector { };
 template <> struct Vector<float, 2> { using Type = float2; using TransformType = float2; };
 template <> struct Vector<float, 3> { using Type = float3; using TransformType = float3; };
 template <> struct Vector<float, 4> { using Type = float4; using TransformType = float3; };
 
-template <typename T, unsigned int N> bool          operator==(const Matrix<T, N>& m1, const Matrix<T, N>& m2);
-template <typename T, unsigned int N> bool          operator!=(const Matrix<T, N>& m1, const Matrix<T, N>& m2);
-template <typename T, unsigned int N> Matrix<T, N>  operator+(const Matrix<T, N>& m1, const Matrix<T, N>& m2);
-template <typename T, unsigned int N> Matrix<T, N>& operator+=(Matrix<T, N>& m1, const Matrix<T, N>& m2);
-template <typename T, unsigned int N> Matrix<T, N>  operator-(const Matrix<T, N>& m1, const Matrix<T, N>& m2);
-template <typename T, unsigned int N> Matrix<T, N>& operator-=(Matrix<T, N>& m1, const Matrix<T, N>& m2);
-template <typename T, unsigned int N> Matrix<T, N>  operator*(const Matrix<T, N>& m1, const Matrix<T, N>& m2);
-template <typename T, unsigned int N> Matrix<T, N>  operator*(const Matrix<T, N>& m, const float t);
-template <typename T, unsigned int N> Matrix<T, N>& operator*=(Matrix<T, N>& m1, const Matrix<T, N>& m2);
-template <typename T, unsigned int N> Matrix<T, N>& operator*=(Matrix<T, N>& m, const float t);
-template <typename T, unsigned int N> Matrix<T, N>  operator/(const Matrix<T, N>& m1, const float t);
-template <typename T, unsigned int N> typename Matrix<T, N>::floatN operator*(const Matrix<T, N>& m, typename Matrix<T, N>::floatN& v);
+template <typename T, uint32_t N> bool          operator==(const Matrix<T, N>& m1, const Matrix<T, N>& m2);
+template <typename T, uint32_t N> bool          operator!=(const Matrix<T, N>& m1, const Matrix<T, N>& m2);
+template <typename T, uint32_t N> Matrix<T, N>  operator+(const Matrix<T, N>& m1, const Matrix<T, N>& m2);
+template <typename T, uint32_t N> Matrix<T, N>& operator+=(Matrix<T, N>& m1, const Matrix<T, N>& m2);
+template <typename T, uint32_t N> Matrix<T, N>  operator-(const Matrix<T, N>& m1, const Matrix<T, N>& m2);
+template <typename T, uint32_t N> Matrix<T, N>& operator-=(Matrix<T, N>& m1, const Matrix<T, N>& m2);
+template <typename T, uint32_t N> Matrix<T, N>  operator*(const Matrix<T, N>& m1, const Matrix<T, N>& m2);
+template <typename T, uint32_t N> Matrix<T, N>  operator*(const Matrix<T, N>& m, const float t);
+template <typename T, uint32_t N> Matrix<T, N>& operator*=(Matrix<T, N>& m1, const Matrix<T, N>& m2);
+template <typename T, uint32_t N> Matrix<T, N>& operator*=(Matrix<T, N>& m, const float t);
+template <typename T, uint32_t N> Matrix<T, N>  operator/(const Matrix<T, N>& m1, const float t);
+template <typename T, uint32_t N> typename Matrix<T, N>::floatN operator*(const Matrix<T, N>& m, typename Matrix<T, N>::floatN& v);
 
 template <typename T> float4 operator*(const Matrix<T, 3>, const float4& v);
 template <typename T> float3 operator*(const Matrix<T, 4>, const float3& v);
 
  
 // Class definition
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 class Matrix
 {
 public:
@@ -85,7 +86,7 @@ private:
 
 // Operator overload
 // ----------------------------------------------------------------------------
-template <typename T, unsigned int N> 
+template <typename T, uint32_t N> 
 bool operator==(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
 {
     bool is_equal = true;
@@ -94,14 +95,14 @@ bool operator==(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
     return is_equal;
 }
 
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 bool operator!=(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
 {
     return !(m1 == m2);
 }
 
 // ----------------------------------------------------------------------------
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 Matrix<T, N> operator+(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
 {
     Matrix<T, N> result(m1);
@@ -109,7 +110,7 @@ Matrix<T, N> operator+(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
     return result;
 }
 
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 Matrix<T, N>& operator+=(Matrix<T, N>& m1, const Matrix<T, N>& m2)
 {
     for (int i = 0; i < N*N; i++)
@@ -117,7 +118,7 @@ Matrix<T, N>& operator+=(Matrix<T, N>& m1, const Matrix<T, N>& m2)
     return m1;
 }
 
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 Matrix<T, N> operator-(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
 {
     Matrix<T, N> result(m1);
@@ -125,7 +126,7 @@ Matrix<T, N> operator-(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
     return result;
 }
 
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 Matrix<T, N>& operator-=(Matrix<T, N>& m1, const Matrix<T, N>& m2)
 {
     for (int i = 0; i < N*N; i++)
@@ -133,7 +134,7 @@ Matrix<T, N>& operator-=(Matrix<T, N>& m1, const Matrix<T, N>& m2)
     return m1;
 }
 
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 Matrix<T, N> operator*(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
 {
     //Matrix<T, N> result = Matrix<T, N>::zero();
@@ -154,7 +155,7 @@ Matrix<T, N> operator*(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
     return Matrix<T, N>(data);
 }
 
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 Matrix<T, N> operator*(const Matrix<T, N>& m, const float t)
 {
     Matrix<T, N> result;
@@ -163,7 +164,7 @@ Matrix<T, N> operator*(const Matrix<T, N>& m, const float t)
     return result;
 }
 
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 Matrix<T, N>& operator*=(Matrix<T, N>& m1, const Matrix<T, N>& m2)
 {
     for (int i = 0; i < N*N; i++)
@@ -171,14 +172,14 @@ Matrix<T, N>& operator*=(Matrix<T, N>& m1, const Matrix<T, N>& m2)
     return m1;
 }
 
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 Matrix<T, N>& operator*=(Matrix<T, N>& m1, const float t)
 {
     for (int i = 0; i < N*N; i++)
         m1[i] *= t;
 }
 
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 Matrix<T, N> operator/(const Matrix<T, N>& m1, const float t)
 {
     Matrix<T, N> result;
@@ -187,7 +188,7 @@ Matrix<T, N> operator/(const Matrix<T, N>& m1, const float t)
     return result;
 }
 
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 typename Vector<T, N>::Type operator*(const Matrix<T, N>& m, const typename Matrix<T, N>::floatN& v)
 {
     using vec_t = typename Vector<T, N>::Type;
@@ -226,31 +227,31 @@ float3 operator*(const Matrix<T, 4>& m, const float3& v)
 
 // Class implementations
 // ----------------------------------------------------------------------------
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 HOSTDEVICE Matrix<T, N>::Matrix() : Matrix(Matrix::identity()) { }
 
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 HOSTDEVICE Matrix<T, N>::Matrix(const Matrix<T, N>& m)
 {
     for (int i = 0; i < N*N; i++)
         m_data[i] = m[i];
 }
 
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 HOSTDEVICE Matrix<T, N>::Matrix(const T data[N*N])
 {
     for (int i = 0; i < N * N; i++)
         m_data[i] = data[i];
 }
 
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 HOSTDEVICE Matrix<T, N>::Matrix(const T (&data)[N*N])
 {
     for (int i = 0; i < N*N; i++)
         m_data[i] = data[i];
 }
 
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 HOSTDEVICE Matrix<T, N>::Matrix(const float (&data)[12])
 {
     static_assert(std::is_same_v<T, float> && N == 4,
@@ -262,7 +263,7 @@ HOSTDEVICE Matrix<T, N>::Matrix(const float (&data)[12])
     m_data[15] = 1.0f;
 }
 
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 HOSTDEVICE Matrix<T, N>::Matrix(const std::initializer_list<T>& list)
 {
     int i = 0; 
@@ -271,7 +272,7 @@ HOSTDEVICE Matrix<T, N>::Matrix(const std::initializer_list<T>& list)
 }
 
 // ----------------------------------------------------------------------------
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 HOSTDEVICE Matrix<T, N>& Matrix<T, N>::operator=(const Matrix<T, N>& a)
 {
     for (int i = 0; i < N * N; i++)
@@ -280,61 +281,61 @@ HOSTDEVICE Matrix<T, N>& Matrix<T, N>::operator=(const Matrix<T, N>& a)
 }
 
 // ----------------------------------------------------------------------------
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 HOSTDEVICE T Matrix<T, N>::operator[](const int i) const 
 {
     return m_data[i];
 }
 
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 HOSTDEVICE T& Matrix<T, N>::operator[](const int i)
 {
     return m_data[i];
 }
 
 // ----------------------------------------------------------------------------
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 HOSTDEVICE T Matrix<T, N>::get(int i, int j) const
 {
-    unsigned int idx = i * N + j;
+    uint32_t idx = i * N + j;
     return m_data[idx];
 }
 
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 HOSTDEVICE T& Matrix<T, N>::get(int i, int j)
 {
-    unsigned int idx = i * N + j;
+    uint32_t idx = i * N + j;
     return m_data[idx];
 }
 
 // ----------------------------------------------------------------------------
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 HOSTDEVICE void Matrix<T, N>::setData(const T data[N*N])
 {
     for (int i = 0; i < N*N; i++)
         m_data[i] = data[i];
 }
 
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 HOSTDEVICE T* Matrix<T, N>::data()
 {
     return m_data;
 }
 
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 HOSTDEVICE const T* Matrix<T, N>::data() const
 {
     return m_data;
 }
 
 // ----------------------------------------------------------------------------
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 HOSTDEVICE bool Matrix<T, N>::isIdentity() const
 {
     return *this == Matrix<T, N>::identity();
 }
 
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 HOSTDEVICE Matrix<T, N> Matrix<T, N>::inverse()
 {
     T inv_data[N*N];
@@ -365,7 +366,7 @@ HOSTDEVICE Matrix<T, N> Matrix<T, N>::inverse()
 }
 
 // ----------------------------------------------------------------------------
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 HOSTDEVICE Matrix<T, N> Matrix<T, N>::rotate(const float radians, const typename Matrix<T, N>::TfloatN& axis)
 {
     static_assert(1 < N && N <= 4, "Matrix::rotate(): The dimension of matrix must be 2x2, 3x3 or 4x4.");
@@ -403,7 +404,7 @@ HOSTDEVICE Matrix<T, N> Matrix<T, N>::rotate(const float radians, const typename
     return Matrix<T, N>(data);
 }
 
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 HOSTDEVICE Matrix<T, N> Matrix<T, N>::translate(const typename Matrix<T, N>::TfloatN& t)
 {
     static_assert(1 < N && N <= 4, "Matrix::translate(): The dimension of matrix must be 2x2, 3x3 or 4x4.");
@@ -416,7 +417,7 @@ HOSTDEVICE Matrix<T, N> Matrix<T, N>::translate(const typename Matrix<T, N>::Tfl
     return Matrix<T, N>(data);
 }
 
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 HOSTDEVICE Matrix<T, N> Matrix<T, N>::scale(const typename Matrix<T, N>::TfloatN& s)
 {
     static_assert(1 < N && N <= 4, "Matrix::scale(): The dimension of matrix must be 2x2, 3x3 or 4x4.");
@@ -429,7 +430,7 @@ HOSTDEVICE Matrix<T, N> Matrix<T, N>::scale(const typename Matrix<T, N>::TfloatN
     return Matrix<T, N>(data);
 }
 
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 HOSTDEVICE Matrix<T, N> Matrix<T, N>::scale(const float s)
 {
     static_assert(1 < N && N <= 4, "Matrix::scale(): The dimension of matrix must be 2x2, 3x3 or 4x4.");
@@ -442,14 +443,14 @@ HOSTDEVICE Matrix<T, N> Matrix<T, N>::scale(const float s)
 }
 
 // ----------------------------------------------------------------------------
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 HOSTDEVICE Matrix<T, N> Matrix<T, N>::zero()
 {
     T data[N*N] = {};
     return Matrix<T, N>(data);
 }
 
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 HOSTDEVICE Matrix<T, N> Matrix<T, N>::identity()
 {
     T data[N*N] = {};

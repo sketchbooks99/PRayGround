@@ -1,18 +1,16 @@
 #include "bitmap.h"
-#include "color.h"
-#include "cudabuffer.h"
-#include "file_util.h"
-#include "../app/app_runner.h"
-
-#include <glad/glad.h>
+#include <oprt/core/color.h>
+#include <oprt/core/cudabuffer.h>
+#include <oprt/core/file_util.h>
+#include <oprt/core/util.h>
+#include <oprt/app/app_runner.h>
 
 #define STB_IMAGE_IMPLEMENTATION
-// #include "../ext/stb/stb_image.h"
-#include <ext/stb/stb_image.h>
+#include <oprt/ext/stb/stb_image.h>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include <ext/stb/stb_image_write.h>
+#include <oprt/ext/stb/stb_image_write.h>
 #define TINYEXR_IMPLEMENTATION
-#include <ext/tinyexr/tinyexr.h>
+#include <oprt/ext/tinyexr/tinyexr.h>
 
 namespace oprt {
 

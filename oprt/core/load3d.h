@@ -1,9 +1,9 @@
 #pragma once
 
 #include <sutil/vec_math.h>
-#include "../ext/happly/happly.h"
+#include <oprt/ext/happly/happly.h>
 #include <algorithm>
-#include "../shape/cuda/trianglemesh.cuh"
+#include <oprt/shape/cuda/trianglemesh.cuh>
 
 namespace oprt {
 

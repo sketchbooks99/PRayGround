@@ -1,11 +1,9 @@
 #pragma once 
 
-// #include <sutil/Matrix.h>
-// #include <sutil/vec_math.h>
-#include "../math/matrix.h"
-#include "../core/util.h"
-#include "../core/ray.h"
-#include "../optix/macros.h"
+#include <oprt/math/matrix.h>
+#include <oprt/core/util.h>
+#include <oprt/core/ray.h>
+#include <oprt/optix/macros.h>
 
 namespace oprt {
 

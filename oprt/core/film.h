@@ -1,9 +1,9 @@
 #pragma once 
 
-#include "util.h"
-#include "bitmap.h"
-#include <unordered_map>
+#include <oprt/core/bitmap.h>
 #include <sutil/vec_math.h>
+#include <unordered_map>
+#include <memory>
 
 namespace oprt {
 

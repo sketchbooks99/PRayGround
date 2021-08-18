@@ -1,5 +1,5 @@
 #include "shader.h"
-#include "../core/file_util.h"
+#include <oprt/core/file_util.h>
 
 namespace oprt {
 
@@ -12,6 +12,11 @@ namespace fs = std::filesystem;
 Shader::Shader()
 {
 
+}
+
+Shader::Shader(const fs::path& vert_name, const fs::path& frag_name)
+{
+    load(vert_name, frag_name);
 }
 
 Shader::Shader(const fs::path& vert_name, const fs::path& frag_name, const fs::path& geom_name)
@@ -31,6 +36,53 @@ void Shader::end() const
 }
 
 // --------------------------------------------------------------------
+void Shader::load(const fs::path& vert_name, const fs::path& frag_name)
+{
+    m_program = glCreateProgram();
+
+    GLuint vert_shader = 0, frag_shader = 0, geom_shader = 0;
+
+    // Vertex shader
+    {
+        std::optional<fs::path> vert_path = findDataPath(vert_name);
+        Assert(vert_path, "The shader file '" + vert_name.string() + "' is not found.");
+
+        vert_shader = _createGLShaderFromFile(vert_path.value(), GL_VERTEX_SHADER);
+        glAttachShader(m_program, vert_shader);
+    }
+
+    // Fragment shader
+    {
+        std::optional<fs::path> frag_path = findDataPath(frag_name);
+        Assert(frag_path, "The shader file '" + frag_name.string() + "' is not found.");
+
+        frag_shader = _createGLShaderFromFile(frag_path.value(), GL_FRAGMENT_SHADER);
+        glAttachShader(m_program, frag_shader);
+    }
+
+    // Linking of shaders
+    glLinkProgram(m_program);
+    GLint linked;
+    glGetProgramiv(m_program, GL_LINK_STATUS, &linked);
+    if (linked == GL_FALSE)
+    {
+        GLint bufsize;
+        glGetProgramiv(m_program, GL_INFO_LOG_LENGTH, &bufsize);
+
+        GLsizei length;
+        GLchar* infolog = (GLchar*)malloc(bufsize);
+        glGetProgramInfoLog(m_program, bufsize, &length, infolog);
+
+        glDeleteProgram(m_program);
+        Message(MSG_ERROR, "Shader::load(): Linking of program failed:", infolog);
+
+        return;
+    }
+
+    glDeleteShader(vert_shader);
+    glDeleteShader(frag_shader);
+}
+
 void Shader::load(const fs::path& vert_name, const fs::path& frag_name, const fs::path& geom_name)
 {
     m_program = glCreateProgram();
@@ -56,7 +108,6 @@ void Shader::load(const fs::path& vert_name, const fs::path& frag_name, const fs
     }
 
     // Geometry shader
-    if (geom_name != "")
     {
         std::optional<fs::path> geom_path = findDataPath(geom_name);
         Assert(geom_path, "The shader file '" + geom_name.string() + "' is not found.");
@@ -86,8 +137,7 @@ void Shader::load(const fs::path& vert_name, const fs::path& frag_name, const fs
     
     glDeleteShader(vert_shader);
     glDeleteShader(frag_shader);
-    if (geom_shader) 
-        glDeleteShader(geom_shader);
+    glDeleteShader(geom_shader);
 }
 
 // --------------------------------------------------------------------

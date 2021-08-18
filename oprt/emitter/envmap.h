@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../core/emitter.h"
-#include "../texture/constant.h"
+#include <oprt/core/emitter.h>
+#include <oprt/texture/constant.h>
 #include "cuda/envmap.cuh"
 
 /**

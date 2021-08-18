@@ -1,7 +1,7 @@
 #include "bitmap.h"
 
-#include "../ext/stb/stb_image.h"
-#include "../core/file_util.h"
+#include <oprt/ext/stb/stb_image.h>
+#include <oprt/core/file_util.h>
 
 namespace oprt {
 

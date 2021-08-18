@@ -3,7 +3,7 @@
 #include "cuda/sphere.cuh"
 
 #ifndef __CUDACC__
-#include "../core/shape.h"
+#include <oprt/core/shape.h>
 
 namespace oprt {
 

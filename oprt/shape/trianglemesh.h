@@ -3,7 +3,8 @@
 #include "cuda/trianglemesh.cuh"
 
 #ifndef __CUDACC__
-#include "../core/shape.h"
+#include <oprt/core/shape.h>
+#include <oprt/math/util.h>
 
 namespace oprt {
 

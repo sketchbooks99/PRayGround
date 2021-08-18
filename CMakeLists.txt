@@ -283,6 +283,7 @@ foreach(flag ${CUDA_NVRTC_FLAGS})
 endforeach()
 set(CUDA_NVRTC_OPTIONS "${CUDA_NVRTC_OPTIONS}")
 
+# TODO: deprecate this
 configure_file(sampleConfig.h.in sampleConfig.h @ONLY)
 
 # Path to sutil.h that all the samples need
@@ -294,31 +295,27 @@ include_directories( ${CMAKE_CURRENT_SOURCE_DIR}
 
 set(OPRT_CUDA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/cuda)
 
-#########################################################
-# OPTIX_add_sample_executable
-#
-# Convience function for adding samples to the code.  You can copy the contents of this
-# funtion into your individual project if you wish to customize the behavior.  Note that
-# in CMake, functions have their own scope, whereas macros use the scope of the caller.
-function(OPRT_add_executable target_name_base target_name_var)
+function(OPRT_add_executalbe target_name_base target_name_var)
+
   set( target_name ${target_name_base} )
   set( ${target_name_var} ${target_name} PARENT_SCOPE )
 
   # These calls will group PTX and CUDA files into their own directories in the Visual
   # Studio projects.
+  source_group("OPRT Files" FILES ${oprt_sources})
   if (NOT CUDA_NVRTC_ENABLED)
-    source_group("PTX Files"  REGULAR_EXPRESSION ".+\\.ptx$")
+    source_group("PTX Files" REGULAR_EXPRESSION ".+\\.ptx$")
   endif()
-  source_group("CUDA Files" REGULAR_EXPRESSION ".+\\.cuh?$")
+  source_group("CUDA Files" REGULAR_EXPRESSION ".+\\.cu$")
   source_group("Shader Files" REGULAR_EXPRESSION ".+\\.(vert|frag|geom|glsl|compute|comp)$")
+
 
   # Separate the sources from the CMake and CUDA options fed to the macro.  This code
   # comes from the CUDA_COMPILE_PTX macro found in FindCUDA.cmake.  We are copying the
   # code here, so that we can use our own name for the target.  target_name is used in the
   # creation of the output file names, and we want this to be unique for each target in
   # the SDK.
-  CUDA_GET_SOURCES_AND_OPTIONS(source_files cmake_options options ${ARGN})
-
+  CUDA_GET_SOURCES_AND_OPTIONS(source_files cmake_options options ${oprt_sources} ${ARGN})
   if (CUDA_NVRTC_ENABLED)
 
     # Isolate OBJ target files. NVCC should only process these files and leave PTX targets for NVRTC
@@ -355,12 +352,16 @@ function(OPRT_add_executable target_name_base target_name_var)
     imgui
     sutil_7_sdk
     )
-  
-  target_include_directories(${target_name} PUBLIC "${OPRT_DIR}/oprt")
+
+  target_include_directories(${target_name} PRIVATE "{$OPRT_DIR}")
 
   set_target_properties( ${target_name} PROPERTIES
     COMPILE_DEFINITIONS
     "OPTIX_SAMPLE_NAME_DEFINE=${target_name};OPTIX_SAMPLE_DIR_DEFINE=${target_name}" )
+
+  if (WIN32)
+    target_compile_options(${target_name} PUBLIC "/source-charset:utf-8")
+  endif()
 
   if( UNIX AND NOT APPLE )
     # Force using RPATH instead of RUNPATH on Debian
@@ -380,11 +381,14 @@ endfunction()
 # and the CMakeLists.txt file.
 add_subdirectory(oprt)
 
-# Our sutil library.  The rules to build it are found in the subdirectory.
+# sutil library.  The rules to build it are found in the subdirectory.
 add_subdirectory(sutil)
 
 # External libraries
 add_subdirectory(oprt/ext)
+
+# Executable apps
+add_subdirectory(apps/empty-app)
 
 #################################################################
 

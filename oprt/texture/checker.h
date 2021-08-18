@@ -1,5 +1,5 @@
 #pragma once
-#include "../core/texture.h"
+#include <oprt/core/texture.h>
 
 namespace oprt {
 

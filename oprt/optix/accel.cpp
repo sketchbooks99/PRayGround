@@ -1,5 +1,5 @@
 #include "accel.h"
-#include "../core/cudabuffer.h"
+#include <oprt/core/cudabuffer.h>
 #include <algorithm>
 
 namespace oprt {

@@ -2,20 +2,9 @@
 
 #include <optix.h>
 #include <cuda_runtime.h>
-#include "helpers.h"
-#include "macros.h"
-#include "../core/util.h"
-
-/** 
- * @todo 
- * enum/struct/functions described below will be deprecated 
- * to guarantee the extendablity of an user specified application.
- */
-enum RayType {
-    RAY_TYPE_RADIANCE = 0,
-    RAY_TYPE_OCCLUSION = 1,
-    RAY_TYPE_COUNT = 2
-};
+#include <oprt/optix/helpers.h>
+#include <oprt/optix/macros.h>
+#include <oprt/core/util.h>
 
 namespace oprt {
 

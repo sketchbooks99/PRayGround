@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../core/material.h"
-#include "../texture/constant.h"
+#include <oprt/core/material.h>
+#include <oprt/texture/constant.h>
 
 namespace oprt {
 

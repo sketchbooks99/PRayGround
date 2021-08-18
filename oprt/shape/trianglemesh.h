@@ -35,12 +35,14 @@ public:
      * computing devices (CPU or GPU) according to the need of an application, 
      * and AABB will be needed for this.
      */
-    AABB bound() const override { return AABB(); } 
+    AABB bound() const override;
 
     void addVertex(const float3& v);
     void addFace(const Face& face);
     void addNormal(const float3& n);
     void addTexcoord(const float2& texcoord);
+
+    void load(const std::filesystem::path& filename, bool is_smooth=true);
 
     std::vector<float3> vertices() const { return m_vertices; } 
     std::vector<Face> faces() const { return m_faces; } 

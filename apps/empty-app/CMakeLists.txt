@@ -1,16 +1,16 @@
-OPTIX_add_sample_executable( empty-app target_name 
+add_executable(empty-app 
     main.cpp 
     app.cpp 
     app.h
 )
 
 target_compile_definitions(
-    ${target_name}
+    empty-app
     PRIVATE
     OPRT_ROOT_DIR="${PROJECT_SOURCE_DIR}"
     OPRT_APP_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
-target_link_libraries( ${target_name}
-    ${CUDA_LIBRARIES}
+target_link_libraries( 
+    empty-app oprt
 )

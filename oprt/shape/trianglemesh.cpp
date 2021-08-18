@@ -6,72 +6,13 @@
 
 namespace oprt {
 
+namespace fs = std::filesystem;
+
 /** @note At present, only .obj file format is supported. */
 // ------------------------------------------------------------------
-TriangleMesh::TriangleMesh(
-    const std::filesystem::path& relative_path, bool is_smooth)
+TriangleMesh::TriangleMesh(const fs::path& filename, bool is_smooth)
 {
-    if (relative_path.string().substr(relative_path.string().length() - 4) == ".obj") {
-        std::optional<std::filesystem::path> filepath = findDataPath(relative_path);
-        if (!filepath)
-            Message(MSG_ERROR, "The OBJ file '" + relative_path.string() + "' is not found.");
-
-        Message(MSG_NORMAL, "Loading OBJ file '" + filepath.value().string() + "' ...");
-        loadObj(filepath.value(), m_vertices, m_normals, m_faces, m_texcoords);
-    }
-    else if (relative_path.string().substr(relative_path.string().length() - 4) == ".ply") {
-        std::optional<std::filesystem::path> filepath = findDataPath(relative_path);
-        if (!filepath)
-            Message(MSG_ERROR, "The PLY file '" + relative_path.string() + "' is not found.");
-            
-        Message(MSG_NORMAL, "Loading PLY file '" + filepath.value().string() + "' ...");
-        loadPly(filepath.value(), m_vertices, m_normals, m_faces, m_texcoords);
-    }
-
-    // Calculate normals if they are empty.
-    if (m_normals.empty())
-    {
-        m_normals.resize(m_vertices.size());
-        auto counts = std::vector<int>(m_vertices.size(), 0);
-        for(size_t i=0; i<m_faces.size(); i++)
-        {
-            m_faces[i].normal_id = m_faces[i].vertex_id;
-
-            auto p0 = m_vertices[m_faces[i].vertex_id.x];
-            auto p1 = m_vertices[m_faces[i].vertex_id.y];
-            auto p2 = m_vertices[m_faces[i].vertex_id.z];
-            auto N = normalize(cross(p2 - p0, p1 - p0));
-
-            if (is_smooth) {
-                auto idx = m_faces[i].vertex_id.x;
-                m_normals[idx] += N;
-                counts[idx]++;
-                idx = m_faces[i].vertex_id.y;
-                m_normals[idx] += N;
-                counts[idx]++;
-                idx = m_faces[i].vertex_id.z;
-                m_normals[idx] += N;
-                counts[idx]++;
-            }
-            else
-            {
-                m_normals[m_faces[i].vertex_id.x] = N;
-                m_normals[m_faces[i].vertex_id.y] = N;
-                m_normals[m_faces[i].vertex_id.z] = N;
-            }
-        }
-        if (is_smooth) {
-            for (size_t i = 0; i < m_vertices.size(); i++)
-            {
-                m_normals[i] /= counts[i];
-                m_normals[i] = normalize(m_normals[i]);
-            }
-        }
-    }
-
-    if (m_texcoords.empty()) {
-        m_texcoords.resize(m_vertices.size());
-    }
+    load(filename, is_smooth);
 }
 
 // ------------------------------------------------------------------
@@ -150,7 +91,7 @@ void TriangleMesh::prepareData() {
     d_faces = d_faces_buf.devicePtr();
     d_normals = d_normals_buf.devicePtr();
     d_texcoords = d_texcoords_buf.devicePtr();
-}   
+}
 
 // ------------------------------------------------------------------
 void TriangleMesh::buildInput( OptixBuildInput& bi, const uint32_t sbt_idx ) {
@@ -176,6 +117,100 @@ void TriangleMesh::buildInput( OptixBuildInput& bi, const uint32_t sbt_idx ) {
     bi.triangleArray.sbtIndexOffsetSizeInBytes = sizeof(uint32_t);
     bi.triangleArray.sbtIndexOffsetStrideInBytes = sizeof(uint32_t);
 }
+
+// ------------------------------------------------------------------
+AABB TriangleMesh::bound() const 
+{
+    return AABB();
+}
+
+// ------------------------------------------------------------------
+void TriangleMesh::addVertex(const float3& v)
+{
+    TODO_MESSAGE();
+}
+
+void TriangleMesh::addFace(const Face& face)
+{
+    TODO_MESSAGE();
+}
+
+void TriangleMesh::addNormal(const float3& n)
+{
+    TODO_MESSAGE();
+}
+
+void TriangleMesh::addTexcoord(const float2& texcoord)
+{
+    TODO_MESSAGE();
+}
+
+// ------------------------------------------------------------------
+void TriangleMesh::load(const fs::path& filename, bool is_smooth)
+{
+    if (filename.string().substr(filename.string().length() - 4) == ".obj") {
+        std::optional<fs::path> filepath = findDataPath(filename);
+        if (!filepath)
+            Message(MSG_ERROR, "The OBJ file '" + filename.string() + "' is not found.");
+
+        Message(MSG_NORMAL, "Loading OBJ file '" + filepath.value().string() + "' ...");
+        loadObj(filepath.value(), m_vertices, m_normals, m_faces, m_texcoords);
+    }
+    else if (filename.string().substr(filename.string().length() - 4) == ".ply") {
+        std::optional<fs::path> filepath = findDataPath(filename);
+        if (!filepath)
+            Message(MSG_ERROR, "The PLY file '" + filename.string() + "' is not found.");
+            
+        Message(MSG_NORMAL, "Loading PLY file '" + filepath.value().string() + "' ...");
+        loadPly(filepath.value(), m_vertices, m_normals, m_faces, m_texcoords);
+    }
+
+    // Calculate normals if they are empty.
+    if (m_normals.empty())
+    {
+        m_normals.resize(m_vertices.size());
+        auto counts = std::vector<int>(m_vertices.size(), 0);
+        for(size_t i=0; i<m_faces.size(); i++)
+        {
+            m_faces[i].normal_id = m_faces[i].vertex_id;
+
+            auto p0 = m_vertices[m_faces[i].vertex_id.x];
+            auto p1 = m_vertices[m_faces[i].vertex_id.y];
+            auto p2 = m_vertices[m_faces[i].vertex_id.z];
+            auto N = normalize(cross(p2 - p0, p1 - p0));
+
+            if (is_smooth) {
+                auto idx = m_faces[i].vertex_id.x;
+                m_normals[idx] += N;
+                counts[idx]++;
+                idx = m_faces[i].vertex_id.y;
+                m_normals[idx] += N;
+                counts[idx]++;
+                idx = m_faces[i].vertex_id.z;
+                m_normals[idx] += N;
+                counts[idx]++;
+            }
+            else
+            {
+                m_normals[m_faces[i].vertex_id.x] = N;
+                m_normals[m_faces[i].vertex_id.y] = N;
+                m_normals[m_faces[i].vertex_id.z] = N;
+            }
+        }
+        if (is_smooth) {
+            for (size_t i = 0; i < m_vertices.size(); i++)
+            {
+                m_normals[i] /= counts[i];
+                m_normals[i] = normalize(m_normals[i]);
+            }
+        }
+    }
+
+    if (m_texcoords.empty()) {
+        m_texcoords.resize(m_vertices.size());
+    }
+}
+
 
 // ------------------------------------------------------------------
 std::shared_ptr<TriangleMesh> createQuadMesh(

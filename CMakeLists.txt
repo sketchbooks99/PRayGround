@@ -262,13 +262,13 @@ else (WIN32)
 endif (WIN32)
 
 set(OPRT_CUDA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../cuda")
-
-set(OPRT_SUPPORT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../oprt/ext")
+set(OPRT_EXTERNAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../oprt/ext")
 
 # NVRTC include paths relative to the sample path
 set(OPRT_RELATIVE_INCLUDE_DIRS "\\
   \"cuda\", \\
   \"sutil\", \\
+  \"oprt\", \\
   \".\", ")
 
 # NVRTC absolute include paths to the headers used to build the samples
@@ -301,7 +301,6 @@ set(OPRT_CUDA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/cuda)
 # funtion into your individual project if you wish to customize the behavior.  Note that
 # in CMake, functions have their own scope, whereas macros use the scope of the caller.
 function(OPRT_add_executable target_name_base target_name_var)
-
   set( target_name ${target_name_base} )
   set( ${target_name_var} ${target_name} PARENT_SCOPE )
 
@@ -347,7 +346,7 @@ function(OPRT_add_executable target_name_base target_name_var)
     ${source_files}
     ${generated_files}
     ${cmake_options}
-    )
+  )
 
   # Most of the samples link against the sutil library and the optix library.  Here is the
   # rule that specifies this linkage.
@@ -356,6 +355,8 @@ function(OPRT_add_executable target_name_base target_name_var)
     imgui
     sutil_7_sdk
     )
+  
+  target_include_directories(${target_name} PUBLIC "${OPRT_DIR}/oprt")
 
   set_target_properties( ${target_name} PROPERTIES
     COMPILE_DEFINITIONS

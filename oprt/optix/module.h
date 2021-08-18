@@ -24,13 +24,19 @@ public:
     explicit operator OptixModule() const { return m_module; }
     explicit operator OptixModule&() { return m_module; }
     
-    void create( const Context& ctx, const std::filesystem::path& ptx_path, OptixPipelineCompileOptions pipeline_options);
+// #ifdef CUDA_NVRTC_ENABLED   
+    void createFromCudaFile(const Context& ctx, const std::filesystem::path& filename, OptixPipelineCompileOptions pipeline_options);
+    void createFromCudaSource(const Context& ctx, const std::string& source, OptixPipelineCompileOptions pipeline_options);
+// #endif
+    void createFromPtxFile(const Context& ctx, const std::filesystem::path& filename, OptixPipelineCompileOptions pipeline_options);
+    void createFromPtxSource(const Context& ctx, const std::string& source, OptixPipelineCompileOptions pipeline_options);
+
     void destroy();
 
     /** @note At default, This is set to OPTIX_COMPILE_OPTIMIZATION_DEFAULT */
-    void setOptimizationLevel( OptixCompileOptimizationLevel optlevel );
+    void setOptimizationLevel(OptixCompileOptimizationLevel optlevel);
     /** @note At default, This is set to OPTIX_COMPILE_DEBUG_LINEINFO */
-    void setDebugLevel( OptixCompileDebugLevel debuglevel );
+    void setDebugLevel(OptixCompileDebugLevel debuglevel);
 
     /** 
      * @brief 

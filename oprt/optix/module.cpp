@@ -3,6 +3,8 @@
 
 namespace oprt {
 
+namespace fs = std::filesystem;
+
 // ------------------------------------------------------------------
 Module::Module()
 {
@@ -17,11 +19,12 @@ Module::Module(const OptixModuleCompileOptions& options)
 
 }
 
+// #if CUDA_NVRTC_ENABLED
 // ------------------------------------------------------------------
-void Module::create(const Context& ctx, const std::filesystem::path& ptx_path, OptixPipelineCompileOptions pipeline_options)
+void Module::createFromCudaFile(const Context& ctx, const fs::path& filename, OptixPipelineCompileOptions pipeline_options)
 {
-    auto filepath = findDataPath(ptx_path);
-    Assert(filepath, "The CUDA file to create module of '" + ptx_path.string() + "' is not found.");
+    auto filepath = findDataPath(filename);
+    Assert(filepath, "The CUDA file to create module of '" + filename.string() + "' is not found.");
 
     char log[2048];
     size_t sizeof_log = sizeof(log);
@@ -38,6 +41,22 @@ void Module::create(const Context& ctx, const std::filesystem::path& ptx_path, O
         &sizeof_log, 
         &m_module
     ));
+}
+
+void Module::createFromCudaSource(const Context& ctx, const std::string& source, OptixPipelineCompileOptions pipeline_options)
+{
+    TODO_MESSAGE();
+}
+// #endif
+
+void Module::createFromPtxFile(const Context& ctx, const fs::path& filename, OptixPipelineCompileOptions pipeline_options)
+{
+    TODO_MESSAGE();
+}
+
+void Module::createFromPtxSource(const Context& ctx, const std::string& source, OptixPipelineCompileOptions pipeline_options)
+{
+    TODO_MESSAGE();
 }
 
 void Module::destroy()

@@ -47,14 +47,12 @@ public:
 
         // Create modules
         Module raygen_module, miss_module, hitgroups_module, textures_module, surfaces_module;
-        raygen_module.create(context, "cuda/raygen.cu", pipeline.compileOptions());
-        miss_module.create(context, "cuda/miss.cu", pipeline.compileOptions());
-        hitgroups_module.create(context, "cuda/hitgroups.cu", pipeline.compileOptions());
-        textures_module.create(context, "cuda/textures.cu", pipeline.compileOptions());
-        surfaces_module.create(context, "cuda/surfaces.cu", pipeline.compileOptions());
+        raygen_module.createFromCudaFile(context, "cuda/raygen.cu", pipeline.compileOptions());
+        miss_module.createFromCudaFile(context, "cuda/miss.cu", pipeline.compileOptions());
+        hitgroups_module.createFromCudaFile(context, "cuda/hitgroups.cu", pipeline.compileOptions());
+        textures_module.createFromCudaFile(context, "cuda/textures.cu", pipeline.compileOptions());
+        surfaces_module.createFromCudaFile(context, "cuda/surfaces.cu", pipeline.compileOptions());
 
-        vector<ProgramGroup> program_groups;
-        
         // Prepare film to store rendered results.
         film = Film(1024, 1024);
         film.addBitmap("result", Bitmap::Format::RGBA);
@@ -72,10 +70,11 @@ public:
         camera.setFovAxis(Camera::FovAxis::Vertical);
 
         // Create raygen program and bind record;
-        raygen.createRaygen(context, raygen_module, "__raygen__pinhole");
-        program_groups.push_back(raygen);
+        ProgramGroup raygen_prg;
+        raygen_prg.createRaygen(context, raygen_module, "__raygen__pinhole");
+        pipeline.addProgram(raygen_prg);
         RaygenRecord raygen_record;
-        raygen.bindRecord(&raygen_record);
+        raygen_prg.bindRecord(&raygen_record);
         raygen_record.data.camera.origin = camera.origin();
         raygen_record.data.camera.lookat = camera.lookat();
         raygen_record.data.camera.up = camera.up();
@@ -87,11 +86,12 @@ public:
         // Prepare environment 
         env = make_shared<EnvironmentEmitter>("image/earth.jpg");
         env->prepareData();
-
-        miss.createMiss(context, miss_module, "__miss__env");
-        program_groups.push_back(miss);
+         
+        ProgramGroup miss_prg;
+        miss_prg.createMiss(context, miss_module, "__miss__env");
+        pipeline.addProgram(miss_prg);
         MissRecord miss_record;
-        miss.bindRecord(&miss_record);
+        miss_prg.bindRecord(&miss_record);
         miss_record.data.env_data = env->devicePtr();
         CUDABuffer<MissRecord> d_miss_record;
         d_miss_record.copyToDevice(&miss_record, sizeof(MissRecord));
@@ -115,9 +115,9 @@ public:
         constant_texture_prg.bindRecord(&callable_record);
         checker_texture_prg.bindRecord(&callable_record);
         bitmap_texture_prg.bindRecord(&callable_record);
-        program_groups.push_back(constant_texture_prg);
-        program_groups.push_back(checker_texture_prg);
-        program_groups.push_back(bitmap_texture_prg);
+        pipeline.addProgram(constant_texture_prg);
+        pipeline.addProgram(checker_texture_prg);
+        pipeline.addProgram(bitmap_texture_prg);
 
         // Preparing textures
         textures.emplace("checker_texture", make_shared<CheckerTexture>(make_float3(0.9f), make_float3(0.3f)));
@@ -139,9 +139,9 @@ public:
         diffuse_prg.bindRecord(&callable_record);
         dielectric_prg.bindRecord(&callable_record);
         area_emitter_prg.bindRecord(&callable_record);
-        program_groups.push_back(diffuse_prg);
-        program_groups.push_back(dielectric_prg);
-        program_groups.push_back(area_emitter_prg);
+        pipeline.addProgram(diffuse_prg);
+        pipeline.addProgram(dielectric_prg);
+        pipeline.addProgram(area_emitter_prg);
 
         // Preparing materials and program id
         ceiling_light = make_shared<AreaEmitter>(make_float3(1.0f), 15.0f);
@@ -174,16 +174,13 @@ public:
         cornel.at("floor")->attachSurface(materials.at("checker_diffuse"));
         cornel.at("back")->attachSurface(materials.at("white_diffuse"));
 
-        ProgramGroup mesh_program, plane_program;
-        mesh_program.createHitgroup(context, hitgroups_module, "__closesthit__mesh");
-        plane_program.createHitgroup(context, hitgroups_module, "__closesthit__plane", "__intesection__plane");
-
         // Build GAS for cornel box
         uint32_t sbt_base_index = 0;
         unordered_map<string, GeometryAccel> cornel_gases;
         vector<HitgroupRecord> hitgroup_records;
         for (auto& plane : cornel)
         {
+
             plane.second->prepareData();
             GeometryAccel gas;
             gas.build(context, plane.second, sbt_base_index);
@@ -194,8 +191,10 @@ public:
             instance.setVisibilityMask(255);
             instances.emplace(plane.first, instance);
 
+            ProgramGroup plane_program;
+            plane_program.createHitgroup(context, hitgroups_module, "__closesethit__plane", "__intersection__plane");
             plane.second->addProgram(plane_program);
-            program_groups.push_back(plane.second->programAt(0));
+            pipeline.addProgram(plane_program);
             HitgroupRecord hitgroup_record;
             plane.second->bindRecord(&hitgroup_record, 0);
             hitgroup_record.data.shape_data = plane.second->devicePtr();
@@ -234,8 +233,11 @@ public:
         bunny = make_shared<TriangleMesh>("model/bunny.obj");
         bunny->attachSurface(materials.at("glass"));
         bunny->prepareData();
+
+        ProgramGroup mesh_program;
+        mesh_program.createHitgroup(context, hitgroups_module, "__closesethit__mesh");
         bunny->addProgram(mesh_program);
-        program_groups.push_back(bunny->programAt(0));
+        pipeline.addProgram(mesh_program);
 
         HitgroupRecord bunny_record;
         bunny->bindRecord(&bunny_record, 0);
@@ -266,7 +268,7 @@ public:
         ias.build(context, instance_arr);
         params.handle = ias.handle();
 
-        pipeline.create(context, program_groups);
+        pipeline.create(context);
 
         d_params.allocate(sizeof(LaunchParams));
     }
@@ -317,7 +319,6 @@ private:
     unordered_map<string, shared_ptr<Material>> materials;
     shared_ptr<AreaEmitter> ceiling_light;
     unordered_map<string, shared_ptr<Texture>> textures;
-    ProgramGroup raygen, miss;
     InstanceAccel ias;
 };
 

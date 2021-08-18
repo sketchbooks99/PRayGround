@@ -17,8 +17,10 @@ public:
     explicit operator OptixPipeline() const { return m_pipeline; }
     explicit operator OptixPipeline&() { return m_pipeline; }
 
+    void addProgram(const ProgramGroup& prg);
+
     /** Create pipeline object and calculate the stack sizes of pipeline. */
-    void create( const Context& ctx, const std::vector<ProgramGroup>& prg_groups);
+    void create(const Context& ctx);
     void destroy();
 
     /** Compile options. */
@@ -58,6 +60,9 @@ private:
     uint32_t m_trace_depth { 5 }; 
     uint32_t m_cc_depth { 0 }; 
     uint32_t m_dc_depth { 0 };
+
+    /// @note Is it better to use unordered_map instead of vector?
+    std::vector<ProgramGroup> m_program_groups; 
 };
 
 }

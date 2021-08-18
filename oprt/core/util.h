@@ -66,10 +66,7 @@ template <typename T>
 inline void cuda_free(T& data) {
     CUDA_CHECK(cudaFree(reinterpret_cast<void*>(data)));
 }
-/** 
- * \brief 
- * Recursive free of object.
- */
+/** @brief Recursive release of object from a device. */
 template <typename Head, typename... Args>
 inline void cuda_frees(Head& head, Args... args) {
     cuda_free(head);
@@ -77,10 +74,7 @@ inline void cuda_frees(Head& head, Args... args) {
         cuda_frees(args...);
 }
 
-/**
- * @brief Stream out object recursively. 
- */
-
+/** @brief Recursively print object to a standard stream. */
 template <typename Head, typename... Args>
 inline void Message(MessageType type, Head head, Args... args) {
 
@@ -121,7 +115,7 @@ inline void Message(MessageType type, Head head, Args... args) {
     std::cout << head;
     SetConsoleTextAttribute(hConsole, current_attributes);
 
-#endif
+#endif  // defined(__linux__)
 
     // Recusrive call of message function  
     const size_t num_args = sizeof...(args);
@@ -132,6 +126,14 @@ inline void Message(MessageType type, Head head, Args... args) {
     if constexpr (num_args == 0) std::cout << std::endl;
 }
 
-#endif
+/** 実装してない関数が多すぎるので、マクロ設定で簡略化する。横着です。 */
+#define TODO_MESSAGE()                                  \
+    std::stringstream ss;                               \
+    ss << "Sorry! The function you called at "          \
+       << "' (" __FILE__ << ":" << __LINE__ << ")"      \
+       << " is still under development! ";              \
+    Message(MSG_WARNING, ss.str());
+
+#endif // __CUDACC__
 
 }

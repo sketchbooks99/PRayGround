@@ -10,7 +10,7 @@ namespace oprt {
 
 class Plane final : public Shape {
 public:
-    explicit Plane(float2 min, float2 max) : m_min(min), m_max(max) {}
+    explicit Plane(const float2& min, const float2& max) : m_min(min), m_max(max) {}
 
     OptixBuildInputType buildInputType() const override { return OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES; }
 

@@ -268,7 +268,7 @@ GLuint Shader::_createGLShaderFromSource(const std::string& source, GLuint type)
 GLuint Shader::_createGLShaderFromFile(const fs::path& relative_path, GLuint type)
 {
     std::optional<fs::path> filepath = findDataPath(relative_path);
-    Assert(filepath, "The shader file '" + relative_path.string() + "' is not found.");
+    Assert(filepath, "oprt::gl::Shader::The shader file '" + relative_path.string() + "' is not found.");
 
     std::string source;
     std::ifstream file_stream;
@@ -280,9 +280,9 @@ GLuint Shader::_createGLShaderFromFile(const fs::path& relative_path, GLuint typ
         file_stream.close();
         source = source_stream.str();
     }
-    catch (std::istream::failure e)
+    catch (const std::istream::failure e)
     {
-        Message(MSG_ERROR, "gl::Shader::_createGLShaderFromFile(): Failed to create shader from file.");
+        Message(MSG_ERROR, "oprt::gl::Shader::_createGLShaderFromFile(): Failed to load shader source from file due to '" + std::string(e.what()) + "'.");
     }
 
     return _createGLShaderFromSource(source, type);

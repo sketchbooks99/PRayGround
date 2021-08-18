@@ -30,10 +30,16 @@ Pipeline::Pipeline(const OptixPipelineCompileOptions& c_op, const OptixPipelineL
 }
 
 // --------------------------------------------------------------------
-void Pipeline::create(const Context& ctx, const std::vector<ProgramGroup>& prg_groups)
+void Pipeline::addProgram(const ProgramGroup& prg)
+{
+    m_program_groups.push_back(prg);
+}
+
+// --------------------------------------------------------------------
+void Pipeline::create(const Context& ctx)
 {
     std::vector<OptixProgramGroup> optix_prg_groups;
-    std::transform(prg_groups.begin(), prg_groups.end(), std::back_inserter(optix_prg_groups),
+    std::transform(m_program_groups.begin(), m_program_groups.end(), std::back_inserter(optix_prg_groups),
         [](ProgramGroup pg){ return static_cast<OptixProgramGroup>(pg); });
 
     // Create pipeline from program groups.

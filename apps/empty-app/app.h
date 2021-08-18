@@ -1,7 +1,6 @@
 #pragma once
 
-#include "../oprt/oprt.h"
-#include "../oprt/app/baseapp.h"
+
 
 class App : public BaseApp 
 {

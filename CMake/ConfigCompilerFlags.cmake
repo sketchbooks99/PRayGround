@@ -181,6 +181,7 @@ SET(PARALLEL_COMPILE_FLAGS /MP)
 IF (USING_WINDOWS_CL)
   APPEND_TO_STRING(C_FLAGS       "${PARALLEL_COMPILE_FLAGS} ${WARNING_FLAGS}")
   APPEND_TO_STRING(CXX_FLAGS     "${PARALLEL_COMPILE_FLAGS} ${WARNING_FLAGS}")
+  message("${CXX_FLAGS}")
 
   # /Ox       - Full Optimization (should supperseed the /O2 optimization
   # /Ot       - Favor fast code over small code

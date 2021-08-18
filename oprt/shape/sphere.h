@@ -9,7 +9,7 @@ namespace oprt {
 
 class Sphere final : public Shape {
 public:
-    explicit Sphere(float3 c, float r) : m_center(c), m_radius(r) {}
+    explicit Sphere(const float3& c, float r) : m_center(c), m_radius(r) {}
 
     OptixBuildInputType buildInputType() const override { return OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES; }
 

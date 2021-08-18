@@ -26,12 +26,10 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-OPRT_add_executable( oprt target_name
-
+set(oprt_target_name "oprt")
+set(oprt_sources 
   # Core libraries ==========
   core/aabb.h 
-  # core/api.h 
-  # core/api.cpp 
   core/bitmap.cpp 
   core/bitmap.h 
   core/bsdf.h 
@@ -129,17 +127,87 @@ OPRT_add_executable( oprt target_name
   oprt_dev.cpp
   oprt.h 
   params.h
-  # scene_config.h
 
   # OPTIONS -rdc true
 )
 
+# -------------------------------------------------------------------------------------
+# The following declarations are copied from the function of OPTIX_add_sample_executable 
+# defined in the CMakeLists.txt of OptiX/SDK, and modified to suit my oprt library.
+# -------------------------------------------------------------------------------------
+
+# These calls will group PTX and CUDA files into their own directories in the Visual
+# Studio projects.
+if (NOT CUDA_NVRTC_ENABLED)
+  source_group("PTX Files"  REGULAR_EXPRESSION ".+\\.ptx$")
+endif()
+source_group("CUDA Files" REGULAR_EXPRESSION ".+\\.cuh?$")
+source_group("Shader Files" REGULAR_EXPRESSION ".+\\.(vert|frag|geom|glsl|compute|comp)$")
+
+# Separate the sources from the CMake and CUDA options fed to the macro.  This code
+# comes from the CUDA_COMPILE_PTX macro found in FindCUDA.cmake.  We are copying the
+# code here, so that we can use our own name for the target.  target_name is used in the
+# creation of the output file names, and we want this to be unique for each target in
+# the SDK.
+CUDA_GET_SOURCES_AND_OPTIONS(source_files cmake_options options ${oprt_sources})
+
+if (CUDA_NVRTC_ENABLED)
+
+  # Isolate OBJ target files. NVCC should only process these files and leave PTX targets for NVRTC
+  set(cu_obj_source_files)
+  foreach(file ${source_files})
+    get_source_file_property(_cuda_source_format ${file} CUDA_SOURCE_PROPERTY_FORMAT)
+    if(${_cuda_source_format} MATCHES "OBJ")
+      list(APPEND cu_obj_source_files ${file})
+    endif()
+  endforeach()
+
+  # Create the rules to build the OBJ from the CUDA files.
+  CUDA_WRAP_SRCS( ${oprt_target_name} OBJ generated_files ${cu_obj_source_files} ${cmake_options} OPTIONS ${options} )
+else()
+
+  # Create the rules to build the PTX and OBJ from the CUDA files.
+  CUDA_WRAP_SRCS( ${oprt_target_name} PTX generated_files ${source_files} ${cmake_options} OPTIONS ${options} )
+endif()
+
+
+# Here is where we create the rule to make the executable.  We define a target name and
+# list all the source files used to create the target.  In addition we also pass along
+# the cmake_options parsed out of the arguments.
+add_executable(${oprt_target_name}
+  ${source_files}
+  ${generated_files}
+  ${cmake_options}
+)
+
+# Most of the samples link against the sutil library and the optix library.  Here is the
+# rule that specifies this linkage.
+target_link_libraries( ${oprt_target_name}
+  ${GLFW_LIB_NAME}
+  imgui
+  sutil_7_sdk
+  ${CUDA_LIBRARIES}
+)
+
+target_include_directories(${oprt_target_name} PUBLIC "${OPRT_DIR}/oprt")
+
+set_target_properties( ${oprt_target_name} PROPERTIES
+  COMPILE_DEFINITIONS
+  "OPTIX_SAMPLE_NAME_DEFINE=${target_name};OPTIX_SAMPLE_DIR_DEFINE=${target_name}" )
+
+if( UNIX AND NOT APPLE )
+  # Force using RPATH instead of RUNPATH on Debian
+  target_link_libraries( ${oprt_target_name} "-Wl,--disable-new-dtags" )
+endif()
+
+if(USING_GNU_CXX)
+  target_link_libraries( ${oprt_target_name} m ) # Explicitly link against math library (C samples don't do that by default)
+endif()
+
 target_compile_definitions( 
-  ${target_name} 
-  PRIVATE 
+  ${oprt_target_name}
+  PUBLIC
   OPRT_ROOT_DIR="${PROJECT_SOURCE_DIR}"
 )
 
-target_link_libraries( ${target_name}
-  ${CUDA_LIBRARIES}
-)
+target_compile_options(${oprt_target_name} PUBLIC "/source-charset:utf-8")

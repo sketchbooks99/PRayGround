@@ -421,7 +421,6 @@ void initImGui( GLFWwindow* window )
     ImGui::GetStyle().WindowBorderSize = 0.0f;
 }
 
-
 GLFWwindow* initUI( const char* window_title, int width, int height )
 {
     GLFWwindow* window = initGLFW( window_title, width, height );
@@ -877,10 +876,12 @@ static void getPtxFromCuString( std::string& ptx, const char* sample_name, const
 
     for( const char* dir : abs_dirs )
     {
+        std::cout << std::string("-I") + dir << std::endl;
         include_dirs.push_back( std::string( "-I" ) + dir );
     }
     for( const char* dir : rel_dirs )
     {
+        std::cout << std::string("-I") + dir << std::endl;
         include_dirs.push_back( "-I" + base_dir + '/' + dir );
     }
     for( const std::string& dir : include_dirs)

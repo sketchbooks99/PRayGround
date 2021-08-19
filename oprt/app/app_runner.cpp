@@ -1,10 +1,46 @@
 #include "app_runner.h"
+#include <chrono>
 
 namespace oprt {
 
 namespace { // nonamed-namespace
     std::shared_ptr<Window> current_window;
 } // ::nonamed-namespace
+
+float oprtGetMouseX()
+{
+    return current_window->events().inputStates.mousePosition.x;
+}
+
+float oprtGetMouseY()
+{
+    return current_window->events().inputStates.mousePosition.y;
+}
+
+float oprtGetPreviousMouseX()
+{
+    return current_window->events().inputStates.mousePreviousPosition.x;
+}
+
+float oprtGetPreviousMouseY()
+{
+    return current_window->events().inputStates.mousePreviousPosition.y;
+}
+
+float2 oprtGetMousePosition()
+{
+    return current_window->events().inputStates.mousePosition;
+}
+
+float2  oprtGetPreviousMousePosition()
+{
+    return current_window->events().inputStates.mousePreviousPosition;
+}
+
+int32_t oprtGetMouseButton()
+{
+    return current_window->events().inputStates.mouseButton;
+}
 
 int32_t oprtGetWidth()
 {
@@ -56,11 +92,10 @@ void AppRunner::loop() const
 {
     while (!m_window->shouldClose())
     {
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+        m_window->update();
         m_app->update();
         m_app->draw();
-        m_window->update();
+        m_window->swap();
     }
     close();
 }

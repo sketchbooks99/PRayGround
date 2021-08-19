@@ -45,8 +45,11 @@ public:
     virtual TextureType type() const = 0;
 
     // Preparing texture data on the device.
-    virtual void prepareData() = 0;
-    virtual void freeData() {}
+    virtual void copyToDevice() = 0;
+    virtual void free()
+    {
+        if (d_data) cuda_free(d_data);
+    }
 
     // Get data pointer on the device.
     void* devicePtr() const 

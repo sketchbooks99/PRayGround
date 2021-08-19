@@ -18,16 +18,16 @@ struct DielectricData {
 class Dielectric final : public Material {
 public:
     Dielectric(const float3& a, float ior)
-    : m_texture(new ConstantTexture(a)), m_ior(ior) { }
+    : m_texture(std::make_shared<ConstantTexture>(a)), m_ior(ior) { }
 
     Dielectric(const std::shared_ptr<Texture>& texture, float ior)
     : m_texture(texture), m_ior(ior) {}
 
     ~Dielectric() { }
 
-    void prepareData() override {
+    void copyToDevice() override {
         if (!m_texture->devicePtr())
-            m_texture->prepareData();
+            m_texture->copyToDevice();
 
         DielectricData data = {
             m_texture->devicePtr(), 
@@ -43,9 +43,9 @@ public:
         ));
     }
 
-    void freeData() override
+    void free() override
     {
-        m_texture->freeData();
+        m_texture->free();
     }
 
     MaterialType type() const override { return MaterialType::Dielectric; }

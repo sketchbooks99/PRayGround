@@ -65,45 +65,26 @@ public:
     virtual OptixBuildInputType buildInputType() const = 0;
     virtual AABB bound() const = 0;
 
-    virtual void prepareData() = 0;
-    virtual void buildInput( OptixBuildInput& bi, uint32_t sbt_idx ) = 0;
+    virtual void copyToDevice() = 0;
+    virtual void buildInput( OptixBuildInput& bi ) = 0;
 
-    void attachSurface(const std::shared_ptr<Material>& material)
-    {
-        m_surface = material;
-    }
-    void attachSurface(const std::shared_ptr<AreaEmitter>& area_emitter)
-    {
-        m_surface = area_emitter;
-    }
-    void* surfaceDevicePtr() const 
-    {
-        return std::visit([](const auto& surface) { return surface->devicePtr(); }, m_surface);
-    }
-    SurfaceType surfaceType() const
-    {
-        if (std::holds_alternative<std::shared_ptr<Material>>(m_surface))
-            return SurfaceType::Material;
-        else 
-            return SurfaceType::AreaEmitter;
-    }
-    std::variant<std::shared_ptr<Material>, std::shared_ptr<AreaEmitter>> surface() const 
-    {
-        return m_surface;
-    }
-    void addProgram(const ProgramGroup& program)
-    {
-        if (program.kind() != OPTIX_PROGRAM_GROUP_KIND_HITGROUP)
-        {
-            Message(MSG_ERROR, "oprt::Shape::addProgram(): The kind of input program is not a OPTIX_PROGRAM_GROUP_KIND_HITGROUP.");
-            return;
-        }
-        m_programs.push_back(program);
-    }
-    void free()
-    {
-        if (d_aabb_buffer) cuda_free( d_aabb_buffer );  
-    }
+    void attachSurface(const std::shared_ptr<Material>& material);
+    void attachSurface(const std::shared_ptr<AreaEmitter>& area_emitter);
+    std::variant<std::shared_ptr<Material>, std::shared_ptr<AreaEmitter>> surface() const;
+    SurfaceType surfaceType() const;
+    void* surfaceDevicePtr() const;
+
+    void addProgram(const ProgramGroup& program);
+    std::vector<ProgramGroup> programs() const;
+    ProgramGroup programAt(int idx) const;
+
+    void setSbtIndex(const uint32_t sbt_index);
+    uint32_t sbtIndex() const;
+
+    void free();
+    void freeAabbBuffer();
+    
+    void* devicePtr() const;
 
     template <class SBTRecord>
     void bindRecord(SBTRecord* record, int idx)
@@ -115,22 +96,12 @@ public:
         m_programs[idx].bindRecord(record);
     }
 
-    void* devicePtr() const
-    {
-        return d_data;
-    }
-    std::vector<ProgramGroup> programs() const
-    {
-        return m_programs;
-    }
-    ProgramGroup programAt(int idx) const
-    {
-        return m_programs[idx];
-    }
 protected:
     void* d_data { 0 };
     CUdeviceptr d_aabb_buffer { 0 };
+    uint32_t m_sbt_index;
 
+private:
     std::vector<ProgramGroup> m_programs;
     std::variant<std::shared_ptr<Material>, std::shared_ptr<AreaEmitter>> m_surface;
 };

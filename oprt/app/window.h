@@ -50,6 +50,7 @@ public:
     /** @brief Basical functions of the window. */
     void setup();
     void update();
+    void swap();
     void close();
     bool shouldClose() const;
 

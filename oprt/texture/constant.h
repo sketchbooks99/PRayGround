@@ -14,7 +14,13 @@ public:
     explicit ConstantTexture(const float3& c) : m_color(c) {}
     ~ConstantTexture() noexcept {}
 
-    void prepareData() override {
+    void free() override
+    {
+        if (d_data)
+            cuda_free(d_data);
+    }
+
+    void copyToDevice() override {
         ConstantTextureData data = { m_color };
 
         CUDA_CHECK(cudaMalloc(&d_data, sizeof(ConstantTextureData)));

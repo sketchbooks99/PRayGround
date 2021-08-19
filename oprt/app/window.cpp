@@ -37,6 +37,8 @@ Window::~Window()
 void Window::setup()
 {
     m_events = std::make_unique<WindowEvents>();
+    m_events->inputStates.mousePosition = make_float2(0.0f);
+    m_events->inputStates.mousePreviousPosition = make_float2(0.0f);
 
     // Initialize GLFW
     if (!glfwInit())
@@ -84,7 +86,15 @@ void Window::setup()
 // ----------------------------------------------------------------
 void Window::update()
 {
+    m_events->inputStates.mousePreviousPosition = m_events->inputStates.mousePosition;
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glfwPollEvents();
+}
+
+// ----------------------------------------------------------------
+void Window::swap()
+{
     glfwSwapBuffers(m_window_ptr);
 }
 
@@ -199,6 +209,9 @@ void Window::_mouseButtonCallback(GLFWwindow* window, int button, int action, in
 void Window::_cursorPosCallback(GLFWwindow* window, double xpos, double ypos)
 {
     Window* current_window = _getCurrent(window);
+
+    const float2 mouse_pos = make_float2(xpos, ypos);
+    current_window->events().inputStates.mousePosition = mouse_pos;
 
     if (current_window->events().inputStates.mouseButtonPressed)
         current_window->events().mouseDragged.invoke(xpos, ypos, current_window->events().inputStates.mouseButton);

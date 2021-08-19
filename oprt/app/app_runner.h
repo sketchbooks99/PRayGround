@@ -8,13 +8,17 @@ namespace oprt {
 float   oprtGetMouseX();
 float   oprtGetMouseY();
 float   oprtGetPreviousMouseX();
-float   oprtGetpreviousMouseY();
+float   oprtGetPreviousMouseY();
 float2  oprtGetMousePosition();
+float2  oprtGetPreviousMousePosition();
 int32_t oprtGetMouseButton();
 int32_t oprtGetWidth();
 int32_t oprtGetHeight();
-void oprtSetWindowName(const std::string& name);
-void oprtRunApp(const std::shared_ptr<BaseApp>& app, const std::shared_ptr<Window>& window);
+int32_t oprtGetFrame();
+float oprtGetFrameRate();
+template <typename T> const T oprtGetElapsedTime();
+void    oprtSetWindowName(const std::string& name);
+void    oprtRunApp(const std::shared_ptr<BaseApp>& app, const std::shared_ptr<Window>& window);
 
 class AppRunner
 {

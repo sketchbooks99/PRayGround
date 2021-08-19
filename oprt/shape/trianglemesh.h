@@ -25,8 +25,8 @@ public:
 
     OptixBuildInputType buildInputType() const override { return OPTIX_BUILD_INPUT_TYPE_TRIANGLES; }
 
-    void prepareData() override;
-    void buildInput( OptixBuildInput& bi, uint32_t sbt_idx ) override;
+    void copyToDevice() override;
+    void buildInput( OptixBuildInput& bi ) override;
     /**
      * @note 
      * Currently, triangle never need AABB for intersection test on the device side

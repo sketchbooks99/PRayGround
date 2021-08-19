@@ -13,7 +13,7 @@ public:
 
     OptixBuildInputType buildInputType() const override { return OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES; }
 
-    void prepareData() override 
+    void copyToDevice() override 
     {
         SphereData data = {
             m_center, 
@@ -28,11 +28,11 @@ public:
         ));
     }
 
-    void buildInput( OptixBuildInput& bi, uint32_t sbt_idx ) override
+    void buildInput( OptixBuildInput& bi ) override
     {
         CUDABuffer<uint32_t> d_sbt_indices;
         uint32_t* sbt_indices = new uint32_t[1];
-        sbt_indices[0] = sbt_idx;
+        sbt_indices[0] = m_sbt_index;
         d_sbt_indices.copyToDevice(sbt_indices, sizeof(uint32_t));
 
         // Prepare bounding box information on the device.

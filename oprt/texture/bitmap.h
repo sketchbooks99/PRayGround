@@ -19,8 +19,8 @@ class BitmapTexture_ final : public Texture {
 public:
     explicit BitmapTexture_(const std::filesystem::path& filename);
 
-    void prepareData() override;
-    void freeData() override;
+    void copyToDevice() override;
+    void free() override;
 
     TextureType type() const override { return TextureType::Bitmap; }
 private:

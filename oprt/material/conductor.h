@@ -23,9 +23,9 @@ public:
     
     ~Conductor() {}
 
-    void prepareData() override {
+    void copyToDevice() override {
         if (!m_texture->devicePtr())
-            m_texture->prepareData();
+            m_texture->copyToDevice();
 
         ConductorData data = {
             m_texture->devicePtr(), 
@@ -42,9 +42,9 @@ public:
         ));
     }
 
-    void freeData() override
+    void free() override
     {
-        m_texture->freeData();
+        m_texture->free();
     }
 
     MaterialType type() const override { return MaterialType::Conductor; }    

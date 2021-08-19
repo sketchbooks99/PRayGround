@@ -42,8 +42,8 @@ struct SurfaceInteraction {
     float2 uv;
 
     /** Derivatives on texture coordinates. */
-    float3 dpdu;    // Tangent vector at a surface.
-    float3 dpdv;    // Binormal vector at a surface.
+    float2 dpdu;    // Tangent vector at a surface.
+    float2 dpdv;    // Binormal vector at a surface.
 
     /** Seed for random */
     unsigned int seed;

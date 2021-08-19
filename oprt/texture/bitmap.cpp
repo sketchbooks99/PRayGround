@@ -43,7 +43,7 @@ BitmapTexture_<PixelType>::BitmapTexture_(const std::filesystem::path& filename)
 
 // ---------------------------------------------------------------------
 template <typename PixelType>
-void BitmapTexture_<PixelType>::prepareData()
+void BitmapTexture_<PixelType>::copyToDevice()
 {
     // Alloc CUDA array in device memory.
     int32_t pitch = m_bitmap->width() * sizeof(Vec_t);
@@ -74,7 +74,7 @@ void BitmapTexture_<PixelType>::prepareData()
 
 // ---------------------------------------------------------------------
 template <typename PixelType>
-void BitmapTexture_<PixelType>::freeData()
+void BitmapTexture_<PixelType>::free()
 {
     if (d_texture != 0) 
         CUDA_CHECK( cudaDestroyTextureObject( d_texture ) );

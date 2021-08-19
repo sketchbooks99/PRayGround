@@ -18,9 +18,10 @@ set(sources
   # core/primitive.h 
   # core/primitive.cpp 
   core/ray.h 
-  # core/scene.h 
-  # core/scene.cpp 
+  core/scene.h 
+  core/scene.cpp 
   core/shape.h 
+  core/shape.cpp
   core/stream_helpers.h 
   core/texture.h 
   core/transform.h 
@@ -54,6 +55,8 @@ set(sources
   optix/helpers.h 
   optix/instance.h 
   optix/instance.cpp
+  optix/shape_instance.h 
+  optix/shape_instance.cpp
   optix/macros.h 
   optix/module.h 
   optix/module.cpp
@@ -97,7 +100,7 @@ set(sources
   emitter/cuda/area.cuh 
   emitter/cuda/envmap.cuh
   
-  oprt.h 
+  oprt.h
 
   # OPTIONS -rdc true
 )

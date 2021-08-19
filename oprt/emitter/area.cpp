@@ -20,7 +20,7 @@ AreaEmitter::AreaEmitter(const std::shared_ptr<Texture>& texture, float intensit
 void AreaEmitter::prepareData() 
 {
     if (!m_texture->devicePtr())
-        m_texture->prepareData();
+        m_texture->copyToDevice();
 
     AreaEmitterData data = {
         m_texture->devicePtr(),

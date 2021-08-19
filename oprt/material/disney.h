@@ -49,9 +49,9 @@ public:
     
     ~Disney() {}
 
-    void prepareData() override {
+    void copyToDevice() override {
         if (!m_base->devicePtr())
-            m_base->prepareData();
+            m_base->copyToDevice();
 
         DisneyData data = {
             m_base->devicePtr(),
@@ -77,9 +77,9 @@ public:
         ));
     }
 
-    void freeData() override
+    void free() override
     {
-        m_base->freeData();
+        m_base->free();
     }
 
     MaterialType type() const override { return MaterialType::Disney; }

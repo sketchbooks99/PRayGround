@@ -1,24 +1,64 @@
 #include "app.h"
 
+// ------------------------------------------------------------------
 void App::setup()
 {
-    bitmap.load("016_env.jpg");
-    bitmap_draw_w = oprtGetWidth();
-    bitmap_draw_h = oprtGetHeight();
+
 }
 
+// ------------------------------------------------------------------
 void App::update()
 {
 
 }
 
+// ------------------------------------------------------------------
 void App::draw()
 {
-    bitmap.draw(0, 0, bitmap_draw_w, bitmap_draw_h);
+
 }
 
+// ------------------------------------------------------------------
+void App::mousePressed(float x, float y, int button)
+{
+    
+}
+
+// ------------------------------------------------------------------
 void App::mouseDragged(float x, float y, int button)
 {
-    bitmap_draw_w = x;
-    bitmap_draw_h = y;
+    
 }
+
+// ------------------------------------------------------------------
+void App::mouseReleased(float x, float y, int button)
+{
+    
+}
+
+// ------------------------------------------------------------------
+void App::mouseMoved(float x, float y)
+{
+    
+}
+
+// ------------------------------------------------------------------
+void App::mouseScrolled(float x, float y)
+{
+    
+}
+
+// ------------------------------------------------------------------
+void App::keyPressed(int key)
+{
+
+}
+
+// ------------------------------------------------------------------
+void App::keyReleased(int key)
+{
+
+}
+
+
+

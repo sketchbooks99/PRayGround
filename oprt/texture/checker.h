@@ -16,7 +16,7 @@ public:
     : m_color1(c1), m_color2(c2), m_scale(s) {}
     ~CheckerTexture() noexcept {}
 
-    void prepareData() override {
+    void copyToDevice() override {
         CheckerTextureData data = {
             m_color1, 
             m_color2, 

@@ -14,6 +14,11 @@ Instance::Instance(const Transform& transform)
     setTransform(transform);
 }
 
+Instance::Instance(const Matrix4f& matrix)
+{
+    setTransform(matrix);
+}
+
 // ------------------------------------------------------------------
 void Instance::copyToDevice()
 {
@@ -51,6 +56,31 @@ void Instance::setPadding(uint32_t pad[2])
 void Instance::setFlags(const uint32_t flags)
 {
     m_instance.flags = flags;
+}
+
+// ------------------------------------------------------------------
+uint32_t Instance::id() const
+{
+    return m_instance.instanceId;
+}
+
+uint32_t Instance::sbtOffset() const
+{
+    return m_instance.sbtOffset;
+}
+
+uint32_t Instance::visibilityMask() const
+{
+    return m_instance.visibilityMask;
+}
+OptixTraversableHandle Instance::handle()
+{
+    return m_instance.traversableHandle;
+}
+
+uint32_t Instance::flags() const
+{
+    return m_instance.flags;
 }
 
 // ------------------------------------------------------------------

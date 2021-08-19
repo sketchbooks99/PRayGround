@@ -75,9 +75,13 @@ class Material {
 public:
     virtual ~Material() {}
     
-    virtual void prepareData() = 0;
-    virtual void freeData() = 0;
+    virtual void copyToDevice() = 0;
     virtual MaterialType type() const = 0;
+
+    virtual void free()
+    {
+        if (d_data) cuda_free(d_data);
+    }
     
     void* devicePtr() const { return d_data; }
 

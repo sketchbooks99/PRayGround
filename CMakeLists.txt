@@ -302,7 +302,7 @@ function(OPRT_add_executalbe target_name_base target_name_var)
 
   # These calls will group PTX and CUDA files into their own directories in the Visual
   # Studio projects.
-  source_group("OPRT Files" FILES ${oprt_sources})
+  source_group(TREE ${OPRT_DIR} FILES ${oprt_sources})
   if (NOT CUDA_NVRTC_ENABLED)
     source_group("PTX Files" REGULAR_EXPRESSION ".+\\.ptx$")
   endif()
@@ -373,12 +373,7 @@ function(OPRT_add_executalbe target_name_base target_name_var)
   endif()
 endfunction()
 
-#########################################################
-#  List of samples found in subdirectories.
-#
-# If you wish to start your own sample, you can copy one of the sample's directories.
-# Just make sure you rename all the occurances of the sample's name in the C code as well
-# and the CMakeLists.txt file.
+# Load oprt library sources.
 add_subdirectory(oprt)
 
 # sutil library.  The rules to build it are found in the subdirectory.
@@ -386,6 +381,9 @@ add_subdirectory(sutil)
 
 # External libraries
 add_subdirectory(oprt/ext)
+
+# Example apps
+add_subdirectory(examples/cornel)
 
 # Executable apps
 add_subdirectory(apps/empty-app)

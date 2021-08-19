@@ -62,7 +62,7 @@ TriangleMesh::TriangleMesh(
 }
 
 // ------------------------------------------------------------------
-void TriangleMesh::prepareData() {
+void TriangleMesh::copyToDevice() {
     CUDABuffer<float3> d_vertices_buf;
     CUDABuffer<Face> d_faces_buf;
     CUDABuffer<float3> d_normals_buf;
@@ -94,9 +94,9 @@ void TriangleMesh::prepareData() {
 }
 
 // ------------------------------------------------------------------
-void TriangleMesh::buildInput( OptixBuildInput& bi, const uint32_t sbt_idx ) {
+void TriangleMesh::buildInput( OptixBuildInput& bi ) {
     CUDABuffer<uint32_t> d_sbt_faces;
-    std::vector<uint32_t> sbt_faces(m_faces.size(), sbt_idx);
+    std::vector<uint32_t> sbt_faces(m_faces.size(), m_sbt_index);
     d_sbt_faces.copyToDevice(sbt_faces);
 
     unsigned int* triangle_input_flags = new unsigned int[1];

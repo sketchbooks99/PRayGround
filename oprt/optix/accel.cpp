@@ -16,13 +16,13 @@ GeometryAccel::~GeometryAccel()
 }
 
 // ---------------------------------------------------------------------------
-void GeometryAccel::build(const Context& ctx, const std::shared_ptr<Shape>& shape, uint32_t sbt_base)
+void GeometryAccel::build(const Context& ctx, const std::shared_ptr<Shape>& shape)
 {
     std::vector<std::shared_ptr<Shape>> shapes(1, shape);
-    build(ctx, shapes, sbt_base);
+    build(ctx, shapes);
 }
 
-void GeometryAccel::build(const Context& ctx, const std::vector<std::shared_ptr<Shape>>& shapes, uint32_t sbt_base)
+void GeometryAccel::build(const Context& ctx, const std::vector<std::shared_ptr<Shape>>& shapes)
 {
     if (shapes.size() == 0)
     {
@@ -58,11 +58,9 @@ void GeometryAccel::build(const Context& ctx, const std::vector<std::shared_ptr<
     std::vector<OptixBuildInput> build_inputs(shapes.size());
     m_options.operation = OPTIX_BUILD_OPERATION_BUILD;
 
-    uint32_t sbt_idx = sbt_base;
     for (size_t i = 0; i < shapes.size(); i++)
     {
-        shapes[i]->buildInput(build_inputs[i], sbt_idx);
-        sbt_idx++;
+        shapes[i]->buildInput(build_inputs[i]);
     }
 
     OptixAccelBufferSizes gas_buffer_sizes;
@@ -75,7 +73,6 @@ void GeometryAccel::build(const Context& ctx, const std::vector<std::shared_ptr<
     ));
 
     // Temporarily buffer to build GAS
-    CUdeviceptr d_temp_buffer;
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_temp_buffer), gas_buffer_sizes.tempSizeInBytes));
 
     CUdeviceptr d_buffer_temp_output_gas_and_compacted_size;
@@ -104,37 +101,111 @@ void GeometryAccel::build(const Context& ctx, const std::vector<std::shared_ptr<
         1
     ));
 
-    // Free temporarily buffers 
-    cuda_free(d_temp_buffer);
 
-    size_t compacted_gas_size;
-    CUDA_CHECK(cudaMemcpy(&compacted_gas_size, (void*)emit_property.result, sizeof(size_t), cudaMemcpyDeviceToHost));
-
-    if (compacted_gas_size < gas_buffer_sizes.outputSizeInBytes) {
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_buffer), compacted_gas_size));
-        OPTIX_CHECK(optixAccelCompact(static_cast<OptixDeviceContext>(ctx), 0, m_handle, d_buffer, compacted_gas_size, &m_handle));
-        cuda_free(d_buffer_temp_output_gas_and_compacted_size);
+    if (is_hold_temp_buffer)
+        d_temp_buffer_size = gas_buffer_sizes.tempSizeInBytes;
+    else
+    {
+        cuda_free(d_temp_buffer);
+        d_temp_buffer_size = 0;
     }
-    else {
-        d_buffer = d_buffer_temp_output_gas_and_compacted_size;
+
+    if ((m_options.buildFlags & OPTIX_BUILD_FLAG_ALLOW_COMPACTION) != 0)
+    {
+        size_t compacted_gas_size;
+        CUDA_CHECK(cudaMemcpy(&compacted_gas_size, (void*)emit_property.result, sizeof(size_t), cudaMemcpyDeviceToHost));
+
+        if (compacted_gas_size < gas_buffer_sizes.outputSizeInBytes) {
+            CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_buffer), compacted_gas_size));
+            OPTIX_CHECK(optixAccelCompact(static_cast<OptixDeviceContext>(ctx), 0, m_handle, d_buffer, compacted_gas_size, &m_handle));
+            cuda_free(d_buffer_temp_output_gas_and_compacted_size);
+        }
+        else {
+            d_buffer = d_buffer_temp_output_gas_and_compacted_size;
+        }
     }
 }
 
 void GeometryAccel::update(const Context& ctx)
 {
-    /** Future work */
+    TODO_MESSAGE();
 }
 
 void GeometryAccel::free()
 {
     if (d_buffer) cudaFree(reinterpret_cast<void*>(d_buffer));
+    if (d_temp_buffer) cudaFree(reinterpret_cast<void*>(d_temp_buffer));
+    d_buffer_size = 0;
+    d_temp_buffer_size = 0;
 }
 
-// -----------------------------------C----------------------------------------
+// ---------------------------------------------------------------------------
+void GeometryAccel::enableHoldTempBuffer()
+{
+    is_hold_temp_buffer = true;
+}
+
+void GeometryAccel::disableHoldTempBuffer()
+{
+    is_hold_temp_buffer = false;
+}
+
+// ---------------------------------------------------------------------------
 void GeometryAccel::setFlags(const uint32_t build_flags)
 {
     m_options.buildFlags = build_flags;
 }
+
+void GeometryAccel::allowUpdate()
+{
+    m_options.buildFlags |= OPTIX_BUILD_FLAG_ALLOW_UPDATE;
+}
+
+void GeometryAccel::allowCompaction()
+{
+    m_options.buildFlags |= OPTIX_BUILD_FLAG_ALLOW_COMPACTION;
+}
+
+void GeometryAccel::preferFastTrace()
+{
+    m_options.buildFlags |= OPTIX_BUILD_FLAG_PREFER_FAST_TRACE;
+}
+
+void GeometryAccel::preferFastBuild()
+{
+    m_options.buildFlags |= OPTIX_BUILD_FLAG_PREFER_FAST_BUILD;
+}
+
+void GeometryAccel::allowRandomVertexAccess()
+{
+    m_options.buildFlags |= OPTIX_BUILD_FLAG_ALLOW_RANDOM_VERTEX_ACCESS;
+}
+
+void GeometryAccel::disableUpdate()
+{
+    m_options.buildFlags &= ~OPTIX_BUILD_FLAG_ALLOW_UPDATE;
+}
+
+void GeometryAccel::disableCompaction()
+{
+    m_options.buildFlags &= ~OPTIX_BUILD_FLAG_ALLOW_COMPACTION;
+}
+
+void GeometryAccel::disableFastTrace()
+{
+    m_options.buildFlags &= ~OPTIX_BUILD_FLAG_PREFER_FAST_TRACE;
+}
+
+void GeometryAccel::disableFastBuild()
+{
+    m_options.buildFlags &= ~OPTIX_BUILD_FLAG_PREFER_FAST_BUILD;
+}
+
+void GeometryAccel::disableRandomVertexAccess()
+{
+    m_options.buildFlags &= ~OPTIX_BUILD_FLAG_ALLOW_RANDOM_VERTEX_ACCESS;
+}
+
 
 void GeometryAccel::setMotionOptions(const OptixMotionOptions& motion_options)
 {
@@ -152,9 +223,29 @@ OptixTraversableHandle GeometryAccel::handle() const
     return m_handle;
 }
 
+CUdeviceptr GeometryAccel::deviceBuffer() const
+{
+    return d_buffer;
+}
+
+size_t GeometryAccel::deviceBufferSize() const
+{
+    return d_buffer_size;
+}
+
+CUdeviceptr GeometryAccel::deviceTempBuffer() const
+{
+    return d_temp_buffer;
+}
+
+size_t GeometryAccel::deviceTempBufferSize() const
+{
+    return d_temp_buffer_size;
+}
+
 // InstanceAccel -------------------------------------------------------------
 InstanceAccel::InstanceAccel()
-: InstanceAccel(Type::Instances)
+: m_type(Type::Instances)
 {
 
 }
@@ -171,9 +262,9 @@ InstanceAccel::~InstanceAccel()
 }
 
 // ---------------------------------------------------------------------------
-void InstanceAccel::build(const Context& ctx, const Instance& instance)
+void InstanceAccel::build(const Context& ctx, const std::shared_ptr<Instance>& instance)
 {
-    std::vector<OptixInstance> optix_instance(1, static_cast<OptixInstance>(instance));
+    std::vector<OptixInstance> optix_instance(1, static_cast<OptixInstance>(*instance));
     build(ctx, optix_instance);
 }
 
@@ -183,20 +274,14 @@ void InstanceAccel::build(const Context& ctx, const OptixInstance& instance)
     build(ctx, optix_instance);
 }
 
-void InstanceAccel::build(const Context& ctx, const std::vector<Instance>& instances)
+void InstanceAccel::build(const Context& ctx, const std::vector<std::shared_ptr<Instance>>& instances)
 {
-    /**
-     * @todo
-     * oprt::Instance manages device pointer itself, so building instances 
-     * should not be realized by using build(ctx, optix_instances);
-     */
-    // std::vector<OptixInstance> optix_instances(instances.size());
     std::vector<CUdeviceptr> d_instance_array;
     std::transform(instances.begin(), instances.end(), std::back_inserter(d_instance_array), 
-        [](Instance instance) {
-            if (!instance.isDataOnDevice())
-                instance.copyToDevice();
-            return instance.devicePtr();
+        [](const std::shared_ptr<Instance>& instance) {
+            if (!instance->isDataOnDevice())
+                instance->copyToDevice();
+            return instance->devicePtr();
         });
     CUDABuffer<CUdeviceptr> d_instances;
     d_instances.copyToDevice(d_instance_array);
@@ -217,7 +302,6 @@ void InstanceAccel::build(const Context& ctx, const std::vector<Instance>& insta
         &ias_buffer_sizes ));
 
     // Allocate buffer to build acceleration structure
-    CUdeviceptr d_temp_buffer;
     CUDA_CHECK(cudaMalloc(
         reinterpret_cast<void**>(&d_temp_buffer), 
         ias_buffer_sizes.tempSizeInBytes ));
@@ -226,7 +310,6 @@ void InstanceAccel::build(const Context& ctx, const std::vector<Instance>& insta
         reinterpret_cast<void**>(&d_ias_output_buffer), 
         ias_buffer_sizes.outputSizeInBytes ));
     
-    OptixTraversableHandle ias_handle = 0;
     // Build instance AS contains all GASs to describe the scene.
     OPTIX_CHECK(optixAccelBuild(
         static_cast<OptixDeviceContext>(ctx), 
@@ -238,14 +321,20 @@ void InstanceAccel::build(const Context& ctx, const std::vector<Instance>& insta
         ias_buffer_sizes.tempSizeInBytes, 
         d_ias_output_buffer, 
         ias_buffer_sizes.outputSizeInBytes, 
-        &ias_handle, 
+        &m_handle, 
         nullptr,            // emitted property list
         0                   // num emitted properties
     ));
 
-    cuda_free(d_temp_buffer);
+    if (is_hold_temp_buffer)
+        d_temp_buffer_size = ias_buffer_sizes.tempSizeInBytes;
+    else
+    {
+        cuda_free(d_temp_buffer);
+        d_temp_buffer_size = 0;
+    }
     /// @note Is this release of pointer needed?
-    // d_instances.free();  
+    d_instances.free();  
 }
 
 void InstanceAccel::build(const Context& ctx, const std::vector<OptixInstance>& optix_instances)
@@ -269,7 +358,6 @@ void InstanceAccel::build(const Context& ctx, const std::vector<OptixInstance>& 
         &ias_buffer_sizes ));
 
     // Allocate buffer to build acceleration structure
-    CUdeviceptr d_temp_buffer;
     CUDA_CHECK(cudaMalloc(
         reinterpret_cast<void**>(&d_temp_buffer), 
         ias_buffer_sizes.tempSizeInBytes ));
@@ -278,7 +366,6 @@ void InstanceAccel::build(const Context& ctx, const std::vector<OptixInstance>& 
         reinterpret_cast<void**>(&d_ias_output_buffer), 
         ias_buffer_sizes.outputSizeInBytes ));
     
-    OptixTraversableHandle ias_handle = 0;
     // Build instance AS contains all GASs to describe the scene.
     OPTIX_CHECK(optixAccelBuild(
         static_cast<OptixDeviceContext>(ctx), 
@@ -290,29 +377,90 @@ void InstanceAccel::build(const Context& ctx, const std::vector<OptixInstance>& 
         ias_buffer_sizes.tempSizeInBytes, 
         d_ias_output_buffer, 
         ias_buffer_sizes.outputSizeInBytes, 
-        &ias_handle, 
+        &m_handle, 
         nullptr,            // emitted property list
         0                   // num emitted properties
     ));
 
-    cuda_free(d_temp_buffer);
+    if (is_hold_temp_buffer)
+        d_temp_buffer_size = ias_buffer_sizes.tempSizeInBytes;
+    else
+    {
+        cuda_free(d_temp_buffer);
+        d_temp_buffer_size = 0;
+    }
+   
     d_instances.free();
 }
 
 void InstanceAccel::update(const Context& ctx)
 {
-    /** Future work */
+    TODO_MESSAGE();
 }
 
 void InstanceAccel::free()
 {
     if (d_buffer) cudaFree(reinterpret_cast<void*>(d_buffer));
+    if (d_temp_buffer) cudaFree(reinterpret_cast<void*>(d_temp_buffer));
+    d_buffer_size = 0;
+    d_temp_buffer_size = 0;
+}
+
+// ---------------------------------------------------------------------------
+void InstanceAccel::enableHoldTempBuffer()
+{
+    is_hold_temp_buffer = true;
+}
+
+void InstanceAccel::disableHoldTempBuffer()
+{
+    is_hold_temp_buffer = false;
 }
 
 // ---------------------------------------------------------------------------
 void InstanceAccel::setFlags(const uint32_t build_flags)
 {
     m_options.buildFlags = build_flags;
+}
+
+void InstanceAccel::allowUpdate()
+{
+    m_options.buildFlags |= OPTIX_BUILD_FLAG_ALLOW_UPDATE;
+}
+
+void InstanceAccel::allowCompaction()
+{
+    m_options.buildFlags |= OPTIX_BUILD_FLAG_ALLOW_COMPACTION;
+}
+
+void InstanceAccel::preferFastTrace()
+{
+    m_options.buildFlags |= OPTIX_BUILD_FLAG_PREFER_FAST_TRACE;
+}
+
+void InstanceAccel::preferFastBuild()
+{
+    m_options.buildFlags |= OPTIX_BUILD_FLAG_PREFER_FAST_BUILD;
+}
+
+void InstanceAccel::disableUpdate()
+{
+    m_options.buildFlags &= ~OPTIX_BUILD_FLAG_ALLOW_UPDATE;
+}
+
+void InstanceAccel::disableCompaction()
+{
+    m_options.buildFlags &= ~OPTIX_BUILD_FLAG_ALLOW_COMPACTION;
+}
+
+void InstanceAccel::disableFastTrace()
+{
+    m_options.buildFlags &= ~OPTIX_BUILD_FLAG_PREFER_FAST_TRACE;
+}
+
+void InstanceAccel::disableFastBuild()
+{
+    m_options.buildFlags &= ~OPTIX_BUILD_FLAG_PREFER_FAST_BUILD;
 }
 
 void InstanceAccel::setMotionOptions(const OptixMotionOptions& motion_options)
@@ -329,6 +477,26 @@ uint32_t InstanceAccel::count() const
 OptixTraversableHandle InstanceAccel::handle() const
 {
     return m_handle;
+}
+
+CUdeviceptr InstanceAccel::deviceBuffer() const
+{
+    return d_buffer;
+}
+
+size_t InstanceAccel::deviceBufferSize() const
+{
+    return d_buffer_size;
+}
+
+CUdeviceptr InstanceAccel::deviceTempBuffer() const
+{
+    return d_temp_buffer;
+}
+
+size_t InstanceAccel::deviceTempBufferSize() const
+{
+    return d_temp_buffer_size;
 }
 
 } // ::oprt

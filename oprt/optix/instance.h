@@ -5,10 +5,9 @@
 #include <oprt/core/transform.h>
 #include <unordered_map>
 
-/**
- * @todo
- * OptixInstanceとそれによるIASのビルドに対するラッパーの実装
- */
+/** OptixInstanceのラッパー 
+ * 
+*/
 
 namespace oprt {
 
@@ -26,7 +25,7 @@ public:
     void setId(const uint32_t id);
     void setSBTOffset(const uint32_t sbt_offset);
     void setVisibilityMask(const uint32_t visibility_mask);
-    virtual void setTraversableHandle(OptixTraversableHandle handle);
+    void setTraversableHandle(OptixTraversableHandle handle);
     void setPadding(uint32_t pad[2]);
     void setFlags(const uint32_t flags);
 

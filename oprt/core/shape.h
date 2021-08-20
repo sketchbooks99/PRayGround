@@ -93,7 +93,7 @@ public:
             Message(MSG_ERROR, "oprt::Shape::bindRecord(): The index to bind SBT record exceeds the number of programs.");
             return;
         }
-        m_programs[idx].bindRecord(record);
+        m_programs[idx]->bindRecord(record);
     }
 
 protected:
@@ -102,7 +102,7 @@ protected:
     uint32_t m_sbt_index;
 
 private:
-    std::vector<ProgramGroup> m_programs;
+    std::vector<std::unique_ptr<ProgramGroup>> m_programs;
     std::variant<std::shared_ptr<Material>, std::shared_ptr<AreaEmitter>> m_surface;
 };
 

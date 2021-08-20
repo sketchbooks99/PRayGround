@@ -37,12 +37,15 @@ void Shape::addProgram(const ProgramGroup& program)
         Message(MSG_ERROR, "oprt::Shape::addProgram(): The kind of input program is not a OPTIX_PROGRAM_GROUP_KIND_HITGROUP.");
         return;
     }
-    m_programs.push_back(program);
+    m_programs.push_back(make_unique<ProgramGroup>(program));
 }
 
 std::vector<ProgramGroup> Shape::programs() const
 {
-    return m_programs;
+    std::vector<ProgramGroup> prg_groups;
+    std::transform(m_programs.begin(), m_programs.end(), std::back_inserter(prg_groups), 
+        [](auto prg_ptr) { return *prg_ptr; });
+    return prg_groups;
 }
 
 ProgramGroup Shape::programAt(int idx) const

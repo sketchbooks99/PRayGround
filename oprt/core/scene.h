@@ -69,10 +69,11 @@ namespace oprt {
 //};
 
 /**
- * RTScene ‚Í Shader Binding Table ‚Æ‚Í“Æ—§‚ÉŠÇ—‚·‚éB
- * ‚ ‚­‚Ü‚ÅAƒŒƒCƒgƒŒ[ƒVƒ“ƒO‚·‚é‘ÎÛ‚Æ‚È‚éƒV[ƒ“
- * (Environment Emitter, Shape, Material, Texture) ‚ğŠÇ—‚·‚é‚Ì‚İ‚É‚Æ‚Ç‚Ü‚é
+ * RTScene ï¿½ï¿½ Shader Binding Table ï¿½Æ‚Í“Æ—ï¿½ï¿½ÉŠÇ—ï¿½ï¿½ï¿½ï¿½ï¿½B
+ * ï¿½ï¿½ï¿½ï¿½ï¿½Ü‚ÅAï¿½ï¿½ï¿½Cï¿½gï¿½ï¿½ï¿½[ï¿½Vï¿½ï¿½ï¿½Oï¿½ï¿½ï¿½ï¿½ÎÛ‚Æ‚È‚ï¿½Vï¿½[ï¿½ï¿½
+ * (Environment Emitter, Shape, Material, Texture) ï¿½ï¿½ï¿½Ç—ï¿½ï¿½ï¿½ï¿½ï¿½Ì‚İ‚É‚Æ‚Ç‚Ü‚ï¿½
  */
+template <class Key>
 class RTScene {
 public:
     RTScene(const uint32_t num_ray_type);
@@ -82,27 +83,28 @@ public:
     void updateAccelStructure();
     void destroy();
 
-    void addShape(const std::string& instance_name, const std::string& shape_name, const std::shared_ptr<Shape>& shape);
-    void addShapeInstance(const std::string& name, const std::shared_ptr<Shape>& shape);
-    std::shared_ptr<ShapeInstance> getShapeInstance(const std::string& name) const;
-    std::shared_ptr<Shape> getShape(const std::string& instance_name, const std::string& shape_name) const;
+    void addShape(const Key& instance_key, const Key& shape_key, const std::shared_ptr<Shape>& shape);
+    void addInstance(const Key& instance_key, const std::shared_ptr<Instance>& instance);
+    void addShapeInstance(const Key& key, const std::shared_ptr<ShapeInstance>& shape_instance);
+    std::shared_ptr<ShapeInstance> getShapeInstance(const Key& key) const;
+    std::shared_ptr<Shape> getShape(const Key& instance_key, const Key& shape_key) const;
 
     // Future work
-    // void eraseShapeInstance(const std::string& name);
-    // void eraseShapeFromInstance(const std::string& instance_name, const std::string& shape_name) const;
+    // void eraseShapeInstance(const Key& name);
+    // void eraseShapeFromInstance(const Key& instance_name, const Key& shape_name) const;
 
-    void addMaterial(const std::string& name, const std::shared_ptr<Material>& material);
-    std::shared_ptr<Material> getMaterial(const std::string& name) const;
+    void addMaterial(const Key& key, const std::shared_ptr<Material>& material);
+    std::shared_ptr<Material> getMaterial(const Key& key) const;
 
-    void addTexture(const std::string& name, const std::shared_ptr<Texture>& texture);
-    std::shared_ptr<Texture> getTexture(const std::string& name) const;
+    void addTexture(const Key& key, const std::shared_ptr<Texture>& texture);
+    std::shared_ptr<Texture> getTexture(const Key& key) const;
 
     OptixTraversableHandle handle() const;
 private:
     std::shared_ptr<EnvironmentEmitter> m_enviroment;
-    std::unordered_map<std::string, std::shared_ptr<ShapeInstance>> m_shape_instances;
-    std::unordered_map<std::string, std::shared_ptr<Material>> m_materials;
-    std::unordered_map<std::string, std::shared_ptr<Texture>> m_textures;
+    std::unordered_map<Key, std::shared_ptr<Instance>> m_instances;
+    std::unordered_map<Key, std::shared_ptr<Material>> m_materials;
+    std::unordered_map<Key, std::shared_ptr<Texture>> m_textures;
     InstanceAccel m_instance_accel;
     uint32_t m_num_ray_type{ 1 };
 };

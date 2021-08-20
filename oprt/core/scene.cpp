@@ -98,14 +98,16 @@ namespace oprt {
 //}
 
 // --------------------------------------------------------------------------------
-RTScene::RTScene(const uint32_t num_ray_type)
+template <class Key>
+RTScene<Key>::RTScene(const uint32_t num_ray_type)
 : m_num_ray_type(num_ray_type)
 {
 
 }
 
 // --------------------------------------------------------------------------------
-void RTScene::createDataOnDevice()
+template <class Key>
+void RTScene<Key>::createDataOnDevice()
 {
 	for (auto& shape_instance : m_shape_instances)
 		shape_instance.second->copyToDevice();
@@ -121,7 +123,8 @@ void RTScene::createDataOnDevice()
 	}
 }
 
-void RTScene::buildAccelStructure()
+template <class Key>
+void RTScene<Key>::buildAccelStructure()
 {
 	// Create geometry acceleration structures for shape
 	for (auto& shape_instance : m_shape_instances)
@@ -129,74 +132,90 @@ void RTScene::buildAccelStructure()
 	
 }
 
-void RTScene::updateAccelStructure()
+template <class Key>
+void RTScene<Key>::updateAccelStructure()
 {
 
 }
 
 // --------------------------------------------------------------------------------
-void RTScene::destroy()
+template <class Key>
+void RTScene<Key>::destroy()
 {
 
 }
 
 // --------------------------------------------------------------------------------
-void RTScene::addShape(const std::string& instance_name, const std::string& shape_name, const std::shared_ptr<Shape>& shape)
+template <class Key>
+void RTScene<Key>::addShape(const std::string& instance_name, const std::string& shape_name, const std::shared_ptr<Shape>& shape)
 {
 
 }
 
-void RTScene::addShapeInstance(const std::string& name, const std::shared_ptr<Shape>& shape)
+template <class Key>
+void RTScene<Key>::addShapeInstance(const std::string& name, const std::shared_ptr<Shape>& shape)
 {
 
 }
 
-//void RTScene::eraseShapeInstance(const std::string& name)
+// template <class Key>
+//void RTScene<Key>::eraseShapeInstance(const std::string& name)
 //{
 //
 //}
-//
+
+// template <class Key>
 //void RTScene::eraseShapeFromInstance(const std::string& instance_name, const std::string& shape_name) const
 //{
 //
 //}
 
-std::shared_ptr<ShapeInstance> RTScene::getShapeInstance(const std::string& name) const
+template <class Key>
+std::shared_ptr<ShapeInstance> RTScene<Key>::getShapeInstance(const std::string& name) const
 {
 
 }
 
-std::shared_ptr<Shape> RTScene::getShape(const std::string& instance_name, const std::string& shape_name) const
-{
-
-}
-
-// --------------------------------------------------------------------------------
-void RTScene::addMaterial(const std::string& name, const std::shared_ptr<Material>& material)
-{
-
-}
-
-std::shared_ptr<Material> RTScene::getMaterial(const std::string& name) const
+template <class Key>
+std::shared_ptr<Shape> RTScene<Key>::getShape(const std::string& instance_name, const std::string& shape_name) const
 {
 
 }
 
 // --------------------------------------------------------------------------------
-void RTScene::addTexture(const std::string& name, const std::shared_ptr<Texture>& texture)
+template <class Key>
+void RTScene<Key>::addMaterial(const std::string& name, const std::shared_ptr<Material>& material)
 {
 
 }
 
-std::shared_ptr<Texture> RTScene::getTexture(const std::string& name) const
+template <class Key>
+std::shared_ptr<Material> RTScene<Key>::getMaterial(const std::string& name) const
 {
 
 }
 
 // --------------------------------------------------------------------------------
-OptixTraversableHandle RTScene::handle() const
+template <class Key>
+void RTScene<Key>::addTexture(const std::string& name, const std::shared_ptr<Texture>& texture)
 {
 
 }
+
+template <class Key>
+std::shared_ptr<Texture> RTScene<Key>::getTexture(const std::string& name) const
+{
+
+}
+
+// --------------------------------------------------------------------------------
+template <class Key>
+OptixTraversableHandle RTScene<Key>::handle() const
+{
+
+}
+
+template class RTScene<std::string>;
+template class RTScene<int32_t>;
 
 } // ::oprt

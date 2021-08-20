@@ -36,7 +36,7 @@ public:
 
     Type type() const;
 
-    OptixTraversableHandle handle();
+    OptixTraversableHandle gasHandle();
 private:
     GeometryAccel m_gas;
     Type m_type;

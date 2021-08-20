@@ -33,7 +33,7 @@ void ShapeInstance::copyToDevice()
 // ------------------------------------------------------------------
 void ShapeInstance::buildAccelStructure()
 {
-
+    
 }
 
 void ShapeInstance::updateAccelStructure()

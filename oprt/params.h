@@ -52,4 +52,6 @@ using HitgroupRecord = Record<HitgroupData>;
 using MissRecord = Record<MissData>;
 using EmptyRecord = Record<EmptyData>;
 
+using AppSBT = ShaderBindingTable<RaygenRecord, MissRecord, HitgroupRecord, EmptyRecord, EmptyRecord, 1>;
+
 } // ::oprt

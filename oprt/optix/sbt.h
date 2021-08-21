@@ -68,8 +68,9 @@ public:
         static_assert(std::conjunction<std::is_same<MissRecord, Args>...>::value, 
             "oprt::ShaderBindingTable::addMissRecord(): Data type must be same with 'MissRecord'.");
 
-        if (!m_miss_records.empty()) m_miss_records.clear();
-        push_to_vector(m_miss_records, args...);
+        int j = 0;
+        for (auto i : std::initializer_list<std::common_type_t<MissRecordArgs...>>{args...})
+            m_miss_records[j++] = i;
     }
 
     /// @note 置き換えを行ったらデバイス上のデータも更新する？
@@ -80,6 +81,10 @@ public:
             Message(MSG_ERROR, "oprt::ShaderBindingTable::replaceMissRecord(): The index out of range.");
             return;
         }
+        m_miss_records[idx] = record;
+    }
+
+    MissRecord getMissRecord(const int idx) const {
         m_miss_records[idx] = record;
     }
 
@@ -160,7 +165,7 @@ public:
 
     OptixShaderBindingTable sbt() const 
     {
-        return sbt;
+        return m_sbt;
     }
 
     bool isOnDevice() const 
@@ -170,7 +175,8 @@ public:
 private:
     OptixShaderBindingTable m_sbt {};
     RayGenRecord m_raygen_record;
-    std::vector<MissRecord> m_miss_records;
+    // std::vector<MissRecord> m_miss_records;
+    MissRecord m_miss_records[NRay];
     std::vector<HitGroupRecord> m_hitgroup_records;
     std::vector<CallablesRecord> m_callables_records;
     ExceptionRecord m_exception_record;

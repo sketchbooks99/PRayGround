@@ -1,10 +1,11 @@
 #pragma once
 
 #include <cuda/random.h>
-#include "../core/bsdf.h"
-#include "../core/onb.h"
-#include "../core/color.h"
-#include "../disney.h"
+#include <oprt/core/bsdf.h>
+#include <oprt/core/onb.h>
+#include <oprt/core/color.h>
+#include <oprt/core/interaction.h>
+#include <oprt/material/disney.h>
 
 CALLABLE_FUNC void DC_FUNC(sample_disney)(SurfaceInteraction* si, void* mat_data)
 {

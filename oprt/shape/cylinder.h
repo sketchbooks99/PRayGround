@@ -5,9 +5,17 @@
 #ifndef __CUDACC__
 #include <oprt/core/shape.h>
 #include <oprt/core/cudabuffer.h>
+#endif
 
 namespace oprt {
 
+struct CylinderData
+{
+    float radius; 
+    float height;
+};
+
+#ifndef __CUDACC__
 class Cylinder final : public Shape {
 public:
     explicit Cylinder(float radius, float height) : m_radius(radius), m_height(height) {}
@@ -73,7 +81,6 @@ private:
     float m_radius;
     float m_height;
 };
+#endif // __CUDACC__
 
 }
-
-#endif

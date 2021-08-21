@@ -15,8 +15,8 @@ public:
     AreaEmitter(const float3& color, float intensity=1.0f, bool twosided=true);
     AreaEmitter(const std::shared_ptr<Texture>& texture, float intensity = 1.0f, bool twosided = true);
 
-    void prepareData() override;
-    void freeData() override;
+    void copyToDevice() override;
+    void free() override;
 
     void setProgramId(const int32_t prg_id);
     int32_t programId() const;

@@ -1,10 +1,10 @@
 #pragma once
 
 #include <sutil/vec_math.h>
-#include "../../optix/util.h"
-#include "../../core/bsdf.h"
-#include "../../core/onb.h"
-#include "../diffuse.h"
+#include <oprt/core/interaction.h>
+#include <oprt/core/bsdf.h>
+#include <oprt/core/onb.h>
+#include <oprt/material/diffuse.h>
 
 /**
  * \brief Sample bsdf at the surface.

@@ -1,17 +1,12 @@
 #pragma once
 
 #include <sutil/vec_math.h>
-#include "../../core/material.h"
-#include "../../core/ray.h"
-#include "../../optix/sbt.h"
+#include <oprt/core/material.h>
+#include <oprt/core/ray.h>
+#include <oprt/optix/sbt.h>
+#include <oprt/optix/cuda/util.cuh>
 
 namespace oprt {
-
-struct CylinderData
-{
-    float radius; 
-    float height;
-};
 
 #ifdef __CUDACC__
 

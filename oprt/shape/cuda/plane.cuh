@@ -1,19 +1,13 @@
 #pragma once
 
+#include <optix.h>
 #include <sutil/vec_math.h>
-#include "../../core/material.h"
-#include "../../core/ray.h"
-#include "../../optix/sbt.h"
+#include <oprt/core/material.h>
+#include <oprt/core/ray.h>
+#include <oprt/shape/plane.h>
+#include <oprt/optix/cuda/util.cuh>
 
 namespace oprt {
-
-struct PlaneData 
-{
-    float2 min;
-    float2 max;
-};
-
-#ifdef __CUDACC__
 
 CALLABLE_FUNC void IS_FUNC(plane)()
 {
@@ -69,7 +63,5 @@ CALLABLE_FUNC void CH_FUNC(plane_occlusion)()
 {
     setPayloadOcclusion(true);
 }
-
-#endif
 
 }

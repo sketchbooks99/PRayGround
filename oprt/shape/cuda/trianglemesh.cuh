@@ -1,29 +1,10 @@
 #pragma once
 
 #include <sutil/vec_math.h>
-#include "../../core/util.h"
-#include "../../core/transform.h"
-#include "../../core/material.h"
-#include "../../optix/sbt.h"
+#include <oprt/optix/cuda/util.cuh>
+#include <oprt/shape/trianglemesh.h>
 
 namespace oprt {
-
-struct Face {
-    int3 vertex_id; 
-    int3 normal_id; 
-    int3 texcoord_id;
-};
-
-struct MeshData {
-    float3* vertices;
-    Face* faces;
-    float3* normals;
-    float2* texcoords;
-};
-
-}
-
-#ifdef __CUDACC__
 
 CALLABLE_FUNC void CH_FUNC(mesh)()
 {
@@ -70,4 +51,3 @@ CALLABLE_FUNC void CH_FUNC(mesh_occlusion)()
 	setPayloadOcclusion(true);
 }
 
-#endif

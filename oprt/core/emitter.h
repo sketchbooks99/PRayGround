@@ -26,10 +26,10 @@ inline std::ostream& operator<<(std::ostream& out, EmitterType type)
 
 class Emitter {
 public:
-    virtual void prepareData() = 0;
+    virtual void copyToDevice() = 0;
     virtual EmitterType type() const = 0;
 
-    virtual void freeData() = 0;
+    virtual void free() = 0;
 
     void* devicePtr() const { return reinterpret_cast<void*>(d_data); }
 protected:

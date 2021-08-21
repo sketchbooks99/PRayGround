@@ -1,9 +1,9 @@
 #pragma once
 
 #include <sutil/vec_math.h>
-#include "../../optix/util.h"
-#include "../../core/bsdf.h"
-#include "../dielectric.h"
+#include <oprt/core/interaction.h>
+#include <oprt/core/bsdf.h>
+#include <oprt/material/dielectric.h>
 
 CALLABLE_FUNC void DC_FUNC(sample_dielectric)(SurfaceInteraction* si, void* mat_data) {
     const DielectricData* dielectric = reinterpret_cast<DielectricData*>(mat_data);

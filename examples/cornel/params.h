@@ -47,9 +47,4 @@ struct EmptyData
 
 };
 
-using RaygenRecord = Record<RaygenData>;
-using HitgroupRecord = Record<HitgroupData>;
-using MissRecord = Record<MissData>;
-using EmptyRecord = Record<EmptyData>;
-
 } // ::oprt

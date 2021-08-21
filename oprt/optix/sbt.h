@@ -7,10 +7,7 @@
 
 namespace oprt {
 
-/**
- * @note 
- * Should I implement a wrapper for Optix Shader Binding Table ??
- */
+#ifndef __CUDACC__
 
 namespace {
     template <class T>
@@ -24,8 +21,6 @@ namespace {
             push_to_vector(v, args...);
     }
 } // ::nonamed namespace
-
-#ifndef __CUDACC__
 
 /**
  * @note 
@@ -44,7 +39,7 @@ struct Record
     T data;
 };
 
-template <class RayGenRecord, class MissRecord, class HitGroupRecord, 
+template <class RaygenRecord, class MissRecord, class HitgroupRecord, 
           class CallablesRecord, class ExceptionRecord, size_t NRay>
 class ShaderBindingTable {
 public:
@@ -55,9 +50,9 @@ public:
 
     explicit operator OptixShaderBindingTable() const { return m_sbt; }
 
-    void setRayGenRecord(const RayGenRecord& rg_record)
+    void setRaygenRecord(const RaygenRecord& rg_record)
     {
-        m_raygen_record = rg_record;
+        m_Raygen_record = rg_record;
     }
 
     template <class... MissRecordArgs>
@@ -88,25 +83,25 @@ public:
         m_miss_records[idx] = record;
     }
 
-    template <class... HitGroupRecordArgs> 
-    void addHitGroupRecord(const HitGroupRecordArgs...& args)
+    template <class... HitgroupRecordArgs> 
+    void addHitgroupRecord(const HitgroupRecordArgs...& args)
     {
         static_assert(sizeof...(args) == N, 
             "oprt::ShaderBindingTable::addHitgroupRecord(): The number of hitgroup record must be same with the number of ray types.");        
-        static_assert(std::conjunction<std::is_same<HitGroupRecord, Args>...>::value, 
-            "oprt::ShaderBindingTable::addHitgroupRecord(): Record type must be same with 'HitGroupRecord'.");
-        push_to_vector(m_hitgroup_records, args...);
+        static_assert(std::conjunction<std::is_same<HitgroupRecord, Args>...>::value, 
+            "oprt::ShaderBindingTable::addHitgroupRecord(): Record type must be same with 'HitgroupRecord'.");
+        push_to_vector(m_Hitgroup_records, args...);
     }
 
     /// @note 置き換えを行ったらデバイス上のデータも更新する？
-    void replaceHitGroupRecord(const HitGroupRecord& record, const int idx)
+    void replaceHitgroupRecord(const HitgroupRecord& record, const int idx)
     {
-        if (idx >= m_hitgroup_records.size())
+        if (idx >= m_Hitgroup_records.size())
         {
-            Message(MSG_ERROR, "oprt::ShaderBindingTable::replaceHitGroupRecord(): The index out of range.");
+            Message(MSG_ERROR, "oprt::ShaderBindingTable::replaceHitgroupRecord(): The index out of range.");
             return;
         }
-        m_hitgroup_records[idx] = record;
+        m_Hitgroup_records[idx] = record;
     }
 
     template <class... CallablesRecordArgs>
@@ -136,29 +131,29 @@ public:
 
     void createOnDevice()
     {
-        CUDABuffer<RayGenRecord> d_raygen_record;
+        CUDABuffer<RaygenRecord> d_raygen_record;
         CUDABuffer<MissRecord> d_miss_records;
-        CUDABuffer<HitGroupRecord> d_hitgroup_records;
+        CUDABuffer<HitgroupRecord> d_hitgroup_records;
         CUDABuffer<CallablesRecord> d_callables_records;
-        CUDABuffer<ExceptionRecord> d_exception_records;
+        CUDABuffer<ExceptionRecord> d_exception_record;
 
-        d_raygen_record.copyToDevice(&m_raygen_record, sizeof(RayGenRecord));
+        d_raygen_record.copyToDevice(&m_raygen_record, sizeof(RaygenRecord));
         d_miss_records.copyToDevice(m_miss_record.data(), m_miss_records.size() * sizeof(MissRecord));
-        d_hitgroup_records.copyToDevice(m_hitgroup_records.data(), m_hitgroup_records.size() * sizeof(HitGroupRecord));
+        d_hitgroup_records.copyToDevice(m_hitgroup_records.data(), m_hitgroup_records.size() * sizeof(HitgroupRecord));
         d_callables_records.copyToDevice(m_callables_records.data(), m_callables_records.size() * sizeof(CallablesRecord));
-        d_exception_records.copyToDevice(m_exception_record.data(), sizeof(ExceptionRecord));
+        d_exception_record.copyToDevice(&m_exception_record, sizeof(ExceptionRecord));
 
-        m_sbt.raygenRecord = d_raygen_record.devicePtr();
+        m_sbt.raygenRecord = d_Raygen_record.devicePtr();
         m_sbt.missRecordBase = d_miss_record.devicePtr();
         m_sbt.missRecordCount = static_cast<uint32_t>(m_miss_record.size());
         m_sbt.missRecordStrideInBytes = static_cast<uint32_t>(sizeof(MissRecord));
         m_sbt.hitgroupRecordBase = d_hitgroup_record.devicePtr();
         m_sbt.hitgroupRecordCount = static_cast<uint32_t>(m_hitgroup_records.size());
-        m_sbt.hitgroupRecordStrideInBytes = static_cast<uint32_t>(sizeof(HitGroupRecord));
+        m_sbt.hitgroupRecordStrideInBytes = static_cast<uint32_t>(sizeof(HitgroupRecord));
         m_sbt.callablesRecordBase = d_callables_records.devicePtr();
         m_sbt.callablesRecordCount = static_cast<uint32_t>(m_callables_records.size());
         m_sbt.callablesRecordStrideInBytes = static_cast<uint32_t>(sizeof(CallablesRecord));
-        m_sbt.raygenRecord = d_raygen_record.devicePtr();
+        m_sbt.exceptionRecord = d_exception_record.devicePtr();
 
         on_device = true;
     }
@@ -174,10 +169,9 @@ public:
     }
 private:
     OptixShaderBindingTable m_sbt {};
-    RayGenRecord m_raygen_record;
-    // std::vector<MissRecord> m_miss_records;
+    RaygenRecord m_raygen_record;
     MissRecord m_miss_records[NRay];
-    std::vector<HitGroupRecord> m_hitgroup_records;
+    std::vector<HitgroupRecord> m_hitgroup_records;
     std::vector<CallablesRecord> m_callables_records;
     ExceptionRecord m_exception_record;
     bool on_device;

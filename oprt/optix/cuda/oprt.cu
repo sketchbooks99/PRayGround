@@ -29,8 +29,8 @@
 #include <optix.h>
 #include <cuda/random.h>
 
-#include "../../core/color.h"
-#include "../../oprt.h"
+#include <oprt/core/color.h>
+#include <oprt/oprt.h>
 
 namespace oprt {
 

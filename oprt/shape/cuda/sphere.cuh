@@ -1,18 +1,12 @@
 #pragma once 
 
 #include <sutil/vec_math.h>
-#include "../../core/material.h"
-#include "../../core/ray.h"
-#include "../../optix/sbt.h"
+#include <oprt/core/ray.h>
+#include <oprt/core/interaction.h>
+#include <oprt/shape/sphere.h>
+#include <oprt/optix/cuda/util.cuh>
 
 namespace oprt {
-
-struct SphereData {
-    float3 center;
-    float radius;
-};
-
-#ifdef __CUDACC__
 
 static INLINE DEVICE float2 getUV(const float3& p) {
     float phi = atan2(p.z, p.x);
@@ -23,7 +17,7 @@ static INLINE DEVICE float2 getUV(const float3& p) {
 }
 
 CALLABLE_FUNC void IS_FUNC(sphere)() {
-    const HitGroupData* data = reinterpret_cast<HitGroupData*>(optixGetSbtDataPointer());
+    const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
     const SphereData* sphere_data = reinterpret_cast<SphereData*>(data->shape_data);
 
     const float3 center = sphere_data->center;
@@ -89,7 +83,5 @@ CALLABLE_FUNC void CH_FUNC(sphere_occlusion)()
 {
 	setPayloadOcclusion(true);
 }
-
-#endif
 
 }

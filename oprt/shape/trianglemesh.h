@@ -1,17 +1,26 @@
 #pragma once
 
-#include "cuda/trianglemesh.cuh"
-
 #ifndef __CUDACC__
 #include <oprt/core/shape.h>
-#include <oprt/math/util.h>
+#include <sutil/vec_math.h>
+#endif
 
 namespace oprt {
 
-/**
- * @todo Implementation of uv texcoords.
- */
+struct Face {
+    int3 vertex_id; 
+    int3 normal_id; 
+    int3 texcoord_id;
+};
 
+struct MeshData {
+    float3* vertices;
+    Face* faces;
+    float3* normals;
+    float2* texcoords;
+};
+
+#ifndef __CUDACC__
 class TriangleMesh final : public Shape {
 public:
     TriangleMesh() {}
@@ -50,7 +59,6 @@ public:
     std::vector<float3> normals() const { return m_normals; }
     std::vector<float2> texcoords() const { return m_texcoords; }
 
-    // Getters of device side pointers.
     CUdeviceptr deviceVertices() const { return d_vertices; }
     CUdeviceptr deviceFaces() const { return d_faces; }
     CUdeviceptr deviceNormals() const { return d_normals; }
@@ -88,6 +96,6 @@ std::shared_ptr<TriangleMesh> createTriangleMesh(
     bool is_smooth = true
 );
 
-}
+#endif // __CUDACC__
 
-#endif
+}

@@ -8,11 +8,21 @@ namespace oprt {
 
 class GeometryAccel {
 public:
-    GeometryAccel();
+    enum class Type {
+        Mesh = OPTIX_BUILD_INPUT_TYPE_TRIANGLES,
+        Custom = OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES,
+        Curves = OPTIX_BUILD_INPUT_TYPE_CURVES,
+        None
+    };
+
+    GeometryAccel() = delete;
+    explicit GeometryAccel(Type type);
     ~GeometryAccel();
 
-    void build(const Context& ctx, const std::shared_ptr<Shape>& shape);
-    void build(const Context& ctx, const std::vector<std::shared_ptr<Shape>>& shapes);
+    void addShape(const std::shared_ptr<Shape>& shape);
+    std::shared_ptr<Shape> shapeAt(const int idx) const;
+   
+    void build(const Context& ctx);
     void update(const Context& ctx);
     void free();
 
@@ -44,9 +54,12 @@ public:
     CUdeviceptr deviceTempBuffer() const;
     size_t deviceTempBufferSize() const;
 private:
+    Type m_type;
     OptixTraversableHandle m_handle{ 0 };
     OptixAccelBuildOptions m_options{};
     uint32_t m_count{ 0 };
+
+    std::vector<std::shared_ptr<Shape>> m_shapes;
 
     bool is_hold_temp_buffer{ false };
     CUdeviceptr d_buffer{ 0 }, d_temp_buffer{ 0 };
@@ -61,14 +74,14 @@ public:
         InstancePointers = OPTIX_BUILD_INPUT_TYPE_INSTANCE_POINTERS
     };
 
-    InstanceAccel();
-    InstanceAccel(Type type);
+    InstanceAccel() = delete;
+    explicit InstanceAccel(Type type);
     ~InstanceAccel();
 
-    void build(const Context& ctx, const std::shared_ptr<Instance>& instance);
-    void build(const Context& ctx, const OptixInstance& optix_instance);
-    void build(const Context& ctx, const std::vector<std::shared_ptr<Instance>>& instances);
-    void build(const Context& ctx, const std::vector<OptixInstance>& optix_instances);
+    void addInstance(const Instance& instance);
+    Instance& instanceAt(const int32_t idx);
+
+    void build(const Context& ctx);
     void update(const Context& ctx);
     void free();
 
@@ -101,6 +114,8 @@ private:
     OptixTraversableHandle m_handle{ 0 };
     OptixAccelBuildOptions m_options{};
     uint32_t m_count{ 0 };
+
+    std::vector<Instance> m_instances;
 
     bool is_hold_temp_buffer{ false };
     CUdeviceptr d_buffer{ 0 }, d_temp_buffer{ 0 };

@@ -5,7 +5,8 @@
 namespace oprt {
 
 // GeometryAccel -------------------------------------------------------------
-GeometryAccel::GeometryAccel()
+GeometryAccel::GeometryAccel(Type type)
+: m_type(type)
 {
     m_options.buildFlags = OPTIX_BUILD_FLAG_NONE;
 }
@@ -16,34 +17,33 @@ GeometryAccel::~GeometryAccel()
 }
 
 // ---------------------------------------------------------------------------
-void GeometryAccel::build(const Context& ctx, const std::shared_ptr<Shape>& shape)
+void GeometryAccel::addShape(const std::shared_ptr<Shape>& shape)
 {
-    std::vector<std::shared_ptr<Shape>> shapes(1, shape);
-    build(ctx, shapes);
+    Assert(shape->buildInputType() == static_cast<OptixBuildInputType>(m_type)),
+        "oprt::GeometryAccel::addShape(): The type of shape must be same as the type of GeometryAccel.");
+    m_shapes.emplace_back(shape);
 }
 
-void GeometryAccel::build(const Context& ctx, const std::vector<std::shared_ptr<Shape>>& shapes)
+std::shared_ptr<Shape> GeometryAccel::shapeAt(const int idx) const
 {
-    if (shapes.size() == 0)
+    return m_shapes[idx];
+}
+
+// ---------------------------------------------------------------------------
+void GeometryAccel::build(const Context& ctx)
+{
+    if (m_shapes.size() == 0)
     {
         Message(MSG_ERROR, "oprt::GeoetryAccel::build(): The number of shapes is 0.");
         return;
     }
 
     bool is_all_same_type = true;
-    OptixBuildInputType zeroth_input_type = shapes[0]->buildInputType();
+    OptixBuildInputType zeroth_input_type = m_shapes[0]->buildInputType();
 
     if (zeroth_input_type == OPTIX_BUILD_INPUT_TYPE_INSTANCES || zeroth_input_type == OPTIX_BUILD_INPUT_TYPE_INSTANCE_POINTERS)
     {
-        Message(MSG_ERROR, "oprt::GeometryAccel::build(): The OptixBuildInputType of","OPTIX_BUILD_INPUT_TYPE_INSTANCES or OPTIX_BUILD_INPUT_TYPE_INSTANCE_POINTERS cannot be used as an input type of geometry acceleration structure.");
-        return;
-    }
-
-    for (auto& shape : shapes)
-        is_all_same_type &= (zeroth_input_type == shape->buildInputType());
-    if (!is_all_same_type)
-    {
-        Message(MSG_ERROR, "oprt::GeometryAccel::build(): All type of shapes must be a same type.");
+        Message(MSG_ERROR, "oprt::GeometryAccel::build(): The OptixBuildInputType of OPTIX_BUILD_INPUT_TYPE_INSTANCES or OPTIX_BUILD_INPUT_TYPE_INSTANCE_POINTERS cannot be used as an input type of geometry acceleration structure.");
         return;
     }
 
@@ -55,12 +55,12 @@ void GeometryAccel::build(const Context& ctx, const std::vector<std::shared_ptr<
         m_count = 0;
     }
 
-    std::vector<OptixBuildInput> build_inputs(shapes.size());
+    std::vector<OptixBuildInput> build_inputs(m_shapes.size());
     m_options.operation = OPTIX_BUILD_OPERATION_BUILD;
 
-    for (size_t i = 0; i < shapes.size(); i++)
+    for (size_t i = 0; i < m_shapes.size(); i++)
     {
-        shapes[i]->buildInput(build_inputs[i]);
+        m_shapes[i]->buildInput(build_inputs[i]);
     }
 
     OptixAccelBufferSizes gas_buffer_sizes;
@@ -244,12 +244,6 @@ size_t GeometryAccel::deviceTempBufferSize() const
 }
 
 // InstanceAccel -------------------------------------------------------------
-InstanceAccel::InstanceAccel()
-: m_type(Type::Instances)
-{
-
-}
-
 InstanceAccel::InstanceAccel(Type type)
 : m_type(type)
 {
@@ -262,22 +256,21 @@ InstanceAccel::~InstanceAccel()
 }
 
 // ---------------------------------------------------------------------------
-void InstanceAccel::build(const Context& ctx, const std::shared_ptr<Instance>& instance)
+void InstanceAccel::addInstance(const Instance& instance)
 {
-    std::vector<OptixInstance> optix_instance(1, static_cast<OptixInstance>(*instance));
-    build(ctx, optix_instance);
+    m_instances.emplace_back(instance);
 }
 
-void InstanceAccel::build(const Context& ctx, const OptixInstance& instance)
-{   
-    std::vector<OptixInstance> optix_instance(1, instance);
-    build(ctx, optix_instance);
+Instance& InstanceAccel::instanceAt(const int32_t idx)
+{
+    return m_instances[idx];
 }
 
-void InstanceAccel::build(const Context& ctx, const std::vector<std::shared_ptr<Instance>>& instances)
+// ---------------------------------------------------------------------------
+void InstanceAccel::build(const Context& ctx)
 {
     std::vector<CUdeviceptr> d_instance_array;
-    std::transform(instances.begin(), instances.end(), std::back_inserter(d_instance_array), 
+    std::transform(m_instances.begin(), m_instances.end(), std::back_inserter(d_instance_array), 
         [](const std::shared_ptr<Instance>& instance) {
             if (!instance->isDataOnDevice())
                 instance->copyToDevice();
@@ -289,7 +282,7 @@ void InstanceAccel::build(const Context& ctx, const std::vector<std::shared_ptr<
     OptixBuildInput instance_input = {};
     instance_input.type = static_cast<OptixBuildInputType>(m_type);
     instance_input.instanceArray.instances = d_instances.devicePtr();
-    instance_input.instanceArray.numInstances = static_cast<uint32_t>(instances.size());
+    instance_input.instanceArray.numInstances = static_cast<uint32_t>(m_instances.size());
 
     m_options.operation = OPTIX_BUILD_OPERATION_BUILD;
 
@@ -335,62 +328,6 @@ void InstanceAccel::build(const Context& ctx, const std::vector<std::shared_ptr<
     }
     /// @note Is this release of pointer needed?
     d_instances.free();  
-}
-
-void InstanceAccel::build(const Context& ctx, const std::vector<OptixInstance>& optix_instances)
-{
-    CUDABuffer<OptixInstance> d_instances;
-    d_instances.copyToDevice(optix_instances);
-
-    OptixBuildInput instance_input = {};
-    instance_input.type = static_cast<OptixBuildInputType>(m_type);
-    instance_input.instanceArray.instances = d_instances.devicePtr();
-    instance_input.instanceArray.numInstances = static_cast<uint32_t>(optix_instances.size());
-
-    m_options.operation = OPTIX_BUILD_OPERATION_BUILD;
-
-    OptixAccelBufferSizes ias_buffer_sizes;
-    OPTIX_CHECK(optixAccelComputeMemoryUsage(
-        static_cast<OptixDeviceContext>(ctx), 
-        &m_options, 
-        &instance_input, 
-        1,  // num build inputs
-        &ias_buffer_sizes ));
-
-    // Allocate buffer to build acceleration structure
-    CUDA_CHECK(cudaMalloc(
-        reinterpret_cast<void**>(&d_temp_buffer), 
-        ias_buffer_sizes.tempSizeInBytes ));
-    CUdeviceptr d_ias_output_buffer; 
-    CUDA_CHECK(cudaMalloc(
-        reinterpret_cast<void**>(&d_ias_output_buffer), 
-        ias_buffer_sizes.outputSizeInBytes ));
-    
-    // Build instance AS contains all GASs to describe the scene.
-    OPTIX_CHECK(optixAccelBuild(
-        static_cast<OptixDeviceContext>(ctx), 
-        0,                  // CUDA stream
-        &m_options, 
-        &instance_input, 
-        1,                  // num build inputs
-        d_temp_buffer, 
-        ias_buffer_sizes.tempSizeInBytes, 
-        d_ias_output_buffer, 
-        ias_buffer_sizes.outputSizeInBytes, 
-        &m_handle, 
-        nullptr,            // emitted property list
-        0                   // num emitted properties
-    ));
-
-    if (is_hold_temp_buffer)
-        d_temp_buffer_size = ias_buffer_sizes.tempSizeInBytes;
-    else
-    {
-        cuda_free(d_temp_buffer);
-        d_temp_buffer_size = 0;
-    }
-   
-    d_instances.free();
 }
 
 void InstanceAccel::update(const Context& ctx)

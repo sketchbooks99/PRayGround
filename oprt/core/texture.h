@@ -1,7 +1,6 @@
 #pragma once 
 
 #include <oprt/core/util.h>
-#include <oprt/optix/util.h>
 #include <sutil/vec_math.h>
 
 #ifndef __CUDACC__

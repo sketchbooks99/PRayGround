@@ -1,8 +1,8 @@
 #pragma once
 
 #include <sutil/vec_math.h>
-#include "../../core/ray.h"
-#include "../../optix/sbt.h"
+#include <oprt/core/ray.h>
+#include <oprt/optix/sbt.h>
 
 namespace oprt {
 

@@ -4,9 +4,16 @@
 
 #ifndef __CUDACC__
 #include <oprt/core/shape.h>
+#endif
 
 namespace oprt {
 
+struct SphereData {
+    float3 center;
+    float radius;
+};
+
+#ifndef __CUDACC__
 class Sphere final : public Shape {
 public:
     explicit Sphere(const float3& c, float r) : m_center(c), m_radius(r) {}
@@ -69,6 +76,6 @@ private:
     float m_radius;
 };
 
-}
-
 #endif
+
+}

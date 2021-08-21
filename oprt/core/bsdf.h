@@ -18,7 +18,7 @@
 #include <cuda/random.h>
 #include <sutil/vec_math.h>
 #include <oprt/core/util.h>
-#include <oprt/optix/util.h>
+#include <oprt/optix/macros.h>
 
 namespace oprt {
 

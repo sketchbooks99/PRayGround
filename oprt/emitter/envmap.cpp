@@ -14,7 +14,7 @@ EnvironmentEmitter::EnvironmentEmitter(const std::filesystem::path& filename)
         m_texture = std::make_shared<BitmapTextureFloat>(filename);
 }
 
-void EnvironmentEmitter::prepareData()
+void EnvironmentEmitter::copyToDevice()
 {
     if (!m_texture->devicePtr())
         m_texture->copyToDevice();

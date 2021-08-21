@@ -2,8 +2,10 @@
 
 #include <optix.h>
 #include <oprt/core/util.h>
-#include "program.h"
-#include "context.h"
+#include <oprt/optix/program.h>
+#include <oprt/optix/context.h>
+#include <filesystem>
+#include <tuple>
 
 namespace oprt {
 
@@ -17,7 +19,27 @@ public:
     explicit operator OptixPipeline() const { return m_pipeline; }
     explicit operator OptixPipeline&() { return m_pipeline; }
 
-    void addProgram(const ProgramGroup& prg);
+#ifdef CUDA_NVRTC_ENABLED
+    [[nodiscard]] Module createModuleFromCudaFile(const Context& ctx, const std::filesystem::path& filename);
+    [[nodiscard]] Module createModuleFromCudaSource(const Context& ctx, const std::string& source);
+#endif
+    [[nodiscard]] Module createModuleFromPtxFile(const Context& ctx, const std::filesystem::path& filename);
+    [[nodiscard]] Module createModuleFromPtxSource(const Context& ctx, const std::string& source);
+
+    [[nodiscard]] ProgramGroup createRaygenProgram(const Context& ctx, const Module& module, const std::string& func_name);
+    [[nodiscard]] ProgramGroup createRaygenProgram(const Context& ctx, const ProgramEntry& entry);
+    [[nodiscard]] ProgramGroup createMissProgram(const Context& ctx, const Module& module, const std::string& func_name);
+    [[nodiscard]] ProgramGroup createMissProgram(const Context& ctx, const ProgramEntry& entry);
+    [[nodiscard]] ProgramGroup createHitgroupProgram(const Context& ctx, const Module& module, const std::string& ch_name);
+    [[nodiscard]] ProgramGroup createHitgroupProgram(const Context& ctx, const ProgramEntry& ch_entry);
+    [[nodiscard]] ProgramGroup createHitgroupProgram(const Context& ctx, const Module& module, const std::string& ch_name, const std::string& is_name);
+    [[nodiscard]] ProgramGroup createHitgroupProgram(const Context& ctx, const ProgramEntry& ch_entry, const ProgramEntry& is_entry);
+    [[nodiscard]] ProgramGroup createHitgroupProgram(const Context& ctx, const Module& module, const std::string& ch_name, const std::string& is_name, const std::string& ah_name);
+    [[nodiscard]] ProgramGroup createHitgroupProgram(const Context& ctx, const ProgramEntry& ch_entry, const ProgramEntry& is_entry, const ProgramEntry& ah_entry);
+    [[nodiscard]] std::pair<ProgramGroup, uint32_t> createCallablesProgram(const Context& ctx, const Module& module, const std::string& dc_name, const std::string& cc_name);
+    [[nodiscard]] std::pair<ProgramGroup, uint32_t> createCallablesProgram(const Context& ctx, const ProgramEntry& dc_entry, const ProgramEntry& cc_entry);
+    [[nodiscard]] ProgramGroup createExceptionProgram(const Context& ctx, const Module& module, const std::string& func_name);
+    [[nodiscard]] ProgramGroup createExceptionProgram(const Context& ctx, const ProgramEntry& entry);
 
     /** Create pipeline object and calculate the stack sizes of pipeline. */
     void create(const Context& ctx);
@@ -53,6 +75,14 @@ public:
 private:
     void _initCompileOptions();
     void _initLinkOptions();
+
+    std::vector<Module> m_modules;
+
+    ProgramGroup m_raygen_program;
+    std::vector<ProgramGroup> m_miss_programs;
+    std::vector<ProgramGroup> m_hitgroup_programs;
+    std::vector<ProgramGroup> m_callables_programs;
+    ProgramGroup m_exception_program;
     
     OptixPipelineCompileOptions m_compile_options = {};
     OptixPipelineLinkOptions m_link_options = {};
@@ -60,9 +90,6 @@ private:
     uint32_t m_trace_depth { 5 }; 
     uint32_t m_cc_depth { 0 }; 
     uint32_t m_dc_depth { 0 };
-
-    /// @note Is it better to use unordered_map instead of vector?
-    std::vector<ProgramGroup> m_program_groups; 
 };
 
 }

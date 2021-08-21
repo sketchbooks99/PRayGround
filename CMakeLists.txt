@@ -345,6 +345,10 @@ function(OPRT_add_executalbe target_name_base target_name_var)
     ${cmake_options}
   )
 
+  if (CUDA_NVRTC_ENABLED)
+    target_compile_definitions(${target_name} PRIVATE CUDA_NVRTC_ENABLED=${CUDA_NVRTC_ENABLED})
+  endif()
+
   # Most of the samples link against the sutil library and the optix library.  Here is the
   # rule that specifies this linkage.
   target_link_libraries( ${target_name}

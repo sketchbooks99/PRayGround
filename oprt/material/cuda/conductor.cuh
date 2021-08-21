@@ -1,9 +1,9 @@
 #pragma once
 
 #include <sutil/vec_math.h>
-#include "../../optix/util.h"
-#include "../../core/bsdf.h"
-#include "../conductor.h"
+#include <oprt/core/bsdf.h>
+#include <oprt/material/conductor.h>
+#include <oprt/core/interaction.h>
 
 namespace oprt {
 

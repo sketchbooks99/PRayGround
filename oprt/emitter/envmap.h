@@ -24,9 +24,9 @@ public:
     explicit EnvironmentEmitter(const std::shared_ptr<Texture>& texture)
     : m_texture(texture) {}
 
-    void prepareData() override;
+    void copyToDevice() override;
 
-    void freeData() override {}
+    void free() override {}
 
     EmitterType type() const override { return EmitterType::Envmap; }
 private:

@@ -2,10 +2,6 @@
 
 namespace oprt {
 
-namespace { // nonamed namespace
-    int32_t num_callables = 0;
-} // ::nonamed namespace
-
 // ---------------------------------------------------------------------------
 ProgramGroup::ProgramGroup()
 {
@@ -98,14 +94,14 @@ void ProgramGroup::createHitgroup(const Context& ctx, const Module& module, cons
 
 void ProgramGroup::createHitgroup(const Context& ctx, const ProgramEntry& ch_entry)
 {
-    ProgramEntry ah_entry{Module(), ""};
-    ProgramEntry is_entry{Module(), ""};
+    ProgramEntry ah_entry{ Module{}, "" };
+    ProgramEntry is_entry{ Module{}, "" };
     createHitgroup(ctx, ch_entry, is_entry, ah_entry);
 }
 
 void ProgramGroup::createHitgroup(const Context& ctx, const ProgramEntry& ch_entry, const ProgramEntry& is_entry)
 {
-    ProgramEntry ah_entry{Module(), ""};
+    ProgramEntry ah_entry{ Module{}, "" };
     createHitgroup(ctx, ch_entry, is_entry, ah_entry);
 }
 
@@ -186,8 +182,6 @@ int32_t ProgramGroup::createCallables(const Context& ctx, const ProgramEntry& dc
         &sizeof_log,
         &m_program
     ));
-
-    return num_callables++;
 }
 
 // ---------------------------------------------------------------------------

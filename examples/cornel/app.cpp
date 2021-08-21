@@ -1,5 +1,5 @@
 #include "app.h"
-
+#include <oprt/core/interaction.h>
 
 // ----------------------------------------------------------------
 void App::setup()
@@ -11,6 +11,8 @@ void App::setup()
     context.setDeviceId(0);
     context.create();
 
+    ias = InstanceAccel(InstanceAccel::InstanceType::Instances);
+
     // Prepare pipeline
     pipeline.setLaunchVariableName("params");
     pipeline.setDirectCallableDepth(4);
@@ -20,11 +22,11 @@ void App::setup()
 
     // Create modules
     Module raygen_module, miss_module, hitgroups_module, textures_module, surfaces_module;
-    raygen_module.createFromCudaFile(context, "cuda/raygen.cu", pipeline.compileOptions());
-    miss_module.createFromCudaFile(context, "cuda/miss.cu", pipeline.compileOptions());
-    hitgroups_module.createFromCudaFile(context, "cuda/hitgroups.cu", pipeline.compileOptions());
-    textures_module.createFromCudaFile(context, "cuda/textures.cu", pipeline.compileOptions());
-    surfaces_module.createFromCudaFile(context, "cuda/surfaces.cu", pipeline.compileOptions());
+    raygen_module = pipeline.createModuleFromCudaFile(context, "cuda/raygen.cu");
+    miss_module = pipeline.createModuleFromCudaFile(context, "cuda/miss.cu");
+    hitgroups_module = pipeline.createModuleFromCudaFile(context, "cuda/hitgroups.cu");
+    textures_module = pipeline.createModuleFromCudaFile(context, "cuda/textures.cu");
+    surfaces_module = pipeline.createModuleFromCudaFile(context, "cuda/surfaces.cu");
 
     // Prepare film to store rendered results.
     film = Film(1024, 1024);
@@ -43,54 +45,39 @@ void App::setup()
     camera.setFovAxis(Camera::FovAxis::Vertical);
 
     // Create raygen program and bind record;
-    ProgramGroup raygen_prg;
-    raygen_prg.createRaygen(context, raygen_module, "__raygen__pinhole");
-    pipeline.addProgram(raygen_prg);
+    ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, raygen_module, "__raygen__pinhole");
     RaygenRecord raygen_record;
     raygen_prg.bindRecord(&raygen_record);
     raygen_record.data.camera.origin = camera.origin();
     raygen_record.data.camera.lookat = camera.lookat();
     raygen_record.data.camera.up = camera.up();
     raygen_record.data.camera.fov = camera.fov();
-    CUDABuffer<RaygenRecord> d_raygen_record;
-    d_raygen_record.copyToDevice(&raygen_record, sizeof(RaygenRecord));
-    sbt.raygenRecord = d_raygen_record.devicePtr();
+    sbt.setRaygenRecord(raygen_record);
 
     // Prepare environment 
     env = make_shared<EnvironmentEmitter>("image/earth.jpg");
-    env->prepareData();
+    env->copyToDevice();
 
-    ProgramGroup miss_prg;
-    miss_prg.createMiss(context, miss_module, "__miss__env");
-    pipeline.addProgram(miss_prg);
+    ProgramGroup miss_prg = pipeline.createMissProgram(context, miss_module, "__miss__env");
     MissRecord miss_record;
     miss_prg.bindRecord(&miss_record);
     miss_record.data.env_data = env->devicePtr();
-    CUDABuffer<MissRecord> d_miss_record;
-    d_miss_record.copyToDevice(&miss_record, sizeof(MissRecord));
-    sbt.missRecordBase = d_miss_record.devicePtr();
-    sbt.missRecordCount = 1;
-    sbt.missRecordStrideInBytes = static_cast<uint32_t>(sizeof(MissRecord));
+    sbt.setMissRecord(miss_record);
 
     // SBT record for callable programs
     EmptyRecord callable_record;
-    CUDABuffer<EmptyRecord> d_callable_record;
-    d_callable_record.copyToDevice(&callable_record, sizeof(EmptyRecord));
-    sbt.callablesRecordBase = d_callable_record.devicePtr();
-    sbt.callablesRecordCount = 1;
-    sbt.callablesRecordStrideInBytes = static_cast<uint32_t>(sizeof(EmptyRecord));
+    sbt.addCallablesRecord(callable_record);
 
     // Creating texture programs
-    ProgramGroup constant_texture_prg, checker_texture_prg, bitmap_texture_prg;
-    int32_t constant_prg_id = constant_texture_prg.createCallables(context, textures_module, "__direct_callable__constant", "");
-    int32_t checker_prg_id = checker_texture_prg.createCallables(context, textures_module, "__direct_callable__checker", "");
-    int32_t bitmap_prg_id = bitmap_texture_prg.createCallables(context, textures_module, "__direct_callable__bitmap", "");
+    auto [constant_texture_prg, constant_prg_id] = 
+        pipeline.createCallablesProgram(context, textures_module, "__direct_callable__constant", "");
+    auto [checker_texture_prg, checker_prg_id] = 
+        pipeline.createCallablesProgram(context, textures_module, "__direct_callable__checker", "");
+    auto [bitmap_texture_prg, bitmap_prg_id] =
+        pipeline.createCallablesProgram(context, textures_module, "__direct_callable__bitmap", "");
     constant_texture_prg.bindRecord(&callable_record);
     checker_texture_prg.bindRecord(&callable_record);
     bitmap_texture_prg.bindRecord(&callable_record);
-    pipeline.addProgram(constant_texture_prg);
-    pipeline.addProgram(checker_texture_prg);
-    pipeline.addProgram(bitmap_texture_prg);
 
     // Preparing textures
     textures.emplace("checker_texture", make_shared<CheckerTexture>(make_float3(0.9f), make_float3(0.3f)));
@@ -102,19 +89,16 @@ void App::setup()
     textures.at("red_constant")->setProgramId(constant_prg_id);
     textures.at("green_constant")->setProgramId(constant_prg_id);
     for (auto texture : textures)
-        texture.second->prepareData();
+        texture.second->copyToDevice();
 
     // Creating material and emitter programs
     ProgramGroup diffuse_prg, dielectric_prg, area_emitter_prg;
-    int32_t diffuse_prg_id = diffuse_prg.createCallables(context, surfaces_module, "", "__continuation_callable__diffuse");
-    int32_t dielectric_prg_id = dielectric_prg.createCallables(context, surfaces_module, "", "__continuation_callable__dielectric");
-    int32_t area_emitter_prg_id = area_emitter_prg.createCallables(context, surfaces_module, "__direct_callable_emitter", "");
+    auto [diffuse_prg, diffuse_prg_id] = pipeline.createCallablesProgram(context, surfaces_module, "", "__continuation_callable__diffuse");
+    auto [dielectric_prg, dielectric_prg_id] = pipeline.createCallablesProgram(context, surfaces_module, "", "__continuation_callable__dielectric");
+    auto [area_emitter_prg, area_emitter_prg_id] = pipeline.createCallablesProgram(context, surfaces_module, "__direct_callable__emitter", "");
     diffuse_prg.bindRecord(&callable_record);
     dielectric_prg.bindRecord(&callable_record);
     area_emitter_prg.bindRecord(&callable_record);
-    pipeline.addProgram(diffuse_prg);
-    pipeline.addProgram(dielectric_prg);
-    pipeline.addProgram(area_emitter_prg);
 
     // Preparing materials and program id
     ceiling_light = make_shared<AreaEmitter>(make_float3(1.0f), 15.0f);
@@ -129,9 +113,9 @@ void App::setup()
     materials.at("green_diffuse")->addProgramId(diffuse_prg_id);
     materials.at("checker_diffuse")->addProgramId(diffuse_prg_id);
     materials.at("glass")->addProgramId(dielectric_prg_id);
-    ceiling_light->prepareData();
+    ceiling_light->copyToDevice();
     for (auto material : materials)
-        material.second->prepareData();
+        material.second->copyToDevice();
 
     // Prepare cornel box and construct its gas and instance
     cornel.emplace("ceiling_light", make_shared<Plane>(make_float2(-2.5f, -2.5f), make_float2(2.5f, 2.5f)));
@@ -147,50 +131,46 @@ void App::setup()
     cornel.at("floor")->attachSurface(materials.at("checker_diffuse"));
     cornel.at("back")->attachSurface(materials.at("white_diffuse"));
 
-    // Build GAS for cornel box
-    uint32_t sbt_base_index = 0;
-    unordered_map<string, GeometryAccel> cornel_gases;
-    vector<HitgroupRecord> hitgroup_records;
+    ProgramGroup plane_prg = pipeline.createHitgroupProgram(context, hitgroups_module, "__closesethit__plane", "__intersection__plane");
+
+    uint32_t sbt_idx = 0;
     for (auto& plane : cornel)
     {
-
-        plane.second->prepareData();
-        GeometryAccel gas;
-        gas.build(context, plane.second, sbt_base_index);
-        cornel_gases.emplace(plane.first, gas);
+        plane.second->copyToDevice();
+        plane.second->setSbtIndex(sbt_idx);
+        GeometryAccel gas{GeometryAccel::ShapeType::Custom};
+        gas.addShape(plane.second);
+        gas.build(context);
         Instance instance;
-        instance.setSBTOffset(sbt_base_index);
         instance.setTraversableHandle(gas.handle());
+        instance.setSBTOffset(sbt_idx);
         instance.setVisibilityMask(255);
-        instances.emplace(plane.first, instance);
+        ias.addInstance(instance);
 
-        ProgramGroup plane_program;
-        plane_program.createHitgroup(context, hitgroups_module, "__closesethit__plane", "__intersection__plane");
-        plane.second->addProgram(plane_program);
-        pipeline.addProgram(plane_program);
         HitgroupRecord hitgroup_record;
-        plane.second->bindRecord(&hitgroup_record, 0);
         hitgroup_record.data.shape_data = plane.second->devicePtr();
-        hitgroup_record.data.surface_data = plane.second->surfaceDevicePtr();
         switch (plane.second->surfaceType())
         {
         case SurfaceType::Material:
         {
             auto material = std::get<shared_ptr<Material>>(plane.second->surface());
+            hitgroup_record.data.surface_data = material->devicePtr();
             hitgroup_record.data.surface_program_id = material->programIdAt(0);
             break;
         }
         case SurfaceType::AreaEmitter:
         {
             auto area_emitter = std::get<shared_ptr<AreaEmitter>>(plane.second->surface());
+            hitgroup_record.data.surface_data = area_emitter->devicePtr();
             hitgroup_record.data.surface_program_id = area_emitter->programId();
             break;
         }
-        }
 
-        hitgroup_records.push_back(hitgroup_record);
-        sbt_base_index++;
+        plane_prg.bindRecord(&hitgroup_record);
+        sbt.addHitgroupRecord(hitgroup_record);
+        sbt_idx++;
     }
+
     // Configuration of instances for cornel box
     instances.at("ceiling_light").translate(make_float3(0.0f, 9.9f, 0.0f));
     instances.at("ceiling").translate(make_float3(0.0f, 10.0f, 0.0f));
@@ -204,41 +184,29 @@ void App::setup()
 
     // Stanford bunny mesh
     bunny = make_shared<TriangleMesh>("model/bunny.obj");
+    bunny->setSbtIndex(sbt_idx);
     bunny->attachSurface(materials.at("glass"));
-    bunny->prepareData();
+    bunny->copyToDevice();
 
-    ProgramGroup mesh_program;
-    mesh_program.createHitgroup(context, hitgroups_module, "__closesethit__mesh");
-    bunny->addProgram(mesh_program);
-    pipeline.addProgram(mesh_program);
+    ProgramGroup mesh_prg = pipeline.createHitgroupProgram(context, hitgroups_module, "__closesethit__mesh");
 
     HitgroupRecord bunny_record;
-    bunny->bindRecord(&bunny_record, 0);
     bunny_record.data.shape_data = bunny->devicePtr();
     bunny_record.data.surface_data = bunny->surfaceDevicePtr();
     bunny_record.data.surface_program_id = materials.at("glass")->programIdAt(0);
-    hitgroup_records.push_back(bunny_record);
+    mesh_prg.bindRecord(&bunny_record);
+    sbt.addHitgroupRecord(bunny_record);
 
-    // Copy Hitgroup record on device.
-    CUDABuffer<HitgroupRecord> d_hitgroup_records;
-    d_hitgroup_records.copyToDevice(hitgroup_records);
-    sbt.hitgroupRecordBase = d_hitgroup_records.devicePtr();
-    sbt.hitgroupRecordCount = static_cast<uint32_t>(hitgroup_records.size());
-    sbt.hitgroupRecordStrideInBytes = static_cast<uint32_t>(sizeof(HitgroupRecord));
-
-    GeometryAccel bunny_gas;
-    bunny_gas.build(context, bunny, sbt_base_index);
+    GeometryAccel bunny_gas{GeometryAccel::ShapeType::Mesh};
+    bunny_gas.build(context);
     Instance bunny_instance;
-    bunny_instance.setSBTOffset(sbt_base_index);
+    bunny_instance.setSBTOffset(sbt_idx);
     bunny_instance.setTraversableHandle(bunny_gas.handle());
-    instances.emplace("bunny", bunny_instance);
-
-    std::vector<Instance> instance_arr;
-    std::transform(instances.begin(), instances.end(), std::back_inserter(instance_arr),
-        [](auto& plane) { return plane.second; });
+    bunny_instance.setVisibilityMask(255);
+    ias.addInstance(bunny_instance);
 
     // Build IAS
-    ias.build(context, instance_arr);
+    ias.build(context);
     params.handle = ias.handle();
 
     pipeline.create(context);

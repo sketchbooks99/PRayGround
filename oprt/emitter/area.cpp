@@ -17,7 +17,7 @@ AreaEmitter::AreaEmitter(const std::shared_ptr<Texture>& texture, float intensit
 }
     
 // ---------------------------------------------------------------------------
-void AreaEmitter::prepareData() 
+void AreaEmitter::copyToDevice() 
 {
     if (!m_texture->devicePtr())
         m_texture->copyToDevice();
@@ -47,7 +47,7 @@ int32_t AreaEmitter::programId() const
     return m_prg_id;
 }
 
-void AreaEmitter::freeData()
+void AreaEmitter::free()
 {
 
 }

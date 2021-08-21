@@ -5,9 +5,17 @@
 #ifndef __CUDACC__
 #include <oprt/core/shape.h>
 #include <oprt/core/cudabuffer.h>
+#endif
 
 namespace oprt {
 
+struct PlaneData 
+{
+    float2 min;
+    float2 max;
+};
+
+#ifndef __CUDACC__
 class Plane final : public Shape {
 public:
     explicit Plane(const float2& min, const float2& max) : m_min(min), m_max(max) {}
@@ -69,7 +77,6 @@ public:
 private:
     float2 m_min, m_max;
 };
+#endif // __CUDACC__
 
 }
-
-#endif

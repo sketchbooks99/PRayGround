@@ -20,29 +20,152 @@ Pipeline::Pipeline(const std::string& params_name)
 }
 
 Pipeline::Pipeline(const OptixPipelineCompileOptions& c_op)
-: m_compile_options(c_op)
+    : m_compile_options(c_op)
 {
     _initLinkOptions();
 }
 
 Pipeline::Pipeline(const OptixPipelineCompileOptions& c_op, const OptixPipelineLinkOptions& l_op)
-: m_compile_options(c_op), m_link_options(l_op)
+    : m_compile_options(c_op), m_link_options(l_op)
 {
 
 }
 
 // --------------------------------------------------------------------
-void Pipeline::addProgram(const ProgramGroup& prg)
+#ifdef CUDA_NVRTC_ENABLED
+[[nodiscard]] Module Pipeline::createModuleFromCudaFile(const Context& ctx, const std::filesystem::path& filename)
 {
-    m_program_groups.push_back(prg);
+    m_modules.emplace_back(Module{});
+    m_modules.back().createFromCudaFile(ctx, filename, m_compile_options);
+    return m_modules.back();
+}
+
+[[nodiscard]] Module Pipeline::createModuleFromCudaSource(const Context& ctx, const std::string& source)
+{
+    m_modules.emplace_back(Module{});
+    m_modules.back().createFromCudaSource(ctx, source, m_compile_options);
+    return m_modules.back();
+}
+#endif // CUDA_NVRTC_ENABLED
+
+[[nodiscard]] Module Pipeline::createModuleFromPtxFile(const Context& ctx, const std::filesystem::path& filename)
+{
+    TODO_MESSAGE();
+}
+
+[[nodiscard]] Module Pipeline::createModuleFromPtxSource(const Context& ctx, const std::string& source)
+{
+    TODO_MESSAGE();
+}
+
+// --------------------------------------------------------------------
+[[nodiscard]] ProgramGroup Pipeline::createRaygenProgram(const Context& ctx, const Module& module, const std::string& func_name)
+{
+    m_raygen_program.createRaygen(ctx, module, func_name);
+    return m_raygen_program;
+}
+
+[[nodiscard]] ProgramGroup Pipeline::createRaygenProgram(const Context& ctx, const ProgramEntry& entry)
+{
+    m_raygen_program.createRaygen(ctx, entry);
+    return m_raygen_program;
+}
+
+[[nodiscard]] ProgramGroup Pipeline::createMissProgram(const Context& ctx, const Module& module, const std::string& func_name)
+{
+    m_miss_programs.emplace_back(ProgramGroup{});
+    m_miss_programs.back().createMiss(ctx, module, func_name);
+    return m_miss_programs.back();
+}
+
+[[nodiscard]] ProgramGroup Pipeline::createMissProgram(const Context& ctx, const ProgramEntry& entry)
+{
+    m_miss_programs.emplace_back(ProgramGroup{});
+    m_miss_programs.back().createMiss(ctx, entry);
+    return m_miss_programs.back();
+}
+
+[[nodiscard]] ProgramGroup Pipeline::createHitgroupProgram(const Context& ctx, const Module& module, const std::string& ch_name)
+{
+    m_hitgroup_programs.emplace_back(ProgramGroup{});
+    m_hitgroup_programs.back().createHitgroup(ctx, module, ch_name);
+    return m_hitgroup_programs.back();
+}
+
+[[nodiscard]] ProgramGroup Pipeline::createHitgroupProgram(const Context& ctx, const ProgramEntry& ch_entry)
+{
+    m_hitgroup_programs.emplace_back(ProgramGroup{});
+    m_hitgroup_programs.back().createHitgroup(ctx, ch_entry);
+    return m_hitgroup_programs.back();
+}
+[[nodiscard]] ProgramGroup Pipeline::createHitgroupProgram(const Context& ctx, const Module& module, const std::string& ch_name, const std::string& is_name)
+{
+    m_hitgroup_programs.emplace_back(ProgramGroup{});
+    m_hitgroup_programs.back().createHitgroup(ctx, module, ch_name, is_name);
+    return m_hitgroup_programs.back();
+}
+
+[[nodiscard]] ProgramGroup Pipeline::createHitgroupProgram(const Context& ctx, const ProgramEntry& ch_entry, const ProgramEntry& is_entry)
+{
+    m_hitgroup_programs.emplace_back(ProgramGroup{});
+    m_hitgroup_programs.back().createHitgroup(ctx, ch_entry, is_entry);
+    return m_hitgroup_programs.back();
+}
+[[nodiscard]] ProgramGroup Pipeline::createHitgroupProgram(const Context& ctx, const Module& module, const std::string& ch_name, const std::string& is_name, const std::string& ah_name)
+{
+    m_hitgroup_programs.emplace_back(ProgramGroup{});
+    m_hitgroup_programs.back().createHitgroup(ctx, module, ch_name, is_name, ah_name);
+    return m_hitgroup_programs.back();
+}
+[[nodiscard]] ProgramGroup Pipeline::createHitgroupProgram(const Context& ctx, const ProgramEntry& ch_entry, const ProgramEntry& is_entry, const ProgramEntry& ah_entry)
+{
+    m_hitgroup_programs.emplace_back(ProgramGroup{});
+    m_hitgroup_programs.back().createHitgroup(ctx, ch_entry, is_entry, ah_entry);
+    return m_hitgroup_programs.back();
+}
+
+[[nodiscard]] std::pair<ProgramGroup, uint32_t> Pipeline::createCallablesProgram(const Context& ctx, const Module& module, const std::string& dc_name, const std::string& cc_name)
+{
+    m_callables_programs.emplace_back(ProgramGroup{});
+    m_hitgroup_programs.back().createCallables(ctx, module, dc_name, cc_name);
+    return { m_callables_programs.back(), static_cast<uint32_t>( m_callables_programs.size() - 1) };
+}
+
+[[nodiscard]] std::pair<ProgramGroup, uint32_t> Pipeline::createCallablesProgram(const Context& ctx, const ProgramEntry& dc_entry, const ProgramEntry& cc_entry)
+{
+    m_callables_programs.emplace_back(ProgramGroup{});
+    m_hitgroup_programs.back().createCallables(ctx, dc_entry, cc_entry);
+    return { m_callables_programs.back(), static_cast<uint32_t>(m_callables_programs.size() - 1) };
+}
+
+[[nodiscard]] ProgramGroup Pipeline::createExceptionProgram(const Context& ctx, const Module& module, const std::string& func_name)
+{
+    m_exception_program.createException(ctx, module, func_name);
+    return m_exception_program;
+}
+
+[[nodiscard]] ProgramGroup Pipeline::createExceptionProgram(const Context& ctx, const ProgramEntry& entry)
+{
+    m_exception_program.createException(ctx, entry);
+    return m_exception_program;
 }
 
 // --------------------------------------------------------------------
 void Pipeline::create(const Context& ctx)
 {
     std::vector<OptixProgramGroup> optix_prg_groups;
-    std::transform(m_program_groups.begin(), m_program_groups.end(), std::back_inserter(optix_prg_groups),
-        [](ProgramGroup pg){ return static_cast<OptixProgramGroup>(pg); });
+
+    auto transform_programs = [&optix_prg_groups](const std::vector<ProgramGroup>& prg_groups)
+    {
+        std::transform(prg_groups.begin(), prg_groups.end(), std::back_inserter(optix_prg_groups),
+            [](const ProgramGroup& prg) { return static_cast<OptixProgramGroup>(prg); });
+    };
+
+    optix_prg_groups.emplace_back(static_cast<OptixProgramGroup>(m_raygen_program));
+    transform_programs(m_miss_programs);
+    transform_programs(m_hitgroup_programs);
+    transform_programs(m_callables_programs);
+    optix_prg_groups.emplace_back(m_exception_program);
 
     // Create pipeline from program groups.
     char log[2048];
@@ -92,6 +215,8 @@ void Pipeline::create(const Context& ctx)
 void Pipeline::destroy()
 {
     OPTIX_CHECK(optixPipelineDestroy(m_pipeline));
+
+    /** @todo Destroy modules and programs */
 }
 
 // --------------------------------------------------------------------

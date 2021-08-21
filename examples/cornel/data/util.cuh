@@ -1,10 +1,19 @@
-#pragma once
+#pragma once 
 
 #include <optix.h>
 #include <cuda_runtime.h>
-#include <oprt/core/interaction.h>
+#include <sutil/vec_math.h>
+#include <cuda/random.h>
 #include <oprt/optix/helpers.h>
 #include <oprt/optix/macros.h>
+#include <oprt/core/interaction.h>
+#include "../params.h"
+
+namespace oprt {
+
+extern "C" {
+__constant__ LaunchParams params;
+}
 
 template <typename T>
 INLINE DEVICE void swap(T& a, T& b)
@@ -39,28 +48,6 @@ static INLINE DEVICE void setPayloadOcclusion(bool occluded)
 	optixSetPayload_0(static_cast<unsigned int>(occluded));
 }
 
-INLINE DEVICE bool traceOcclusion(
-    OptixTraversableHandle handle, float3 ro, float3 rd, float tmin, float tmax
-)
-{
-    unsigned int occluded = 0u;
-    optixTrace(
-        handle, 
-        ro, 
-        rd, 
-        tmin, 
-        tmax,
-        0.0f,
-        OptixVisibilityMask(1),
-        OPTIX_RAY_FLAG_TERMINATE_ON_FIRST_HIT,
-        RAY_TYPE_OCCLUSION,
-        RAY_TYPE_COUNT,
-        RAY_TYPE_OCCLUSION,
-        occluded
-    );
-    return occluded;
-}
-
 INLINE DEVICE void trace(
     OptixTraversableHandle handle,
     float3                 ray_origin,
@@ -85,4 +72,6 @@ INLINE DEVICE void trace(
         RAY_TYPE_COUNT,           
         RAY_TYPE_RADIANCE,        
         u0, u1 );	
+}
+
 }

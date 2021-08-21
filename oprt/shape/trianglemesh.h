@@ -2,8 +2,11 @@
 
 #ifndef __CUDACC__
 #include <oprt/core/shape.h>
-#include <sutil/vec_math.h>
+#include <oprt/core/util.h>
 #endif
+
+#include <sutil/vec_math.h>
+#include <oprt/math/util.h>
 
 namespace oprt {
 
@@ -21,6 +24,7 @@ struct MeshData {
 };
 
 #ifndef __CUDACC__
+
 class TriangleMesh final : public Shape {
 public:
     TriangleMesh() {}

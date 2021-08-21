@@ -11,7 +11,7 @@ void App::setup()
     context.setDeviceId(0);
     context.create();
 
-    ias = InstanceAccel(InstanceAccel::InstanceType::Instances);
+    ias = InstanceAccel(InstanceAccel::Type::Instances);
 
     // Prepare pipeline
     pipeline.setLaunchVariableName("params");

@@ -52,15 +52,15 @@ public:
 
     void setRaygenRecord(const RaygenRecord& rg_record)
     {
-        m_Raygen_record = rg_record;
+        m_raygen_record = rg_record;
     }
 
     template <class... MissRecordArgs>
     void setMissRecord(const MissRecordArgs&... args)
     {
-        static_assert(sizeof...(args) == N, 
+        static_assert(sizeof...(args) == NRay, 
             "oprt::ShaderBindingTable::addMissRecord(): The number of record must be same with the number of ray types.");        
-        static_assert(std::conjunction<std::is_same<MissRecord, Args>...>::value, 
+        static_assert(std::conjunction<std::is_same<MissRecord, MissRecordArgs>...>::value, 
             "oprt::ShaderBindingTable::addMissRecord(): Data type must be same with 'MissRecord'.");
 
         int j = 0;
@@ -80,34 +80,34 @@ public:
     }
 
     MissRecord getMissRecord(const int idx) const {
-        m_miss_records[idx] = record;
+        return m_miss_records[idx];
     }
 
     template <class... HitgroupRecordArgs> 
-    void addHitgroupRecord(const HitgroupRecordArgs...& args)
+    void addHitgroupRecord(const HitgroupRecordArgs&... args)
     {
-        static_assert(sizeof...(args) == N, 
+        static_assert(sizeof...(args) == NRay, 
             "oprt::ShaderBindingTable::addHitgroupRecord(): The number of hitgroup record must be same with the number of ray types.");        
-        static_assert(std::conjunction<std::is_same<HitgroupRecord, Args>...>::value, 
+        static_assert(std::conjunction<std::is_same<HitgroupRecord, HitgroupRecordArgs>...>::value, 
             "oprt::ShaderBindingTable::addHitgroupRecord(): Record type must be same with 'HitgroupRecord'.");
-        push_to_vector(m_Hitgroup_records, args...);
+        push_to_vector(m_hitgroup_records, args...);
     }
 
     /// @note 置き換えを行ったらデバイス上のデータも更新する？
     void replaceHitgroupRecord(const HitgroupRecord& record, const int idx)
     {
-        if (idx >= m_Hitgroup_records.size())
+        if (idx >= m_hitgroup_records.size())
         {
             Message(MSG_ERROR, "oprt::ShaderBindingTable::replaceHitgroupRecord(): The index out of range.");
             return;
         }
-        m_Hitgroup_records[idx] = record;
+        m_hitgroup_records[idx] = record;
     }
 
     template <class... CallablesRecordArgs>
     void addCallablesRecord(const CallablesRecordArgs&... args)
     {
-        static_assert(std::conjunction<std::is_same<CallablesRecord, Args>...>::value, 
+        static_assert(std::conjunction<std::is_same<CallablesRecord, CallablesRecordArgs>...>::value, 
             "oprt::ShaderBindingTable::addCallablesRecord(): Record type must be same with 'CallablesRecord'.");
 
         push_to_vector(m_callables_records, args...);
@@ -138,16 +138,16 @@ public:
         CUDABuffer<ExceptionRecord> d_exception_record;
 
         d_raygen_record.copyToDevice(&m_raygen_record, sizeof(RaygenRecord));
-        d_miss_records.copyToDevice(m_miss_record.data(), m_miss_records.size() * sizeof(MissRecord));
+        d_miss_records.copyToDevice(m_miss_records, NRay * sizeof(MissRecord));
         d_hitgroup_records.copyToDevice(m_hitgroup_records.data(), m_hitgroup_records.size() * sizeof(HitgroupRecord));
         d_callables_records.copyToDevice(m_callables_records.data(), m_callables_records.size() * sizeof(CallablesRecord));
         d_exception_record.copyToDevice(&m_exception_record, sizeof(ExceptionRecord));
 
-        m_sbt.raygenRecord = d_Raygen_record.devicePtr();
-        m_sbt.missRecordBase = d_miss_record.devicePtr();
-        m_sbt.missRecordCount = static_cast<uint32_t>(m_miss_record.size());
+        m_sbt.raygenRecord = d_raygen_record.devicePtr();
+        m_sbt.missRecordBase = d_miss_records.devicePtr();
+        m_sbt.missRecordCount = static_cast<uint32_t>(m_miss_records.size());
         m_sbt.missRecordStrideInBytes = static_cast<uint32_t>(sizeof(MissRecord));
-        m_sbt.hitgroupRecordBase = d_hitgroup_record.devicePtr();
+        m_sbt.hitgroupRecordBase = d_hitgroup_records.devicePtr();
         m_sbt.hitgroupRecordCount = static_cast<uint32_t>(m_hitgroup_records.size());
         m_sbt.hitgroupRecordStrideInBytes = static_cast<uint32_t>(sizeof(HitgroupRecord));
         m_sbt.callablesRecordBase = d_callables_records.devicePtr();

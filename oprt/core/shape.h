@@ -5,6 +5,7 @@
 #include <oprt/core/util.h>
 #include <oprt/core/aabb.h>
 #include <oprt/core/material.h>
+#include <oprt/core/interaction.h>
 #include <oprt/emitter/area.h>
 #include <oprt/optix/macros.h>
 #include <oprt/optix/program.h>

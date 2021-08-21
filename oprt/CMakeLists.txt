@@ -12,11 +12,10 @@ set(sources
   core/file_util.cpp 
   core/film.h 
   core/film.cpp
+  core/interaction.h
   core/load3d.h 
   core/material.h 
   core/onb.h 
-  # core/primitive.h 
-  # core/primitive.cpp 
   core/ray.h 
   core/scene.h 
   core/scene.cpp 
@@ -65,7 +64,6 @@ set(sources
   optix/program.h 
   optix/program.cpp 
   optix/sbt.h 
-  optix/util.h 
   optix/cuda/oprt.cu 
   optix/cuda/texture.cuh
 

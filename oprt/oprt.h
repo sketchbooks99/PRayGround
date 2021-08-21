@@ -43,7 +43,6 @@
 #include <sutil/vec_math.h>
 
 // optix utilities
-#include "optix/util.h"
 #include "optix/module.h"
 #include "optix/pipeline.h"
 #include "optix/sbt.h"

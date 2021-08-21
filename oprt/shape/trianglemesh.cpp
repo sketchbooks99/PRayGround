@@ -2,7 +2,6 @@
 #include <oprt/core/cudabuffer.h>
 #include <oprt/core/load3d.h>
 #include <oprt/core/file_util.h>
-#include <sutil/sutil.h>
 
 namespace oprt {
 
@@ -283,6 +282,5 @@ std::shared_ptr<TriangleMesh> createTriangleMesh(
 {
     return std::make_shared<TriangleMesh>(vertices, faces, normals, texcoords, is_smooth);
 }
-
 
 }

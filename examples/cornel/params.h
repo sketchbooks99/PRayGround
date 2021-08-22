@@ -8,9 +8,10 @@ namespace oprt {
 
 struct LaunchParams 
 {
-    uint32_t width, height;
-    uint32_t samples_per_launch;
-    int32_t subframe_index;
+    unsigned int width, height;
+    unsigned int samples_per_launch;
+    unsigned int max_depth;
+    int subframe_index;
     uchar4* result_buffer;
     float4* accum_buffer;
     OptixTraversableHandle handle;
@@ -36,6 +37,7 @@ struct HitgroupData
     void* surface_data;
 
     unsigned int surface_program_id;   
+    SurfaceType surface_type;
 };
 
 struct MissData

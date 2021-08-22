@@ -203,7 +203,7 @@ if(NOT PASSED_FIRST_CONFIGURE)
   endif()
 
   if(CMAKE_CXX_STANDARD GREATER 17)
-    set(OPRT_NVRTC_CXX "-std=c++11")
+    set(OPRT_NVRTC_CXX "-std=c++17")
   else()
     set(OPRT_NVRTC_CXX "")
   endif()
@@ -269,7 +269,7 @@ set(OPRT_RELATIVE_INCLUDE_DIRS "\\
   \"cuda\", \\
   \"sutil\", \\
   \"oprt\", \\
-  \".\", ")
+  \"${CMAKE_CURRENT_SOURCE_DIR}\", ")
 
 # NVRTC absolute include paths to the headers used to build the samples
 set(OPRT_ABSOLUTE_INCLUDE_DIRS "\\

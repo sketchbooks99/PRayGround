@@ -1,7 +1,5 @@
 #pragma once
 
-#include <iostream>
-
 namespace oprt {
 
 enum class EmitterType {
@@ -12,17 +10,6 @@ enum class EmitterType {
 };
 
 #ifndef __CUDACC__
-
-inline std::ostream& operator<<(std::ostream& out, EmitterType type)
-{
-    switch(type)
-    {
-        case EmitterType::Point:   return out << "EmitterType::Point";
-        case EmitterType::Area:    return out << "EmitterType::Area";
-        case EmitterType::Envmap:  return out << "EmitterType::Envmap";
-        default:                   return out << "";
-    }
-}
 
 class Emitter {
 public:

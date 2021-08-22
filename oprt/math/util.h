@@ -18,11 +18,10 @@ enum class Axis {
 
 namespace constants {
 
-constexpr float PI = 3.14159265358979323846f;
-constexpr float TWO_PI = 6.283185307179586232f;
-constexpr float INV_PI = 0.3183098861837906912164f;
-constexpr float INF = std::numeric_limits<double>::infinity();
-constexpr float EPS = 1e-10f;
+constexpr float pi = 3.14159265358979323846f;
+constexpr float two_pi = 6.283185307179586232f;
+constexpr float inv_pi = 0.3183098861837906912164f;
+constexpr float eps = 1e-10f;
 
 } // ::constant
 } // ::oprt

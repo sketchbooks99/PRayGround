@@ -1,7 +1,9 @@
 #pragma once
 
 #include <optix.h>
-#include <stdexcept>
+#ifndef __CUDACC__
+    #include <stdexcept>
+#endif
 
 #ifdef __CUDACC__
     #define CALLABLE_FUNC extern "C" __device__

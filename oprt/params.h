@@ -8,9 +8,9 @@ namespace oprt {
 
 struct LaunchParams 
 {
-    uint32_t width, height;
-    uint32_t samples_per_launch;
-    int32_t subframe_index;
+    unsigned int width, height;
+    unsigned int samples_per_launch;
+    int subframe_index;
     uchar4* result_buffer;
     OptixTraversableHandle handle;
 };

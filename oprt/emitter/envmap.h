@@ -2,7 +2,10 @@
 
 #include <oprt/core/emitter.h>
 #include <oprt/texture/constant.h>
-#include <filesystem>
+
+#ifndef __CUDACC__
+    #include <filesystem>
+#endif
 
 /**
  * @brief Environment emitter. In general, emittance is evaluated at a miss program.

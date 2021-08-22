@@ -29,6 +29,6 @@ extern "C" __device__ void __miss__envmap()
     si->uv = make_float2(u, v);
     si->trace_terminate = true;
     si->emission = optixDirectCall<float3, SurfaceInteraction*, void*>(
-        env->tex_func_id, si, env->texdata
+        env->tex_program_id, si, env->tex_data
     );
 }

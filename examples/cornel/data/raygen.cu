@@ -4,9 +4,9 @@
 
 using namespace oprt;
 
-static __forceinline__ __device__ cameraFrame(const CameraData& camera, float3& U, float3& V, float3& W)
+static __forceinline__ __device__ void cameraFrame(const CameraData& camera, float3& U, float3& V, float3& W)
 {
-    W = camera.lookat - camera.eye;
+    W = camera.lookat - camera.origin;
     float wlen = length(W);
     U = normalize(cross(W, camera.up));
     V = normalize(cross(U, W));
@@ -17,11 +17,13 @@ static __forceinline__ __device__ cameraFrame(const CameraData& camera, float3& 
     U *= ulen;
 }
 
-extern "C" __device__ __raygen__pinhole()
+extern "C" __device__ void __raygen__pinhole()
 {
     const RaygenData* raygen = reinterpret_cast<RaygenData*>(optixGetSbtDataPointer());
     float3 U, V, W;
-    cameraFrame(raygen.camera, U, V, W);
+    cameraFrame(raygen->camera, U, V, W);
+
+    const int subframe_index = params.subframe_index;
 
     const uint3 idx = optixGetLaunchIndex();
     unsigned int seed = tea<4>(idx.y * params.width + idx.x, subframe_index);
@@ -38,7 +40,7 @@ extern "C" __device__ __raygen__pinhole()
             (static_cast<float>(idx.y) + subpixel_jitter.y) / static_cast<float>(params.height)
         ) - 1.0f;
         float3 rd = normalize(d.x * U + d.y * V + W);
-        float3 ro = raygen.camera.origin;
+        float3 ro = raygen->camera.origin;
 
         SurfaceInteraction si;
         si.seed = seed;
@@ -55,8 +57,8 @@ extern "C" __device__ __raygen__pinhole()
 
             trace(
                 params.handle,
-                ray_origin, 
-                ray_direction, 
+                ro, 
+                rd, 
                 0.01f, 
                 1e16f, 
                 &si 
@@ -68,11 +70,11 @@ extern "C" __device__ __raygen__pinhole()
                 break;
             }
 
-            if ( si.surface_type == SurfaceType::Emitter )
+            if ( si.surface_type == SurfaceType::AreaEmitter )
             {
                 // Evaluating emission from emitter
                 optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_property.func_base_id, 
+                    si.surface_property.program_id, 
                     &si, 
                     si.surface_property.data
                 );
@@ -84,7 +86,7 @@ extern "C" __device__ __raygen__pinhole()
             {
                 // Sampling surface
                 optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_property.func_base_id, 
+                    si.surface_property.program_id, 
                     &si,
                     si.surface_property.data
                 );
@@ -116,5 +118,5 @@ extern "C" __device__ __raygen__pinhole()
     }
     params.accum_buffer[image_index] = make_float4(accum_color, 1.0f);
     uchar3 color = make_color(accum_color);
-    params.frame_buffer[image_index] = make_uchar4(color.x, color.y, color.z, 255);
+    params.result_buffer[image_index] = make_uchar4(color.x, color.y, color.z, 255);
 }

@@ -35,11 +35,12 @@ void App::setup()
     params.width = film.width();
     params.height = film.height();
     params.samples_per_launch = 10;
+    params.max_depth = 10;
+    params.subframe_index = 0;
     CUDABuffer<float4> d_accum_buffer;
     d_accum_buffer.allocate(sizeof(float4) * film.bitmapAt("result")->width() * film.bitmapAt("result")->height());
     params.accum_buffer = d_accum_buffer.deviceData();
     params.result_buffer = reinterpret_cast<uchar4*>(film.bitmapAt("result")->devicePtr());
-    params.subframe_index = 0;
 
     camera.setOrigin(make_float3(0.0f, 0.0f, 50.0f));
     camera.setLookat(make_float3(0.0f, 0.0f, 0.0f));
@@ -61,7 +62,7 @@ void App::setup()
     env = make_shared<EnvironmentEmitter>("image/earth.jpg");
     env->copyToDevice();
 
-    ProgramGroup miss_prg = pipeline.createMissProgram(context, miss_module, "__miss__env");
+    ProgramGroup miss_prg = pipeline.createMissProgram(context, miss_module, "__miss__envmap");
     MissRecord miss_record;
     miss_prg.bindRecord(&miss_record);
     miss_record.data.env_data = env->devicePtr();
@@ -151,6 +152,7 @@ void App::setup()
 
         HitgroupRecord hitgroup_record;
         hitgroup_record.data.shape_data = plane.second->devicePtr();
+        hitgroup_record.data.surface_type = plane.second->surfaceType();
         switch (plane.second->surfaceType())
         {
             case SurfaceType::Material:

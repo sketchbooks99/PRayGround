@@ -1,6 +1,7 @@
 #pragma once
 
 #include <oprt/optix/macros.h>
+#include <vector>
 
 namespace oprt {
 
@@ -166,6 +167,4 @@ size_t CUDABuffer<T>::size() const
     return m_size;
 }
 
-
-
-}
+} // oprt

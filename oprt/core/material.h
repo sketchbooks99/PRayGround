@@ -68,8 +68,6 @@ inline std::ostream& operator<<(std::ostream& out, const MaterialType& type) {
     }
 }
 
-#endif
-
 // Abstract class to compute scattering properties.
 class Material {
 public:
@@ -103,5 +101,7 @@ protected:
     void* d_data { 0 };
     std::vector<uint32_t> m_prg_ids;
 };
+
+#endif
 
 } // ::oprt

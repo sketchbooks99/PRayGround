@@ -56,12 +56,12 @@ extern "C" __device__ void __continuation_callable__dielectric(SurfaceInteractio
     si->radiance_evaled = false;
     si->trace_terminate = false;
     si->attenuation *= optixDirectCall<float3, SurfaceInteraction*, void*>(
-        dielectric->tex_program_id, si, dielectric->tex_data)
+        dielectric->tex_program_id, si, dielectric->tex_data);
 }
 
 extern "C" __device__ void __direct_callable__area_emitter(SurfaceInteraction* si, void* surface_data)
 {
-    const AreaEmitterData* area = reinterpret_cast<AreaEmitterData*>(emitterdata);
+    const AreaEmitterData* area = reinterpret_cast<AreaEmitterData*>(surface_data);
     si->trace_terminate = true;
     float is_emitted = 1.0f;
     if (!area->twosided)

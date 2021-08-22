@@ -7,7 +7,7 @@ using namespace oprt;
 
 extern "C" __device__ void __intersection__plane()
 {
-    const HitGroupData* data = reinterpret_cast<HitGroupData*>(optixGetSbtDataPointer());
+    const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
     const PlaneData* plane_data = reinterpret_cast<PlaneData*>(data->shape_data);
 
     const float2 min = plane_data->min;
@@ -28,7 +28,7 @@ extern "C" __device__ void __intersection__plane()
 
 extern "C" __device__ void __closesethit__plane()
 {
-    HitGroupData* data = reinterpret_cast<HitGroupData*>(optixGetSbtDataPointer());
+    HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
 
     Ray ray = getWorldRay();
 
@@ -50,13 +50,13 @@ extern "C" __device__ void __closesethit__plane()
     si->surface_type = data->surface_type;
     si->surface_property = {
         data->surface_data,
-        data->surface_func_base_id
+        data->surface_program_id
     };
 }
 
 extern "C" __device__ void __closesethit__mesh()
 {
-    HitGroupData* data = reinterpret_cast<HitGroupData*>(optixGetSbtDataPointer());
+    HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
     const MeshData* mesh_data = reinterpret_cast<MeshData*>(data->shape_data);
 
     Ray ray = getWorldRay();
@@ -89,6 +89,6 @@ extern "C" __device__ void __closesethit__mesh()
     si->surface_type = data->surface_type;
     si->surface_property = {
         data->surface_data,
-        data->surface_func_base_id
+        data->surface_program_id
     };
 }

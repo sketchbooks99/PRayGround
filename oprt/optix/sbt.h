@@ -1,42 +1,25 @@
 #pragma once
 
 #include <optix.h>
-#include <concepts>
-#include <type_traits>
-#include <oprt/core/cudabuffer.h>
+
+#ifndef __CUDACC__
+    #include <concepts>
+    #include <type_traits>
+    #include <oprt/core/cudabuffer.h>
+#endif
 
 namespace oprt {
 
-#ifndef __CUDACC__
-
-namespace {
-    template <class T>
-    concept TrivialCopyable = std::is_trivially_copyable_v<T>;
-
-    template <class Head, class... Args>
-    void push_to_vector(std::vector<Head>& v, const Head& head, const Args&... args)
-    {
-        v.emplace_back(head);
-        if constexpr (sizeof...(args) != 0)
-            push_to_vector(v, args...);
-    }
-} // ::nonamed namespace
-
-template <TrivialCopyable T>
-struct Record 
-{
-    __align__ (OPTIX_SBT_RECORD_ALIGNMENT) char header[OPTIX_SBT_RECORD_HEADER_SIZE];
-    T data;
-};
-
-namespace builtin
-{
+/**
+ * デフォルトのレイトレ実装 <oprt/optix/cuda/oprt.cu> などが動くようにビルトインパラメータを宣言しておく
+ */
+namespace builtin {
 
 struct LaunchParams 
 {
-    uint32_t width, height;
-    uint32_t samples_per_launch;
-    int32_t subframe_index;
+    unsigned int width, height;
+    unsigned int samples_per_launch;
+    int subframe_index;
     uchar4* result_buffer;
     OptixTraversableHandle handle;
 };
@@ -74,12 +57,29 @@ struct EmptyData
 
 };
 
-using RaygenRecord = Record<RaygenData>;
-using HitgroupRecord = Record<HitgroupData>;
-using MissRecord = Record<MissData>;
-using EmptyRecord = Record<EmptyData>;
-
 } // ::builtin
+
+#ifndef __CUDACC__
+
+namespace {
+    template <class T>
+    concept TrivialCopyable = std::is_trivially_copyable_v<T>;
+
+    template <class Head, class... Args>
+    void push_to_vector(std::vector<Head>& v, const Head& head, const Args&... args)
+    {
+        v.emplace_back(head);
+        if constexpr (sizeof...(args) != 0)
+            push_to_vector(v, args...);
+    }
+} // ::nonamed namespace
+
+template <TrivialCopyable T>
+struct Record 
+{
+    __align__ (OPTIX_SBT_RECORD_ALIGNMENT) char header[OPTIX_SBT_RECORD_HEADER_SIZE];
+    T data;
+};
 
 /**
  * @note 
@@ -229,6 +229,6 @@ private:
     bool on_device;
 };
 
-#endif
+#endif // __CUDACC__
 
 }

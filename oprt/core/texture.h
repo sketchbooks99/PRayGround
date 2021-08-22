@@ -20,14 +20,6 @@ enum class TextureType {
 };
 
 #ifndef __CUDACC__
-/**
- * @brief A map connects TextureType with names of entry functions that evaluate texture albedo.
- */
-static std::map<TextureType, const char*> tex_eval_map = {
-    { TextureType::Constant, "eval_constant" },
-    { TextureType::Checker, "eval_checker" },
-    { TextureType::Bitmap, "eval_bitmap" }
-};
 
 inline std::ostream& operator<<(std::ostream& out, TextureType type) {
     switch (type) {
@@ -37,7 +29,6 @@ inline std::ostream& operator<<(std::ostream& out, TextureType type) {
     default:                    return out << "";
     }
 }
-#endif
 
 class Texture {
 public:
@@ -56,18 +47,20 @@ public:
         return d_data;
     }
 
-    void setProgramId(const int32_t prg_id)
+    void setProgramId(const int prg_id)
     {
         m_prg_id = prg_id;
     }
-    int32_t programId() const 
+    int programId() const 
     {
         return m_prg_id;
     }
 protected:
     // CUdeviceptr d_data { 0 };
     void* d_data;
-    int32_t m_prg_id { -1 };
+    int m_prg_id { -1 };
 };
+
+#endif
 
 } // ::oprt

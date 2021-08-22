@@ -78,6 +78,13 @@ namespace {
         options.push_back(app_dir.c_str());
 #endif // OPRT_APP_DIR
 
+        std::string file_dir;
+        if (name)
+        {
+            file_dir = std::string("-I") + fs::path(name).parent_path().string();
+            options.push_back( file_dir.c_str() );
+        }
+
         // Collect include dirs
         std::vector<std::string> include_dirs;
         const char* abs_dirs[] = { OPRT_ABSOLUTE_INCLUDE_DIRS };

@@ -68,9 +68,9 @@ INLINE DEVICE void trace(
         0.0f,                // rayTime
         OptixVisibilityMask( 1 ),
         OPTIX_RAY_FLAG_NONE,
-        RAY_TYPE_RADIANCE,        
-        RAY_TYPE_COUNT,           
-        RAY_TYPE_RADIANCE,        
+        0,        
+        1,           
+        0,        
         u0, u1 );	
 }
 

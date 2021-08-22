@@ -24,10 +24,9 @@ public:
     explicit operator OptixModule() const { return m_module; }
     explicit operator OptixModule&() { return m_module; }
     
-  #ifdef CUDA_NVRTC_ENABLED   
     void createFromCudaFile(const Context& ctx, const std::filesystem::path& filename, OptixPipelineCompileOptions pipeline_options);
     void createFromCudaSource(const Context& ctx, const std::string& source, OptixPipelineCompileOptions pipeline_options);
-  #endif
+
     void createFromPtxFile(const Context& ctx, const std::filesystem::path& filename, OptixPipelineCompileOptions pipeline_options);
     void createFromPtxSource(const Context& ctx, const std::string& source, OptixPipelineCompileOptions pipeline_options);
 

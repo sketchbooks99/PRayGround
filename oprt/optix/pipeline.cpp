@@ -1,4 +1,5 @@
 #include "pipeline.h"
+#include <sampleConfig.h>
 #include <optix_stubs.h>
 #include <optix_function_table_definition.h>
 #include <optix_stack_size.h>
@@ -32,9 +33,11 @@ Pipeline::Pipeline(const OptixPipelineCompileOptions& c_op, const OptixPipelineL
 }
 
 // --------------------------------------------------------------------
-#ifdef CUDA_NVRTC_ENABLED
 [[nodiscard]] Module Pipeline::createModuleFromCudaFile(const Context& ctx, const std::filesystem::path& filename)
 {
+#if !(CUDA_NVRTC_ENABLED)
+    static_assert(false);
+#endif
     m_modules.emplace_back(Module{});
     m_modules.back().createFromCudaFile(ctx, filename, m_compile_options);
     return m_modules.back();
@@ -42,20 +45,24 @@ Pipeline::Pipeline(const OptixPipelineCompileOptions& c_op, const OptixPipelineL
 
 [[nodiscard]] Module Pipeline::createModuleFromCudaSource(const Context& ctx, const std::string& source)
 {
+#if !(CUDA_NVRTC_ENABLED)
+    static_assert(false);
+#endif
     m_modules.emplace_back(Module{});
     m_modules.back().createFromCudaSource(ctx, source, m_compile_options);
     return m_modules.back();
 }
-#endif // CUDA_NVRTC_ENABLED
 
 [[nodiscard]] Module Pipeline::createModuleFromPtxFile(const Context& ctx, const std::filesystem::path& filename)
 {
     TODO_MESSAGE();
+    return Module{};
 }
 
 [[nodiscard]] Module Pipeline::createModuleFromPtxSource(const Context& ctx, const std::string& source)
 {
     TODO_MESSAGE();
+    return Module{};
 }
 
 // --------------------------------------------------------------------

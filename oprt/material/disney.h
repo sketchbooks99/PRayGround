@@ -1,12 +1,6 @@
 #pragma once
 
 // For cuda
-#ifdef __CUDACC__
-    #include <cuda/random.h>
-    #include <oprt/core/bsdf.h>
-    #include <oprt/core/onb.h>
-    #include <oprt/core/color.h>
-#endif
 
 #include <oprt/core/material.h>
 #include <oprt/texture/constant.h>
@@ -14,7 +8,7 @@
 namespace oprt {
 
 struct DisneyData {
-    void* base_tex;             // base color
+    void* base_tex_data;             // base color
     float subsurface;          
     float metallic;
     float specular;
@@ -26,7 +20,7 @@ struct DisneyData {
     float clearcoat;
     float clearcoat_gloss;   
     bool twosided;  
-    unsigned int base_func_id;  
+    unsigned int base_program_id;  
 };
 
 #ifndef __CUDACC__

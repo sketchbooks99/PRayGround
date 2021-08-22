@@ -72,7 +72,7 @@ CALLABLE_FUNC float3 CC_FUNC(bsdf_disney)(SurfaceInteraction* si, void* mat_data
     const float LdotH /* = VdotH */ = dot(L, H);
 
     const float3 base_color = optixDirectCall<float3, SurfaceInteraction*, void*>(
-        disney->base_func_id, si, disney->base_tex
+        disney->base_program_id, si, disney->base_tex_data
     );
 
     // Diffuse term (diffuse, subsurface, sheen) ======================

@@ -203,7 +203,7 @@ if(NOT PASSED_FIRST_CONFIGURE)
   endif()
 
   if(CMAKE_CXX_STANDARD GREATER 17)
-    set(OPRT_NVRTC_CXX "-std=c++17")
+    set(OPRT_NVRTC_CXX "-std=c++11")
   else()
     set(OPRT_NVRTC_CXX "")
   endif()
@@ -306,7 +306,7 @@ function(OPRT_add_executalbe target_name_base target_name_var)
   if (NOT CUDA_NVRTC_ENABLED)
     source_group("PTX Files" REGULAR_EXPRESSION ".+\\.ptx$")
   endif()
-  source_group("CUDA Files" REGULAR_EXPRESSION ".+\\.cu$")
+  source_group("CUDA Files" REGULAR_EXPRESSION ".+\\.cuh?$")
   source_group("Shader Files" REGULAR_EXPRESSION ".+\\.(vert|frag|geom|glsl|compute|comp)$")
 
 
@@ -345,17 +345,21 @@ function(OPRT_add_executalbe target_name_base target_name_var)
     ${cmake_options}
   )
 
-  if (CUDA_NVRTC_ENABLED)
-    target_compile_definitions(${target_name} PRIVATE CUDA_NVRTC_ENABLED=${CUDA_NVRTC_ENABLED})
-  endif()
-
   # Most of the samples link against the sutil library and the optix library.  Here is the
   # rule that specifies this linkage.
+
   target_link_libraries( ${target_name}
     ${GLFW_LIB_NAME}
     imgui
     sutil_7_sdk
     )
+
+  if (CUDA_NVRTC_ENABLED)
+    target_link_libraries(${target_name} ${CUDA_nvrtc_LIBRARY})
+  endif()
+  if(WIN32)
+    target_link_libraries(${target_name} winmm.lib)
+  endif()
 
   target_include_directories(${target_name} PRIVATE "{$OPRT_DIR}")
 

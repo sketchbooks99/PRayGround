@@ -3,10 +3,16 @@ OPRT_add_executalbe(cornel target_name
     app.cpp 
     app.h
     params.h
+    data/hitgroups.cu
+    data/surfaces.cu
+    data/miss.cu
+    data/raygen.cu
+    data/textures.cu
+    data/util.cuh
 )
 
 target_compile_definitions(
-    cornel
+    ${target_name}
     PRIVATE
     OPRT_APP_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
     OPRT_ROOT_DIR="${OPRT_DIR}"

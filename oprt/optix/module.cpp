@@ -1,5 +1,6 @@
 #include "module.h"
 #include <nvrtc.h>
+#include <sampleConfig.h>
 #include <oprt/core/file_util.h>
 #include <oprt/core/util.h>
 #include <oprt/optix/macros.h>
@@ -25,10 +26,13 @@ Module::Module(const OptixModuleCompileOptions& options)
 
 }
 
- #ifdef CUDA_NVRTC_ENABLED
 // ------------------------------------------------------------------
 void Module::createFromCudaFile(const Context& ctx, const fs::path& filename, OptixPipelineCompileOptions pipeline_options)
 {
+#if !(CUDA_NVRTC_ENABLED)
+    static_assert(false);
+#endif
+
     auto filepath = findDataPath(filename);
     Assert(filepath, "oprt::Module::createFromModule(): The CUDA file to create module of '" + filename.string() + "' is not found.");
 
@@ -40,9 +44,11 @@ void Module::createFromCudaFile(const Context& ctx, const fs::path& filename, Op
 
 void Module::createFromCudaSource(const Context& ctx, const std::string& source, OptixPipelineCompileOptions pipeline_options)
 {
+#if !(CUDA_NVRTC_ENABLED)
+    static_assert(false);
+#endif
     nvrtcProgram prog = 0;
 }
-#endif
 
 void Module::createFromPtxFile(const Context& ctx, const fs::path& filename, OptixPipelineCompileOptions pipeline_options)
 {

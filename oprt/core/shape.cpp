@@ -30,28 +30,28 @@ std::variant<std::shared_ptr<Material>, std::shared_ptr<AreaEmitter>> Shape::sur
     return m_surface;
 }
 
-void Shape::addProgram(const ProgramGroup& program)
-{
-    if (program.kind() != OPTIX_PROGRAM_GROUP_KIND_HITGROUP)
-    {
-        Message(MSG_ERROR, "oprt::Shape::addProgram(): The kind of input program is not a OPTIX_PROGRAM_GROUP_KIND_HITGROUP.");
-        return;
-    }
-    m_programs.push_back(make_unique<ProgramGroup>(program));
-}
-
-std::vector<ProgramGroup> Shape::programs() const
-{
-    std::vector<ProgramGroup> prg_groups;
-    std::transform(m_programs.begin(), m_programs.end(), std::back_inserter(prg_groups), 
-        [](auto prg_ptr) { return *prg_ptr; });
-    return prg_groups;
-}
-
-ProgramGroup Shape::programAt(int idx) const
-{
-    return m_programs[idx];
-}
+//void Shape::addProgram(const ProgramGroup& program)
+//{
+//    if (program.kind() != OPTIX_PROGRAM_GROUP_KIND_HITGROUP)
+//    {
+//        Message(MSG_ERROR, "oprt::Shape::addProgram(): The kind of input program is not a OPTIX_PROGRAM_GROUP_KIND_HITGROUP.");
+//        return;
+//    }
+//    m_programs.push_back(std::make_unique<ProgramGroup>(program));
+//}
+//
+//std::vector<ProgramGroup> Shape::programs() const
+//{
+//    std::vector<ProgramGroup> prg_groups;
+//    std::transform(m_programs.begin(), m_programs.end(), std::back_inserter(prg_groups), 
+//        [](auto prg_ptr) { return *prg_ptr; });
+//    return prg_groups;
+//}
+//
+//ProgramGroup Shape::programAt(int idx) const
+//{
+//    return *m_programs[idx];
+//}
 
 void Shape::setSbtIndex(const uint32_t sbt_idx)
 {

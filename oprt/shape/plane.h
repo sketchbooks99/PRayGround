@@ -1,7 +1,5 @@
 #pragma once
 
-#include "cuda/plane.cuh"
-
 #ifndef __CUDACC__
 #include <oprt/core/shape.h>
 #include <oprt/core/cudabuffer.h>
@@ -79,4 +77,4 @@ private:
 };
 #endif // __CUDACC__
 
-}
+} // ::oprt

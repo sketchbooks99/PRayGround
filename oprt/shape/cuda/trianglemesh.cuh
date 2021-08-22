@@ -8,13 +8,13 @@ namespace oprt {
 
 CALLABLE_FUNC void CH_FUNC(mesh)()
 {
-    oprt::HitGroupData* data = reinterpret_cast<oprt::HitGroupData*>(optixGetSbtDataPointer());
-    const oprt::MeshData* mesh_data = reinterpret_cast<oprt::MeshData*>(data->shape_data);
+    HitGroupData* data = reinterpret_cast<HitGroupData*>(optixGetSbtDataPointer());
+    const MeshData* mesh_data = reinterpret_cast<MeshData*>(data->shape_data);
 
-    oprt::Ray ray = getWorldRay();
+    Ray ray = getWorldRay();
     
     const int prim_id = optixGetPrimitiveIndex();
-    const oprt::Face face = mesh_data->faces[prim_id];
+    const Face face = mesh_data->faces[prim_id];
     const float u = optixGetTriangleBarycentrics().x;
     const float v = optixGetTriangleBarycentrics().y;
 
@@ -32,7 +32,7 @@ CALLABLE_FUNC void CH_FUNC(mesh)()
     float3 world_n = optixTransformNormalFromObjectToWorldSpace(local_n);
     world_n = normalize(world_n);
 
-    oprt::SurfaceInteraction* si = getSurfaceInteraction();
+    SurfaceInteraction* si = getSurfaceInteraction();
     si->p = ray.at(ray.tmax);
     si->n = world_n;
     si->wi = ray.d;

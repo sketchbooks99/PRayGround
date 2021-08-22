@@ -1,17 +1,9 @@
 #pragma once
 
 #include <sutil/vec_math.h>
-#include "../../core/ray.h"
-#include "../../optix/sbt.h"
+#include <oprt/core/ray.h>
 
 namespace oprt {
-
-struct EnvironmentEmitterData {
-    void* texdata;
-    unsigned int tex_func_id;
-};
-
-#ifdef __CUDACC__
 
 CALLABLE_FUNC void MS_FUNC(envmap)()
 {
@@ -41,7 +33,5 @@ CALLABLE_FUNC void MS_FUNC(envmap)()
         env->tex_func_id, si, env->texdata
     );
 }
-
-#endif
 
 }

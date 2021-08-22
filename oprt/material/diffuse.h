@@ -10,9 +10,9 @@
 namespace oprt {
 
 struct DiffuseData {
-    void* texdata;
+    void* tex_data;
     bool twosided;
-    unsigned int tex_func_id;
+    unsigned int tex_program_id;
 };
 
 #ifndef __CUDACC__

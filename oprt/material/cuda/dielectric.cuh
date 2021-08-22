@@ -36,7 +36,7 @@ CALLABLE_FUNC float3 CC_FUNC(bsdf_dielectric)(SurfaceInteraction* si, void* mat_
 {
     const DielectricData* dielectric = reinterpret_cast<DielectricData*>(mat_data);
     si->emission = make_float3(0.0f);
-    return optixDirectCall<float3, SurfaceInteraction*, void*>(dielectric->tex_func_id, si, dielectric->texdata);    
+    return optixDirectCall<float3, SurfaceInteraction*, void*>(dielectric->tex_program_id, si, dielectric->tex_data);    
 }
 
 CALLABLE_FUNC float DC_FUNC(pdf_dielectric)(SurfaceInteraction* si, void* mat_data)

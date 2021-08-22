@@ -5,14 +5,14 @@
 using namespace std;
 
 // The number of ray types of the application.
-constexpr uint32_t NRay = 1;
+//constexpr uint32_t NRay = 1;
 
 using RaygenRecord = Record<RaygenData>;
 using HitgroupRecord = Record<HitgroupData>;
 using MissRecord = Record<MissData>;
 using EmptyRecord = Record<EmptyData>;
 
-using CornelSBT = ShaderBindingTable<RaygenRecord, MissRecord, HitgroupRecord, EmptyRecord, EmptyRecord, NRay>;
+using CornelSBT = ShaderBindingTable<RaygenRecord, MissRecord, HitgroupRecord, EmptyRecord, EmptyRecord, 1>;
 
 class App : public BaseApp
 {

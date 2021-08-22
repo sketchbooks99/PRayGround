@@ -1,7 +1,5 @@
 #pragma once 
 
-#include "cuda/cylinder.cuh"
-
 #ifndef __CUDACC__
 #include <oprt/core/shape.h>
 #include <oprt/core/cudabuffer.h>

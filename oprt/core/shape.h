@@ -75,9 +75,9 @@ public:
     SurfaceType surfaceType() const;
     void* surfaceDevicePtr() const;
 
-    void addProgram(const ProgramGroup& program);
+    /*void addProgram(const ProgramGroup& program);
     std::vector<ProgramGroup> programs() const;
-    ProgramGroup programAt(int idx) const;
+    ProgramGroup programAt(int idx) const;*/
 
     void setSbtIndex(const uint32_t sbt_index);
     uint32_t sbtIndex() const;
@@ -87,15 +87,15 @@ public:
     
     void* devicePtr() const;
 
-    template <class SBTRecord>
-    void bindRecord(SBTRecord* record, int idx)
-    {
-        if (m_programs.size() <= idx) {
-            Message(MSG_ERROR, "oprt::Shape::bindRecord(): The index to bind SBT record exceeds the number of programs.");
-            return;
-        }
-        m_programs[idx]->bindRecord(record);
-    }
+    //template <class SBTRecord>
+    //void bindRecord(SBTRecord* record, int idx)
+    //{
+    //    if (m_programs.size() <= idx) {
+    //        Message(MSG_ERROR, "oprt::Shape::bindRecord(): The index to bind SBT record exceeds the number of programs.");
+    //        return;
+    //    }
+    //    m_programs[idx]->bindRecord(record);
+    //}
 
 protected:
     void* d_data { 0 };
@@ -103,7 +103,7 @@ protected:
     uint32_t m_sbt_index;
 
 private:
-    std::vector<std::unique_ptr<ProgramGroup>> m_programs;
+    //std::vector<std::unique_ptr<ProgramGroup>> m_programs;
     std::variant<std::shared_ptr<Material>, std::shared_ptr<AreaEmitter>> m_surface;
 };
 

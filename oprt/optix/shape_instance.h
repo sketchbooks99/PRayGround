@@ -28,7 +28,7 @@ public:
     void buildAccelStructure();
     void updateAccelStructure();
 
-    void setTraversableHandle(OptixTraversableHandle handle) override;
+    void setTraversableHandle(OptixTraversableHandle handle);
 
     void addShape(const std::string& name, const std::shared_ptr<Shape>& shape);
     std::shared_ptr<Shape> getShape(const std::string& name) const;

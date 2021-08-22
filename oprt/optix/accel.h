@@ -15,7 +15,7 @@ public:
         None
     };
 
-    GeometryAccel() = delete;
+    GeometryAccel() = default;
     explicit GeometryAccel(Type type);
     ~GeometryAccel();
 
@@ -74,7 +74,7 @@ public:
         InstancePointers = OPTIX_BUILD_INPUT_TYPE_INSTANCE_POINTERS
     };
 
-    InstanceAccel() = delete;
+    InstanceAccel() = default;
     explicit InstanceAccel(Type type);
     ~InstanceAccel();
 

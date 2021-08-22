@@ -12,6 +12,7 @@ struct LaunchParams
     uint32_t samples_per_launch;
     int32_t subframe_index;
     uchar4* result_buffer;
+    float4* accum_buffer;
     OptixTraversableHandle handle;
 };
 

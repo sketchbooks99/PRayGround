@@ -3,15 +3,10 @@
 #include <sutil/vec_math.h>
 #include <oprt/core/ray.h>
 #include <oprt/optix/sbt.h>
+#include <oprt/core/interaction.h>
+#include "../area.h"
 
 namespace oprt {
-
-struct AreaEmitterData {
-    void* texdata;
-    float strength;
-    bool twosided;
-    unsigned int tex_func_id;
-};
 
 #ifdef __CUDACC__
 

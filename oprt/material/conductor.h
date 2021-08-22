@@ -6,10 +6,10 @@
 namespace oprt {
 
 struct ConductorData {
-    void* texdata;
+    void* tex_data;
     float fuzz;
     bool twosided;
-    uint32_t tex_func_id;
+    uint32_t tex_program_id;
 };
 
 #ifndef __CUDACC__

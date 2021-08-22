@@ -8,9 +8,9 @@
 namespace oprt {
 
 struct DielectricData {
-    void* texdata;
+    void* tex_data;
     float ior;
-    unsigned int tex_func_id;
+    unsigned int tex_program_id;
 };
 
 #ifndef __CUDACC__

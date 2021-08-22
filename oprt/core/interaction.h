@@ -30,7 +30,7 @@ struct SurfaceInteraction {
     /** Spectrum information of ray. */
     float3 spectrum;
 
-    /** Radiance and attenuation computed by a material attached with a surface. */
+    /** Attenuation and self-emission from a surface attached with a shape. */
     float3 attenuation;
     float3 emission;
 
@@ -49,7 +49,8 @@ struct SurfaceInteraction {
     SurfaceType surface_type;
 
     int trace_terminate;
-    int radiance_evaled;
+    int radiance_evaled; // For NEE
 };
 
-}
+} // ::oprt
+

@@ -2,7 +2,6 @@
 
 #include <oprt/core/emitter.h>
 #include <oprt/texture/constant.h>
-#include "cuda/envmap.cuh"
 
 /**
  * @brief Environment emitter. In general, emittance is evaluated at a miss program.
@@ -13,6 +12,11 @@
  */
 
 namespace oprt {
+
+struct EnvironmentEmitterData {
+    void* tex_data;
+    unsigned int tex_program_id;
+};
 
 #ifndef __CUDACC__
 

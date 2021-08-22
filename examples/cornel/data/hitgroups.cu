@@ -1,0 +1,94 @@
+#include "util.cuh"
+#include <oprt/shape/plane.h>
+#include <oprt/shape/trianglemesh.h>
+#include <oprt/core/ray.h>
+
+using namespace oprt;
+
+extern "C" __device__ void __intersection__plane()
+{
+    const HitGroupData* data = reinterpret_cast<HitGroupData*>(optixGetSbtDataPointer());
+    const PlaneData* plane_data = reinterpret_cast<PlaneData*>(data->shape_data);
+
+    const float2 min = plane_data->min;
+    const float2 max = plane_data->max;
+
+    Ray ray = getLocalRay();
+
+    const float t = -ray.o.y / ray.d.y;
+
+    const float x = ray.o.x + t * ray.d.x;
+    const float z = ray.o.z + t * ray.d.z;
+
+    float2 uv = make_float2(x / (max.x - min.x), z / (max.y - min.y));
+
+    if (min.x < x && x < max.x && min.y < z && z < max.y && ray.tmin < t && t < ray.tmax)
+        optixReportIntersection(t, 0, float2_as_ints(uv));
+}
+
+extern "C" __device__ void __closesethit__plane()
+{
+    HitGroupData* data = reinterpret_cast<HitGroupData*>(optixGetSbtDataPointer());
+
+    Ray ray = getWorldRay();
+
+    float3 local_n = make_float3(0, 1, 0);
+    float3 world_n = optixTransformNormalFromObjectToWorldSpace(local_n);
+    world_n = normalize(world_n);
+    float2 uv = make_float2(
+        int_as_float( optixGetAttribute_0() ), 
+        int_as_float( optixGetAttribute_1() )
+    );
+
+    SurfaceInteraction* si = getSurfaceInteraction();
+
+    si->p = ray.at(ray.tmax);
+    si->n = world_n;
+    si->wi = ray.d;
+    si->uv = uv;
+
+    si->surface_type = data->surface_type;
+    si->surface_property = {
+        data->surface_data,
+        data->surface_func_base_id
+    };
+}
+
+extern "C" __device__ void __closesethit__mesh()
+{
+    HitGroupData* data = reinterpret_cast<HitGroupData*>(optixGetSbtDataPointer());
+    const MeshData* mesh_data = reinterpret_cast<MeshData*>(data->shape_data);
+
+    Ray ray = getWorldRay();
+    
+    const int prim_id = optixGetPrimitiveIndex();
+    const Face face = mesh_data->faces[prim_id];
+    const float u = optixGetTriangleBarycentrics().x;
+    const float v = optixGetTriangleBarycentrics().y;
+
+    const float2 texcoord0 = mesh_data->texcoords[face.texcoord_id.x];
+    const float2 texcoord1 = mesh_data->texcoords[face.texcoord_id.y];
+    const float2 texcoord2 = mesh_data->texcoords[face.texcoord_id.z];
+    const float2 texcoords = (1-u-v)*texcoord0 + u*texcoord1 + v*texcoord2;
+
+    float3 n0 = normalize(mesh_data->normals[face.normal_id.x]);
+	float3 n1 = normalize(mesh_data->normals[face.normal_id.y]);
+	float3 n2 = normalize(mesh_data->normals[face.normal_id.z]);
+
+    // Linear interpolation of normal by barycentric coordinates.
+    float3 local_n = (1.0f-u-v)*n0 + u*n1 + v*n2;
+    float3 world_n = optixTransformNormalFromObjectToWorldSpace(local_n);
+    world_n = normalize(world_n);
+
+    SurfaceInteraction* si = getSurfaceInteraction();
+    si->p = ray.at(ray.tmax);
+    si->n = world_n;
+    si->wi = ray.d;
+    si->uv = texcoords;
+
+    si->surface_type = data->surface_type;
+    si->surface_property = {
+        data->surface_data,
+        data->surface_func_base_id
+    };
+}

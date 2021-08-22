@@ -1,12 +1,20 @@
 #pragma once
 
+#ifndef __CUDACC__
 #include <memory>
 #include <oprt/core/texture.h>
 #include <oprt/core/emitter.h>
 #include <oprt/texture/constant.h>
-#include "cuda/area.cuh"
+#endif 
 
 namespace oprt {
+
+struct AreaEmitterData {
+    void* tex_data;
+    float strength;
+    bool twosided;
+    unsigned int tex_program_id;
+};
 
 #ifndef __CUDACC__
 

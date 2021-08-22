@@ -1,7 +1,5 @@
 #pragma once 
 
-#include "cuda/sphere.cuh"
-
 #ifndef __CUDACC__
 #include <oprt/core/shape.h>
 #endif

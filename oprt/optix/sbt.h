@@ -22,6 +22,65 @@ namespace {
     }
 } // ::nonamed namespace
 
+template <TrivialCopyable T>
+struct Record 
+{
+    __align__ (OPTIX_SBT_RECORD_ALIGNMENT) char header[OPTIX_SBT_RECORD_HEADER_SIZE];
+    T data;
+};
+
+namespace builtin
+{
+
+struct LaunchParams 
+{
+    uint32_t width, height;
+    uint32_t samples_per_launch;
+    int32_t subframe_index;
+    uchar4* result_buffer;
+    OptixTraversableHandle handle;
+};
+
+struct CameraData
+{
+    float3 origin; 
+    float3 lookat; 
+    float3 up;
+    float fov;
+    float aspect;
+};
+
+struct RaygenData
+{
+    CameraData camera;
+};
+
+struct HitgroupData
+{
+    void* shape_data;
+    void* surface_data;
+
+    unsigned int surface_program_id;
+    unsigned int surface_pdf_id;
+};
+
+struct MissData
+{
+    void* env_data;
+};
+
+struct EmptyData
+{
+
+};
+
+using RaygenRecord = Record<RaygenData>;
+using HitgroupRecord = Record<HitgroupData>;
+using MissRecord = Record<MissData>;
+using EmptyRecord = Record<EmptyData>;
+
+} // ::builtin
+
 /**
  * @note 
  * 各種データが仮想関数を保持したしている場合、デバイス上におけるインスタンス周りで 
@@ -31,13 +90,6 @@ namespace {
  * @yaito3014 gave me an advise that to use is_trivially_copyable_v 
  * for prohibiting declaration of virtual functions in SBT Data.
  */
-
-template <TrivialCopyable T>
-struct Record 
-{
-    __align__ (OPTIX_SBT_RECORD_ALIGNMENT) char header[OPTIX_SBT_RECORD_HEADER_SIZE];
-    T data;
-};
 
 template <class RaygenRecord, class MissRecord, class HitgroupRecord, 
           class CallablesRecord, class ExceptionRecord, size_t NRay>
@@ -158,7 +210,7 @@ public:
         on_device = true;
     }
 
-    OptixShaderBindingTable sbt() const 
+    OptixShaderBindingTable& sbt()
     {
         return m_sbt;
     }

@@ -17,8 +17,8 @@ set(sources
   core/material.h 
   core/onb.h 
   core/ray.h 
-  core/scene.h 
-  core/scene.cpp 
+  # core/scene.h 
+  # core/scene.cpp 
   core/shape.h 
   core/shape.cpp
   core/stream_helpers.h 
@@ -54,8 +54,8 @@ set(sources
   optix/helpers.h 
   optix/instance.h 
   optix/instance.cpp
-  optix/shape_instance.h 
-  optix/shape_instance.cpp
+  # optix/shape_instance.h 
+  # optix/shape_instance.cpp
   optix/macros.h 
   optix/module.h 
   optix/module.cpp
@@ -107,5 +107,7 @@ set(oprt_sources)
 foreach (source ${sources})
   set(oprt_sources ${oprt_sources} "${OPRT_DIR}/oprt/${source}")
 endforeach()
+
+set(oprt_sources ${oprt_sources} ${CMAKE_CURRENT_BINARY_DIR}/../sampleConfig.h)
 
 set(oprt_sources ${oprt_sources} PARENT_SCOPE)

@@ -19,7 +19,7 @@ GeometryAccel::~GeometryAccel()
 // ---------------------------------------------------------------------------
 void GeometryAccel::addShape(const std::shared_ptr<Shape>& shape)
 {
-    Assert(shape->buildInputType() == static_cast<OptixBuildInputType>(m_type)),
+    Assert(shape->buildInputType() == static_cast<OptixBuildInputType>(m_type),
         "oprt::GeometryAccel::addShape(): The type of shape must be same as the type of GeometryAccel.");
     m_shapes.emplace_back(shape);
 }
@@ -269,15 +269,20 @@ Instance& InstanceAccel::instanceAt(const int32_t idx)
 // ---------------------------------------------------------------------------
 void InstanceAccel::build(const Context& ctx)
 {
-    std::vector<CUdeviceptr> d_instance_array;
-    std::transform(m_instances.begin(), m_instances.end(), std::back_inserter(d_instance_array), 
-        [](const std::shared_ptr<Instance>& instance) {
-            if (!instance->isDataOnDevice())
-                instance->copyToDevice();
-            return instance->devicePtr();
-        });
-    CUDABuffer<CUdeviceptr> d_instances;
-    d_instances.copyToDevice(d_instance_array);
+    //std::vector<CUdeviceptr> d_instance_array;
+    //std::transform(m_instances.begin(), m_instances.end(), std::back_inserter(d_instance_array), 
+    //    [](const std::shared_ptr<Instance>& instance) {
+    //        if (!instance->isDataOnDevice())
+    //            instance->copyToDevice();
+    //        return instance->devicePtr();
+    //    });
+    //CUDABuffer<CUdeviceptr> d_instances;
+    //d_instances.copyToDevice(d_instance_array);
+    CUDABuffer<OptixInstance> d_instances;
+    std::vector<OptixInstance> optix_instances;
+    std::transform(m_instances.begin(), m_instances.end(), std::back_inserter(optix_instances),
+        [](const Instance& instance) { return static_cast<OptixInstance>(instance);  });
+    d_instances.copyToDevice(optix_instances.data(), optix_instances.size() * sizeof(OptixInstance));
 
     OptixBuildInput instance_input = {};
     instance_input.type = static_cast<OptixBuildInputType>(m_type);

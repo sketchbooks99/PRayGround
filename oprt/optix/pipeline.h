@@ -97,7 +97,7 @@ public:
     void setTraversableGraphFlags(const uint32_t flags);
     void setNumPayloads(const int num_payloads);
     void setNumAttributes(const int num_attributes);
-    void setLaunchVariableName(const std::string& params_name);
+    void setLaunchVariableName(const char* params_name);
     void setExceptionFlags(const OptixExceptionFlags& flags);
     OptixPipelineCompileOptions compileOptions() const;
 

@@ -240,9 +240,9 @@ void Pipeline::setNumAttributes(const int num_attributes)
     m_compile_options.numAttributeValues = num_attributes;
 }
 
-void Pipeline::setLaunchVariableName(const std::string& params_name)
+void Pipeline::setLaunchVariableName(const char* params_name)
 {
-    m_compile_options.pipelineLaunchParamsVariableName = params_name.c_str();
+    m_compile_options.pipelineLaunchParamsVariableName = params_name;
 }
 
 void Pipeline::setExceptionFlags(const OptixExceptionFlags& flags)

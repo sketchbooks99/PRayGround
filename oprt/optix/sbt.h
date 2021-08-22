@@ -197,7 +197,7 @@ public:
 
         m_sbt.raygenRecord = d_raygen_record.devicePtr();
         m_sbt.missRecordBase = d_miss_records.devicePtr();
-        m_sbt.missRecordCount = static_cast<uint32_t>(m_miss_records.size());
+        m_sbt.missRecordCount = NRay;
         m_sbt.missRecordStrideInBytes = static_cast<uint32_t>(sizeof(MissRecord));
         m_sbt.hitgroupRecordBase = d_hitgroup_records.devicePtr();
         m_sbt.hitgroupRecordCount = static_cast<uint32_t>(m_hitgroup_records.size());

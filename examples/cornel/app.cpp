@@ -214,7 +214,9 @@ void App::setup()
     ias.build(context);
     params.handle = ias.handle();
     pipeline.create(context);
+    CUDA_CHECK(cudaStreamCreate(&stream));
     d_params.allocate(sizeof(LaunchParams));
+    sbt.createOnDevice();
 }
 
 // ----------------------------------------------------------------
@@ -232,6 +234,8 @@ void App::update()
         params.height,
         1
     );
+
+    CUDA_CHECK(cudaStreamSynchronize(stream));
 
     CUDA_SYNC_CHECK();
 

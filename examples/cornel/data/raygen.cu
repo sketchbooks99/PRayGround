@@ -17,11 +17,13 @@ static __forceinline__ __device__ void cameraFrame(const CameraData& camera, flo
     U *= ulen;
 }
 
-extern "C" __device__ void __raygen__pinhole()
+extern "C" __global__ void __raygen__pinhole()
 {
     const RaygenData* raygen = reinterpret_cast<RaygenData*>(optixGetSbtDataPointer());
     float3 U, V, W;
     cameraFrame(raygen->camera, U, V, W);
+
+    printf("%d \n", params.samples_per_launch);
 
     const int subframe_index = params.subframe_index;
 
@@ -85,7 +87,7 @@ extern "C" __device__ void __raygen__pinhole()
             else if ( si.surface_type == SurfaceType::Material )
             {
                 // Sampling surface
-                optixDirectCall<void, SurfaceInteraction*, void*>(
+                optixContinuationCall<void, SurfaceInteraction*, void*>(
                     si.surface_property.program_id, 
                     &si,
                     si.surface_property.data

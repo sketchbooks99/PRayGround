@@ -2,6 +2,7 @@
 
 #include <oprt/core/emitter.h>
 #include <oprt/texture/constant.h>
+#include <filesystem>
 
 /**
  * @brief Environment emitter. In general, emittance is evaluated at a miss program.

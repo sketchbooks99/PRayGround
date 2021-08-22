@@ -4,6 +4,7 @@
 #include <oprt/core/util.h>
 #include <oprt/math/matrix.h>
 #include <unordered_map>
+#include <filesystem>
 
 namespace oprt {
 

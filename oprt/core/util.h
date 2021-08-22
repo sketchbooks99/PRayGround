@@ -11,6 +11,7 @@
 #include <vector>
 #include <array>
 #include <iostream>
+#include <memory>
 #include <oprt/core/stream_helpers.h>
 
 #if defined(_WIN32) | defined(_WIN64)

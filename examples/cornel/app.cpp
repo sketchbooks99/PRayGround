@@ -59,16 +59,6 @@ void App::setup()
     sbt.setRaygenRecord(raygen_record);
     pipeline.bindRaygenRecord(&raygen_record);
 
-    // Prepare environment 
-    env = make_shared<EnvironmentEmitter>("image/earth.jpg");
-    env->copyToDevice();
-
-    pipeline.createMissProgram(context, miss_module, "__miss__envmap");
-    MissRecord miss_record;
-    miss_record.data.env_data = env->devicePtr();
-    sbt.setMissRecord(miss_record);
-    pipeline.bindMissRecord(&miss_record, 0);
-
     // SBT record for callable programs
     EmptyRecord callable_record;
     sbt.addCallablesRecord(callable_record);
@@ -80,6 +70,17 @@ void App::setup()
     pipeline.bindCallablesRecord(&callable_record, 0);
     pipeline.bindCallablesRecord(&callable_record, 1);
     pipeline.bindCallablesRecord(&callable_record, 2);
+
+    // Prepare environment 
+    env = make_shared<EnvironmentEmitter>("image/earth.jpg");
+    env->texture()->setProgramId(bitmap_prg_id);
+    env->copyToDevice();
+
+    pipeline.createMissProgram(context, miss_module, "__miss__envmap");
+    MissRecord miss_record;
+    miss_record.data.env_data = env->devicePtr();
+    sbt.setMissRecord(miss_record);
+    pipeline.bindMissRecord(&miss_record, 0);
 
     // Preparing textures
     textures.emplace("checker_texture", make_shared<CheckerTexture>(make_float3(0.9f), make_float3(0.3f)));
@@ -97,9 +98,9 @@ void App::setup()
     uint32_t diffuse_prg_id = pipeline.createCallablesProgram(context, surfaces_module, "", "__continuation_callable__diffuse");
     uint32_t dielectric_prg_id = pipeline.createCallablesProgram(context, surfaces_module, "", "__continuation_callable__dielectric");
     uint32_t area_emitter_prg_id = pipeline.createCallablesProgram(context, surfaces_module, "__direct_callable__area_emitter", "");
-    pipeline.bindCallablesRecord(&callable_record, 0);
-    pipeline.bindCallablesRecord(&callable_record, 1);
-    pipeline.bindCallablesRecord(&callable_record, 2);
+    pipeline.bindCallablesRecord(&callable_record, 3);
+    pipeline.bindCallablesRecord(&callable_record, 4);
+    pipeline.bindCallablesRecord(&callable_record, 5);
 
     // Preparing materials and program id
     ceiling_light = make_shared<AreaEmitter>(make_float3(1.0f), 15.0f);
@@ -218,6 +219,7 @@ void App::setup()
     CUDA_CHECK(cudaStreamCreate(&stream));
     d_params.allocate(sizeof(LaunchParams));
     sbt.createOnDevice();
+    CUDA_CHECK(cudaSetDevice(context.deviceId()));
 }
 
 // ----------------------------------------------------------------
@@ -236,8 +238,8 @@ void App::update()
         1
     );
 
+    CUDA_CHECK(cudaSetDevice(context.deviceId()));
     CUDA_CHECK(cudaStreamSynchronize(stream));
-
     CUDA_SYNC_CHECK();
 
     film.bitmapAt("result")->copyFromDevice();

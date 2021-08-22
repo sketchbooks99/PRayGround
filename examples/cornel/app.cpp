@@ -55,6 +55,7 @@ void App::setup()
     raygen_record.data.camera.lookat = camera.lookat();
     raygen_record.data.camera.up = camera.up();
     raygen_record.data.camera.fov = camera.fov();
+    raygen_record.data.camera.aspect = 1.0f;
     sbt.setRaygenRecord(raygen_record);
     pipeline.bindRaygenRecord(&raygen_record);
 

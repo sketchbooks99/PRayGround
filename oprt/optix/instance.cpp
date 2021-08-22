@@ -6,17 +6,19 @@ namespace oprt {
 // ------------------------------------------------------------------
 Instance::Instance()
 {
-    
+    m_instance.flags = OPTIX_INSTANCE_FLAG_NONE;
 }
 
 Instance::Instance(const Transform& transform)
 {
     setTransform(transform);
+    m_instance.flags = OPTIX_INSTANCE_FLAG_NONE;
 }
 
 Instance::Instance(const Matrix4f& matrix)
 {
     setTransform(matrix);
+    m_instance.flags = OPTIX_INSTANCE_FLAG_NONE;
 }
 
 // ------------------------------------------------------------------

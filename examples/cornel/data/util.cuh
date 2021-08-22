@@ -43,11 +43,6 @@ INLINE DEVICE oprt::SurfaceInteraction* getSurfaceInteraction()
 }
 
 // -------------------------------------------------------------------------------
-static INLINE DEVICE void setPayloadOcclusion(bool occluded)
-{
-	optixSetPayload_0(static_cast<unsigned int>(occluded));
-}
-
 INLINE DEVICE void trace(
     OptixTraversableHandle handle,
     float3                 ray_origin,

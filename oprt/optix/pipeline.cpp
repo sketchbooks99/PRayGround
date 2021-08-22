@@ -285,7 +285,7 @@ uint32_t Pipeline::traceDepth() const
 // --------------------------------------------------------------------
 void Pipeline::setContinuationCallableDepth(const uint32_t depth)
 {
-    m_dc_depth = depth;
+    m_cc_depth = depth;
 }
 uint32_t Pipeline::continuationCallableDepth() const
 {

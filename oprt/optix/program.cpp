@@ -86,9 +86,9 @@ void ProgramGroup::createHitgroup(const Context& ctx, const Module& module, cons
 
 void ProgramGroup::createHitgroup(const Context& ctx, const Module& module, const std::string& ch_name, const std::string& is_name, const std::string& ah_name)
 {
-    ProgramEntry ch_entry{module, ch_name};
-    ProgramEntry is_entry{module, is_name};
-    ProgramEntry ah_entry{module, ah_name};
+    ProgramEntry ch_entry{ module, ch_name };
+    ProgramEntry is_entry{ is_name == "" ? Module{} : module , is_name };
+    ProgramEntry ah_entry{ ah_name == "" ? Module{} : module, ah_name };
     createHitgroup(ctx, ch_entry, is_entry, ah_entry);
 }
 
@@ -105,7 +105,7 @@ void ProgramGroup::createHitgroup(const Context& ctx, const ProgramEntry& ch_ent
     createHitgroup(ctx, ch_entry, is_entry, ah_entry);
 }
 
-void ProgramGroup::createHitgroup(const Context& ctx, const ProgramEntry& ch_entry, const ProgramEntry& ah_entry, const ProgramEntry& is_entry)
+void ProgramGroup::createHitgroup(const Context& ctx, const ProgramEntry& ch_entry, const ProgramEntry& is_entry, const ProgramEntry& ah_entry)
 {
     m_kind = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
 
@@ -113,17 +113,17 @@ void ProgramGroup::createHitgroup(const Context& ctx, const ProgramEntry& ch_ent
     size_t sizeof_log = sizeof(log);
 
     auto [ch_module, ch_name] = ch_entry;
-    auto [ah_module, ah_name] = ah_entry;
     auto [is_module, is_name] = is_entry;
+    auto [ah_module, ah_name] = ah_entry;
 
     OptixProgramGroupDesc prog_desc = {};
     prog_desc.kind = m_kind;
     prog_desc.hitgroup.moduleCH = static_cast<OptixModule>(ch_module);
     prog_desc.hitgroup.entryFunctionNameCH = ch_name == "" ? nullptr : ch_name.c_str();
-    prog_desc.hitgroup.moduleAH = static_cast<OptixModule>(ah_module);
-    prog_desc.hitgroup.entryFunctionNameAH = ah_name == "" ? nullptr : ah_name.c_str();
     prog_desc.hitgroup.moduleIS = static_cast<OptixModule>(is_module);
     prog_desc.hitgroup.entryFunctionNameIS = is_name == "" ? nullptr : is_name.c_str();
+    prog_desc.hitgroup.moduleAH = static_cast<OptixModule>(ah_module);
+    prog_desc.hitgroup.entryFunctionNameAH = ah_name == "" ? nullptr : ah_name.c_str();
     OPTIX_CHECK_LOG(optixProgramGroupCreate(
         static_cast<OptixDeviceContext>(ctx),
         &prog_desc,

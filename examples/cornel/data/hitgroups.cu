@@ -26,7 +26,7 @@ extern "C" __device__ void __intersection__plane()
         optixReportIntersection(t, 0, float2_as_ints(uv));
 }
 
-extern "C" __device__ void __closesethit__plane()
+extern "C" __device__ void __closesthit__plane()
 {
     HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
 
@@ -54,7 +54,7 @@ extern "C" __device__ void __closesethit__plane()
     };
 }
 
-extern "C" __device__ void __closesethit__mesh()
+extern "C" __device__ void __closesthit__mesh()
 {
     HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
     const MeshData* mesh_data = reinterpret_cast<MeshData*>(data->shape_data);

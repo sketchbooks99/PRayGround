@@ -4,10 +4,22 @@
 #include <oprt/core/util.h>
 #include <oprt/optix/program.h>
 #include <oprt/optix/context.h>
+#include <oprt/optix/sbt.h>
 #include <filesystem>
 #include <tuple>
 
 namespace oprt {
+
+/**
+ * @note
+ * template <class RaygenRecord, class MissRecord, class HitgroupRecord, 
+ *         class CallablesRecord, class ExceptionRecord, unsigned int NRay>
+ * class Pipeline;
+ * こんな感じにして内部にSBTを持つと楽？ただ、こうすると実装をヘッダファイルに
+ * 全て書く必要があってすごくやりたくない ...
+ * 
+ * とりあえずはbindRaygenRecord的な関数だけtemplateで実装して、コーディング側で注意するようにする
+ */
 
 class Pipeline {
 public:
@@ -25,20 +37,55 @@ public:
     [[nodiscard]] Module createModuleFromPtxFile(const Context& ctx, const std::filesystem::path& filename);
     [[nodiscard]] Module createModuleFromPtxSource(const Context& ctx, const std::string& source);
 
-    [[nodiscard]] ProgramGroup createRaygenProgram(const Context& ctx, const Module& module, const std::string& func_name);
-    [[nodiscard]] ProgramGroup createRaygenProgram(const Context& ctx, const ProgramEntry& entry);
-    [[nodiscard]] ProgramGroup createMissProgram(const Context& ctx, const Module& module, const std::string& func_name);
-    [[nodiscard]] ProgramGroup createMissProgram(const Context& ctx, const ProgramEntry& entry);
-    [[nodiscard]] ProgramGroup createHitgroupProgram(const Context& ctx, const Module& module, const std::string& ch_name);
-    [[nodiscard]] ProgramGroup createHitgroupProgram(const Context& ctx, const ProgramEntry& ch_entry);
-    [[nodiscard]] ProgramGroup createHitgroupProgram(const Context& ctx, const Module& module, const std::string& ch_name, const std::string& is_name);
-    [[nodiscard]] ProgramGroup createHitgroupProgram(const Context& ctx, const ProgramEntry& ch_entry, const ProgramEntry& is_entry);
-    [[nodiscard]] ProgramGroup createHitgroupProgram(const Context& ctx, const Module& module, const std::string& ch_name, const std::string& is_name, const std::string& ah_name);
-    [[nodiscard]] ProgramGroup createHitgroupProgram(const Context& ctx, const ProgramEntry& ch_entry, const ProgramEntry& is_entry, const ProgramEntry& ah_entry);
-    [[nodiscard]] std::pair<ProgramGroup, uint32_t> createCallablesProgram(const Context& ctx, const Module& module, const std::string& dc_name, const std::string& cc_name);
-    [[nodiscard]] std::pair<ProgramGroup, uint32_t> createCallablesProgram(const Context& ctx, const ProgramEntry& dc_entry, const ProgramEntry& cc_entry);
-    [[nodiscard]] ProgramGroup createExceptionProgram(const Context& ctx, const Module& module, const std::string& func_name);
-    [[nodiscard]] ProgramGroup createExceptionProgram(const Context& ctx, const ProgramEntry& entry);
+    void createRaygenProgram(const Context& ctx, const Module& module, const std::string& func_name);
+    void createRaygenProgram(const Context& ctx, const ProgramEntry& entry);
+    void createMissProgram(const Context& ctx, const Module& module, const std::string& func_name);
+    void createMissProgram(const Context& ctx, const ProgramEntry& entry);
+    void createHitgroupProgram(const Context& ctx, const Module& module, const std::string& ch_name);
+    void createHitgroupProgram(const Context& ctx, const ProgramEntry& ch_entry);
+    void createHitgroupProgram(const Context& ctx, const Module& module, const std::string& ch_name, const std::string& is_name);
+    void createHitgroupProgram(const Context& ctx, const ProgramEntry& ch_entry, const ProgramEntry& is_entry);
+    void createHitgroupProgram(const Context& ctx, const Module& module, const std::string& ch_name, const std::string& is_name, const std::string& ah_name);
+    void createHitgroupProgram(const Context& ctx, const ProgramEntry& ch_entry, const ProgramEntry& is_entry, const ProgramEntry& ah_entry);
+    uint32_t createCallablesProgram(const Context& ctx, const Module& module, const std::string& dc_name, const std::string& cc_name);
+    uint32_t createCallablesProgram(const Context& ctx, const ProgramEntry& dc_entry, const ProgramEntry& cc_entry);
+    void createExceptionProgram(const Context& ctx, const Module& module, const std::string& func_name);
+    void createExceptionProgram(const Context& ctx, const ProgramEntry& entry);
+
+    template <class SBTRecord>
+    void bindRaygenRecord(SBTRecord* record)
+    {
+        Assert((OptixProgramGroup)m_raygen_program, "Raygen program has not been create yet.");
+        m_raygen_program.bindRecord(record);
+    }
+
+    template <class SBTRecord>
+    void bindMissRecord(SBTRecord* record, const int idx)
+    {
+        Assert(idx < m_miss_programs.size(), "Out of ranges of miss programs");
+        m_miss_programs[idx].bindRecord(record);
+    }
+
+    template <class SBTRecord>
+    void bindHitgroupRecord(SBTRecord* record, const int idx)
+    {
+        Assert(idx < m_hitgroup_programs.size(), "Out of ranges of hitgroup programs");
+        m_hitgroup_programs[idx].bindRecord(record);
+    }
+
+    template <class SBTRecord>
+    void bindCallablesRecord(SBTRecord* record, const int idx)
+    {
+        Assert(idx < m_callables_programs.size(), "Out of ranges of miss programs");
+        m_callables_programs[idx].bindRecord(record);
+    }
+
+    template <class SBTRecord>
+    void bindExceptionRecord(SBTRecord* record)
+    {
+        Assert((OptixProgramGroup)m_exception_program, "Exceptino program has not been create yet.");
+        m_exception_program.bindRecord(record);
+    }
 
     /** Create pipeline object and calculate the stack sizes of pipeline. */
     void create(const Context& ctx);
@@ -89,6 +136,7 @@ private:
     uint32_t m_trace_depth { 5 }; 
     uint32_t m_cc_depth { 0 }; 
     uint32_t m_dc_depth { 0 };
+
 };
 
 }

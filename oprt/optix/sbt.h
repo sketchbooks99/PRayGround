@@ -92,7 +92,7 @@ struct Record
  */
 
 template <class RaygenRecord, class MissRecord, class HitgroupRecord, 
-          class CallablesRecord, class ExceptionRecord, size_t NRay>
+          class CallablesRecord, class ExceptionRecord, unsigned int NRay>
 class ShaderBindingTable {
 public:
     ShaderBindingTable()

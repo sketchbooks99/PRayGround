@@ -269,15 +269,6 @@ Instance& InstanceAccel::instanceAt(const int32_t idx)
 // ---------------------------------------------------------------------------
 void InstanceAccel::build(const Context& ctx)
 {
-    //std::vector<CUdeviceptr> d_instance_array;
-    //std::transform(m_instances.begin(), m_instances.end(), std::back_inserter(d_instance_array), 
-    //    [](const std::shared_ptr<Instance>& instance) {
-    //        if (!instance->isDataOnDevice())
-    //            instance->copyToDevice();
-    //        return instance->devicePtr();
-    //    });
-    //CUDABuffer<CUdeviceptr> d_instances;
-    //d_instances.copyToDevice(d_instance_array);
     CUDABuffer<OptixInstance> d_instances;
     std::vector<OptixInstance> optix_instances;
     std::transform(m_instances.begin(), m_instances.end(), std::back_inserter(optix_instances),
@@ -303,9 +294,8 @@ void InstanceAccel::build(const Context& ctx)
     CUDA_CHECK(cudaMalloc(
         reinterpret_cast<void**>(&d_temp_buffer), 
         ias_buffer_sizes.tempSizeInBytes ));
-    CUdeviceptr d_ias_output_buffer; 
     CUDA_CHECK(cudaMalloc(
-        reinterpret_cast<void**>(&d_ias_output_buffer), 
+        reinterpret_cast<void**>(&d_buffer), 
         ias_buffer_sizes.outputSizeInBytes ));
     
     // Build instance AS contains all GASs to describe the scene.
@@ -317,7 +307,7 @@ void InstanceAccel::build(const Context& ctx)
         1,                  // num build inputs
         d_temp_buffer, 
         ias_buffer_sizes.tempSizeInBytes, 
-        d_ias_output_buffer, 
+        d_buffer, 
         ias_buffer_sizes.outputSizeInBytes, 
         &m_handle, 
         nullptr,            // emitted property list

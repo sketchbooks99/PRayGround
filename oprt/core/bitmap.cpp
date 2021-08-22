@@ -390,7 +390,7 @@ void Bitmap_<PixelType>::copyFromDevice()
     CUDA_CHECK(cudaMemcpy(
         m_data,
         d_data, m_width * m_height * m_channels * sizeof(PixelType),
-        cudaMemcpyHostToDevice
+        cudaMemcpyDeviceToHost
     ));
 }
 

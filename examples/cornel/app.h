@@ -37,7 +37,6 @@ private:
     shared_ptr<EnvironmentEmitter> env;
     shared_ptr<TriangleMesh> bunny;
     unordered_map<string, shared_ptr<Plane>> cornel;
-    unordered_map<string, Instance> instances;
     unordered_map<string, shared_ptr<Material>> materials;
     shared_ptr<AreaEmitter> ceiling_light;
     unordered_map<string, shared_ptr<Texture>> textures;

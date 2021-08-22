@@ -33,24 +33,95 @@
 #include <oprt/core/util.h>
 #include <oprt/optix/macros.h>
 #include <sutil/sutil.h>
+#include <map>
 
 namespace oprt {
 
 namespace fs = std::filesystem;
 
-// NVRTC error handles
-#define NVRTC_CHECK(call)                                                                                                   \
-    do                                                                                                                      \
-    {                                                                                                                       \
-        nvrtcResult code = func;                                                                                            \
-        if (code != NVRTC_SUCCESS)                                                                                          \
-            throw std::runtime_error( "ERROR: " __FILE__ "(" STRINGIFY( __LINE__ ) "): " + std::string( nvrtcGetErrorString( code ) ) ); \
-    } while (0)
-    
-static void getPtxFromCuString(std::string& ptx, const char* source, const char* name, const char** log_string)
-{
+#define STRINGIFY( x ) STRINGIFY2( x )
+#define STRINGIFY2( x ) #x
 
-}
+// NVRTC error handles
+#define NVRTC_CHECK(call)                                                                                                                  \
+    do                                                                                                                                     \
+    {                                                                                                                                      \
+        nvrtcResult code = call;                                                                                                           \
+        if (code != NVRTC_SUCCESS)                                                                                                         \
+            throw std::runtime_error( "ERROR: " __FILE__ "(" STRINGIFY(__LINE__) "): " + std::string( nvrtcGetErrorString( code ) ) );   \
+    } while (0)
+
+namespace {
+    struct PtxSourceCache
+    {
+        std::map<std::string, std::string*> map;
+        ~PtxSourceCache()
+        {
+            for (std::map<std::string, std::string*>::const_iterator it = map.begin(); it != map.end(); ++it)
+                delete it->second;
+        }
+    };
+    PtxSourceCache g_ptxSourceCache;
+
+#if CUDA_NVRTC_ENABLED
+    std::string g_nvrtcLog;
+
+    void getPtxFromCuString(std::string& ptx, const char* cu_source, const char* name, const char** log_string)
+    {
+        nvrtcProgram prog = 0;
+        NVRTC_CHECK(nvrtcCreateProgram(&prog, cu_source, name, 0, nullptr, nullptr));
+
+        std::vector<const char*> options;
+
+#ifdef OPRT_APP_DIR
+        std::string app_dir = std::string("-I") + oprtAppDir().string();
+        options.push_back(app_dir.c_str());
+#endif // OPRT_APP_DIR
+
+        // Collect include dirs
+        std::vector<std::string> include_dirs;
+        const char* abs_dirs[] = { OPRT_ABSOLUTE_INCLUDE_DIRS };
+        const char* rel_dirs[] = { OPRT_RELATIVE_INCLUDE_DIRS };
+
+        for (const char* dir : abs_dirs)
+            include_dirs.push_back(std::string("-I") + dir);
+        for (const char* dir : rel_dirs)
+            include_dirs.push_back(std::string("-I") + dir);
+        for (const std::string& dir : include_dirs)
+            options.push_back(dir.c_str());
+
+        // Collect NVRTC options
+        const char* compiler_options[] = { CUDA_NVRTC_OPTIONS };
+        std::copy(std::begin(compiler_options), std::end(compiler_options), std::back_inserter(options));
+
+        // JIT compile CU to PTX
+        const nvrtcResult compileRes = nvrtcCompileProgram(prog, (int)options.size(), options.data());
+
+        // Retrieve log output
+        size_t log_size = 0;
+        NVRTC_CHECK(nvrtcGetProgramLogSize(prog, &log_size));
+        g_nvrtcLog.resize(log_size);
+        if (log_size > 1)
+        {
+            NVRTC_CHECK(nvrtcGetProgramLog(prog, &g_nvrtcLog[0]));
+            if (log_string)
+                *log_string = g_nvrtcLog.c_str();
+        }
+        if (compileRes != NVRTC_SUCCESS)
+            throw std::runtime_error("NVRTC Compilation failed.\n" + g_nvrtcLog);
+
+        // Retrieve PTX code
+        size_t ptx_size = 0;
+        NVRTC_CHECK(nvrtcGetPTXSize(prog, &ptx_size));
+        ptx.resize(ptx_size);
+        NVRTC_CHECK(nvrtcGetPTX(prog, &ptx[0]));
+
+        // Cleanup
+        NVRTC_CHECK(nvrtcDestroyProgram(&prog));
+    }
+#endif // CUDA_NVRTC_ENABLED
+
+} // ::nonamed namespace 
 
 // ------------------------------------------------------------------
 Module::Module()
@@ -76,13 +147,24 @@ void Module::createFromCudaFile(const Context& ctx, const fs::path& filename, Op
     auto filepath = findDataPath(filename);
     Assert(filepath, "oprt::Module::createFromModule(): The CUDA file to create module of '" + filename.string() + "' is not found.");
 
-    // ***** from sutil *****
-    // std::string ptx = sutil::getPtxString(OPTIX_SAMPLE_NAME, OPTIX_SAMPLE_DIR, filepath.value().string().c_str());
-    // createFromPtxSource(ctx, ptx, pipeline_options);
-
-    // ***** my code (todo) *****
-    std::string source = getTextFromFile(filepath.value());
-    createFromCudaSource(ctx, source, pipeline_options);
+    const char** log = nullptr;
+    std::string key = filepath.value().string();
+    std::map<std::string, std::string*>::iterator elem = g_ptxSourceCache.map.find(key);
+    
+    // Load cuda source from file
+    std::string cu_source = getTextFromFile(filepath.value());
+    std::string* ptx;
+    if (elem == g_ptxSourceCache.map.end())
+    {
+        ptx = new std::string;
+        getPtxFromCuString(*ptx, cu_source.c_str(), filepath.value().string().c_str(), log);
+        g_ptxSourceCache.map[key] = ptx;
+    }
+    else
+    {
+        ptx = elem->second;
+    }
+    createFromPtxSource(ctx, *ptx, pipeline_options);
 }
 
 void Module::createFromCudaSource(const Context& ctx, const std::string& source, OptixPipelineCompileOptions pipeline_options)
@@ -90,13 +172,32 @@ void Module::createFromCudaSource(const Context& ctx, const std::string& source,
 #if !(CUDA_NVRTC_ENABLED)
     static_assert(false);
 #endif
-    nvrtcProgram prog = 0;
-    NVRTC_CHECK(nvrtcCreateProgram(&prog, source.c_str(), ))
+    const char** log;
+    std::string ptx;
+    getPtxFromCuString(ptx, source.c_str(), "", log);
+    createFromPtxSource(ctx, ptx, pipeline_options);
 }
 
 void Module::createFromPtxFile(const Context& ctx, const fs::path& filename, OptixPipelineCompileOptions pipeline_options)
 {
-    TODO_MESSAGE();
+    auto filepath = findDataPath(filename);
+    Assert(filepath, "oprt::Module::createFromModule(): The CUDA file to create module of '" + filename.string() + "' is not found.");
+
+    std::string key = filepath.value().string();
+    std::map<std::string, std::string*>::iterator elem = g_ptxSourceCache.map.find(key);
+    std::string* ptx;
+
+    if (elem == g_ptxSourceCache.map.end())
+    {
+        *ptx = getTextFromFile(filepath.value());
+        g_ptxSourceCache.map[key] = ptx;
+    }
+    else
+    {
+        ptx = elem->second;
+    }
+
+    createFromPtxSource(ctx, *ptx, pipeline_options);
 }
 
 void Module::createFromPtxSource(const Context& ctx, const std::string& source, OptixPipelineCompileOptions pipeline_options)

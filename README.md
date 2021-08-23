@@ -20,7 +20,7 @@ Before building our project, please be sure to check requirements and your envir
 
 # :inbox_tray: Cloning
 ```
-git clone https://github.com/uec-media-design-lab/PRayGround.git
+git clone https://github.com/sketchbooks99/PRayGround.git
 cd PRayGround
 git submodule update --init --recursive 
 ```

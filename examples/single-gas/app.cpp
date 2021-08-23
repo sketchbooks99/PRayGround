@@ -49,7 +49,6 @@ void App::setup()
     // Create raygen program and bind record;
     pipeline.createRaygenProgram(context, raygen_module, "__raygen__pinhole");
     RaygenRecord raygen_record;
-    pipeline.bindRaygenRecord(&raygen_record);
     raygen_record.data.camera.origin = camera.origin();
     raygen_record.data.camera.lookat = camera.lookat();
     raygen_record.data.camera.up = camera.up();
@@ -59,6 +58,7 @@ void App::setup()
     CUDABuffer<RaygenRecord> d_raygen_record;
     d_raygen_record.copyToDevice(&raygen_record, sizeof(RaygenRecord));
     sbt.raygenRecord = d_raygen_record.devicePtr();
+    pipeline.bindRaygenRecord(&raygen_record);
 
     // SBT record for callable programs
     std::vector<EmptyRecord> callable_records(3, EmptyRecord{});
@@ -77,9 +77,9 @@ void App::setup()
 
     pipeline.createMissProgram(context, miss_module, "__miss__envmap");
     MissRecord miss_record;
-    pipeline.bindMissRecord(&miss_record, 0);
     miss_record.data.env_data = env->devicePtr();
     //sbt.setMissRecord(miss_record);
+    pipeline.bindMissRecord(&miss_record, 0);
 
     CUDABuffer<MissRecord> d_miss_record;
     d_miss_record.copyToDevice(&miss_record, sizeof(MissRecord));
@@ -114,10 +114,10 @@ void App::setup()
     pipeline.createHitgroupProgram(context, hitgroups_module, "__closesthit__mesh");
 
     HitgroupRecord bunny_record;
-    pipeline.bindHitgroupRecord(&bunny_record, 0);
     bunny_record.data.shape_data = bunny->devicePtr();
     bunny_record.data.surface_data = bunny->surfaceDevicePtr();
     bunny_record.data.surface_program_id = area->programId();
+    pipeline.bindHitgroupRecord(&bunny_record, 0);
     //sbt.addHitgroupRecord(bunny_record);
 
     CUDABuffer<HitgroupRecord> d_hitgroup_records;
@@ -170,7 +170,8 @@ void App::update()
 // ----------------------------------------------------------------
 void App::draw()
 {
-    film.bitmapAt("result")->draw(0, 0, film.width(), film.height());
+    Message(MSG_WARNING, "Draw called");
+    film.bitmapAt("result")->draw(0, 0);
 }
 
 // ----------------------------------------------------------------

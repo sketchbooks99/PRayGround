@@ -164,14 +164,14 @@ void App::update()
     CUDA_CHECK(cudaStreamSynchronize(stream));
     CUDA_SYNC_CHECK();
 
-    //film.bitmapAt("result")->copyFromDevice();
+    film.bitmapAt("result")->copyFromDevice();
 }
 
 // ----------------------------------------------------------------
 void App::draw()
 {
     Message(MSG_WARNING, "Draw called");
-    //film.bitmapAt("result")->draw(0, 0, film.width(), film.height());
+    film.bitmapAt("result")->draw(0, 0);
 }
 
 // ----------------------------------------------------------------

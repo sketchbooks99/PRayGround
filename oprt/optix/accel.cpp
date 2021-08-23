@@ -38,15 +38,6 @@ void GeometryAccel::build(const Context& ctx)
         return;
     }
 
-    bool is_all_same_type = true;
-    OptixBuildInputType zeroth_input_type = m_shapes[0]->buildInputType();
-
-    if (zeroth_input_type == OPTIX_BUILD_INPUT_TYPE_INSTANCES || zeroth_input_type == OPTIX_BUILD_INPUT_TYPE_INSTANCE_POINTERS)
-    {
-        Message(MSG_ERROR, "oprt::GeometryAccel::build(): The OptixBuildInputType of OPTIX_BUILD_INPUT_TYPE_INSTANCES or OPTIX_BUILD_INPUT_TYPE_INSTANCE_POINTERS cannot be used as an input type of geometry acceleration structure.");
-        return;
-    }
-
     if (d_buffer)
     {
         cuda_free(d_buffer);
@@ -247,7 +238,7 @@ size_t GeometryAccel::deviceTempBufferSize() const
 InstanceAccel::InstanceAccel(Type type)
 : m_type(type)
 {
-
+    m_options.buildFlags = OPTIX_BUILD_FLAG_NONE;
 }
 
 InstanceAccel::~InstanceAccel()
@@ -273,7 +264,7 @@ void InstanceAccel::build(const Context& ctx)
     std::vector<OptixInstance> optix_instances;
     std::transform(m_instances.begin(), m_instances.end(), std::back_inserter(optix_instances),
         [](const Instance& instance) { return static_cast<OptixInstance>(instance);  });
-    d_instances.copyToDevice(optix_instances.data(), optix_instances.size() * sizeof(OptixInstance));
+    d_instances.copyToDevice(optix_instances);
 
     OptixBuildInput instance_input = {};
     instance_input.type = static_cast<OptixBuildInputType>(m_type);

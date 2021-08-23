@@ -64,8 +64,6 @@ Bitmap_<PixelType>::Bitmap_(const std::filesystem::path& filename, Format format
 template <typename PixelType>
 void Bitmap_<PixelType>::allocate(Format format, int width, int height)
 {
-    Assert(!this->m_data, "Image data in the host side is already allocated. Please use setData() if you'd like to override bitmap data with your specified range.");
-
     m_width = width; 
     m_height = height;
     m_format = format;
@@ -81,10 +79,11 @@ void Bitmap_<PixelType>::allocate(Format format, int width, int height)
             m_channels = 3;
             break;
         case Format::RGBA:
-        case Format::UNKNOWN:
-        default:
             m_channels = 4;
             break;
+        case Format::UNKNOWN:
+        default:
+            Throw("oprt::Bitmap::allocate(): Invalid type of allocation");
     }
 
     // Zero-initialization of pixel data
@@ -366,6 +365,18 @@ void Bitmap_<PixelType>::draw(int32_t x, int32_t y, int32_t width, int32_t heigh
     glBindTexture(GL_TEXTURE_2D, m_gltex);
     glBindVertexArray(vertex_array);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+}
+
+// --------------------------------------------------------------------
+template <typename PixelType>
+void Bitmap_<PixelType>::allocateDeviceData()
+{
+    if (d_data)
+        CUDA_CHECK(cudaFree(d_data));
+    CUDA_CHECK(cudaMalloc(
+        reinterpret_cast<void**>(&d_data),
+        m_width * m_height * m_channels * sizeof(PixelType)
+    ));
 }
 
 // --------------------------------------------------------------------

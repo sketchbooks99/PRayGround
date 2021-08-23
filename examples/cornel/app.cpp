@@ -31,15 +31,15 @@ void App::setup()
     // Prepare film to store rendered results.
     film = Film(1024, 1024);
     film.addBitmap("result", Bitmap::Format::RGBA);
-    film.bitmapAt("result")->copyToDevice();
+    film.addFloatBitmap("accum", FloatBitmap::Format::RGBA);
+    film.bitmapAt("result")->allocateDeviceData();
+    film.floatBitmapAt("accum")->allocateDeviceData();
     params.width = film.width();
     params.height = film.height();
     params.samples_per_launch = 1;
     params.max_depth = 10;
     params.subframe_index = 0;
-    CUDABuffer<float4> d_accum_buffer;
-    d_accum_buffer.allocate(sizeof(float4) * film.bitmapAt("result")->width() * film.bitmapAt("result")->height());
-    params.accum_buffer = d_accum_buffer.deviceData();
+    params.accum_buffer = reinterpret_cast<float4*>(film.floatBitmapAt("accum")->devicePtr());
     params.result_buffer = reinterpret_cast<uchar4*>(film.bitmapAt("result")->devicePtr());
 
     camera.setOrigin(make_float3(0.0f, 0.0f, 50.0f));
@@ -213,18 +213,23 @@ void App::setup()
     ias.addInstance(bunny_instance);
 
     // Build IAS
+    sbt.createOnDevice();
     ias.build(context);
     params.handle = ias.handle();
     pipeline.create(context);
     CUDA_CHECK(cudaStreamCreate(&stream));
     d_params.allocate(sizeof(LaunchParams));
-    sbt.createOnDevice();
     CUDA_CHECK(cudaSetDevice(context.deviceId()));
 }
 
 // ----------------------------------------------------------------
 void App::update()
 {
+    film.bitmapAt("result")->allocateDeviceData();
+    film.floatBitmapAt("accum")->allocateDeviceData();
+    params.result_buffer = reinterpret_cast<uchar4*>(film.bitmapAt("result")->devicePtr());
+    params.accum_buffer = reinterpret_cast<float4*>(film.floatBitmapAt("accum")->devicePtr());
+
     d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);
 
     optixLaunch(
@@ -248,6 +253,7 @@ void App::update()
 // ----------------------------------------------------------------
 void App::draw()
 {
+    Message(MSG_WARNING, "Draw called");
     film.bitmapAt("result")->draw(0, 0, film.width(), film.height());
 }
 

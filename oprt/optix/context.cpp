@@ -54,8 +54,6 @@ Context::Context(unsigned int device_id, const OptixDeviceContextOptions& option
 // --------------------------------------------------------------------
 void Context::create()
 {
-    CUDA_CHECK(cudaFree(0));
-
     /// Verify if the \c device_id exceeds the detected number of GPU devices.
     int32_t num_device;
     CUDA_CHECK( cudaGetDeviceCount( &num_device ) );

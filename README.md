@@ -2,7 +2,7 @@
 
 Languages | English | [日本語](README_ja.md)
 
-# OptiX-Raytracer
+# PRayGround
 
 This is a ray tracer based on OptiX 7. Basically, this allows you to render just by describing the scene (transformations, geometry, materials, etc.) without being aware of the OptiX API. This also provides a wrapper library for OptiX 7 and a simple registration system for user-defined geometries, materials and textures.
 
@@ -20,8 +20,8 @@ Before building our project, please be sure to check requirements and your envir
 
 # :inbox_tray: Cloning
 ```
-git clone https://github.com/uec-media-design-lab/OptiX-Raytracer.git
-cd OptiX-Raytracer
+git clone https://github.com/uec-media-design-lab/PRayGround.git
+cd PRayGround
 git submodule update --init --recursive 
 ```
 
@@ -34,7 +34,7 @@ export CXX=g++-10
 ```
 Next, you can build with following command. Please be sure to set `OptiX_INCLUDE` in terminal execution of ccmake or in the launched prompt.
 ```
-cd <path/to/OptiX-Raytracer>
+cd <path/to/PRayGround>
 mkdir build
 cd build
 
@@ -61,9 +61,9 @@ Building steps are as follows.
 
 1. Start up cmake-gui.
 
-2. Set the `<path/to/OptiX-Raytracer>` for the source code location ( **Where is the source code** ). 
+2. Set the `<path/to/PRayGround>` for the source code location ( **Where is the source code** ). 
 
-3. Set the `<path/to/OptiX-Raytracer>/build` for the binary location ( **Where to build the binaries** ).
+3. Set the `<path/to/PRayGround>/build` for the binary location ( **Where to build the binaries** ).
 
 4. Press `Configure` button at the bottom of the window. When a window popped up, be careful with the settings for the platform to build. You must select **Visual Studio 16 2019** as the generator to use the recent features of C++, and specify the **x64** for the generator platform because OptiX only supports 64-bit builds.
 
@@ -71,11 +71,16 @@ Building steps are as follows.
 
 6. When configulation finished, press `Generate`.
 
-7. Open the `OptiX-Raytracer.sln` solution file in the build directory.
+7. Open the `PRayGround.sln` solution file in the build directory.
 
 8. Execute `Build Solution` in the IDE. When compile succeeded, the execution file will be created in the `build/bin/Debug or Release` directory. You also can run the ray tracer by setting the `<app-name>` project as start up project.
 
 ## Mac
 Not supported.
+
+## Examples
+:exclamation: ... doesn't work 
+[Single GAS](https://github.com/sketchbooks99/PRayGround/tree/master/examples/single-gas)
+[:exclamation: Cornel Box](https://github.com/sketchbooks99/PRayGround/tree/master/examples/cornel)
 
 

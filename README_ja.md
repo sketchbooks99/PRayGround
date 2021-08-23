@@ -2,7 +2,7 @@
 
 Languages | [English](README.md) | 日本語
 
-# OptiX-Raytracer
+# PRayGround
 
 OptiX 7 をベースとしたレイトレーサーです。OptiXのAPIを意識することなく、基本的にはシーンの記述（座標変換やジオメトリ、マテリアル等）のみでレンダリングが可能です。
 さらに、OptiX 7 の煩雑な処理に対するラッパーライブラリと、ユーザー定義によるジオメトリやマテリアル、テクスチャの簡易な登録システムを提供します。
@@ -21,8 +21,8 @@ OptiX 7 をベースとしたレイトレーサーです。OptiXのAPIを意識�
 
 # :inbox_tray: Cloning
 ```
-git clone https://github.com/uec-media-design-lab/OptiX-Raytracer.git
-cd OptiX-Raytracer
+git clone https://github.com/uec-media-design-lab/PRayGround.git
+cd PRayGround
 git submodule update --init --recursive 
 ```
 
@@ -35,7 +35,7 @@ export CXX=g++-10
 ```
 次に、以下のコマンドでビルドします。ターミナルで`ccmake`を実行するときもしくはccmakeのプロンプトで必ず`OptiX_INCLUDE`を設定してください。
 ```
-cd <path/to/OptiX-Raytracer>
+cd <path/to/PRayGround>
 mkdir build
 cd build
 
@@ -62,9 +62,9 @@ CMakeの実行では、[cmake-gui](https://cmake.org/download/)を使用して�
 
 1. cmake-gui を起動する。
 
-2. ソースコードの場所（**Where is the source code**）には、`<path/to/OptiX-Raytracer>` を設定してください。
+2. ソースコードの場所（**Where is the source code**）には、`<path/to/PRayGround>` を設定してください。
 
-3. バイナリの場所（**Where to build the binaries**）には、`<path/to/OptiX-Raytracer>/build` を設定してください。
+3. バイナリの場所（**Where to build the binaries**）には、`<path/to/PRayGround>/build` を設定してください。
 
 4. ウィンドウの下部にある `Configure` ボタンを押してください。ポップアップウィンドウが表示されたら、注意してビルドするプラットフォームの設定を選択してください。最近のC++の機能を使うためには、ジェネレーターとして **Visual Studio 16 2019** を選択し、OptiXは64-bitのビルドしかサポートしていないため、ジェネレーターのプラットフォームには **x64** を指定してください。
 
@@ -72,7 +72,7 @@ CMakeの実行では、[cmake-gui](https://cmake.org/download/)を使用して�
 
 6. 処理が完了したら, `Generate` ボタンを押してください。
 
-7. `build/` ディレクトリにある `OptiX-Raytracer.sln` というソリューションファイルを開いてください。
+7. `build/` ディレクトリにある `PRayGround.sln` というソリューションファイルを開いてください。
 
 8. IDEで `ソリューションのビルド` を実行します。コンパイルが成功すると、実行ファイルが `build/bin/Debug or Release` に作成されます。また、`<app-name>` プロジェクトをスタートアッププロジェクトとして設定し、`ローカル Windows デバッガー` を実行することで、レイトレーサーを簡単に実行できます。
 

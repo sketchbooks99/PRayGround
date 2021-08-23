@@ -19,9 +19,6 @@ struct DiffuseData {
 
 class Diffuse final : public Material {
 public:
-    explicit Diffuse(const float3& a, bool twosided=true)
-    : m_texture(std::make_shared<ConstantTexture>(a)), m_twosided(twosided) { }
-
     explicit Diffuse(const std::shared_ptr<Texture>& texture, bool twosided=true)
     : m_texture(texture), m_twosided(twosided) {}
 

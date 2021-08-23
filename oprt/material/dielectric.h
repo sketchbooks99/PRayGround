@@ -17,9 +17,6 @@ struct DielectricData {
 
 class Dielectric final : public Material {
 public:
-    Dielectric(const float3& a, float ior)
-    : m_texture(std::make_shared<ConstantTexture>(a)), m_ior(ior) { }
-
     Dielectric(const std::shared_ptr<Texture>& texture, float ior)
     : m_texture(texture), m_ior(ior) {}
 

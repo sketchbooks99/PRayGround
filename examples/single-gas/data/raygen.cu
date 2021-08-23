@@ -19,108 +19,92 @@ static __forceinline__ __device__ void cameraFrame(const CameraData& camera, flo
 
 extern "C" __device__ void __raygen__pinhole()
 {
-    //const RaygenData* raygen = reinterpret_cast<RaygenData*>(optixGetSbtDataPointer());
-    //float3 U, V, W;
-    //cameraFrame(raygen->camera, U, V, W);
+    const RaygenData* raygen = reinterpret_cast<RaygenData*>(optixGetSbtDataPointer());
+    float3 U, V, W;
+    cameraFrame(raygen->camera, U, V, W);
 
-    //const int subframe_index = params.subframe_index;
+    const int subframe_index = params.subframe_index;
 
     const uint3 idx = optixGetLaunchIndex();
-    //unsigned int seed = tea<4>(idx.y * params.width + idx.x, subframe_index);
+    unsigned int seed = tea<4>(idx.y * params.width + idx.x, subframe_index);
 
-    //float3 result = make_float3(0.0f, 0.0f, 0.0f);
-    //int i = params.samples_per_launch;
+    float3 result = make_float3(0.0f, 0.0f, 0.0f);
+    int i = params.samples_per_launch;
 
-    //do
-    //{
-    //    const float2 subpixel_jitter = make_float2(rnd(seed) - 0.5f, rnd(seed) - 0.5f);
+    do
+    {
+        const float2 subpixel_jitter = make_float2(rnd(seed) - 0.5f, rnd(seed) - 0.5f);
 
-    //    const float2 d = 2.0f * make_float2(
-    //        (static_cast<float>(idx.x) + subpixel_jitter.x) / static_cast<float>(params.width),
-    //        (static_cast<float>(idx.y) + subpixel_jitter.y) / static_cast<float>(params.height)
-    //    ) - 1.0f;
-    //    float3 rd = normalize(d.x * U + d.y * V + W);
-    //    float3 ro = raygen->camera.origin;
+        const float2 d = 2.0f * make_float2(
+            (static_cast<float>(idx.x) + subpixel_jitter.x) / static_cast<float>(params.width),
+            (static_cast<float>(idx.y) + subpixel_jitter.y) / static_cast<float>(params.height)
+        ) - 1.0f;
+        float3 rd = normalize(d.x * U + d.y * V + W);
+        float3 ro = raygen->camera.origin;
 
-    //    SurfaceInteraction si;
-    //    si.seed = seed;
-    //    si.emission = make_float3(0.0f);
-    //    si.trace_terminate = false;
-    //    si.radiance_evaled = false;
-    //    si.attenuation = make_float3(1.0f);
+        SurfaceInteraction si;
+        si.seed = seed;
+        si.emission = make_float3(0.0f);
+        si.trace_terminate = false;
+        si.radiance_evaled = false;
+        si.attenuation = make_float3(1.0f);
 
-    //    int depth = 0;
-    //    for ( ;; ) {
+        int depth = 0;
+        for ( ;; ) {
 
-    //        if ( depth >= params.max_depth )
-    //            break;
+            if (depth >= params.max_depth)
+            {
+                break;
+            }
 
-    //        trace(
-    //            params.handle,
-    //            ro, 
-    //            rd, 
-    //            0.01f, 
-    //            1e16f, 
-    //            &si 
-    //        );
+            trace(
+                params.handle,
+                ro, 
+                rd, 
+                0.01f, 
+                1e16f, 
+                &si 
+            );
 
-    //        if ( si.trace_terminate )
-    //        {
-    //            result += si.emission * si.attenuation;
-    //            break;
-    //        }
+            if (si.trace_terminate)
+            {
+                result += si.emission * si.attenuation;
+                break;
+            }
 
-    //        if ( si.surface_type == SurfaceType::AreaEmitter )
-    //        {
-    //            // Evaluating emission from emitter
-    //            optixDirectCall<void, SurfaceInteraction*, void*>(
-    //                si.surface_property.program_id, 
-    //                &si, 
-    //                si.surface_property.data
-    //            );
-    //            result += si.emission * si.attenuation;
-    //            if (si.trace_terminate)
-    //                break;
-    //        }
-    //        else if ( si.surface_type == SurfaceType::Material )
-    //        {
-    //            // Sampling surface
-    //            optixContinuationCall<void, SurfaceInteraction*, void*>(
-    //                si.surface_property.program_id, 
-    //                &si,
-    //                si.surface_property.data
-    //            );
-    //            
-    //            result += si.emission * si.attenuation;
-    //        }
-    //        
-    //        ro = si.p;
-    //        rd = si.wo;
+            if ( si.surface_type == SurfaceType::Material )
+            {
+                // Sampling surface
+                optixContinuationCall<void, SurfaceInteraction*, void*>(
+                    si.surface_property.program_id, 
+                    &si,
+                    si.surface_property.data
+                );
+            }
+            
+            ro = si.p;
+            rd = si.wo;
 
-    //        ++depth;
-    //    }
-    //} while (--i);
+            ++depth;
+        }
+    } while (--i);
 
-    //const uint3 launch_index = optixGetLaunchIndex();
-    //const unsigned int image_index = launch_index.y * params.width + launch_index.x;
+    const uint3 launch_index = optixGetLaunchIndex();
+    const unsigned int image_index = launch_index.y * params.width + launch_index.x;
 
-    //if (result.x != result.x) result.x = 0.0f;
-    //if (result.y != result.y) result.y = 0.0f;
-    //if (result.z != result.z) result.z = 0.0f;
+    if (result.x != result.x) result.x = 0.0f;
+    if (result.y != result.y) result.y = 0.0f;
+    if (result.z != result.z) result.z = 0.0f;
 
-    //float3 accum_color = result / static_cast<float>(params.samples_per_launch);
+    float3 accum_color = result / static_cast<float>(params.samples_per_launch);
 
-    //if (subframe_index > 0)
-    //{
-    //    const float a = 1.0f / static_cast<float>(subframe_index + 1);
-    //    const float3 accum_color_prev = make_float3(params.accum_buffer[image_index]);
-    //    accum_color = lerp(accum_color_prev, accum_color, a);
-    //}
-    //params.accum_buffer[image_index] = make_float4(accum_color, 1.0f);
-    //uchar3 color = make_color(accum_color);
-    //params.result_buffer[image_index] = make_uchar4(color.x, color.y, color.z, 255);
-    float3 c = make_float3((float)idx.x / (float)params.width, (float)idx.y / (float)params.height, 1.0f);
-    uchar3 color = make_color(c);
-    const unsigned int image_idx = idx.y * params.width + idx.x;
-    params.result_buffer[image_idx] = make_uchar4(color.x, color.y, color.z, 255);
+    if (subframe_index > 0)
+    {
+        const float a = 1.0f / static_cast<float>(subframe_index + 1);
+        const float3 accum_color_prev = make_float3(params.accum_buffer[image_index]);
+        accum_color = lerp(accum_color_prev, accum_color, a);
+    }
+    params.accum_buffer[image_index] = make_float4(accum_color, 1.0f);
+    uchar3 color = make_color(accum_color);
+    params.result_buffer[image_index] = make_uchar4(color.x, color.y, color.z, 255);
 }

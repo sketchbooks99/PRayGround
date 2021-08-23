@@ -25,7 +25,7 @@ extern "C" __device__ void __continuation_callable__diffuse(SurfaceInteraction* 
         si->wo = normalize(wi);
     }
     si->seed = seed;
-    si->attenuation *= optixDirectCall<float3, SurfaceInteraction*, void*>(
+    si->attenuation = optixDirectCall<float3, SurfaceInteraction*, void*>(
         diffuse->tex_program_id, si, diffuse->tex_data);
 }
 

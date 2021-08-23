@@ -5,6 +5,7 @@ namespace oprt {
 
 namespace { // nonamed-namespace
     std::shared_ptr<Window> current_window;
+    int32_t current_frame = 0;
 } // ::nonamed-namespace
 
 float oprtGetMouseX()
@@ -84,6 +85,8 @@ void AppRunner::run() const
     m_window->events().mouseScrolled.bindFunction( [&](float xoffset, float yoffset) { return m_app->mouseScrolled(xoffset, yoffset); } );
     m_window->events().keyPressed.bindFunction( [&](int key) { return m_app->keyPressed(key); } );
     m_window->events().keyReleased.bindFunction( [&](int key) { return m_app->keyReleased(key); } );
+
+    m_window->setVisible(true);
 
     loop();
 }

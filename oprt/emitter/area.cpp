@@ -4,12 +4,6 @@
 namespace oprt {
 
 // ---------------------------------------------------------------------------
-AreaEmitter::AreaEmitter(const float3& color, float intensity, bool twosided)
-: m_texture(std::make_shared<ConstantTexture>(color)), m_intensity(intensity), m_twosided(twosided)
-{
-
-}
-
 AreaEmitter::AreaEmitter(const std::shared_ptr<Texture>& texture, float intensity, bool twosided)
 : m_texture(texture), m_intensity(intensity), m_twosided(twosided)
 {
@@ -45,6 +39,11 @@ void AreaEmitter::setProgramId(const int32_t prg_id)
 int32_t AreaEmitter::programId() const 
 {
     return m_prg_id;
+}
+
+std::shared_ptr<Texture> AreaEmitter::texture() const
+{
+    return m_texture;
 }
 
 void AreaEmitter::free()

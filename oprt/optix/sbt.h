@@ -111,13 +111,11 @@ public:
     void setMissRecord(const MissRecordArgs&... args)
     {
         static_assert(sizeof...(args) == NRay, 
-            "oprt::ShaderBindingTable::addMissRecord(): The number of record must be same with the number of ray types.");        
+            "oprt::ShaderBindingTable::setMissRecord(): The number of record must be same with the number of ray types.");        
         static_assert(std::conjunction<std::is_same<MissRecord, MissRecordArgs>...>::value, 
-            "oprt::ShaderBindingTable::addMissRecord(): Data type must be same with 'MissRecord'.");
+            "oprt::ShaderBindingTable::setMissRecord(): Data type must be same with 'MissRecord'.");
 
-        int j = 0;
-        for (auto i : std::initializer_list<std::common_type_t<MissRecordArgs...>>{args...})
-            m_miss_records[j++] = i;
+        push_to_vector(m_miss_records, args...);
     }
 
     /// @note 置き換えを行ったらデバイス上のデータも更新する？
@@ -190,14 +188,14 @@ public:
         CUDABuffer<ExceptionRecord> d_exception_record;
 
         d_raygen_record.copyToDevice(&m_raygen_record, sizeof(RaygenRecord));
-        d_miss_records.copyToDevice(m_miss_records, NRay * sizeof(MissRecord));
-        d_hitgroup_records.copyToDevice(m_hitgroup_records.data(), m_hitgroup_records.size() * sizeof(HitgroupRecord));
-        d_callables_records.copyToDevice(m_callables_records.data(), m_callables_records.size() * sizeof(CallablesRecord));
+        d_miss_records.copyToDevice(m_miss_records);
+        d_hitgroup_records.copyToDevice(m_hitgroup_records);
+        d_callables_records.copyToDevice(m_callables_records);
         d_exception_record.copyToDevice(&m_exception_record, sizeof(ExceptionRecord));
 
         m_sbt.raygenRecord = d_raygen_record.devicePtr();
         m_sbt.missRecordBase = d_miss_records.devicePtr();
-        m_sbt.missRecordCount = NRay;
+        m_sbt.missRecordCount = static_cast<uint32_t>(m_miss_records.size());
         m_sbt.missRecordStrideInBytes = static_cast<uint32_t>(sizeof(MissRecord));
         m_sbt.hitgroupRecordBase = d_hitgroup_records.devicePtr();
         m_sbt.hitgroupRecordCount = static_cast<uint32_t>(m_hitgroup_records.size() * NRay);
@@ -222,7 +220,7 @@ public:
 private:
     OptixShaderBindingTable m_sbt {};
     RaygenRecord m_raygen_record;
-    MissRecord m_miss_records[NRay];
+    std::vector<MissRecord> m_miss_records;
     std::vector<HitgroupRecord> m_hitgroup_records;
     std::vector<CallablesRecord> m_callables_records;
     ExceptionRecord m_exception_record;

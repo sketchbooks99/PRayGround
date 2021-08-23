@@ -48,7 +48,7 @@ private:
 };
 
 using BitmapTexture = BitmapTexture_<unsigned char>;
-using BitmapTextureFloat = BitmapTexture_<float>;
+using FloatBitmapTexture = BitmapTexture_<float>;
 
 #endif
 

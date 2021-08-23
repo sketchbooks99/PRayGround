@@ -149,7 +149,7 @@ void Shader::addSource(const std::string& source, GLuint type)
 // --------------------------------------------------------------------
 void Shader::create()
 {
-
+    TODO_MESSAGE();
 }
 
 GLuint Shader::program() const 
@@ -182,99 +182,99 @@ void Shader::setUniform1f(const std::string& name, float v1) const
 }
 void Shader::setUniform2f(const std::string& name, float v1, float v2) const
 {
-
+    TODO_MESSAGE();
 }
 void Shader::setUniform3f(const std::string& name, float v1, float v2, float v3) const
-{
-    
+{   
+    TODO_MESSAGE();
 }
 void Shader::setUniform4f(const std::string& name, float v1, float v2, float v3, float v4) const
-{
-    
+{   
+    TODO_MESSAGE();
 }
 
 // --------------------------------------------------------------------
 void Shader::setUniform2f(const std::string& name, const float2& vec) const
-{
-    
+{   
+    TODO_MESSAGE();
 }
 void Shader::setUniform3f(const std::string& name, const float3& vec) const
 {
-    
+    TODO_MESSAGE();
 }
 void Shader::setUniform4f(const std::string& name, const float4& vec) const
 {
-    
+    TODO_MESSAGE();
 }
 
 // --------------------------------------------------------------------
 void Shader::setUniform1i(const std::string& name, int32_t v1) const
 {
-    
+    TODO_MESSAGE();
 }
 void Shader::setUniform2i(const std::string& name, int32_t v1, int32_t v2) const
 {
-    
+    TODO_MESSAGE();
 }
 void Shader::setUniform3i(const std::string& name, int32_t v1, int32_t v2, int32_t v3) const
-{
-    
+{   
+    TODO_MESSAGE();
 }
 void Shader::setUniform4i(const std::string& name, int32_t v1, int32_t v2, int32_t v3, int32_t v4) const
 {
-    
+    TODO_MESSAGE();
 }
 
 // --------------------------------------------------------------------
 void Shader::setUniform1fv(const std::string& name, const float* v) const
 {
-
+    TODO_MESSAGE();
 }
 void Shader::setUniform2fv(const std::string& name, const float* v) const
 {
-
+    TODO_MESSAGE();
 }
 void Shader::setUniform3fv(const std::string& name, const float* v) const
 {
-    
+    TODO_MESSAGE();
 }
 void Shader::setUniform4fv(const std::string& name, const float* v) const
-{
-    
+{   
+    TODO_MESSAGE();
 }
 
 // --------------------------------------------------------------------
 void Shader::setUniform1iv(const std::string& name, const int32_t* v) const
 {
-
+    TODO_MESSAGE();
 }
 void Shader::setUniform2iv(const std::string& name, const int32_t* v) const
 {
-
+    TODO_MESSAGE();
 }
 void Shader::setUniform3iv(const std::string& name, const int32_t* v) const
 {
-    
+    TODO_MESSAGE();
 }
 void Shader::setUniform4iv(const std::string& name, const int32_t* v) const
 {
-    
+    TODO_MESSAGE();
 }
 
 // --------------------------------------------------------------------
 void Shader::setUniformMatrix2fv(const std::string& name, const Matrix2f& m) const
 {
-
+    TODO_MESSAGE();
 }
 
 void Shader::setUniformMatrix3fv(const std::string& name, const Matrix3f& m) const
 {
-
+    TODO_MESSAGE();
 }
 
 void Shader::setUniformMatrix4fv(const std::string& name, const Matrix4f& m) const
 {
-    
+    TODO_MESSAGE();
 }
 
 // --------------------------------------------------------------------

@@ -50,9 +50,10 @@ void Window::setup()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, m_gl_version_major);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, m_gl_version_minor);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    // A window make be invisible when it's created.
+    glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
 
     m_window_ptr = glfwCreateWindow(m_width, m_height, m_name.c_str(), nullptr, nullptr);
-    // Assert(m_window_ptr, "oprt::Window::setup(): Failed to create GLFW window.");
     if (m_window_ptr == nullptr)
     {
         glfwTerminate();
@@ -107,6 +108,12 @@ void Window::close()
 bool Window::shouldClose() const
 {
     return glfwWindowShouldClose(m_window_ptr);
+}
+
+// ----------------------------------------------------------------
+void Window::setVisible(const bool is_visible)
+{
+    is_visible ? glfwShowWindow(m_window_ptr) : glfwHideWindow(m_window_ptr);
 }
 
 // ----------------------------------------------------------------

@@ -20,7 +20,6 @@ struct AreaEmitterData {
 
 class AreaEmitter final : public Emitter {
 public:
-    AreaEmitter(const float3& color, float intensity=1.0f, bool twosided=true);
     AreaEmitter(const std::shared_ptr<Texture>& texture, float intensity = 1.0f, bool twosided = true);
 
     void copyToDevice() override;
@@ -30,6 +29,7 @@ public:
     int32_t programId() const;
 
     EmitterType type() const override { return EmitterType::Area; }
+    std::shared_ptr<Texture> texture() const;
 private:
     std::shared_ptr<Texture> m_texture;
     float m_intensity;

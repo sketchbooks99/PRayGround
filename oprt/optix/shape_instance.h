@@ -7,6 +7,10 @@
 #include <unordered_map>
 #include <memory>
 
+/** 
+ * @note おそらく使わない。そのうち消す。
+*/
+
 namespace oprt {
 
 class ShapeInstance : public Instance {

@@ -34,8 +34,8 @@ void App::setup()
     film.addFloatBitmap("accum", FloatBitmap::Format::RGBA);
     film.bitmapAt("result")->allocateDeviceData();
     film.floatBitmapAt("accum")->allocateDeviceData();
-    params.width = film.width() - 1;
-    params.height = film.height() - 1;
+    params.width = film.width();
+    params.height = film.height();
     params.samples_per_launch = 1;
     params.max_depth = 10;
     params.subframe_index = 0;
@@ -51,6 +51,7 @@ void App::setup()
     // Create raygen program and bind record;
     pipeline.createRaygenProgram(context, raygen_module, "__raygen__pinhole");
     RaygenRecord raygen_record;
+    pipeline.bindRaygenRecord(&raygen_record);
     raygen_record.data.camera.origin = camera.origin();
     raygen_record.data.camera.lookat = camera.lookat();
     raygen_record.data.camera.up = camera.up();
@@ -60,7 +61,6 @@ void App::setup()
     CUDABuffer<RaygenRecord> d_raygen_record;
     d_raygen_record.copyToDevice(&raygen_record, sizeof(RaygenRecord));
     sbt.raygenRecord = d_raygen_record.devicePtr();
-    pipeline.bindRaygenRecord(&raygen_record);
 
     // SBT record for callable programs
     std::vector<EmptyRecord> callable_records(6, EmptyRecord{});
@@ -81,9 +81,9 @@ void App::setup()
 
     pipeline.createMissProgram(context, miss_module, "__miss__envmap");
     MissRecord miss_record;
+    pipeline.bindMissRecord(&miss_record, 0);
     miss_record.data.env_data = env->devicePtr();
     //sbt.setMissRecord(miss_record);
-    pipeline.bindMissRecord(&miss_record, 0);
 
     CUDABuffer<MissRecord> d_miss_record;
     d_miss_record.copyToDevice(&miss_record, sizeof(MissRecord));
@@ -177,6 +177,7 @@ void App::setup()
         ias.addInstance(instance);
 
         HitgroupRecord hitgroup_record;
+        pipeline.bindHitgroupRecord(&hitgroup_record, 0);
         hitgroup_record.data.shape_data = plane.second->devicePtr();
         hitgroup_record.data.surface_type = plane.second->surfaceType();
         switch (plane.second->surfaceType())
@@ -196,8 +197,6 @@ void App::setup()
                 break;
             }
         }
-
-        pipeline.bindHitgroupRecord(&hitgroup_record, 0);
         /*sbt.addHitgroupRecord(hitgroup_record);*/
         hitgroup_records.push_back(hitgroup_record);
         sbt_idx++;
@@ -211,11 +210,11 @@ void App::setup()
 
     pipeline.createHitgroupProgram(context, hitgroups_module, "__closesthit__mesh");
 
-    HitgroupRecord bunny_record;
+    HitgroupRecord bunny_record; 
+    pipeline.bindHitgroupRecord(&bunny_record, 1);
     bunny_record.data.shape_data = bunny->devicePtr();
     bunny_record.data.surface_data = bunny->surfaceDevicePtr();
     bunny_record.data.surface_program_id = materials.at("glass")->programIdAt(0);
-    pipeline.bindHitgroupRecord(&bunny_record, 1);
     //sbt.addHitgroupRecord(bunny_record);
     hitgroup_records.push_back(bunny_record);
 
@@ -243,7 +242,7 @@ void App::setup()
     pipeline.create(context);
     CUDA_CHECK(cudaStreamCreate(&stream));
     d_params.allocate(sizeof(LaunchParams));
-    CUDA_CHECK(cudaSetDevice(context.deviceId()));
+    // CUDA_CHECK(cudaSetDevice(context.deviceId()));
 }
 
 // ----------------------------------------------------------------

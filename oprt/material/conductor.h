@@ -15,9 +15,6 @@ struct ConductorData {
 #ifndef __CUDACC__
 class Conductor final : public Material {
 public:
-    Conductor(const float3& a, float f, bool twosided=true) 
-    : m_texture(std::make_shared<ConstantTexture>(a)), m_fuzz(f), m_twosided(twosided) {}
-
     Conductor(const std::shared_ptr<Texture>& texture, float f, bool twosided=true)
     : m_texture(texture), m_fuzz(f), m_twosided(twosided) {}
     

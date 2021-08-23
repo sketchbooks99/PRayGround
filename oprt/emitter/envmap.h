@@ -26,9 +26,6 @@ struct EnvironmentEmitterData {
 
 class EnvironmentEmitter final : public Emitter {
 public:
-    explicit EnvironmentEmitter(const std::filesystem::path& filename);
-    explicit EnvironmentEmitter(const float3& c)
-    : m_texture(std::make_shared<ConstantTexture>(c)) {}
     explicit EnvironmentEmitter(const std::shared_ptr<Texture>& texture)
     : m_texture(texture) {}
 

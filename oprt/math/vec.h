@@ -1,3 +1,17 @@
+/**
+ * @file vec.h
+ * @author Shunji Kiuchi (lunaearth445@gmail.com)
+ * @brief 
+ * @version 0.1
+ * @date 2021-08-23
+ * 
+ * @copyright Copyright (c) 2021
+ * 
+ * @todo 
+ * ベクトルライブラリの実装
+ * もしかしたらデバイス側でも Vector4f 等を使えるようにするかも
+ */
+
 #pragma once
 
 #include <vector_functions.h>

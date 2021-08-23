@@ -54,6 +54,8 @@ public:
     void close();
     bool shouldClose() const;
 
+    void setVisible(const bool is_visible);
+
     /** @brief Setting for the window size. */
     void setSize(int32_t width, int32_t height);
     void setWidth(int32_t width);

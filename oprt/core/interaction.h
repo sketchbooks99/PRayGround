@@ -10,6 +10,7 @@ struct SurfaceProperty {
 };
 
 enum class SurfaceType {
+    None,        // None type (specifically, for envmap)
     Material,    // Scene geometry
     AreaEmitter, // Emitter sampling
     Medium       // Meduim --- Future work

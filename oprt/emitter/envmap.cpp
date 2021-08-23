@@ -5,15 +5,6 @@
 
 namespace oprt {
 
-EnvironmentEmitter::EnvironmentEmitter(const std::filesystem::path& filename)
-{
-    auto ext = getExtension(filename);
-    if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG")
-        m_texture = std::make_shared<BitmapTexture>(filename);
-    else if (ext == ".exr" || ext == ".EXR")
-        m_texture = std::make_shared<BitmapTextureFloat>(filename);
-}
-
 void EnvironmentEmitter::copyToDevice()
 {
     if (!m_texture->devicePtr())

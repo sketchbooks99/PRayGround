@@ -9,7 +9,7 @@ using HitgroupRecord = Record<HitgroupData>;
 using MissRecord = Record<MissData>;
 using EmptyRecord = Record<EmptyData>;
 
-using CornelSBT = ShaderBindingTable<RaygenRecord, MissRecord, HitgroupRecord, EmptyRecord, EmptyRecord, 1>;
+using SingleGASSBT = ShaderBindingTable<RaygenRecord, MissRecord, HitgroupRecord, EmptyRecord, EmptyRecord, 1>;
 
 class App : public BaseApp
 {
@@ -25,15 +25,15 @@ private:
     Pipeline pipeline;
     Context context;
     CUstream stream;
-    //CornelSBT sbt;
-    OptixShaderBindingTable sbt;
+    SingleGASSBT sbt;
     GeometryAccel gas;
 
     Film film;
     Camera camera;
 
     shared_ptr<EnvironmentEmitter> env;
-    shared_ptr<AreaEmitter> area;
+    shared_ptr<Diffuse> diffuse;
     shared_ptr<TriangleMesh> bunny;
-    shared_ptr<CheckerTexture> texture;
+    shared_ptr<CheckerTexture> checker_texture;
+    shared_ptr<FloatBitmapTexture> env_texture;
 };

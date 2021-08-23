@@ -1,5 +1,5 @@
 #include "app.h"
-#include <oprt/core/interaction.h>
+#include <prayground/core/interaction.h>
 
 // ----------------------------------------------------------------
 void App::setup()

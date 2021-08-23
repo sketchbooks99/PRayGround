@@ -1,9 +1,9 @@
 #include "util.cuh"
-#include <oprt/texture/bitmap.h>
-#include <oprt/texture/constant.h>
-#include <oprt/texture/checker.h>
+#include <prayground/texture/bitmap.h>
+#include <prayground/texture/constant.h>
+#include <prayground/texture/checker.h>
 
-using namespace oprt;
+using namespace prayground;
 
 extern "C" __device__ float3 __direct_callable__bitmap(SurfaceInteraction* si, void* tex_data) {
     const BitmapTextureData* image = reinterpret_cast<BitmapTextureData*>(tex_data);

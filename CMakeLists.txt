@@ -84,7 +84,7 @@
 # properly.  We rely on CXX_STANDARD, which was added in CMake 3.1.
 cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
 
-project(OptiX-Raytracer VERSION 0.0.1)
+project(PRayGround VERSION 0.0.1)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
@@ -203,11 +203,11 @@ if(NOT PASSED_FIRST_CONFIGURE)
   endif()
 
   if(CMAKE_CXX_STANDARD GREATER 17)
-    set(OPRT_NVRTC_CXX "-std=c++17")
+    set(PRAYGROUND_NVRTC_CXX "-std=c++17")
   else()
-    set(OPRT_NVRTC_CXX "")
+    set(PRAYGROUND_NVRTC_CXX "")
   endif()
-  set(CUDA_NVRTC_FLAGS ${OPRT_NVRTC_CXX} -arch compute_60 -use_fast_math -lineinfo -default-device -rdc true -D__x86_64 CACHE STRING "Semi-colon delimit multiple arguments." FORCE)
+  set(CUDA_NVRTC_FLAGS ${PRAYGROUND_NVRTC_CXX} -arch compute_60 -use_fast_math -lineinfo -default-device -rdc true -D__x86_64 CACHE STRING "Semi-colon delimit multiple arguments." FORCE)
 endif(NOT PASSED_FIRST_CONFIGURE)
 
 mark_as_advanced(CUDA_NVRTC_FLAGS)
@@ -248,31 +248,31 @@ set(CUDA_NVRTC_ENABLED ON CACHE BOOL "Use NVRTC to compile PTX at run-time inste
 ##################################################################
 # SUtil compilation
 
-set(OPRT_PTX_DIR "${CMAKE_BINARY_DIR}/lib/ptx")
-set(OPRT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+set(PRAYGROUND_PTX_DIR "${CMAKE_BINARY_DIR}/lib/ptx")
+set(PRAYGROUND_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 
-set(CUDA_GENERATED_OUTPUT_DIR ${OPRT_PTX_DIR})
+set(CUDA_GENERATED_OUTPUT_DIR ${PRAYGROUND_PTX_DIR})
 
 if (WIN32)
-  string(REPLACE "/" "\\\\" OPRT_PTX_DIR ${OPRT_PTX_DIR})
+  string(REPLACE "/" "\\\\" PRAYGROUND_PTX_DIR ${PRAYGROUND_PTX_DIR})
 else (WIN32)
   if ( USING_GNU_C AND NOT APPLE)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DM_PI=3.14159265358979323846" )
   endif()
 endif (WIN32)
 
-set(OPRT_CUDA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../cuda")
-set(OPRT_EXTERNAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../oprt/ext")
+set(PRAYGROUND_CUDA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../cuda")
+set(PRAYGROUND_EXTERNAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../prayground/ext")
 
 # NVRTC include paths relative to the sample path
-set(OPRT_RELATIVE_INCLUDE_DIRS "\\
+set(PRAYGROUND_RELATIVE_INCLUDE_DIRS "\\
   \"cuda\", \\
   \"sutil\", \\
-  \"oprt\", \\
+  \"prayground\", \\
   \"${CMAKE_CURRENT_SOURCE_DIR}\", ")
 
 # NVRTC absolute include paths to the headers used to build the samples
-set(OPRT_ABSOLUTE_INCLUDE_DIRS "\\
+set(PRAYGROUND_ABSOLUTE_INCLUDE_DIRS "\\
   \"${OptiX_INCLUDE}\", \\
   \"${CUDA_INCLUDE_DIRS}\", ")
 
@@ -293,16 +293,16 @@ include_directories( ${CMAKE_CURRENT_SOURCE_DIR}
                      ${CUDA_INCLUDE_DIRS}
                      )
 
-set(OPRT_CUDA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/cuda)
+set(PRAYGROUND_CUDA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/cuda)
 
-function(OPRT_add_executalbe target_name_base target_name_var)
+function(PRAYGROUND_add_executalbe target_name_base target_name_var)
 
   set( target_name ${target_name_base} )
   set( ${target_name_var} ${target_name} PARENT_SCOPE )
 
   # These calls will group PTX and CUDA files into their own directories in the Visual
   # Studio projects.
-  source_group(TREE ${OPRT_DIR} FILES ${oprt_sources})
+  source_group(TREE ${PRAYGROUND_DIR} FILES ${prayground_sources})
   if (NOT CUDA_NVRTC_ENABLED)
     source_group("PTX Files" REGULAR_EXPRESSION ".+\\.ptx$")
   endif()
@@ -315,7 +315,7 @@ function(OPRT_add_executalbe target_name_base target_name_var)
   # code here, so that we can use our own name for the target.  target_name is used in the
   # creation of the output file names, and we want this to be unique for each target in
   # the SDK.
-  CUDA_GET_SOURCES_AND_OPTIONS(source_files cmake_options options ${oprt_sources} ${ARGN})
+  CUDA_GET_SOURCES_AND_OPTIONS(source_files cmake_options options ${prayground_sources} ${ARGN})
   if (CUDA_NVRTC_ENABLED)
 
     # Isolate OBJ target files. NVCC should only process these files and leave PTX targets for NVRTC
@@ -361,7 +361,7 @@ function(OPRT_add_executalbe target_name_base target_name_var)
     target_link_libraries(${target_name} winmm.lib)
   endif()
 
-  target_include_directories(${target_name} PRIVATE "{$OPRT_DIR}")
+  target_include_directories(${target_name} PRIVATE "{$PRAYGROUND_DIR}")
 
   set_target_properties( ${target_name} PROPERTIES
     COMPILE_DEFINITIONS
@@ -381,14 +381,14 @@ function(OPRT_add_executalbe target_name_base target_name_var)
   endif()
 endfunction()
 
-# Load oprt library sources.
-add_subdirectory(oprt)
+# Load PRAYGROUND library sources.
+add_subdirectory(prayground)
 
 # sutil library.  The rules to build it are found in the subdirectory.
 add_subdirectory(sutil)
 
 # External libraries
-add_subdirectory(oprt/ext)
+add_subdirectory(prayground/ext)
 
 # Example apps
 add_subdirectory(examples/cornel)

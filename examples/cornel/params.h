@@ -2,9 +2,9 @@
 
 #include <sutil/vec_math.h>
 #include <optix.h>
-#include <oprt/optix/sbt.h>
+#include <prayground/optix/sbt.h>
 
-namespace oprt {
+namespace prayground {
 
 struct LaunchParams 
 {
@@ -50,4 +50,4 @@ struct EmptyData
 
 };
 
-} // ::oprt
+} // ::prayground

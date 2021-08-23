@@ -1,10 +1,10 @@
 #include "util.cuh"
-#include <oprt/material/diffuse.h>
-#include <oprt/material/dielectric.h>
-#include <oprt/emitter/area.h>
-#include <oprt/core/bsdf.h>
+#include <prayground/material/diffuse.h>
+#include <prayground/material/dielectric.h>
+#include <prayground/emitter/area.h>
+#include <prayground/core/bsdf.h>
 
-using namespace oprt;
+using namespace prayground;
 
 extern "C" __device__ void __continuation_callable__diffuse(SurfaceInteraction* si, void* surface_data) 
 {

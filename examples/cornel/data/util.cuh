@@ -4,12 +4,12 @@
 #include <cuda_runtime.h>
 #include <sutil/vec_math.h>
 #include <cuda/random.h>
-#include <oprt/optix/helpers.h>
-#include <oprt/optix/macros.h>
-#include <oprt/core/interaction.h>
+#include <prayground/optix/helpers.h>
+#include <prayground/optix/macros.h>
+#include <prayground/core/interaction.h>
 #include "../params.h"
 
-namespace oprt {
+namespace prayground {
 
 extern "C" {
 __constant__ LaunchParams params;
@@ -35,11 +35,11 @@ INLINE DEVICE void packPointer(void* ptr, unsigned int& i0, unsigned int& i1)
     i1 = uptr & 0x00000000ffffffff;
 }
 
-INLINE DEVICE oprt::SurfaceInteraction* getSurfaceInteraction()
+INLINE DEVICE prayground::SurfaceInteraction* getSurfaceInteraction()
 {
     const unsigned int u0 = optixGetPayload_0();
     const unsigned int u1 = optixGetPayload_1();
-    return reinterpret_cast<oprt::SurfaceInteraction*>( unpackPointer(u0, u1) ); 
+    return reinterpret_cast<prayground::SurfaceInteraction*>( unpackPointer(u0, u1) ); 
 }
 
 // -------------------------------------------------------------------------------
@@ -49,7 +49,7 @@ INLINE DEVICE void trace(
     float3                 ray_direction,
     float                  tmin,
     float                  tmax,
-    oprt::SurfaceInteraction*    si
+    prayground::SurfaceInteraction*    si
 ) 
 {
     unsigned int u0, u1;

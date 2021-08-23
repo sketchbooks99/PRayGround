@@ -1,9 +1,9 @@
 #include "util.cuh"
-#include <oprt/shape/plane.h>
-#include <oprt/shape/trianglemesh.h>
-#include <oprt/core/ray.h>
+#include <prayground/shape/plane.h>
+#include <prayground/shape/trianglemesh.h>
+#include <prayground/core/ray.h>
 
-using namespace oprt;
+using namespace prayground;
 
 extern "C" __device__ void __intersection__plane()
 {

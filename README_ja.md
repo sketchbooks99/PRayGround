@@ -50,7 +50,7 @@ make
 コンパイルが完了すると、`build/bin`ディレクトリに実行ファイルが生成されます。
 ```
 cd bin
-./oprt 
+./<app-name>
 ```
 
 ## Windows
@@ -74,16 +74,8 @@ CMakeの実行では、[cmake-gui](https://cmake.org/download/)を使用して�
 
 7. `build/` ディレクトリにある `OptiX-Raytracer.sln` というソリューションファイルを開いてください。
 
-8. IDEで `ソリューションのビルド` を実行します。コンパイルが成功すると、実行ファイルが `build/bin/Debug or Release` に作成されます。また、`oprt` プロジェクトをスタートアッププロジェクトとして設定し、`ローカル Windows デバッガー` を実行することで、レイトレーサーを簡単に実行できます。
-    - :warning: Japanese comments included in our sources may cause errors during compliation due to the encoding. So, please add /source-charset:utf-8 for Additional Options of Command Line. (Project tab -> Properties -> C/C++ -> Command Line) 
-    - :warning: ソースに含まれる日本語コメントのエンコーディングによってエラーが発生しコンパイルが通らない場合があります。その場合には /source-charset:utf-8 オプションを Additional Options of Command Line に追加してください。 (Project tab -> Properties -> C/C++ -> Command Line) 
+8. IDEで `ソリューションのビルド` を実行します。コンパイルが成功すると、実行ファイルが `build/bin/Debug or Release` に作成されます。また、`<app-name>` プロジェクトをスタートアッププロジェクトとして設定し、`ローカル Windows デバッガー` を実行することで、レイトレーサーを簡単に実行できます。
 
 ## Mac
 サポートしていません。
-
-# Modyfying the scene
-
-現在のところ、マテリアル、ジオメトリ、テクスチャ、センサーなどのシーン・パラメータを変更するには、`scene_config.h` を修正するか、シーンを記述して作成したヘッダファイルを `oprt.cpp` でインクルードしてください。
-
-将来的には、pbrtやmitsuba2で実装されているような、シーン構成のランタイムロードを実装したいと考えています。また、シーンをxmlファイルなどの別ファイルから読み込むか、APIを使って直接コードに書き込むかを選択できるようにしたいと考えています。
 

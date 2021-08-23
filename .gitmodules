@@ -1,12 +1,12 @@
-[submodule "oprt/ext/happly"]
-	path = oprt/ext/happly
+[submodule "prayground/ext/happly"]
+	path = prayground/ext/happly
 	url = https://github.com/nmwsharp/happly.git
-[submodule "oprt/ext/stb"]
-	path = oprt/ext/stb
+[submodule "prayground/ext/stb"]
+	path = prayground/ext/stb
 	url = https://github.com/nothings/stb.git
-[submodule "oprt/ext/tinyexr"]
-	path = oprt/ext/tinyexr
+[submodule "prayground/ext/tinyexr"]
+	path = prayground/ext/tinyexr
 	url = https://github.com/syoyo/tinyexr.git
-[submodule "oprt/ext/glfw"]
-	path = oprt/ext/glfw
+[submodule "prayground/ext/glfw"]
+	path = prayground/ext/glfw
 	url = https://github.com/glfw/glfw.git

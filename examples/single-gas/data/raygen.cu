@@ -1,8 +1,8 @@
 #include "util.cuh"
-#include <oprt/core/color.h>
+#include <prayground/core/color.h>
 #include "../params.h"
 
-using namespace oprt;
+using namespace prayground;
 
 static __forceinline__ __device__ void cameraFrame(const CameraData& camera, float3& U, float3& V, float3& W)
 {

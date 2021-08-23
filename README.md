@@ -49,7 +49,7 @@ make
 After compiling got through, the execution file will be created in the `build/bin` directory. 
 ```
 cd bin
-./oprt 
+./<app-name>
 ```
 
 ## Windows
@@ -73,13 +73,9 @@ Building steps are as follows.
 
 7. Open the `OptiX-Raytracer.sln` solution file in the build directory.
 
-8. Execute `Build Solution` in the IDE. When compile succeeded, the execution file will be created in the `build/bin/Debug or Release` directory. You also can run the ray tracer by setting the `oprt` project as start up project.
-    - ⚠️ Japanese comments included in our sources may cause errors during compliation due to the encoding. So, please add `/source-charset:utf-8` for **Additional Options of Command Line**. (`Project` tab -> `Properties` -> `C/C++` -> `Command Line`) 
+8. Execute `Build Solution` in the IDE. When compile succeeded, the execution file will be created in the `build/bin/Debug or Release` directory. You also can run the ray tracer by setting the `<app-name>` project as start up project.
 
 ## Mac
 Not supported.
 
-# :memo: Modifying the scene
-Currently, you can change scene parameters such as materials, geometries, textures and sensors by modifying `oprt/scene_config.h` or including the custom header file you created that describes the scene in `oprt/oprt.cpp`. 
 
-In the future, we'd like to implement runtime loading of scene configuration as like implemented in pbrt or mitsuba2. Further, we plan to allow users to choose whether to load the scene from a separate file such as xml file or write the scene directly in code using the API.

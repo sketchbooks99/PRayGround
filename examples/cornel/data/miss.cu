@@ -1,8 +1,8 @@
 #include "util.cuh"
-#include <oprt/emitter/envmap.h>
-#include <oprt/core/ray.h>
+#include <prayground/emitter/envmap.h>
+#include <prayground/core/ray.h>
 
-using namespace oprt;
+using namespace prayground;
 
 extern "C" __device__ void __miss__envmap()
 {

@@ -82,7 +82,7 @@ Not supported.
 :exclamation: ... doesn't work 
 
 - [Single GAS](https://github.com/sketchbooks99/PRayGround/tree/master/examples/single-gas)
+  - <img src="examples/single-gas/result.jpg" width=100>
 - [:exclamation: Cornel Box](https://github.com/sketchbooks99/PRayGround/tree/master/examples/cornel)
-    - ![](examples/single-gas/result.jpg)
 
 

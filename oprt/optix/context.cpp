@@ -23,7 +23,7 @@ Context::Context()
         &contextLogCallback,                     // logCallbackFunction
         nullptr,                                 // logCallbackData
         4,                                       // logCallbackLevel
-        OPTIX_DEVICE_CONTEXT_VALIDATION_MODE_OFF // validationMode
+        OPTIX_DEVICE_CONTEXT_VALIDATION_MODE_ALL // validationMode
     };
 }
 
@@ -41,7 +41,7 @@ Context::Context(unsigned int device_id)
         &contextLogCallback,                     // logCallbackFunction
         nullptr,                                 // logCallbackData
         4,                                       // logCallbackLevel
-        OPTIX_DEVICE_CONTEXT_VALIDATION_MODE_OFF // validationMode
+        OPTIX_DEVICE_CONTEXT_VALIDATION_MODE_ALL // validationMode
     };
 }
 

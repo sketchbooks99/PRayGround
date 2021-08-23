@@ -4,9 +4,6 @@
 
 using namespace std;
 
-// The number of ray types of the application.
-//constexpr uint32_t NRay = 1;
-
 using RaygenRecord = Record<RaygenData>;
 using HitgroupRecord = Record<HitgroupData>;
 using MissRecord = Record<MissData>;
@@ -30,7 +27,6 @@ private:
     CUstream stream;
     //CornelSBT sbt;
     OptixShaderBindingTable sbt;
-    // InstanceAccel ias;
     GeometryAccel gas;
 
     Film film;

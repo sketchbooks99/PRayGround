@@ -392,6 +392,7 @@ add_subdirectory(oprt/ext)
 
 # Example apps
 add_subdirectory(examples/cornel)
+add_subdirectory(examples/single-gas)
 
 # Executable apps
 add_subdirectory(apps/empty-app)

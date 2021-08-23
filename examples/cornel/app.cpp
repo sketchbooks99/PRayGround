@@ -34,8 +34,8 @@ void App::setup()
     film.addFloatBitmap("accum", FloatBitmap::Format::RGBA);
     film.bitmapAt("result")->allocateDeviceData();
     film.floatBitmapAt("accum")->allocateDeviceData();
-    params.width = film.width();
-    params.height = film.height();
+    params.width = film.width() - 1;
+    params.height = film.height() - 1;
     params.samples_per_launch = 1;
     params.max_depth = 10;
     params.subframe_index = 0;
@@ -56,20 +56,23 @@ void App::setup()
     raygen_record.data.camera.up = camera.up();
     raygen_record.data.camera.fov = camera.fov();
     raygen_record.data.camera.aspect = 1.0f;
-    sbt.setRaygenRecord(raygen_record);
+    //sbt.setRaygenRecord(raygen_record);
+    CUDABuffer<RaygenRecord> d_raygen_record;
+    d_raygen_record.copyToDevice(&raygen_record, sizeof(RaygenRecord));
+    sbt.raygenRecord = d_raygen_record.devicePtr();
     pipeline.bindRaygenRecord(&raygen_record);
 
     // SBT record for callable programs
-    EmptyRecord callable_record;
-    sbt.addCallablesRecord(callable_record);
+    std::vector<EmptyRecord> callable_records(6, EmptyRecord{});
+    //sbt.addCallablesRecord(callable_record);
 
     // Creating texture programs
     uint32_t constant_prg_id = pipeline.createCallablesProgram(context, textures_module, "__direct_callable__constant", "");
     uint32_t checker_prg_id = pipeline.createCallablesProgram(context, textures_module, "__direct_callable__checker", "");
     uint32_t bitmap_prg_id = pipeline.createCallablesProgram(context, textures_module, "__direct_callable__bitmap", "");
-    pipeline.bindCallablesRecord(&callable_record, 0);
-    pipeline.bindCallablesRecord(&callable_record, 1);
-    pipeline.bindCallablesRecord(&callable_record, 2);
+    pipeline.bindCallablesRecord(&callable_records[0], 0);
+    pipeline.bindCallablesRecord(&callable_records[1], 1);
+    pipeline.bindCallablesRecord(&callable_records[2], 2);
 
     // Prepare environment 
     env = make_shared<EnvironmentEmitter>("image/earth.jpg");
@@ -79,8 +82,14 @@ void App::setup()
     pipeline.createMissProgram(context, miss_module, "__miss__envmap");
     MissRecord miss_record;
     miss_record.data.env_data = env->devicePtr();
-    sbt.setMissRecord(miss_record);
+    //sbt.setMissRecord(miss_record);
     pipeline.bindMissRecord(&miss_record, 0);
+
+    CUDABuffer<MissRecord> d_miss_record;
+    d_miss_record.copyToDevice(&miss_record, sizeof(MissRecord));
+    sbt.missRecordBase = d_miss_record.devicePtr();
+    sbt.missRecordCount = 1;
+    sbt.missRecordStrideInBytes = static_cast<uint32_t>(sizeof(MissRecord));
 
     // Preparing textures
     textures.emplace("checker_texture", make_shared<CheckerTexture>(make_float3(0.9f), make_float3(0.3f)));
@@ -98,9 +107,15 @@ void App::setup()
     uint32_t diffuse_prg_id = pipeline.createCallablesProgram(context, surfaces_module, "", "__continuation_callable__diffuse");
     uint32_t dielectric_prg_id = pipeline.createCallablesProgram(context, surfaces_module, "", "__continuation_callable__dielectric");
     uint32_t area_emitter_prg_id = pipeline.createCallablesProgram(context, surfaces_module, "__direct_callable__area_emitter", "");
-    pipeline.bindCallablesRecord(&callable_record, 3);
-    pipeline.bindCallablesRecord(&callable_record, 4);
-    pipeline.bindCallablesRecord(&callable_record, 5);
+    pipeline.bindCallablesRecord(&callable_records[3], 3);
+    pipeline.bindCallablesRecord(&callable_records[4], 4);
+    pipeline.bindCallablesRecord(&callable_records[5], 5);
+
+    CUDABuffer<EmptyRecord> d_callable_records;
+    d_callable_records.copyToDevice(callable_records);
+    sbt.callablesRecordBase = d_callable_records.devicePtr();
+    sbt.callablesRecordCount = static_cast<uint32_t>(callable_records.size());
+    sbt.callablesRecordStrideInBytes = static_cast<uint32_t>(sizeof(EmptyRecord));
 
     // Preparing materials and program id
     ceiling_light = make_shared<AreaEmitter>(make_float3(1.0f), 15.0f);
@@ -143,6 +158,7 @@ void App::setup()
 
     pipeline.createHitgroupProgram(context, hitgroups_module, "__closesthit__plane", "__intersection__plane");
 
+    std::vector<HitgroupRecord> hitgroup_records;
     uint32_t sbt_idx = 0;
     for (auto& plane : cornel)
     {
@@ -182,7 +198,8 @@ void App::setup()
         }
 
         pipeline.bindHitgroupRecord(&hitgroup_record, 0);
-        sbt.addHitgroupRecord(hitgroup_record);
+        /*sbt.addHitgroupRecord(hitgroup_record);*/
+        hitgroup_records.push_back(hitgroup_record);
         sbt_idx++;
     }
 
@@ -199,7 +216,14 @@ void App::setup()
     bunny_record.data.surface_data = bunny->surfaceDevicePtr();
     bunny_record.data.surface_program_id = materials.at("glass")->programIdAt(0);
     pipeline.bindHitgroupRecord(&bunny_record, 1);
-    sbt.addHitgroupRecord(bunny_record);
+    //sbt.addHitgroupRecord(bunny_record);
+    hitgroup_records.push_back(bunny_record);
+
+    CUDABuffer<HitgroupRecord> d_hitgroup_records;
+    d_hitgroup_records.copyToDevice(hitgroup_records);
+    sbt.hitgroupRecordBase = d_hitgroup_records.devicePtr();
+    sbt.hitgroupRecordCount = static_cast<uint32_t>(hitgroup_records.size());
+    sbt.hitgroupRecordStrideInBytes = static_cast<uint32_t>(sizeof(HitgroupRecord));
 
     GeometryAccel bunny_gas{GeometryAccel::Type::Mesh};
     bunny_gas.addShape(bunny);
@@ -213,7 +237,7 @@ void App::setup()
     ias.addInstance(bunny_instance);
 
     // Build IAS
-    sbt.createOnDevice();
+    //sbt.createOnDevice();
     ias.build(context);
     params.handle = ias.handle();
     pipeline.create(context);
@@ -237,7 +261,7 @@ void App::update()
         stream,
         d_params.devicePtr(),
         sizeof(LaunchParams),
-        &sbt.sbt(),
+        &sbt,
         params.width,
         params.height,
         1

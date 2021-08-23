@@ -30,15 +30,14 @@ private:
     CUstream stream;
     //CornelSBT sbt;
     OptixShaderBindingTable sbt;
-    InstanceAccel ias;
+    // InstanceAccel ias;
+    GeometryAccel gas;
 
     Film film;
     Camera camera;
 
     shared_ptr<EnvironmentEmitter> env;
+    shared_ptr<AreaEmitter> area;
     shared_ptr<TriangleMesh> bunny;
-    unordered_map<string, shared_ptr<Plane>> cornel;
-    unordered_map<string, shared_ptr<Material>> materials;
-    shared_ptr<AreaEmitter> ceiling_light;
-    unordered_map<string, shared_ptr<Texture>> textures;
+    shared_ptr<CheckerTexture> texture;
 };

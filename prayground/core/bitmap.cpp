@@ -262,7 +262,6 @@ void Bitmap_<PixelType>::write(const std::filesystem::path& filepath, int qualit
     }
     else if (ext == ".jpg" || ext == ".JPG")
     {
-        stbi_flip_vertically_on_write(true);
         stbi_write_jpg(filepath.string().c_str(), m_width, m_height, m_channels, data, quality);
         delete[] data;
     }
@@ -276,6 +275,7 @@ void Bitmap_<PixelType>::write(const std::filesystem::path& filepath, int qualit
         Message(MSG_WARNING, "This format is not writable with bitmap.");
         return;
     }
+    Message(MSG_NORMAL, "prayground::Bitmap::write(): Wrote bitmap to '" + filepath.string() + "'");
 }
 
 // --------------------------------------------------------------------

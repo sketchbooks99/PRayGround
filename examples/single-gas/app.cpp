@@ -153,6 +153,10 @@ void App::update()
 void App::draw()
 {
     film.bitmapAt("result")->draw(0, 0);
+
+    if (params.subframe_index == 200) {
+        film.bitmapAt("result")->write(pathJoin(pgAppDir(), "result.jpg"));
+    }
 }
 
 // ----------------------------------------------------------------

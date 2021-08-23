@@ -1,6 +1,8 @@
 #pragma once
 
-#include "util.h"
+#include <filesystem>
+#include <oprt/gl/shader.h>
+#include <map>
 
 namespace oprt {
 
@@ -24,16 +26,18 @@ public:
     explicit Bitmap_(const std::filesystem::path& filename, Format format);
 
     void allocate(Format format, int width, int height);
-    void fillData(PixelType* data, int width, int height, int offset_x, int offset_y);
-    void fillData(PixelType* data, int2 res, int2 offset) 
-    { 
-        fillData(data, res.x, res.y, offset.x, offset.y); 
-    }
+    void setData(PixelType* data, int width, int height, int offset_x, int offset_y);
+    void setData(PixelType* data, const int2& res, const int2& offset);
 
     void load(const std::filesystem::path& filename);
     void load(const std::filesystem::path& filename, Format format);
     void write(const std::filesystem::path& filename, int quality=100) const;
 
+    void draw() const;
+    void draw(int32_t x, int32_t y) const;
+    void draw(int32_t x, int32_t y, int32_t width, int32_t height) const;
+    
+    void allocateDevicePtr();
     void copyToDevice();
     void copyFromDevice();
 
@@ -60,10 +64,14 @@ private:
     int m_width { 0 };
     int m_height { 0 };
     int m_channels { 0 };
+
+    // Member variables to draw Bitmap on OpenGL context
+    GLint m_gltex; 
+    // GLuint m_gl_vertex_array;
+    gl::Shader m_shader;
 };
 
 using Bitmap = Bitmap_<unsigned char>;
-using BitmapFloat = Bitmap_<float>;
-using BitmapDouble = Bitmap_<double>;
+using FloatBitmap = Bitmap_<float>;
 
 }

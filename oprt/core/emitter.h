@@ -1,9 +1,5 @@
 #pragma once
 
-#include "util.h"
-#include "shape.h"
-#include "texture.h"
-
 namespace oprt {
 
 enum class EmitterType {
@@ -15,23 +11,12 @@ enum class EmitterType {
 
 #ifndef __CUDACC__
 
-inline std::ostream& operator<<(std::ostream& out, EmitterType type)
-{
-    switch(type)
-    {
-        case EmitterType::Point:   return out << "EmitterType::Point";
-        case EmitterType::Area:    return out << "EmitterType::Area";
-        case EmitterType::Envmap:  return out << "EmitterType::Envmap";
-        default:                   return out << "";
-    }
-}
-
 class Emitter {
 public:
-    virtual void prepareData() = 0;
+    virtual void copyToDevice() = 0;
     virtual EmitterType type() const = 0;
 
-    virtual void freeData() = 0;
+    virtual void free() = 0;
 
     void* devicePtr() const { return reinterpret_cast<void*>(d_data); }
 protected:
@@ -40,4 +25,4 @@ protected:
 
 #endif // __CUDACC__
 
-}
+} // ::oprt

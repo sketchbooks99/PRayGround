@@ -2,23 +2,17 @@
 
 #include <optix.h>
 #include <optix_stubs.h>
-#include "../core/util.h"
 
 namespace oprt {
 
-static void contextLogCallback( unsigned int level, const char* tag, const char* msg, void* cbdata);
+// static void contextLogCallback( unsigned int level, const char* tag, const char* msg, void* cbdata);
 
 class Context {
 public:
-    explicit Context();
-
-    explicit Context(const OptixDeviceContextOptions& options)
-    : Context(0, options) {}
-
+    Context();
+    explicit Context(const OptixDeviceContextOptions& options);
     explicit Context(unsigned int device_id);
-
-    explicit Context(unsigned int device_id, const OptixDeviceContextOptions& options)
-    : m_device_id(device_id), m_options(options) {}
+    explicit Context(unsigned int device_id, const OptixDeviceContextOptions& options);
 
     explicit operator OptixDeviceContext() const { return m_ctx; }
     explicit operator OptixDeviceContext&() { return m_ctx; }
@@ -26,27 +20,15 @@ public:
     void create();
 
     // Setter for context options
-    void setOptions(const OptixDeviceContextOptions& options) { m_options = options; }
-    void setLogCallbackFunction(OptixLogCallback callback_func)
-    {
-        m_options.logCallbackFunction = callback_func;
-    }
-    void setLogCallbackData(void* callback_data)
-    {
-        m_options.logCallbackData = callback_data;
-    }
-    void setLogCallbackLevel(int callback_level)
-    {
-        m_options.logCallbackLevel = callback_level;
-    }
-    void validationEnabled(bool is_valid)
-    {
-        m_options.validationMode = is_valid ? OPTIX_DEVICE_CONTEXT_VALIDATION_MODE_ALL
-                                            : OPTIX_DEVICE_CONTEXT_VALIDATION_MODE_OFF;
-    }
+    void setOptions(const OptixDeviceContextOptions& options);
+    void setLogCallbackFunction(OptixLogCallback callback_func);
+    void setLogCallbackData(void* callback_data);
+    void setLogCallbackLevel(int callback_level);
+    void validationEnabled(bool is_valid);
+    OptixDeviceContextOptions options() const;
     
-    unsigned int deviceId() const { return m_device_id; }
-    void setDeviceId(unsigned int device_id) { m_device_id = device_id; }
+    void setDeviceId(const unsigned int device_id);
+    unsigned int deviceId() const;
 private:
     unsigned int m_device_id { 0 };
     OptixDeviceContext m_ctx;

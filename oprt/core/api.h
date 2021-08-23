@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../oprt.h"
+#include <oprt/core/util.h>
 
 namespace oprt
 {
@@ -11,8 +11,9 @@ uint32_t oprtGetWidth();
 uint32_t oprtGetHeight();
 float2 oprtGetMousePosition();
 
-// APIs for rnedeirng
+// APIs for rendeirng
 void oprtEnvironment(const float3&);
+void oprtEnvironment(const std::filesystem::path& filepath);
 void oprtEnvironment(const std::shared_ptr<EnvironmentEmitter>& env);
 void oprtCreateSceneOnDevice(Scene scene, unsigned int device_id=0);
 

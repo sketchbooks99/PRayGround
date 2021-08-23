@@ -30,7 +30,7 @@
 
 #include <vector_types.h>
 #include <sutil/vec_math.h>
-#include "macros.h"
+#include <oprt/optix/macros.h>
 
 //__forceinline__ __device__ float dequantizeUnsigned8Bits( const unsigned char i )
 //{

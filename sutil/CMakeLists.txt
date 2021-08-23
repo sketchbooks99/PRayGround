@@ -28,15 +28,16 @@
 
 set(sources
     ${CMAKE_CURRENT_BINARY_DIR}/../sampleConfig.h
-    ${SAMPLES_CUDA_DIR}/sphere.cu
-    ${SAMPLES_CUDA_DIR}/whitted.cu
-    ${SAMPLES_CUDA_DIR}/BufferView.h
-    ${SAMPLES_CUDA_DIR}/GeometryData.h
-    ${SAMPLES_CUDA_DIR}/Light.h
-    ${SAMPLES_CUDA_DIR}/LocalGeometry.h
-    ${SAMPLES_CUDA_DIR}/MaterialData.h
-    ${SAMPLES_CUDA_DIR}/util.h
-    ${SAMPLES_CUDA_DIR}/helpers.h
+    ${OPRT_CUDA_DIR}/sphere.cu
+    ${OPRT_CUDA_DIR}/whitted.cu
+    ${OPRT_CUDA_DIR}/BufferView.h
+    ${OPRT_CUDA_DIR}/GeometryData.h
+    ${OPRT_CUDA_DIR}/Light.h
+    ${OPRT_CUDA_DIR}/LocalGeometry.h
+    ${OPRT_CUDA_DIR}/MaterialData.h
+    ${OPRT_CUDA_DIR}/util.h
+    ${OPRT_CUDA_DIR}/helpers.h
+    ${OPRT_CUDA_DIR}/random.h
     Aabb.h
     Camera.cpp
     Camera.h
@@ -50,8 +51,8 @@ set(sources
     Preprocessor.h
     Quaternion.h
     Record.h
-    Scene.cpp
-    Scene.h
+    # Scene.cpp
+    # Scene.h
     sutilapi.h
     sutil.cpp
     sutil.h

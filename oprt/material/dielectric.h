@@ -1,37 +1,35 @@
 #pragma once 
 
 #include <cuda/random.h>
-#include "../core/material.h"
-#include "../core/bsdf.h"
-#include "../texture/constant.h"
+#include <oprt/core/material.h>
+#include <oprt/core/bsdf.h>
+#include <oprt/texture/constant.h>
 
 namespace oprt {
 
 struct DielectricData {
-    void* texdata;
+    void* tex_data;
     float ior;
-    unsigned int tex_func_id;
+    unsigned int tex_program_id;
 };
 
 #ifndef __CUDACC__
 
 class Dielectric final : public Material {
 public:
-    Dielectric(const float3& a, float ior)
-    : m_texture(new ConstantTexture(a)), m_ior(ior) { }
-
     Dielectric(const std::shared_ptr<Texture>& texture, float ior)
     : m_texture(texture), m_ior(ior) {}
 
     ~Dielectric() { }
 
-    void prepareData() override {
-        m_texture->prepareData();
+    void copyToDevice() override {
+        if (!m_texture->devicePtr())
+            m_texture->copyToDevice();
 
         DielectricData data = {
             m_texture->devicePtr(), 
             m_ior, 
-            static_cast<unsigned int>(m_texture->type()) + static_cast<unsigned int>(MaterialType::Count) * 2
+            m_texture->programId()
         };
 
         CUDA_CHECK(cudaMalloc(&d_data, sizeof(DielectricData)));
@@ -42,9 +40,9 @@ public:
         ));
     }
 
-    void freeData() override
+    void free() override
     {
-        m_texture->freeData();
+        m_texture->free();
     }
 
     MaterialType type() const override { return MaterialType::Dielectric; }
@@ -56,44 +54,6 @@ private:
 };
 
 #else 
-CALLABLE_FUNC void DC_FUNC(sample_dielectric)(SurfaceInteraction* si, void* mat_data) {
-    const DielectricData* dielectric = reinterpret_cast<DielectricData*>(mat_data);
-
-    float ni = 1.0f; // air
-    float nt = dielectric->ior;  // ior specified 
-    float cosine = dot(si->wi, si->n);
-    bool into = cosine < 0;
-    float3 outward_normal = into ? si->n : -si->n;
-
-    if (!into) swap(ni, nt);
-
-    cosine = fabs(cosine);
-    float sine = sqrtf(1.0 - cosine*cosine);
-    bool cannot_refract = (ni / nt) * sine > 1.0f;
-
-    float reflect_prob = fresnel(cosine, ni, nt);
-    unsigned int seed = si->seed;
-
-    if (cannot_refract || reflect_prob > rnd(seed))
-        si->wo = reflect(si->wi, outward_normal);
-    else    
-        si->wo = refract(si->wi, outward_normal, cosine, ni, nt);
-    si->seed = seed;
-    si->radiance_evaled = false;
-    si->trace_terminate = false;
-}
-
-CALLABLE_FUNC float3 CC_FUNC(bsdf_dielectric)(SurfaceInteraction* si, void* mat_data)
-{
-    const DielectricData* dielectric = reinterpret_cast<DielectricData*>(mat_data);
-    si->emission = make_float3(0.0f);
-    return optixDirectCall<float3, SurfaceInteraction*, void*>(dielectric->tex_func_id, si, dielectric->texdata);    
-}
-
-CALLABLE_FUNC float DC_FUNC(pdf_dielectric)(SurfaceInteraction* si, void* mat_data)
-{
-    return 1.0f;
-}
 
 #endif
 

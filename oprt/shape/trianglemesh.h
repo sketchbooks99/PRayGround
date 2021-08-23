@@ -1,15 +1,29 @@
 #pragma once
 
-#include "optix/trianglemesh.cuh"
-
 #ifndef __CUDACC__
-#include "../core/shape.h"
+#include <oprt/core/shape.h>
+#include <oprt/core/util.h>
+#endif
+
+#include <sutil/vec_math.h>
+#include <oprt/math/util.h>
 
 namespace oprt {
 
-/**
- * @todo Implementation of uv texcoords.
- */
+struct Face {
+    int3 vertex_id; 
+    int3 normal_id; 
+    int3 texcoord_id;
+};
+
+struct MeshData {
+    float3* vertices;
+    Face* faces;
+    float3* normals;
+    float2* texcoords;
+};
+
+#ifndef __CUDACC__
 
 class TriangleMesh final : public Shape {
 public:
@@ -22,10 +36,10 @@ public:
         std::vector<float2> texcoords,
         bool is_smooth=true);
 
-    ShapeType type() const override { return ShapeType::Mesh; }
+    OptixBuildInputType buildInputType() const override { return OPTIX_BUILD_INPUT_TYPE_TRIANGLES; }
 
-    void prepareData() override;
-    void buildInput( OptixBuildInput& bi, uint32_t sbt_idx ) override;
+    void copyToDevice() override;
+    void buildInput( OptixBuildInput& bi ) override;
     /**
      * @note 
      * Currently, triangle never need AABB for intersection test on the device side
@@ -35,14 +49,20 @@ public:
      * computing devices (CPU or GPU) according to the need of an application, 
      * and AABB will be needed for this.
      */
-    AABB bound() const override { return AABB(); } 
+    AABB bound() const override;
+
+    void addVertex(const float3& v);
+    void addFace(const Face& face);
+    void addNormal(const float3& n);
+    void addTexcoord(const float2& texcoord);
+
+    void load(const std::filesystem::path& filename, bool is_smooth=true);
 
     std::vector<float3> vertices() const { return m_vertices; } 
     std::vector<Face> faces() const { return m_faces; } 
     std::vector<float3> normals() const { return m_normals; }
     std::vector<float2> texcoords() const { return m_texcoords; }
 
-    // Getters of device side pointers.
     CUdeviceptr deviceVertices() const { return d_vertices; }
     CUdeviceptr deviceFaces() const { return d_faces; }
     CUdeviceptr deviceNormals() const { return d_normals; }
@@ -80,6 +100,6 @@ std::shared_ptr<TriangleMesh> createTriangleMesh(
     bool is_smooth = true
 );
 
-}
+#endif // __CUDACC__
 
-#endif
+}

@@ -1,19 +1,24 @@
 #pragma once 
 
-#include "optix/sphere.cuh"
-
 #ifndef __CUDACC__
-#include "../core/shape.h"
+#include <oprt/core/shape.h>
+#endif
 
 namespace oprt {
 
+struct SphereData {
+    float3 center;
+    float radius;
+};
+
+#ifndef __CUDACC__
 class Sphere final : public Shape {
 public:
-    explicit Sphere(float3 c, float r) : m_center(c), m_radius(r) {}
+    explicit Sphere(const float3& c, float r) : m_center(c), m_radius(r) {}
 
-    ShapeType type() const override { return ShapeType::Sphere; }
+    OptixBuildInputType buildInputType() const override { return OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES; }
 
-    void prepareData() override 
+    void copyToDevice() override 
     {
         SphereData data = {
             m_center, 
@@ -28,17 +33,17 @@ public:
         ));
     }
 
-    void buildInput( OptixBuildInput& bi, uint32_t sbt_idx ) override
+    void buildInput( OptixBuildInput& bi ) override
     {
         CUDABuffer<uint32_t> d_sbt_indices;
         uint32_t* sbt_indices = new uint32_t[1];
-        sbt_indices[0] = sbt_idx;
+        sbt_indices[0] = m_sbt_index;
         d_sbt_indices.copyToDevice(sbt_indices, sizeof(uint32_t));
 
         // Prepare bounding box information on the device.
         OptixAabb aabb = static_cast<OptixAabb>(bound());
 
-        if (d_aabb_buffer) freeAabbBuffer();
+        if (d_aabb_buffer) free();
 
         CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_aabb_buffer), sizeof(OptixAabb)));
         CUDA_CHECK(cudaMemcpy(
@@ -69,6 +74,6 @@ private:
     float m_radius;
 };
 
-}
-
 #endif
+
+}

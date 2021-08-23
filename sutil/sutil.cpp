@@ -40,9 +40,9 @@
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_opengl3.h>
 #define STB_IMAGE_IMPLEMENTATION
-#include <tinygltf/stb_image.h>
+#include "../oprt/ext/stb/stb_image.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include <tinygltf/stb_image_write.h>
+#include "../oprt/ext/stb/stb_image_write.h"
 #define TINYEXR_IMPLEMENTATION
 #include "../oprt/ext/tinyexr/tinyexr.h"
 
@@ -166,7 +166,7 @@ std::string getSampleDir()
         // TODO: Remove the environment variable OPTIX_EXP_SAMPLES_SDK_DIR once SDK 6/7 packages are split
         getenv( "OPTIX_EXP_SAMPLES_SDK_DIR" ),
         getenv( "OPTIX_SAMPLES_SDK_DIR" ),
-        SAMPLES_DIR,
+        OPRT_DIR,
         "."
     };
     for( const char* directory : directories )
@@ -188,7 +188,7 @@ const char* sampleFilePath( const char* relativeSubDir, const char* relativePath
         // TODO: Remove the environment variable OPTIX_EXP_SAMPLES_SDK_DIR once SDK 6/7 packages are split
         getenv( "OPTIX_EXP_SAMPLES_SDK_DIR" ),
         getenv( "OPTIX_SAMPLES_SDK_DIR" ),
-        SAMPLES_DIR,
+        OPRT_DIR,
         "."
     };
     for( const char* directory : directories )
@@ -420,7 +420,6 @@ void initImGui( GLFWwindow* window )
 
     ImGui::GetStyle().WindowBorderSize = 0.0f;
 }
-
 
 GLFWwindow* initUI( const char* window_title, int width, int height )
 {
@@ -872,15 +871,17 @@ static void getPtxFromCuString( std::string& ptx, const char* sample_name, const
 
     // Collect include dirs
     std::vector<std::string> include_dirs;
-    const char*              abs_dirs[] = {SAMPLES_ABSOLUTE_INCLUDE_DIRS};
-    const char*              rel_dirs[] = {SAMPLES_RELATIVE_INCLUDE_DIRS};
+    const char*              abs_dirs[] = {OPRT_ABSOLUTE_INCLUDE_DIRS};
+    const char*              rel_dirs[] = {OPRT_RELATIVE_INCLUDE_DIRS};
 
     for( const char* dir : abs_dirs )
     {
+        std::cout << std::string("-I") + dir << std::endl;
         include_dirs.push_back( std::string( "-I" ) + dir );
     }
     for( const char* dir : rel_dirs )
     {
+        std::cout << std::string("-I") + dir << std::endl;
         include_dirs.push_back( "-I" + base_dir + '/' + dir );
     }
     for( const std::string& dir : include_dirs)
@@ -928,7 +929,7 @@ static std::string samplePTXFilePath( const char* sampleName, const char* fileNa
         // TODO: Remove the environment variable OPTIX_EXP_SAMPLES_SDK_PTX_DIR once SDK 6/7 packages are split
         getenv( "OPTIX_EXP_SAMPLES_SDK_PTX_DIR" ),
         getenv( "OPTIX_SAMPLES_SDK_PTX_DIR" ),
-        SAMPLES_PTX_DIR,
+        OPRT_PTX_DIR,
         "."
     };
 

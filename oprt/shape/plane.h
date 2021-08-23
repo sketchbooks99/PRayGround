@@ -1,20 +1,26 @@
 #pragma once
 
-#include "optix/plane.cuh"
-
 #ifndef __CUDACC__
-#include "../core/shape.h"
-#include "../core/cudabuffer.h"
+#include <oprt/core/shape.h>
+#include <oprt/core/cudabuffer.h>
+#endif
 
 namespace oprt {
 
+struct PlaneData 
+{
+    float2 min;
+    float2 max;
+};
+
+#ifndef __CUDACC__
 class Plane final : public Shape {
 public:
-    explicit Plane(float2 min, float2 max) : m_min(min), m_max(max) {}
+    explicit Plane(const float2& min, const float2& max) : m_min(min), m_max(max) {}
 
-    ShapeType type() const override { return ShapeType::Plane; }
+    OptixBuildInputType buildInputType() const override { return OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES; }
 
-    void prepareData() override
+    void copyToDevice() override
     {
         PlaneData data = {
             m_min, 
@@ -29,17 +35,17 @@ public:
         ));
     }
 
-    void buildInput( OptixBuildInput& bi, uint32_t sbt_idx ) override
+    void buildInput( OptixBuildInput& bi ) override
     {
         CUDABuffer<uint32_t> d_sbt_indices;
         uint32_t* sbt_indices = new uint32_t[1];
-        sbt_indices[0] = sbt_idx;
+        sbt_indices[0] = m_sbt_index;
         d_sbt_indices.copyToDevice(sbt_indices, sizeof(uint32_t));
 
         // Prepare bounding box information on the device.
         OptixAabb aabb = static_cast<OptixAabb>(bound());
 
-        if (d_aabb_buffer) freeAabbBuffer();
+        if (d_aabb_buffer) free();
 
         CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_aabb_buffer), sizeof(OptixAabb)));
         CUDA_CHECK(cudaMemcpy(
@@ -69,7 +75,6 @@ public:
 private:
     float2 m_min, m_max;
 };
+#endif // __CUDACC__
 
-}
-
-#endif
+} // ::oprt

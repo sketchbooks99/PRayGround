@@ -1,20 +1,26 @@
 #pragma once 
 
-#include "optix/cylinder.cuh"
-
 #ifndef __CUDACC__
-#include "../core/shape.h"
-#include "../core/cudabuffer.h"
+#include <oprt/core/shape.h>
+#include <oprt/core/cudabuffer.h>
+#endif
 
 namespace oprt {
 
+struct CylinderData
+{
+    float radius; 
+    float height;
+};
+
+#ifndef __CUDACC__
 class Cylinder final : public Shape {
 public:
     explicit Cylinder(float radius, float height) : m_radius(radius), m_height(height) {}
 
-    ShapeType type() const override { return ShapeType::Cylinder; }
+    OptixBuildInputType buildInputType() const override { return OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES; }
 
-    void prepareData() override
+    void copyToDevice() override
     {
         CylinderData data = {
             m_radius,
@@ -29,16 +35,16 @@ public:
         ));
     }
 
-    void buildInput( OptixBuildInput& bi, uint32_t sbt_idx ) override 
+    void buildInput( OptixBuildInput& bi ) override 
     {
         CUDABuffer<uint32_t> d_sbt_indices;
         uint32_t* sbt_indices = new uint32_t[1];
-        sbt_indices[0] = sbt_idx;
+        sbt_indices[0] = m_sbt_index;
         d_sbt_indices.copyToDevice(sbt_indices, sizeof(uint32_t));
 
         OptixAabb aabb = static_cast<OptixAabb>(bound());
 
-        if (d_aabb_buffer) freeAabbBuffer();
+        if (d_aabb_buffer) free();
 
         CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>(&d_aabb_buffer), sizeof(OptixAabb) ) );
         CUDA_CHECK( cudaMemcpy(
@@ -73,7 +79,6 @@ private:
     float m_radius;
     float m_height;
 };
+#endif // __CUDACC__
 
 }
-
-#endif

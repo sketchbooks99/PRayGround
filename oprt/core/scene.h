@@ -1,87 +1,112 @@
 #pragma once
 
-#include "primitive.h"
-#include "bitmap.h"
-#include "../optix/context.h"
-#include "../emitter/envmap.h"
-#include <sutil/Camera.h>
+#include <oprt/core/bitmap.h>
+#include <oprt/core/shape.h>
+#include <oprt/core/material.h>
+#include <oprt/optix/context.h>
+#include <oprt/optix/pipeline.h>
+#include <oprt/optix/shape_instance.h>
+#include <oprt/optix/accel.h>
+#include <oprt/emitter/area.h>
+#include <oprt/emitter/envmap.h>
+#include <unordered_map>
 // #include "../oprt.h"
 
 namespace oprt {
 
-class Scene {
+//class Scene {
+//public:
+//    Scene() {}
+//
+//    void createOnDevice();
+//    void cleanUp();
+//
+//    void render();
+//
+//    /** 
+//     * @brief Create programs associated with primitives.
+//     */
+//    void createHitgroupPrograms(const Context& ctx, const Module& module);
+//
+//    /**
+//     * @brief Return all hitgroup programs contained in Scene
+//     */
+//    std::vector<ProgramGroup> hitgroupPrograms();
+//
+//    /** 
+//     * @brief Create SBT with HitGroupData. 
+//     * @note SBTs for raygen and miss program aren't created at here.
+//     */
+//    void createHitgroupSBT(OptixShaderBindingTable& sbt);
+//
+//    void addPrimitiveInstance(PrimitiveInstance ps) {
+//        ps.sort();
+//        if (m_primitive_instances.empty())
+//            ps.setSbtIndexBase(0);
+//        else
+//            ps.setSbtIndexBase(m_primitive_instances.back().sbtIndex());
+//        m_primitive_instances.push_back(ps); 
+//    }
+//    std::vector<PrimitiveInstance> primitiveInstances() const { return m_primitive_instances; }
+//
+//    void setEnvironment(const float3& color) 
+//    { 
+//        m_environment = std::make_shared<EnvironmentEmitter>(color);
+//    }
+//    void setEnvironment(const std::shared_ptr<Texture>& texture)
+//    {
+//        m_environment = std::make_shared<EnvironmentEmitter>(texture);
+//    }
+//    void setEnvironment(const std::shared_ptr<EnvironmentEmitter>& env) { m_environment = env; }
+//    void setEnvironment(const std::filesystem::path& filename)
+//    {
+//        m_environment = std::make_shared<EnvironmentEmitter>(filename);
+//    }
+//    std::shared_ptr<EnvironmentEmitter> environment() const { return m_environment; }
+//private:
+//    std::vector<PrimitiveInstance> m_primitive_instances;   // Primitive instances with same transformation.
+//    std::shared_ptr<EnvironmentEmitter> m_environment;      // Environment map
+//};
+
+/**
+ * RTScene �� Shader Binding Table �Ƃ͓Ɨ��ɊǗ�����B
+ * �����܂ŁA���C�g���[�V���O����ΏۂƂȂ�V�[��
+ * (Environment Emitter, Shape, Material, Texture) ���Ǘ�����݂̂ɂƂǂ܂�
+ */
+template <class Key>
+class RTScene {
 public:
-    Scene() {}
+    RTScene(const uint32_t num_ray_type);
 
-    void createOnDevice();
-    void freeFromDevice();
+    void createDataOnDevice();
+    void buildAccelStructure();
+    void updateAccelStructure();
+    void destroy();
 
-    void render();
+    void addShape(const Key& instance_key, const Key& shape_key, const std::shared_ptr<Shape>& shape);
+    void addInstance(const Key& instance_key, const std::shared_ptr<Instance>& instance);
+    void addShapeInstance(const Key& key, const std::shared_ptr<ShapeInstance>& shape_instance);
+    std::shared_ptr<ShapeInstance> getShapeInstance(const Key& key) const;
+    std::shared_ptr<Shape> getShape(const Key& instance_key, const Key& shape_key) const;
 
-    /** 
-     * @brief Create programs associated with primitives.
-     */
-    void createHitgroupPrograms(const Context& ctx, const Module& module);
+    // Future work
+    // void eraseShapeInstance(const Key& name);
+    // void eraseShapeFromInstance(const Key& instance_name, const Key& shape_name) const;
 
-    /**
-     * @brief Return all hitgroup programs contained in Scene
-     */
-    std::vector<ProgramGroup> hitgroupPrograms();
+    void addMaterial(const Key& key, const std::shared_ptr<Material>& material);
+    std::shared_ptr<Material> getMaterial(const Key& key) const;
 
-    /** 
-     * @brief Create SBT with HitGroupData. 
-     * @note SBTs for raygen and miss program aren't created at here.
-     */
-    void createHitgroupSBT(OptixShaderBindingTable& sbt);
+    void addTexture(const Key& key, const std::shared_ptr<Texture>& texture);
+    std::shared_ptr<Texture> getTexture(const Key& key) const;
 
-    void addPrimitiveInstance(PrimitiveInstance ps) {
-        ps.sort();
-        if (m_primitive_instances.empty())
-            ps.setSbtIndexBase(0);
-        else
-            ps.setSbtIndexBase(m_primitive_instances.back().sbtIndex());
-        m_primitive_instances.push_back(ps); 
-    }
-    std::vector<PrimitiveInstance> primitiveInstances() const { return m_primitive_instances; }
-
-    void setEnvironment(const float3& color) 
-    { 
-        m_environment = std::make_shared<EnvironmentEmitter>(color);
-    }
-    void setEnvironment(const std::shared_ptr<Texture>& texture)
-    {
-        m_environment = std::make_shared<EnvironmentEmitter>(texture);
-    }
-    void setEnvironment(const std::shared_ptr<EnvironmentEmitter>& env) { m_environment = env; }
-    void setEnvironment(const std::filesystem::path& filename)
-    {
-        m_environment = std::make_shared<EnvironmentEmitter>(filename);
-    }
-    std::shared_ptr<EnvironmentEmitter> environment() const { return m_environment; }
-
-    void setDepth(unsigned int d) { m_depth = d; }
-    unsigned int depth() const { return m_depth; }
-
-    void setSamplesPerLaunch(unsigned int samples_per_launch) { m_samples_per_launch = samples_per_launch; }
-    unsigned int samplesPerLaunch() const { return m_samples_per_launch; }
-
-    void setNumSamples(unsigned int num_samples) { m_num_samples = num_samples; }
-    unsigned int numSamples() const { return m_num_samples; }
-
-    void setCamera(const sutil::Camera& camera) { m_camera = camera; }
-    const sutil::Camera& camera() const { return m_camera; }
-
-    void setFilm(const std::shared_ptr<Bitmap>& film) { m_film = film; }
-    std::shared_ptr<Bitmap> film() const { return m_film; }
+    OptixTraversableHandle handle() const;
 private:
-    std::vector<PrimitiveInstance> m_primitive_instances;   // Primitive instances with same transformation.
-    std::shared_ptr<EnvironmentEmitter> m_environment;      // Environment map
-    unsigned int m_depth;                                   // Maximum depth of ray tracing.
-    unsigned int m_samples_per_launch;                      // Specify the number of samples per call of optixLaunch.
-    unsigned int m_num_samples;                             // The number of samples per pixel for non-interactive mode.
-    sutil::Camera m_camera;                                 // Camera
-    /// @note For future work, This should be a vector of bitmap to enable AOV.
-    std::shared_ptr<Bitmap> m_film;                         // Film of rendering
+    std::shared_ptr<EnvironmentEmitter> m_enviroment;
+    std::unordered_map<Key, std::shared_ptr<Instance>> m_instances;
+    std::unordered_map<Key, std::shared_ptr<Material>> m_materials;
+    std::unordered_map<Key, std::shared_ptr<Texture>> m_textures;
+    InstanceAccel m_instance_accel;
+    uint32_t m_num_ray_type{ 1 };
 };
 
 }

@@ -29,8 +29,8 @@
 #include <optix.h>
 #include <cuda/random.h>
 
-#include "../../core/color.h"
-#include "../../oprt.h"
+#include <oprt/core/color.h>
+#include <oprt/oprt.h>
 
 namespace oprt {
 
@@ -108,7 +108,7 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 				// Sampling scattered direction
 				optixDirectCall<void, SurfaceInteraction*, void*>(
 					si.surface_property.func_base_id, 
-					&si,  
+					&si,
 					si.surface_property.data
 				);
 

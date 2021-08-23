@@ -1,7 +1,7 @@
 #include "bitmap.h"
 
-#include "../ext/stb/stb_image.h"
-#include "../core/file_util.h"
+#include <oprt/ext/stb/stb_image.h>
+#include <oprt/core/file_util.h>
 
 namespace oprt {
 
@@ -9,7 +9,7 @@ namespace oprt {
 template <typename PixelType>
 BitmapTexture_<PixelType>::BitmapTexture_(const std::filesystem::path& filename)
 {
-    std::optional<std::filesystem::path> filepath = findDatapath(filename);
+    std::optional<std::filesystem::path> filepath = findDataPath(filename);
     if (!filepath)
     {
         Message(MSG_ERROR, "The texture file '" + filename.string() + "' is not found.");
@@ -43,7 +43,7 @@ BitmapTexture_<PixelType>::BitmapTexture_(const std::filesystem::path& filename)
 
 // ---------------------------------------------------------------------
 template <typename PixelType>
-void BitmapTexture_<PixelType>::prepareData()
+void BitmapTexture_<PixelType>::copyToDevice()
 {
     // Alloc CUDA array in device memory.
     int32_t pitch = m_bitmap->width() * sizeof(Vec_t);
@@ -74,7 +74,7 @@ void BitmapTexture_<PixelType>::prepareData()
 
 // ---------------------------------------------------------------------
 template <typename PixelType>
-void BitmapTexture_<PixelType>::freeData()
+void BitmapTexture_<PixelType>::free()
 {
     if (d_texture != 0) 
         CUDA_CHECK( cudaDestroyTextureObject( d_texture ) );

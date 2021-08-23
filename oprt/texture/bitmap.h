@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../core/texture.h"
+#include <oprt/core/texture.h>
 
 #ifndef __CUDACC__
-    #include "../core/bitmap.h"
+    #include <oprt/core/bitmap.h>
 #endif
 
 namespace oprt {
@@ -19,8 +19,8 @@ class BitmapTexture_ final : public Texture {
 public:
     explicit BitmapTexture_(const std::filesystem::path& filename);
 
-    void prepareData() override;
-    void freeData() override;
+    void copyToDevice() override;
+    void free() override;
 
     TextureType type() const override { return TextureType::Bitmap; }
 private:
@@ -48,14 +48,7 @@ private:
 };
 
 using BitmapTexture = BitmapTexture_<unsigned char>;
-using BitmapTextureFloat = BitmapTexture_<float>;
-
-#else
-CALLABLE_FUNC float3 DC_FUNC(eval_bitmap)(SurfaceInteraction* si, void* texdata) {
-    const BitmapTextureData* image = reinterpret_cast<BitmapTextureData*>(texdata);
-    float4 c = tex2D<float4>(image->texture, si->uv.x, si->uv.y);
-    return make_float3(c.x, c.y, c.z);
-}
+using FloatBitmapTexture = BitmapTexture_<float>;
 
 #endif
 

@@ -1,143 +1,142 @@
 #pragma once
 
 #include <optix.h>
-#include <optix_stack_size.h>
-#include "../core/util.h"
-#include "program.h"
-#include "context.h"
+#include <oprt/core/util.h>
+#include <oprt/optix/program.h>
+#include <oprt/optix/context.h>
+#include <oprt/optix/sbt.h>
+#include <filesystem>
+#include <tuple>
 
 namespace oprt {
 
+/**
+ * @note
+ * template <class RaygenRecord, class MissRecord, class HitgroupRecord, 
+ *         class CallablesRecord, class ExceptionRecord, unsigned int NRay>
+ * class Pipeline;
+ * こんな感じにして内部にSBTを持つと楽？ただ、こうすると実装をヘッダファイルに
+ * 全て書く必要があってすごくやりたくない ...
+ * 
+ * とりあえずはbindRaygenRecord的な関数だけtemplateで実装して、コーディング側で注意するようにする
+ */
+
 class Pipeline {
 public:
-    explicit Pipeline(const std::string& params_name) {
-        _initCompileOptions();
-        m_compile_options.pipelineLaunchParamsVariableName = params_name.c_str();
-        _initLinkOptions();
-    }
-    
-    explicit Pipeline(const OptixPipelineCompileOptions& op) : m_compile_options(op) 
-    { 
-        _initLinkOptions();
-    }
-    
-    explicit Pipeline(const OptixPipelineCompileOptions& c_op, const OptixPipelineLinkOptions& l_op)
-    : m_compile_options(c_op), m_link_options(l_op) { }
-
-    void destroy() {
-        OPTIX_CHECK(optixPipelineDestroy(m_pipeline));
-    }
+    Pipeline();
+    explicit Pipeline(const std::string& params_name);
+    explicit Pipeline(const OptixPipelineCompileOptions& op);
+    explicit Pipeline(const OptixPipelineCompileOptions& c_op, const OptixPipelineLinkOptions& l_op);
 
     explicit operator OptixPipeline() const { return m_pipeline; }
     explicit operator OptixPipeline&() { return m_pipeline; }
 
-    /** Compile options. */
-    void setCompileOptions( const OptixPipelineCompileOptions& op ) { m_compile_options = op; }
-    void useMotionBlur( bool is_use ) { m_compile_options.usesMotionBlur = is_use; }
-    void setTraversableGraphFlags( unsigned int flags ) { m_compile_options.traversableGraphFlags = flags; }
-    void setNumPayloads( int num_payloads ) { m_compile_options.numPayloadValues = num_payloads; }
-    void setNumAttributes( int num_attributes ) { m_compile_options.numAttributeValues = num_attributes; }
-    void setLaunchVariableName( const std::string& params_name ) { m_compile_options.pipelineLaunchParamsVariableName = params_name.c_str(); }
-    void setExceptionFlags( const OptixExceptionFlags& flags ) { m_compile_options.exceptionFlags = flags; }
+    [[nodiscard]] Module createModuleFromCudaFile(const Context& ctx, const std::filesystem::path& filename);
+    [[nodiscard]] Module createModuleFromCudaSource(const Context& ctx, const std::string& source);
 
-    OptixPipelineCompileOptions compileOptions() const { return m_compile_options; }
+    [[nodiscard]] Module createModuleFromPtxFile(const Context& ctx, const std::filesystem::path& filename);
+    [[nodiscard]] Module createModuleFromPtxSource(const Context& ctx, const std::string& source);
 
-    /** Link options */
-    void setLinkOptions( const OptixPipelineLinkOptions& op ) { m_link_options = op; }
-    void setLinkTraceDepth( unsigned int depth ) { m_link_options.maxTraceDepth = depth; }
-    void setLinkDebugLevel( const OptixCompileDebugLevel& debug_level ) { m_link_options.debugLevel = debug_level; }
-    OptixPipelineLinkOptions link_options() const { return m_link_options; }
+    void createRaygenProgram(const Context& ctx, const Module& module, const std::string& func_name);
+    void createRaygenProgram(const Context& ctx, const ProgramEntry& entry);
+    void createMissProgram(const Context& ctx, const Module& module, const std::string& func_name);
+    void createMissProgram(const Context& ctx, const ProgramEntry& entry);
+    void createHitgroupProgram(const Context& ctx, const Module& module, const std::string& ch_name);
+    void createHitgroupProgram(const Context& ctx, const ProgramEntry& ch_entry);
+    void createHitgroupProgram(const Context& ctx, const Module& module, const std::string& ch_name, const std::string& is_name);
+    void createHitgroupProgram(const Context& ctx, const ProgramEntry& ch_entry, const ProgramEntry& is_entry);
+    void createHitgroupProgram(const Context& ctx, const Module& module, const std::string& ch_name, const std::string& is_name, const std::string& ah_name);
+    void createHitgroupProgram(const Context& ctx, const ProgramEntry& ch_entry, const ProgramEntry& is_entry, const ProgramEntry& ah_entry);
+    uint32_t createCallablesProgram(const Context& ctx, const Module& module, const std::string& dc_name, const std::string& cc_name);
+    uint32_t createCallablesProgram(const Context& ctx, const ProgramEntry& dc_entry, const ProgramEntry& cc_entry);
+    void createExceptionProgram(const Context& ctx, const Module& module, const std::string& func_name);
+    void createExceptionProgram(const Context& ctx, const ProgramEntry& entry);
+
+    template <class SBTRecord>
+    void bindRaygenRecord(SBTRecord* record)
+    {
+        Assert((OptixProgramGroup)m_raygen_program, "Raygen program has not been create yet.");
+        m_raygen_program.bindRecord(record);
+    }
+
+    template <class SBTRecord>
+    void bindMissRecord(SBTRecord* record, const int idx)
+    {
+        Assert(idx < m_miss_programs.size(), "Out of ranges of miss programs");
+        m_miss_programs[idx].bindRecord(record);
+    }
+
+    template <class SBTRecord>
+    void bindHitgroupRecord(SBTRecord* record, const int idx)
+    {
+        Assert(idx < m_hitgroup_programs.size(), "Out of ranges of hitgroup programs");
+        m_hitgroup_programs[idx].bindRecord(record);
+    }
+
+    template <class SBTRecord>
+    void bindCallablesRecord(SBTRecord* record, const int idx)
+    {
+        Assert(idx < m_callables_programs.size(), "Out of ranges of miss programs");
+        m_callables_programs[idx].bindRecord(record);
+    }
+
+    template <class SBTRecord>
+    void bindExceptionRecord(SBTRecord* record)
+    {
+        Assert((OptixProgramGroup)m_exception_program, "Exceptino program has not been create yet.");
+        m_exception_program.bindRecord(record);
+    }
 
     /** Create pipeline object and calculate the stack sizes of pipeline. */
-    void create( const Context& ctx, const std::vector<ProgramGroup>& prg_groups) {
+    void create(const Context& ctx);
+    void destroy();
 
-        std::vector<OptixProgramGroup> optix_prg_groups;
-        std::transform(prg_groups.begin(), prg_groups.end(), std::back_inserter(optix_prg_groups),
-            [](ProgramGroup pg){ return static_cast<OptixProgramGroup>(pg); });
+    /** Compile options. */
+    void setCompileOptions( const OptixPipelineCompileOptions& op );
+    void usesMotionBlur(const bool is_use);
+    void setTraversableGraphFlags(const uint32_t flags);
+    void setNumPayloads(const int num_payloads);
+    void setNumAttributes(const int num_attributes);
+    void setLaunchVariableName(const char* params_name);
+    void setExceptionFlags(const OptixExceptionFlags& flags);
+    OptixPipelineCompileOptions compileOptions() const;
 
-        // Create pipeline from program groups.
-        char log[2048];
-        size_t sizeof_log = sizeof(log);
-
-        OPTIX_CHECK_LOG(optixPipelineCreate(
-            static_cast<OptixDeviceContext>(ctx),
-            &m_compile_options,
-            &m_link_options,
-            optix_prg_groups.data(),
-            static_cast<unsigned int>(optix_prg_groups.size()),
-            log, 
-            &sizeof_log, 
-            &m_pipeline
-        ));
-
-        // Specify the max traversal depth and calculate the stack sizes.
-        OptixStackSizes stack_sizes = {};
-        for (auto& optix_prg_group : optix_prg_groups) {
-            OPTIX_CHECK(optixUtilAccumulateStackSizes(optix_prg_group, &stack_sizes));
-        }
-        
-        uint32_t dc_stacksize_from_traversal;
-        uint32_t dc_stacksize_from_state;
-        uint32_t cc_stacksize;
-
-        OPTIX_CHECK(optixUtilComputeStackSizes(
-            &stack_sizes,
-            m_trace_depth,
-            m_cc_depth,
-            m_dc_depth,
-            &dc_stacksize_from_traversal,
-            &dc_stacksize_from_state,
-            &cc_stacksize
-        ));
-
-        const uint32_t max_traversal_depth = 5; 
-        OPTIX_CHECK(optixPipelineSetStackSize(
-            m_pipeline,
-            dc_stacksize_from_traversal, 
-            dc_stacksize_from_state, 
-            cc_stacksize, 
-            max_traversal_depth
-        ));
-    }
+    /** Link options */
+    void setLinkOptions(const OptixPipelineLinkOptions& op);
+    void setLinkDebugLevel( const OptixCompileDebugLevel& debug_level );
+    OptixPipelineLinkOptions linkOptions() const;
 
     /** Depth of traversal */
-    void setTraceDepth(uint32_t depth) { 
-        m_trace_depth = depth;
-        m_link_options.maxTraceDepth = m_trace_depth;
-    }
-    uint32_t traceDepth() const { return m_trace_depth; }
+    void setTraceDepth(const uint32_t depth);
+    uint32_t traceDepth() const;
 
     /** Depth of continuation-callable */
-    void setContinuationCallableDepth(uint32_t depth) { m_cc_depth = depth; }
-    uint32_t continuationCallableDepth() const { return m_cc_depth; }
+    void setContinuationCallableDepth(const uint32_t depth);
+    uint32_t continuationCallableDepth() const;
 
     /** Depth of direct-callable */
-    void setDirectCallableDepth(uint32_t depth) { m_dc_depth = depth; }
-    uint32_t directCallableDepth() const { return m_dc_depth; }
+    void setDirectCallableDepth(const uint32_t depth);
+    uint32_t directCallableDepth() const;
 
 private:
-    void _initCompileOptions() { 
-        m_compile_options.usesMotionBlur = false;
-        m_compile_options.traversableGraphFlags = OPTIX_TRAVERSABLE_GRAPH_FLAG_ALLOW_ANY;
-        m_compile_options.numPayloadValues = 2;
-        m_compile_options.numAttributeValues = 3;
-        m_compile_options.pipelineLaunchParamsVariableName = "";
-#ifdef DEBUG
-        m_compile_options.exceptionFlags = OPTIX_EXCEPTION_FLAG_DEBUG | OPTIX_EXCEPTION_FLAG_TRACE_DEPTH | OPTIX_EXCEPTION_FLAG_STACK_OVERFLOW;
-#else   
-        m_compile_options.exceptionFlags = OPTIX_EXCEPTION_FLAG_NONE;
-#endif
-    }
-    void _initLinkOptions() {
-        m_link_options.maxTraceDepth = 5;
-        m_link_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_FULL;
-    }
+    void _initCompileOptions();
+    void _initLinkOptions();
+
+    std::vector<Module> m_modules;
+
+    ProgramGroup m_raygen_program;
+    std::vector<ProgramGroup> m_miss_programs;
+    std::vector<ProgramGroup> m_hitgroup_programs;
+    std::vector<ProgramGroup> m_callables_programs;
+    ProgramGroup m_exception_program;
+    
     OptixPipelineCompileOptions m_compile_options = {};
     OptixPipelineLinkOptions m_link_options = {};
     OptixPipeline m_pipeline { nullptr };
     uint32_t m_trace_depth { 5 }; 
     uint32_t m_cc_depth { 0 }; 
     uint32_t m_dc_depth { 0 };
+
 };
 
 }

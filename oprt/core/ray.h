@@ -1,19 +1,13 @@
 #pragma once 
 
 #include <sutil/vec_math.h>
-#include "../optix/macros.h"
-
-/** MEMO: 
- * Must ray store the spectrum information?
- * */
-
-#ifdef __CUDACC__
+#include <oprt/optix/macros.h>
 
 namespace oprt {
 
 struct Ray {
 
-    float3 at(float time) { return o + d*time; }
+    float3 at(const float time) { return o + d*time; }
 
     /* Position of ray origin in world coordinates. */
     float3 o;
@@ -30,10 +24,25 @@ struct Ray {
     float3 spectrum;
 };
 
-}
+struct pRay {
+    /** @todo Polarized ray */
+    float3 at(const float time) { return o + d*time; }
 
-INLINE DEVICE oprt::Ray getLocalRay() {
-    oprt::Ray ray;
+    float3 o;
+    float3 d; 
+    float3 tangent; // tangent vector
+
+    float tmin; 
+    float tmax; 
+    float t;
+
+    float3 spectrum;
+};
+
+/** Useful function on OptiX to get ray info */
+#ifdef __CUDACC__
+INLINE DEVICE Ray getLocalRay() {
+    Ray ray;
     ray.o = optixTransformPointFromWorldToObjectSpace( optixGetWorldRayOrigin() );
     ray.d = normalize( optixTransformVectorFromWorldToObjectSpace( optixGetWorldRayDirection() ) );
     ray.tmin = optixGetRayTmin();
@@ -42,8 +51,8 @@ INLINE DEVICE oprt::Ray getLocalRay() {
     return ray;
 }
 
-INLINE DEVICE oprt::Ray getWorldRay() {
-    oprt::Ray ray;
+INLINE DEVICE Ray getWorldRay() {
+    Ray ray;
     ray.o = optixGetWorldRayOrigin();
     ray.d = normalize( optixGetWorldRayDirection() );
     ray.tmin = optixGetRayTmin();
@@ -52,4 +61,16 @@ INLINE DEVICE oprt::Ray getWorldRay() {
     return ray;
 }
 
+INLINE DEVICE pRay getLocalpRay() 
+{
+    
+}
+
+INLINE DEVICE pRay getWorldpRay() 
+{
+
+}
+
 #endif
+
+} // ::oprt

@@ -3,8 +3,21 @@
 #include <optix.h>
 #include <vector_types.h>
 #include <sutil/vec_math.h>
-#include "../optix/macros.h"
-#include "../optix/helpers.h"
+#include <oprt/optix/macros.h>
+#include <oprt/optix/helpers.h>
+
+
+/// @todo support spectrum rendering
+
+struct RGBSpectrum
+{
+
+};
+
+struct Spectrum
+{
+
+};
 
 HOSTDEVICE INLINE float3 toSRGB( const float3& c )
 {

@@ -1,9 +1,16 @@
 #pragma once
 
-#include "../core/util.h"
-#include "../core/aabb.h"
-#include "../optix/macros.h"
+#include <variant>
+#include <memory>
+#include <oprt/core/util.h>
+#include <oprt/core/aabb.h>
+#include <oprt/core/material.h>
+#include <oprt/core/interaction.h>
+#include <oprt/emitter/area.h>
+#include <oprt/optix/macros.h>
+#include <oprt/optix/program.h>
 #include <sutil/vec_math.h>
+#include <optix_types.h>
 
 namespace oprt {
 
@@ -23,6 +30,11 @@ enum class ShapeType {
  * ex) 
  *  const char* shape_str = shape_map[ShapeType::Mesh] -> "mesh"
  **/
+
+/**
+ * @todo
+ * Enum and maps associated with shape type will be deprecated.
+ */
 static std::map<ShapeType, const char*> shape_map = {
     { ShapeType::Mesh, "mesh" },
     { ShapeType::Sphere, "sphere" },
@@ -47,44 +59,37 @@ inline std::ostream& operator<<(std::ostream& out, ShapeType type) {
     }
 }
 
-struct AccelData {
-    struct HandleData {
-        OptixTraversableHandle handle { 0 };
-        CUdeviceptr d_buffer { 0 };
-        unsigned int count { 0 };
-    };
-    HandleData meshes {};
-    HandleData customs {};
-
-    ~AccelData() {
-        if (meshes.d_buffer)  cudaFree( reinterpret_cast<void*>( meshes.d_buffer ) );
-        if (customs.d_buffer) cudaFree( reinterpret_cast<void*>( customs.d_buffer ) );
-    }
-};
-
-inline std::ostream& operator<<(std::ostream& out, const AccelData& accel) {
-    out << "AccelData::meshes: " << accel.meshes.handle << ", " << accel.meshes.d_buffer << ", " << accel.meshes.count << std::endl;
-    return out << "AccelData::customs: " << accel.customs.handle << ", " << accel.customs.d_buffer << ", " << accel.customs.count << std::endl;
-}
-
-// Abstract class for readability
 class Shape {
 public:
     virtual ~Shape() {}
 
-    virtual ShapeType type() const = 0;
+    virtual OptixBuildInputType buildInputType() const = 0;
     virtual AABB bound() const = 0;
 
-    virtual void prepareData() = 0;
-    virtual void buildInput( OptixBuildInput& bi, uint32_t sbt_idx ) = 0;
-    void freeAabbBuffer() {
-        if (d_aabb_buffer) cuda_free( d_aabb_buffer ); 
-    }
+    virtual void copyToDevice() = 0;
+    virtual void buildInput( OptixBuildInput& bi ) = 0;
 
-    void* devicePtr() const { return d_data; }
+    void attachSurface(const std::shared_ptr<Material>& material);
+    void attachSurface(const std::shared_ptr<AreaEmitter>& area_emitter);
+    std::variant<std::shared_ptr<Material>, std::shared_ptr<AreaEmitter>> surface() const;
+    SurfaceType surfaceType() const;
+    void* surfaceDevicePtr() const;
+
+    void setSbtIndex(const uint32_t sbt_index);
+    uint32_t sbtIndex() const;
+
+    void free();
+    void freeAabbBuffer();
+    
+    void* devicePtr() const;
+
 protected:
     void* d_data { 0 };
     CUdeviceptr d_aabb_buffer { 0 };
+    uint32_t m_sbt_index;
+
+private:
+    std::variant<std::shared_ptr<Material>, std::shared_ptr<AreaEmitter>> m_surface;
 };
 
 #endif // __CUDACC__

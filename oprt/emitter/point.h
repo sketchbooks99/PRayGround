@@ -1,3 +1,5 @@
+#pragma once
+
 #include "../core/emitter.h"
 
 namespace oprt {

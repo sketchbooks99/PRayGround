@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../core/texture.h"
+#include <oprt/core/texture.h>
 
 namespace oprt {
 
@@ -14,7 +14,13 @@ public:
     explicit ConstantTexture(const float3& c) : m_color(c) {}
     ~ConstantTexture() noexcept {}
 
-    void prepareData() override {
+    void free() override
+    {
+        if (d_data)
+            cuda_free(d_data);
+    }
+
+    void copyToDevice() override {
         ConstantTextureData data = { m_color };
 
         CUDA_CHECK(cudaMalloc(&d_data, sizeof(ConstantTextureData)));
@@ -29,12 +35,6 @@ public:
 private:
     float3 m_color;
 };
-
-#else
-CALLABLE_FUNC float3 DC_FUNC(eval_constant)(SurfaceInteraction* si, void* texdata) {
-    const ConstantTextureData* constant = reinterpret_cast<ConstantTextureData*>(texdata);
-    return constant->color;
-}
 
 #endif
 

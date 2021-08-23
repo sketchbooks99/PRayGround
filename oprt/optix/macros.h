@@ -1,5 +1,10 @@
 #pragma once
 
+#include <optix.h>
+#ifndef __CUDACC__
+    #include <stdexcept>
+#endif
+
 #ifdef __CUDACC__
     #define CALLABLE_FUNC extern "C" __device__
     #define INLINE __forceinline__
@@ -14,7 +19,6 @@
     #define DEVICE 
 #endif
 
-// MACROs to easily define the function.
 #define RG_FUNC(name) __raygen__ ## name
 #define IS_FUNC(name) __intersection__ ## name
 #define AH_FUNC(name) __anyhit__ ## name
@@ -34,18 +38,67 @@
 #define CC_FUNC_STR(name) "__continuation_callable__" name
 
 #ifndef __CUDACC__
-#include <string>
-/** 
- * \note These functions are used in few cases, 
- * especially when you don't want to write \c name directly. 
- */
-inline std::string rg_func_str(const std::string& name) { return "__raygen__" + name; }
-inline std::string is_func_str(const std::string& name) { return "__intersection__" + name; }
-inline std::string ah_func_str(const std::string& name) { return "__anyhit__" + name; }
-inline std::string ch_func_str(const std::string& name) { return "__closesthit__" + name; }
-inline std::string ms_func_str(const std::string& name) { return "__miss__" + name; }
-inline std::string ex_func_str(const std::string& name) { return "__exception__" + name; }
-inline std::string dc_func_str(const std::string& name) { return "__direct_callable__" + name; }
-inline std::string cc_func_str(const std::string& name) { return "__continuation_callable__" + name; }
+
+// OptiX error handles -------------------------------------------------------------
+#define OPTIX_CHECK(call)                                                       \
+    do                                                                          \
+    {                                                                           \
+        OptixResult res = call;                                                 \
+        if (res != OPTIX_SUCCESS)                                               \
+        {                                                                       \
+            std::stringstream ss;                                               \
+            ss << "Optix call '" << #call << "' failed: " __FILE__ ":"          \
+               << __LINE__ << ")\n";                                            \
+               throw std::runtime_error(ss.str());                              \
+            }                                                                   \
+        } while (0)
+
+#define OPTIX_CHECK_LOG( call )                                                \
+    do                                                                         \
+    {                                                                          \
+        OptixResult res = call;                                                \
+        const size_t sizeof_log_returned = sizeof_log;                         \
+        sizeof_log = sizeof( log ); /* reset sizeof_log for future calls */    \
+        if( res != OPTIX_SUCCESS )                                             \
+        {                                                                      \
+            std::stringstream ss;                                              \
+            ss << "Optix call '" << #call << "' failed: " __FILE__ ":"         \
+               << __LINE__ << ")\nLog:\n" << log                               \
+               << ( sizeof_log_returned > sizeof( log ) ? "<TRUNCATED>" : "" ) \
+               << "\n";                                                        \
+            throw std::runtime_error(ss.str());                                \
+        }                                                                      \
+    } while( 0 )
+
+// CUDA error handles --------------------------------------------------------------
+#define CUDA_CHECK( call )                                                     \
+    do                                                                         \
+    {                                                                          \
+        cudaError_t error = call;                                              \
+        if( error != cudaSuccess )                                             \
+        {                                                                      \
+            std::stringstream ss;                                              \
+            ss << "CUDA call (" << #call << " ) failed with error: '"          \
+               << cudaGetErrorString( error )                                  \
+               << "' (" __FILE__ << ":" << __LINE__ << ")\n";                  \
+            throw std::runtime_error(ss.str());                                \
+        }                                                                      \
+    } while( 0 )
+
+
+#define CUDA_SYNC_CHECK()                                                      \
+    do                                                                         \
+    {                                                                          \
+        cudaDeviceSynchronize();                                               \
+        cudaError_t error = cudaGetLastError();                                \
+        if( error != cudaSuccess )                                             \
+        {                                                                      \
+            std::stringstream ss;                                              \
+            ss << "CUDA error on synchronize with error '"                     \
+               << cudaGetErrorString( error )                                  \
+               << "' (" __FILE__ << ":" << __LINE__ << ")\n";                  \
+            throw std::runtime_error(ss.str());                                \
+        }                                                                      \
+    } while( 0 )
 
 #endif

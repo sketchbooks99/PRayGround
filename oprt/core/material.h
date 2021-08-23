@@ -3,8 +3,7 @@
 #include <cuda_runtime.h>
 #include <optix.h>
 #include <sutil/vec_math.h>
-#include "../core/util.h"
-#include "../optix/util.h"
+#include <oprt/core/util.h>
 
 #ifndef __CUDACC__
     #include <map>
@@ -13,18 +12,8 @@
 namespace oprt {
 
 /**
- * \note 
- * [EN] 
- * Material class is used only in host side, because OptiX 7~ doesn't support virtual functions.
- * So, computation of bsdf are performed using direct/continuation callables, and indices of them
- * are the indices of MaterialType.
- * ex) The index of Diffuse function = (int)MaterialType::Diffuse = 0
- * 
- * [JP]
- * Optix 7~ は仮想関数をサポートしていないため、Materialクラスはホスト側でのみ使用されます。
- * BSDFの計算はcontinuation/direct callablesにを用いて行われ、それら関数のインデックスは
- * MaterialTypeのインデックスになります。
- * 例) Diffuse関数のインデックス = (int)MaterialType::Diffuse = 0
+ * @todo
+ * @c MaterialType will be deprecated for extendability of the oprt app
  */
 
 enum class MaterialType {
@@ -79,20 +68,40 @@ inline std::ostream& operator<<(std::ostream& out, const MaterialType& type) {
     }
 }
 
-#endif
-
 // Abstract class to compute scattering properties.
 class Material {
 public:
     virtual ~Material() {}
     
-    virtual void prepareData() = 0;
-    virtual void freeData() = 0;
+    virtual void copyToDevice() = 0;
     virtual MaterialType type() const = 0;
+
+    virtual void free()
+    {
+        if (d_data) cuda_free(d_data);
+    }
     
     void* devicePtr() const { return d_data; }
+
+    void addProgramId(const uint32_t idx)
+    {
+        m_prg_ids.push_back(idx);
+    }
+
+    int32_t programIdAt(const int32_t idx) const
+    {
+        if (idx >= m_prg_ids.size())
+        {
+            Message(MSG_ERROR, "oprt::Material::funcIdAt(): Index to get function id of material exceeds the number of functions");
+            return -1;
+        }
+        return static_cast<int32_t>(m_prg_ids[idx]);
+    }
 protected:
     void* d_data { 0 };
+    std::vector<uint32_t> m_prg_ids;
 };
 
-}
+#endif
+
+} // ::oprt

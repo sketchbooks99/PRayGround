@@ -1,8 +1,11 @@
 #pragma once
 
-#include "../core/emitter.h"
-#include "../texture/constant.h"
-#include "optix/envmap.cuh"
+#include <oprt/core/emitter.h>
+#include <oprt/texture/constant.h>
+
+#ifndef __CUDACC__
+    #include <filesystem>
+#endif
 
 /**
  * @brief Environment emitter. In general, emittance is evaluated at a miss program.
@@ -14,21 +17,24 @@
 
 namespace oprt {
 
+struct EnvironmentEmitterData {
+    void* tex_data;
+    unsigned int tex_program_id;
+};
+
 #ifndef __CUDACC__
 
 class EnvironmentEmitter final : public Emitter {
 public:
-    explicit EnvironmentEmitter(const std::filesystem::path& filename);
-    explicit EnvironmentEmitter(const float3& c)
-    : m_texture(std::make_shared<ConstantTexture>(c)) {}
     explicit EnvironmentEmitter(const std::shared_ptr<Texture>& texture)
     : m_texture(texture) {}
 
-    void prepareData() override;
+    void copyToDevice() override;
 
-    void freeData() override {}
+    void free() override {}
 
     EmitterType type() const override { return EmitterType::Envmap; }
+    std::shared_ptr<Texture> texture() const { return m_texture; }
 private:
     std::shared_ptr<Texture> m_texture;
 };

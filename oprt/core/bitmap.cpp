@@ -1,21 +1,40 @@
 #include "bitmap.h"
-#include "color.h"
-#include "cudabuffer.h"
-#include "file_util.h"
+#include <oprt/core/color.h>
+#include <oprt/core/cudabuffer.h>
+#include <oprt/core/file_util.h>
+#include <oprt/core/util.h>
+#include <oprt/app/app_runner.h>
 
 #define STB_IMAGE_IMPLEMENTATION
-#include "../ext/stb/stb_image.h"
+#include <oprt/ext/stb/stb_image.h>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "../ext/stb/stb_image_write.h"
+#include <oprt/ext/stb/stb_image_write.h>
 #define TINYEXR_IMPLEMENTATION
-#include "../ext/tinyexr/tinyexr.h"
+#include <oprt/ext/tinyexr/tinyexr.h>
 
 namespace oprt {
 
-template <typename PixelType>
-Bitmap_<PixelType>::Bitmap_() 
+GLuint prepareGL(gl::Shader& shader)
 {
+    // Preparing texture
+    GLuint gltex = 0;
+    glGenTextures(1, &gltex);
+    glBindTexture(GL_TEXTURE_2D, gltex);
 
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    shader.load("oprt/core/shaders/bitmap.vert", "oprt/core/shaders/bitmap.frag");
+
+    return gltex;
+}
+
+template <typename PixelType>
+Bitmap_<PixelType>::Bitmap_()
+{
+    
 }
 
 // --------------------------------------------------------------------
@@ -45,8 +64,6 @@ Bitmap_<PixelType>::Bitmap_(const std::filesystem::path& filename, Format format
 template <typename PixelType>
 void Bitmap_<PixelType>::allocate(Format format, int width, int height)
 {
-    Assert(!this->m_data, "Image data in the host side is already allocated. Please use fillData() if you'd like to override bitmap data with your specified range.");
-
     m_width = width; 
     m_height = height;
     m_format = format;
@@ -62,21 +79,24 @@ void Bitmap_<PixelType>::allocate(Format format, int width, int height)
             m_channels = 3;
             break;
         case Format::RGBA:
-        case Format::UNKNOWN:
-        default:
             m_channels = 4;
             break;
+        case Format::UNKNOWN:
+        default:
+            Throw("oprt::Bitmap::allocate(): Invalid type of allocation");
     }
 
     // Zero-initialization of pixel data
     std::vector<PixelType> zero_arr(m_channels * m_width * m_height, static_cast<PixelType>(0));
-    m_data = new PixelType[m_width * m_height * m_channels];
-    memcpy(m_data, zero_arr.data(), zero_arr.size() * sizeof(PixelType));
+    m_data = new PixelType[m_channels * m_width * m_height];
+    memcpy(m_data, zero_arr.data(), m_channels * m_width * m_height * sizeof(PixelType));
+
+    m_gltex = prepareGL(m_shader);
 }
 
 // --------------------------------------------------------------------
 template <typename PixelType>
-void Bitmap_<PixelType>::fillData(PixelType* data, int width, int height, int offset_x, int offset_y)
+void Bitmap_<PixelType>::setData(PixelType* data, int width, int height, int offset_x, int offset_y)
 {
     Assert(m_data, "Please allocate the bitmap before filling data with specified range.");
 
@@ -93,6 +113,12 @@ void Bitmap_<PixelType>::fillData(PixelType* data, int width, int height, int of
         int src_base = ((y - offset_y) * width) * m_channels;
         memcpy(&m_data[dst_base], &data[src_base], sizeof(PixelType) * width * m_channels);
     }
+}
+
+template <typename PixelType>
+void Bitmap_<PixelType>::setData(PixelType* data, const int2& res, const int2& offset)
+{
+    setData(data, res.x, res.y, offset.x, offset.y); 
 }
 
 // --------------------------------------------------------------------
@@ -114,7 +140,7 @@ void Bitmap_<PixelType>::load(const std::filesystem::path& filename)
 template <>
 void Bitmap_<unsigned char>::load(const std::filesystem::path& filename)
 {
-    std::optional<std::filesystem::path> filepath = findDatapath(filename);
+    std::optional<std::filesystem::path> filepath = findDataPath(filename);
     Assert(filepath, "oprt::Bitmap_<unsigned char>::load(): The input file for bitmap '" + filename.string() + "' is not found.");
 
     auto ext = getExtension(filepath.value());
@@ -136,13 +162,15 @@ void Bitmap_<unsigned char>::load(const std::filesystem::path& filename)
     }
     m_data = stbi_load(filepath.value().string().c_str(), &m_width, &m_height, &m_channels, type2channels[m_format]);
     m_channels = type2channels[m_format];
+
+    m_gltex = prepareGL(m_shader);
 }
 
 // --------------------------------------------------------------------
 template <>
 void Bitmap_<float>::load(const std::filesystem::path& filename)
 {
-    std::optional<std::filesystem::path> filepath = findDatapath(filename);
+    std::optional<std::filesystem::path> filepath = findDataPath(filename);
     Assert(filepath, "oprt::Bitmap_<float>::load(): The input file for bitmap '" + filename.string() + "' is not found.");
 
     auto ext = getExtension(filepath.value());
@@ -184,13 +212,15 @@ void Bitmap_<float>::load(const std::filesystem::path& filename)
         }
         stbi_image_free(raw_data);
     }
+
+    m_gltex = prepareGL(m_shader);
 }
 
 // --------------------------------------------------------------------
 template <typename PixelType>
 void Bitmap_<PixelType>::write(const std::filesystem::path& filepath, int quality) const
 {
-    std::string file_extension = getExtension(filepath);
+    std::string ext = getExtension(filepath);
 
     unsigned char* data = new unsigned char[m_width * m_height * m_channels];
     if constexpr (std::is_same_v<PixelType, unsigned char>)
@@ -224,19 +254,19 @@ void Bitmap_<PixelType>::write(const std::filesystem::path& filepath, int qualit
         }
     }
     
-    if (file_extension == ".png" || file_extension == ".PNG")
+    if (ext == ".png" || ext == ".PNG")
     {
         stbi_flip_vertically_on_write(true);
         stbi_write_png(filepath.string().c_str(), m_width, m_height, m_channels, data, m_width * m_channels);
         delete[] data;
     }
-    else if (file_extension == ".jpg" || file_extension == ".JPG")
+    else if (ext == ".jpg" || ext == ".JPG")
     {
         stbi_flip_vertically_on_write(true);
         stbi_write_jpg(filepath.string().c_str(), m_width, m_height, m_channels, data, quality);
         delete[] data;
     }
-    else if (file_extension == ".exr" || file_extension == ".EXR")
+    else if (ext == ".exr" || ext == ".EXR")
     {
         Message(MSG_WARNING, "Sorry! Bitmap doesn't support to write out image with .exr format currently.");
         return;
@@ -246,6 +276,107 @@ void Bitmap_<PixelType>::write(const std::filesystem::path& filepath, int qualit
         Message(MSG_WARNING, "This format is not writable with bitmap.");
         return;
     }
+}
+
+// --------------------------------------------------------------------
+template <typename PixelType>
+void Bitmap_<PixelType>::draw() const
+{
+    draw(0, 0, m_width, m_height);
+}
+
+template <typename PixelType>
+void Bitmap_<PixelType>::draw(int32_t x, int32_t y) const
+{
+    draw(x, y, m_width, m_height);
+}
+
+template <typename PixelType>
+void Bitmap_<PixelType>::draw(int32_t x, int32_t y, int32_t width, int32_t height) const
+{
+    // Prepare vertices data
+    int window_width = oprtGetWidth(), window_height = oprtGetHeight();
+    GLfloat x0 = -1.0f + (static_cast<float>(x) / window_width) * 2.0f;
+    GLfloat x1 = -1.0f + (static_cast<float>(x + width) / window_width) * 2.0f;
+    GLfloat y0 =  1.0f - (static_cast<float>(y + height) / window_height) * 2.0f;
+    GLfloat y1 =  1.0f - (static_cast<float>(y) / window_height) * 2.0f;
+    GLfloat vertices[] = {
+        // position     // texcoord (vertically flipped)
+        x0, y0, 0.0f,   0.0f, 1.0f,
+        x0, y1, 0.0f,   0.0f, 0.0f, 
+        x1, y0, 0.0f,   1.0f, 1.0f, 
+        x1, y1, 0.0f,   1.0f, 0.0f
+    };
+    GLuint indices[] = {
+        0, 1, 2, 
+        2, 1, 3
+    };
+
+    // Prepare vertex array object
+    GLuint vertex_buffer, vertex_array, element_buffer;
+    glGenVertexArrays(1, &vertex_array);
+    glGenBuffers(1, &vertex_buffer); 
+    glGenBuffers(1, &element_buffer);
+
+    glBindVertexArray(vertex_array);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, element_buffer);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
+    glEnableVertexAttribArray(1);
+
+    GLenum texture_data_type;
+    if constexpr (std::is_same_v<PixelType, float>)
+        texture_data_type = GL_FLOAT;
+    else if constexpr (std::is_same_v<PixelType, unsigned char>)
+        texture_data_type = GL_UNSIGNED_BYTE;
+    
+    glBindTexture(GL_TEXTURE_2D, m_gltex);
+    switch (m_format)
+    {
+    case Format::GRAY:
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_R, m_width, m_height, 0, GL_R, texture_data_type, m_data);
+        break;
+    case Format::GRAY_ALPHA:
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RG, m_width, m_height, 0, GL_RG, texture_data_type, m_data);
+        break;
+    case Format::RGB:
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_width, m_height, 0, GL_RGB, texture_data_type, m_data);
+        break;
+    case Format::RGBA:
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_RGBA, texture_data_type, m_data);
+        break;
+    case Format::UNKNOWN:
+    default:
+        return;
+    }
+
+    m_shader.begin();
+    glUniform1i(glGetUniformLocation(m_shader.program(), "tex"), 0);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_gltex);
+    glBindVertexArray(vertex_array);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+}
+
+// --------------------------------------------------------------------
+template <typename PixelType>
+void Bitmap_<PixelType>::allocateDevicePtr()
+{
+    if (d_data)
+        CUDA_CHECK(cudaFree(d_data));
+    CUDA_CHECK(cudaMalloc(
+        reinterpret_cast<void**>(&d_data),
+        m_width * m_height * m_channels * sizeof(PixelType)
+    ));
 }
 
 // --------------------------------------------------------------------
@@ -270,7 +401,7 @@ void Bitmap_<PixelType>::copyFromDevice()
     CUDA_CHECK(cudaMemcpy(
         m_data,
         d_data, m_width * m_height * m_channels * sizeof(PixelType),
-        cudaMemcpyHostToDevice
+        cudaMemcpyDeviceToHost
     ));
 }
 

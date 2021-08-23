@@ -1,4 +1,7 @@
-#include "util.h"
+#pragma once 
+
+#include <filesystem>
+#include <optional>
 
 namespace oprt {
 
@@ -20,16 +23,15 @@ inline std::filesystem::path pathJoin(
     return path;
 }
 
-/**
- * @brief 
- * Check if the file specified by the relative path exists
- * in the data/ or the root directory of OptiX-Raytracer.
- * If the file exists, return the absolute path to the file, 
- * but if not, throw the runtime error that file is not found.
- */
-std::optional<std::filesystem::path> findDatapath( const std::filesystem::path& relative_path );
+/// OptiX-Raytracer の ホームディレクトリと アプリケーションもしくはOptiX-Raytracer 以下の 
+/// data/ ディレクトリ以下を探索し、ファイルが見つかった場合は絶対パスを返し、見つからなかった場合は、無効値を返します。
+std::optional<std::filesystem::path> findDataPath( const std::filesystem::path& relative_path );
 
-std::filesystem::path rootDir();
+std::filesystem::path oprtRootDir();
+
+#ifdef OPRT_APP_DIR
+std::filesystem::path oprtAppDir();
+#endif
 
 /**
  * @brief Get the extension of file.
@@ -45,5 +47,7 @@ void createDir( const std::string& abs_path );
  * @brief Create directories recursively.
  */
 void createDirs( const std::string& abs_path );
+
+std::string getTextFromFile(const std::filesystem::path& filepath);
 
 }

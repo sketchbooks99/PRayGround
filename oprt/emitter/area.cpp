@@ -1,11 +1,20 @@
 #include "area.h"
-#include "../core/material.h"
+#include <oprt/core/material.h>
 
 namespace oprt {
-    
-void AreaEmitter::prepareData() 
+
+// ---------------------------------------------------------------------------
+AreaEmitter::AreaEmitter(const std::shared_ptr<Texture>& texture, float intensity, bool twosided)
+: m_texture(texture), m_intensity(intensity), m_twosided(twosided)
 {
-    m_texture->prepareData();
+
+}
+    
+// ---------------------------------------------------------------------------
+void AreaEmitter::copyToDevice() 
+{
+    if (!m_texture->devicePtr())
+        m_texture->copyToDevice();
 
     AreaEmitterData data = {
         m_texture->devicePtr(),
@@ -20,6 +29,26 @@ void AreaEmitter::prepareData()
         &data, sizeof(AreaEmitterData),
         cudaMemcpyHostToDevice
     ));
+}
+
+void AreaEmitter::setProgramId(const int32_t prg_id)
+{
+    m_prg_id = prg_id;
+}
+
+int32_t AreaEmitter::programId() const 
+{
+    return m_prg_id;
+}
+
+std::shared_ptr<Texture> AreaEmitter::texture() const
+{
+    return m_texture;
+}
+
+void AreaEmitter::free()
+{
+
 }
 
 }

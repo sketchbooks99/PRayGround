@@ -30,7 +30,7 @@
 #include <cuda/random.h>
 
 #include <prayground/core/color.h>
-#include <prayground/oprt.h>
+#include <prayground/prayground.h>
 
 namespace prayground {
 

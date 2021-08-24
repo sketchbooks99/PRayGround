@@ -39,7 +39,7 @@ void App::setup()
     params.accum_buffer = reinterpret_cast<float4*>(film.floatBitmapAt("accum")->devicePtr());
     params.result_buffer = reinterpret_cast<uchar4*>(film.bitmapAt("result")->devicePtr());
 
-    camera.setOrigin(make_float3(0.0f, 0.0f, 1.0f));
+    camera.setOrigin(make_float3(0.0f, 0.0f, 0.75f));
     camera.setLookat(make_float3(0.0f, 0.0f, 0.0f));
     camera.setUp(make_float3(0.0f, -1.0f, 0.0f));
     camera.setFov(40.0f);
@@ -127,7 +127,7 @@ void App::setup()
 void App::update()
 {
     float time = pgGetElapsedTime<float>();
-    checker_texture->setColor1( {abs(sin(time)), 0.0f, 0.0f} );
+    checker_texture->setColor1(make_float3(abs(sin(time))));
     checker_texture->copyToDevice();
 
     params.subframe_index++;

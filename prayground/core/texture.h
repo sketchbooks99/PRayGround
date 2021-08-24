@@ -30,13 +30,13 @@ public:
     {
         m_prg_id = prg_id;
     }
-    int programId() const 
+    uint32_t programId() const 
     {
-        return m_prg_id;
+        Assert(m_prg_id > -1, "prayground::Texture::programId(): Please set program id to texture.");
+        return static_cast<uint32_t>(m_prg_id);
     }
 protected:
-    // CUdeviceptr d_data { 0 };
-    void* d_data;
+    void* d_data{ nullptr };
     int m_prg_id { -1 };
 };
 

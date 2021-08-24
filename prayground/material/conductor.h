@@ -25,13 +25,14 @@ public:
             m_texture->copyToDevice();
 
         ConductorData data = {
-            m_texture->devicePtr(), 
-            m_fuzz,
-            m_twosided,
-            m_texture->programId()
+            .tex_data = m_texture->devicePtr(), 
+            .fuzz = m_fuzz,
+            .twosided = m_twosided,
+            .tex_program_id = m_texture->programId()
         };
 
-        CUDA_CHECK(cudaMalloc(&d_data, sizeof(ConductorData)));
+        if (!d_data)
+            CUDA_CHECK(cudaMalloc(&d_data, sizeof(ConductorData)));
         CUDA_CHECK(cudaMemcpy(
             d_data,
             &data, sizeof(ConductorData), 

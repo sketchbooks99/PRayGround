@@ -20,10 +20,16 @@ public:
             cuda_free(d_data);
     }
 
+    void setColor(const float3& c)
+    {
+        m_color = c;
+    }
+
     void copyToDevice() override {
         ConstantTextureData data = { m_color };
 
-        CUDA_CHECK(cudaMalloc(&d_data, sizeof(ConstantTextureData)));
+        if (!d_data) 
+            CUDA_CHECK(cudaMalloc(&d_data, sizeof(ConstantTextureData)));
         CUDA_CHECK(cudaMemcpy(
             d_data,
             &data, sizeof(ConstantTextureData),

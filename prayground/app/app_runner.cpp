@@ -5,7 +5,8 @@ namespace prayground {
 
 namespace { // nonamed-namespace
     std::shared_ptr<Window> current_window;
-    int32_t current_frame = 0;
+    int32_t current_frame{ 0 };
+    std::chrono::high_resolution_clock::time_point start_time;
 } // ::nonamed-namespace
 
 float pgGetMouseX()
@@ -53,6 +54,25 @@ int32_t pgGetHeight()
     return current_window->height();
 }
 
+int32_t pgGetFrame() 
+{
+    return current_frame;
+}
+
+float pgGetFrameRate()
+{
+    return static_cast<float>(pgGetFrame()) / pgGetElapsedTime<float>();
+}
+
+template <typename T>
+T pgGetElapsedTime()
+{
+    std::chrono::duration<T> elapsed = std::chrono::high_resolution_clock::now() - start_time;
+    return elapsed.count();
+}
+template float pgGetElapsedTime<float>();
+template double pgGetElapsedTime<double>();
+
 void pgSetWindowName(const std::string& name)
 {
     current_window->setName(name);
@@ -88,6 +108,7 @@ void AppRunner::run() const
 
     m_window->setVisible(true);
 
+    start_time = std::chrono::high_resolution_clock::now();
     loop();
 }
 
@@ -99,6 +120,8 @@ void AppRunner::loop() const
         m_app->update();
         m_app->draw();
         m_window->swap();
+
+
     }
     close();
 }

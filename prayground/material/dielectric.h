@@ -27,12 +27,13 @@ public:
             m_texture->copyToDevice();
 
         DielectricData data = {
-            m_texture->devicePtr(), 
-            m_ior, 
-            m_texture->programId()
+            .tex_data = m_texture->devicePtr(), 
+            .ior = m_ior, 
+            .tex_program_id = m_texture->programId()
         };
 
-        CUDA_CHECK(cudaMalloc(&d_data, sizeof(DielectricData)));
+        if (!d_data) 
+            CUDA_CHECK(cudaMalloc(&d_data, sizeof(DielectricData)));
         CUDA_CHECK(cudaMemcpy(
             d_data,
             &data, sizeof(DielectricData),

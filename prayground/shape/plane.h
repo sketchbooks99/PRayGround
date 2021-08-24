@@ -23,11 +23,12 @@ public:
     void copyToDevice() override
     {
         PlaneData data = {
-            m_min, 
-            m_max
+            .min = m_min, 
+            .max = m_max
         };
 
-        CUDA_CHECK( cudaMalloc( &d_data, sizeof(PlaneData) ) );
+        if (!d_data)
+            CUDA_CHECK( cudaMalloc( &d_data, sizeof(PlaneData) ) );
         CUDA_CHECK( cudaMemcpy(
             d_data, 
             &data, sizeof(PlaneData), 

@@ -142,6 +142,8 @@ int32_t Window::height() const
 void Window::setName(const std::string& name)
 {
     m_name = name;
+    if (m_window_ptr)
+        glfwSetWindowTitle(m_window_ptr, name.c_str());
 }
 std::string Window::name() const
 {

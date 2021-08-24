@@ -73,13 +73,14 @@ void TriangleMesh::copyToDevice() {
 
     // device side pointer of mesh data
     MeshData data = {
-        d_vertices_buf.deviceData(),
-        d_faces_buf.deviceData(), 
-        d_normals_buf.deviceData(),
-        d_texcoords_buf.deviceData()
+        .vertices = d_vertices_buf.deviceData(),
+        .faces = d_faces_buf.deviceData(), 
+        .normals = d_normals_buf.deviceData(),
+        .texcoords = d_texcoords_buf.deviceData()
     };
 
-    CUDA_CHECK(cudaMalloc(&d_data, sizeof(MeshData)));
+    if (!d_data) 
+        CUDA_CHECK(cudaMalloc(&d_data, sizeof(MeshData)));
     CUDA_CHECK(cudaMemcpy(
         d_data,
         &data, sizeof(MeshData),

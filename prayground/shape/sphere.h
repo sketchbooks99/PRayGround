@@ -21,11 +21,12 @@ public:
     void copyToDevice() override 
     {
         SphereData data = {
-            m_center, 
-            m_radius
+            .center = m_center, 
+            .radius = m_radius
         };
 
-        CUDA_CHECK( cudaMalloc( &d_data, sizeof(SphereData) ) );
+        if (!d_data) 
+            CUDA_CHECK( cudaMalloc( &d_data, sizeof(SphereData) ) );
         CUDA_CHECK( cudaMemcpy(
             d_data,
             &data, sizeof(SphereData),

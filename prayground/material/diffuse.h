@@ -29,12 +29,13 @@ public:
             m_texture->copyToDevice();
 
         DiffuseData data {
-            m_texture->devicePtr(),
-            m_twosided,
-            m_texture->programId()
+            .tex_data = m_texture->devicePtr(),
+            .twosided = m_twosided,
+            .tex_program_id = m_texture->programId()
         };
 
-        CUDA_CHECK(cudaMalloc(&d_data, sizeof(DiffuseData)));
+        if (!d_data)
+            CUDA_CHECK(cudaMalloc(&d_data, sizeof(DiffuseData)));
         CUDA_CHECK(cudaMemcpy(
             d_data,
             &data, sizeof(DiffuseData), 

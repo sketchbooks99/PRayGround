@@ -128,7 +128,6 @@ void App::setup()
 void App::update()
 {
     params.subframe_index++;
-
     d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);
 
     OPTIX_CHECK(optixLaunch(
@@ -153,10 +152,6 @@ void App::update()
 void App::draw()
 {
     film.bitmapAt("result")->draw(0, 0);
-
-    if (params.subframe_index == 200) {
-        film.bitmapAt("result")->write(pathJoin(pgAppDir(), "result.jpg"));
-    }
 }
 
 // ----------------------------------------------------------------

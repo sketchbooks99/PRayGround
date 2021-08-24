@@ -23,11 +23,12 @@ public:
     void copyToDevice() override
     {
         CylinderData data = {
-            m_radius,
-            m_height
+            .radius = m_radius,
+            .height = m_height
         };
 
-        CUDA_CHECK( cudaMalloc( &d_data, sizeof(CylinderData) ) );
+        if (!d_data) 
+            CUDA_CHECK( cudaMalloc( &d_data, sizeof(CylinderData) ) );
         CUDA_CHECK( cudaMemcpy(
             d_data, 
             &data, sizeof(CylinderData), 

@@ -61,10 +61,11 @@ void BitmapTexture_<PixelType>::copyToDevice()
 
     CUDA_CHECK( cudaCreateTextureObject( &d_texture, &res_desc, &m_tex_desc, nullptr ) );
     BitmapTextureData texture_data = { 
-        d_texture
+        .texture = d_texture
     };
 
-    CUDA_CHECK( cudaMalloc( &d_data, sizeof(BitmapTextureData) ) );
+    if (!d_data) 
+        CUDA_CHECK( cudaMalloc( &d_data, sizeof(BitmapTextureData) ) );
     CUDA_CHECK( cudaMemcpy(
         d_data, 
         &texture_data, sizeof(BitmapTextureData), 

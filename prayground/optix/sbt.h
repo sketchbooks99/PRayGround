@@ -65,6 +65,12 @@ namespace {
     template <class T>
     concept TrivialCopyable = std::is_trivially_copyable_v<T>;
 
+    template <class T>
+    concept HasData = requires(T t)
+    {
+        t.data;
+    };
+
     template <class Head, class... Args>
     void push_to_vector(std::vector<Head>& v, const Head& head, const Args&... args)
     {
@@ -91,8 +97,8 @@ struct Record
  * for prohibiting declaration of virtual functions in SBT Data.
  */
 
-template <class RaygenRecord, class MissRecord, class HitgroupRecord, 
-          class CallablesRecord, class ExceptionRecord, unsigned int NRay>
+template <HasData RaygenRecord, HasData MissRecord, HasData HitgroupRecord, 
+          HasData CallablesRecord, HasData ExceptionRecord, unsigned int NRay>
 class ShaderBindingTable {
 public:
     ShaderBindingTable()
@@ -144,7 +150,7 @@ public:
     }
 
     /// @note 置き換えを行ったらデバイス上のデータも更新する？
-    void replaceHitgroupRecord(const HitgroupRecord& record, const int idx)
+    void replaceHitgroupRecord(HitgroupRecord record, const int idx)
     {
         if (idx >= m_hitgroup_records.size())
         {
@@ -152,6 +158,14 @@ public:
             return;
         }
         m_hitgroup_records[idx] = record;
+
+        if (m_sbt.hitgroupRecordBase)
+        {
+            HitgroupRecord* hg_ptr = &reinterpret_cast<HitgroupRecord*>(m_sbt.hitgroupRecordBase)[idx];
+            CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(&hg_ptr->data), 
+                &record.data, sizeof(record.data), cudaMemcpyHostToDevice
+            ));
+        }
     }
 
     template <class... CallablesRecordArgs>

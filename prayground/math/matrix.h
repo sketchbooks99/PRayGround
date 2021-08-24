@@ -48,16 +48,16 @@ public:
     explicit HOSTDEVICE Matrix(const float (&data)[12]);
     explicit HOSTDEVICE Matrix(const std::initializer_list<T>& list);
 
-    HOSTDEVICE T  operator[](int i) const;
-    HOSTDEVICE T& operator[](int i);
+    HOSTDEVICE T  operator[](uint32_t i) const;
+    HOSTDEVICE T& operator[](uint32_t i);
 
     HOSTDEVICE Matrix& operator=( const Matrix& a );
 
-    HOSTDEVICE void setColumn(const floatN& v, int col_idx);
-    HOSTDEVICE void setRow(const floatN& v, int row_idx);
+    HOSTDEVICE void setColumn(const floatN& v, uint32_t col_idx);
+    HOSTDEVICE void setRow(const floatN& v, uint32_t row_idx);
 
-    HOSTDEVICE T  get(int i, int j) const;
-    HOSTDEVICE T& get(int i, int j);
+    HOSTDEVICE T  get(uint32_t i, uint32_t j) const;
+    HOSTDEVICE T& get(uint32_t i, uint32_t j);
 
     HOSTDEVICE void setData(const T data[N*N]);
 
@@ -90,7 +90,7 @@ template <typename T, uint32_t N>
 bool operator==(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
 {
     bool is_equal = true;
-    for (int i = 0; i < N*N; i++)
+    for (uint32_t i = 0; i < N*N; i++)
         is_equal &= (m1[i] == m2[i]);
     return is_equal;
 }
@@ -113,7 +113,7 @@ Matrix<T, N> operator+(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
 template <typename T, uint32_t N>
 Matrix<T, N>& operator+=(Matrix<T, N>& m1, const Matrix<T, N>& m2)
 {
-    for (int i = 0; i < N*N; i++)
+    for (uint32_t i = 0; i < N*N; i++)
         m1[i] += m2[i];
     return m1;
 }
@@ -129,7 +129,7 @@ Matrix<T, N> operator-(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
 template <typename T, uint32_t N>
 Matrix<T, N>& operator-=(Matrix<T, N>& m1, const Matrix<T, N>& m2)
 {
-    for (int i = 0; i < N*N; i++)
+    for (uint32_t i = 0; i < N*N; i++)
         m1[i] -= m2[i];
     return m1;
 }
@@ -139,15 +139,15 @@ Matrix<T, N> operator*(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
 {
     //Matrix<T, N> result = Matrix<T, N>::zero();
     T data[N * N];
-    for (int row = 0; row < N; row++)
+    for (uint32_t row = 0; row < N; row++)
     {
-        for (int col = 0; col < N; col++)
+        for (uint32_t col = 0; col < N; col++)
         {
-            for (int tmp = 0; tmp < N; tmp++)
+            for (uint32_t tmp = 0; tmp < N; tmp++)
             {
-                int i = row * N + col;
-                int m1_i = row * N + tmp;
-                int m2_i = tmp * N + col;
+                uint32_t i = row * N + col;
+                uint32_t m1_i = row * N + tmp;
+                uint32_t m2_i = tmp * N + col;
                 data[i] += m1[m1_i] * m2[m2_i];
             }
         }
@@ -159,7 +159,7 @@ template <typename T, uint32_t N>
 Matrix<T, N> operator*(const Matrix<T, N>& m, const float t)
 {
     Matrix<T, N> result;
-    for (int i = 0; i < N*N; i++)
+    for (uint32_t i = 0; i < N*N; i++)
         result[i] = m[i] * t;
     return result;
 }
@@ -167,7 +167,7 @@ Matrix<T, N> operator*(const Matrix<T, N>& m, const float t)
 template <typename T, uint32_t N>
 Matrix<T, N>& operator*=(Matrix<T, N>& m1, const Matrix<T, N>& m2)
 {
-    for (int i = 0; i < N*N; i++)
+    for (uint32_t i = 0; i < N*N; i++)
         m1[i] *= m2[i];
     return m1;
 }
@@ -175,7 +175,7 @@ Matrix<T, N>& operator*=(Matrix<T, N>& m1, const Matrix<T, N>& m2)
 template <typename T, uint32_t N>
 Matrix<T, N>& operator*=(Matrix<T, N>& m1, const float t)
 {
-    for (int i = 0; i < N*N; i++)
+    for (uint32_t i = 0; i < N*N; i++)
         m1[i] *= t;
 }
 
@@ -183,7 +183,7 @@ template <typename T, uint32_t N>
 Matrix<T, N> operator/(const Matrix<T, N>& m1, const float t)
 {
     Matrix<T, N> result;
-    for (int i = 0; i < N*N; i++)
+    for (uint32_t i = 0; i < N*N; i++)
         result[i] = m1[i] / t;
     return result;
 }
@@ -196,10 +196,10 @@ typename Vector<T, N>::Type operator*(const Matrix<T, N>& m, const typename Matr
     T* result_ptr = reinterpret_cast<T*>(&result);
     const T* v_ptr = reinterpret_cast<const T*>(&v);
 
-    for (int row = 0; row < N; row++)
+    for (uint32_t row = 0; row < N; row++)
     {
         T sum = static_cast<T>(0);
-        for (int col = 0; col < N; col++)
+        for (uint32_t col = 0; col < N; col++)
         {
             sum += m[row * N + col] * v_ptr[col];
         }
@@ -233,21 +233,21 @@ HOSTDEVICE Matrix<T, N>::Matrix() : Matrix(Matrix::identity()) { }
 template <typename T, uint32_t N>
 HOSTDEVICE Matrix<T, N>::Matrix(const Matrix<T, N>& m)
 {
-    for (int i = 0; i < N*N; i++)
+    for (uint32_t i = 0; i < N*N; i++)
         m_data[i] = m[i];
 }
 
 template <typename T, uint32_t N>
 HOSTDEVICE Matrix<T, N>::Matrix(const T data[N*N])
 {
-    for (int i = 0; i < N * N; i++)
+    for (uint32_t i = 0; i < N * N; i++)
         m_data[i] = data[i];
 }
 
 template <typename T, uint32_t N>
 HOSTDEVICE Matrix<T, N>::Matrix(const T (&data)[N*N])
 {
-    for (int i = 0; i < N*N; i++)
+    for (uint32_t i = 0; i < N*N; i++)
         m_data[i] = data[i];
 }
 
@@ -257,7 +257,7 @@ HOSTDEVICE Matrix<T, N>::Matrix(const float (&data)[12])
     static_assert(std::is_same_v<T, float> && N == 4,
         "This constructor is only allowed for Matrix4f");
 
-    for (int i = 0; i < 12; i++)
+    for (uint32_t i = 0; i < 12; i++)
         m_data[i] = data[i];
     m_data[12] = m_data[13] = m_data[14] = 0.0f;
     m_data[15] = 1.0f;
@@ -266,7 +266,7 @@ HOSTDEVICE Matrix<T, N>::Matrix(const float (&data)[12])
 template <typename T, uint32_t N>
 HOSTDEVICE Matrix<T, N>::Matrix(const std::initializer_list<T>& list)
 {
-    int i = 0; 
+    uint32_t i = 0; 
     for (auto it = list.begin(); it != list.end(); ++it)
         m_data[ i++ ] = *it;
 }
@@ -275,34 +275,34 @@ HOSTDEVICE Matrix<T, N>::Matrix(const std::initializer_list<T>& list)
 template <typename T, uint32_t N>
 HOSTDEVICE Matrix<T, N>& Matrix<T, N>::operator=(const Matrix<T, N>& a)
 {
-    for (int i = 0; i < N * N; i++)
+    for (uint32_t i = 0; i < N * N; i++)
         m_data[i] = a[i];
     return *this;
 }
 
 // ----------------------------------------------------------------------------
 template <typename T, uint32_t N>
-HOSTDEVICE T Matrix<T, N>::operator[](const int i) const 
+HOSTDEVICE T Matrix<T, N>::operator[](const uint32_t i) const 
 {
     return m_data[i];
 }
 
 template <typename T, uint32_t N>
-HOSTDEVICE T& Matrix<T, N>::operator[](const int i)
+HOSTDEVICE T& Matrix<T, N>::operator[](const uint32_t i)
 {
     return m_data[i];
 }
 
 // ----------------------------------------------------------------------------
 template <typename T, uint32_t N>
-HOSTDEVICE T Matrix<T, N>::get(int i, int j) const
+HOSTDEVICE T Matrix<T, N>::get(uint32_t i, uint32_t j) const
 {
     uint32_t idx = i * N + j;
     return m_data[idx];
 }
 
 template <typename T, uint32_t N>
-HOSTDEVICE T& Matrix<T, N>::get(int i, int j)
+HOSTDEVICE T& Matrix<T, N>::get(uint32_t i, uint32_t j)
 {
     uint32_t idx = i * N + j;
     return m_data[idx];
@@ -312,7 +312,7 @@ HOSTDEVICE T& Matrix<T, N>::get(int i, int j)
 template <typename T, uint32_t N>
 HOSTDEVICE void Matrix<T, N>::setData(const T data[N*N])
 {
-    for (int i = 0; i < N*N; i++)
+    for (uint32_t i = 0; i < N*N; i++)
         m_data[i] = data[i];
 }
 
@@ -341,20 +341,20 @@ HOSTDEVICE Matrix<T, N> Matrix<T, N>::inverse()
     T inv_data[N*N];
     Matrix<T, N> current_mat(*this);
     float tmp;
-    for (int i = 0; i < N; i++)
+    for (uint32_t i = 0; i < N; i++)
     {
         tmp = 1.0f / m_data[i * N + i];
-        for (int j = 0; j < N; j++)
+        for (uint32_t j = 0; j < N; j++)
         {
             current_mat[j * N + i] *= tmp;
             inv_data[j * N + i] *= tmp;
         }
-        for (int j = 0; j < N; j++)
+        for (uint32_t j = 0; j < N; j++)
         {
             if (i != j)
             {
                 tmp = current_mat[i * N + j];
-                for (int k = 0; k < N; k++)
+                for (uint32_t k = 0; k < N; k++)
                 {
                     current_mat[k * N + j] -= current_mat[k * N + i] * tmp;
                     inv_data[k * N + j] -= inv_data[k * N + i] * tmp;
@@ -454,7 +454,7 @@ template <typename T, uint32_t N>
 HOSTDEVICE Matrix<T, N> Matrix<T, N>::identity()
 {
     T data[N*N] = {};
-    for (int i=0; i<N; i++)
+    for (uint32_t i = 0; i < N; i++)
     {
         auto idx = i * N + i;
         data[idx] = static_cast<T>(1);

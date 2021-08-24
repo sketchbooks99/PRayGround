@@ -72,7 +72,19 @@ extern "C" __device__ void __raygen__pinhole()
                 break;
             }
 
-            if ( si.surface_type == SurfaceType::Material )
+            if ( si.surface_type == SurfaceType::AreaEmitter )
+            {
+                // Evaluating emission from emitter
+                optixDirectCall<void, SurfaceInteraction*, void*>(
+                    si.surface_property.program_id, 
+                    &si, 
+                    si.surface_property.data
+                );
+                result += si.emission * si.attenuation;
+                if (si.trace_terminate)
+                    break;
+            }
+            else if ( si.surface_type == SurfaceType::Material )
             {
                 // Sampling surface
                 optixContinuationCall<void, SurfaceInteraction*, void*>(
@@ -98,12 +110,13 @@ extern "C" __device__ void __raygen__pinhole()
 
     float3 accum_color = result / static_cast<float>(params.samples_per_launch);
 
-    if (subframe_index > 0)
-    {
-        const float a = 1.0f / static_cast<float>(subframe_index + 1);
-        const float3 accum_color_prev = make_float3(params.accum_buffer[image_index]);
-        accum_color = lerp(accum_color_prev, accum_color, a);
-    }
+    // // レンダリング結果の平均処理を行う場合
+    // if (subframe_index > 0)
+    // {
+    //     const float a = 1.0f / static_cast<float>(subframe_index + 1);
+    //     const float3 accum_color_prev = make_float3(params.accum_buffer[image_index]);
+    //     accum_color = lerp(accum_color_prev, accum_color, a);
+    // }
     params.accum_buffer[image_index] = make_float4(accum_color, 1.0f);
     uchar3 color = make_color(accum_color);
     params.result_buffer[image_index] = make_uchar4(color.x, color.y, color.z, 255);

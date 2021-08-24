@@ -32,7 +32,7 @@ private:
     Camera camera;
 
     shared_ptr<EnvironmentEmitter> env;
-    shared_ptr<Diffuse> diffuse;
+    shared_ptr<AreaEmitter> area;
     shared_ptr<TriangleMesh> bunny;
     shared_ptr<CheckerTexture> checker_texture;
     shared_ptr<FloatBitmapTexture> env_texture;

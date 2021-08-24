@@ -32,8 +32,8 @@ void App::setup()
     film = Film(1024, 1024);
     film.addBitmap("result", Bitmap::Format::RGBA);
     film.addFloatBitmap("accum", FloatBitmap::Format::RGBA);
-    film.bitmapAt("result")->allocateDeviceData();
-    film.floatBitmapAt("accum")->allocateDeviceData();
+    film.bitmapAt("result")->allocateDevicePtr();
+    film.floatBitmapAt("accum")->allocateDevicePtr();
     params.width = film.width();
     params.height = film.height();
     params.samples_per_launch = 1;
@@ -248,10 +248,10 @@ void App::setup()
 // ----------------------------------------------------------------
 void App::update()
 {
-    film.bitmapAt("result")->allocateDeviceData();
-    film.floatBitmapAt("accum")->allocateDeviceData();
-    params.result_buffer = reinterpret_cast<uchar4*>(film.bitmapAt("result")->devicePtr());
-    params.accum_buffer = reinterpret_cast<float4*>(film.floatBitmapAt("accum")->devicePtr());
+    //film.bitmapAt("result")->allocateDevicePtr();
+    //film.floatBitmapAt("accum")->allocateDevicePtr();
+    //params.result_buffer = reinterpret_cast<uchar4*>(film.bitmapAt("result")->devicePtr());
+    //params.accum_buffer = reinterpret_cast<float4*>(film.floatBitmapAt("accum")->devicePtr());
 
     d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);
 

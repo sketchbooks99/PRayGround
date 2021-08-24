@@ -130,7 +130,6 @@ void App::update()
     checker_texture->setColor1(make_float3(abs(sin(time))));
     checker_texture->copyToDevice();
 
-    //params.subframe_index++;
     d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);
 
     OPTIX_CHECK(optixLaunch(

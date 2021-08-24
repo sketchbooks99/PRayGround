@@ -95,7 +95,7 @@ void App::setup()
     area->setProgramId(area_prg_id);
     area->copyToDevice();
 
-    // Prepare cornel box and construct its gas and instance
+    // Load mesh from .obj file
     bunny = make_shared<TriangleMesh>("uv_bunny.obj");
     bunny->setSbtIndex(0);
     bunny->copyToDevice();
@@ -109,13 +109,14 @@ void App::setup()
     bunny_record.data.surface_program_id = area->programId();
     bunny_record.data.surface_type = SurfaceType::AreaEmitter;
     sbt.addHitgroupRecord(bunny_record);
-
+    
+    // Build GAS
     gas = GeometryAccel{GeometryAccel::Type::Mesh};
     gas.addShape(bunny);
     gas.allowCompaction();
     gas.build(context);
-
-    // Build IAS
+    
+    // Create sbt and pipeline to launch ray
     sbt.createOnDevice();
     params.handle = gas.handle();
     pipeline.create(context);

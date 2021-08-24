@@ -26,14 +26,15 @@ template <typename T, uint32_t N> class Vector;
 using Vector2f = Vector<float, 2>;
 using Vector3f = Vector<float, 3>;
 using Vector4f = Vector<float, 4>;
-
-template <typename T, uint32_t N> 
+using Vector2i = Vector<int, 2>;
+using Vector3i = Vector<int, 3>;
+using Vector4i = Vector<int, 4>;
 
 template <typename T, uint32_t N>
 class Vector 
 {
 public:
-
+    
 private:
     T[N] m_data;
 };

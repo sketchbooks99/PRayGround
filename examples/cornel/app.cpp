@@ -1,12 +1,9 @@
 #include "app.h"
 #include <prayground/core/interaction.h>
 
-#define DEV // under develppment
-
 // ----------------------------------------------------------------
 void App::setup()
 {
-#ifndef DEV
     // Initialization of device context.
     stream = 0;
     CUDA_CHECK(cudaFree(0));
@@ -60,10 +57,7 @@ void App::setup()
     raygen_record.data.camera.up = camera.up();
     raygen_record.data.camera.fov = camera.fov();
     raygen_record.data.camera.aspect = 1.0f;
-    //sbt.setRaygenRecord(raygen_record);
-    CUDABuffer<RaygenRecord> d_raygen_record;
-    d_raygen_record.copyToDevice(&raygen_record, sizeof(RaygenRecord));
-    sbt.raygenRecord = d_raygen_record.devicePtr();
+    sbt.setRaygenRecord(raygen_record);
 
     // SBT record for callable programs
     std::vector<EmptyRecord> callable_records(6, EmptyRecord{});
@@ -76,6 +70,9 @@ void App::setup()
     pipeline.bindCallablesRecord(&callable_records[0], 0);
     pipeline.bindCallablesRecord(&callable_records[1], 1);
     pipeline.bindCallablesRecord(&callable_records[2], 2);
+    sbt.addCallableRecord(callable_records[0]);
+    sbt.addCallableRecord(callable_records[1]);
+    sbt.addCallableRecord(callable_records[2]);
 
     // Prepare environment 
     env = make_shared<EnvironmentEmitter>("image/earth.jpg");
@@ -113,12 +110,9 @@ void App::setup()
     pipeline.bindCallablesRecord(&callable_records[3], 3);
     pipeline.bindCallablesRecord(&callable_records[4], 4);
     pipeline.bindCallablesRecord(&callable_records[5], 5);
-
-    CUDABuffer<EmptyRecord> d_callable_records;
-    d_callable_records.copyToDevice(callable_records);
-    sbt.callablesRecordBase = d_callable_records.devicePtr();
-    sbt.callablesRecordCount = static_cast<uint32_t>(callable_records.size());
-    sbt.callablesRecordStrideInBytes = static_cast<uint32_t>(sizeof(EmptyRecord));
+    sbt.addCallableRecord(callable_records[3]);
+    sbt.addCallableRecord(callable_records[4]);
+    sbt.addCallableRecord(callable_records[5]);
 
     // Preparing materials and program id
     ceiling_light = make_shared<AreaEmitter>(make_float3(1.0f), 15.0f);
@@ -144,12 +138,6 @@ void App::setup()
     cornel.emplace("left", make_shared<Plane>(make_float2(-10.0f, -10.0f), make_float2(10.0f, 10.0f)));
     cornel.emplace("floor", make_shared<Plane>(make_float2(-10.0f, -10.0f), make_float2(10.0f, 10.0f)));
     cornel.emplace("back", make_shared<Plane>(make_float2(-10.0f, -10.0f), make_float2(10.0f, 10.0f)));
-    cornel.at("ceiling_light")->attachSurface(ceiling_light);
-    cornel.at("ceiling")->attachSurface(materials.at("white_diffuse"));
-    cornel.at("right")->attachSurface(materials.at("white_diffuse"));
-    cornel.at("left")->attachSurface(materials.at("green_diffuse"));
-    cornel.at("floor")->attachSurface(materials.at("checker_diffuse"));
-    cornel.at("back")->attachSurface(materials.at("white_diffuse"));
 
     unordered_map<string, Matrix4f> plane_transforms;
     plane_transforms.emplace("ceiling_light", Matrix4f::translate(make_float3(0.0f, 9.9f, 0.0f)));
@@ -200,15 +188,13 @@ void App::setup()
                 break;
             }
         }
-        /*sbt.addHitgroupRecord(hitgroup_record);*/
-        hitgroup_records.push_back(hitgroup_record);
+        sbt.addHitgroupRecord(hitgroup_record);
         sbt_idx++;
     }
 
     // Stanford bunny mesh
     bunny = make_shared<TriangleMesh>("model/bunny.obj");
     bunny->setSbtIndex(sbt_idx);
-    bunny->attachSurface(materials.at("glass"));
     bunny->copyToDevice();
 
     pipeline.createHitgroupProgram(context, hitgroups_module, "__closesthit__mesh");
@@ -218,14 +204,7 @@ void App::setup()
     bunny_record.data.shape_data = bunny->devicePtr();
     bunny_record.data.surface_data = bunny->surfaceDevicePtr();
     bunny_record.data.surface_program_id = materials.at("glass")->programIdAt(0);
-    //sbt.addHitgroupRecord(bunny_record);
-    hitgroup_records.push_back(bunny_record);
-
-    CUDABuffer<HitgroupRecord> d_hitgroup_records;
-    d_hitgroup_records.copyToDevice(hitgroup_records);
-    sbt.hitgroupRecordBase = d_hitgroup_records.devicePtr();
-    sbt.hitgroupRecordCount = static_cast<uint32_t>(hitgroup_records.size());
-    sbt.hitgroupRecordStrideInBytes = static_cast<uint32_t>(sizeof(HitgroupRecord));
+    sbt.addHitgroupRecord(bunny_record);
 
     GeometryAccel bunny_gas{GeometryAccel::Type::Mesh};
     bunny_gas.addShape(bunny);
@@ -239,26 +218,17 @@ void App::setup()
     ias.addInstance(bunny_instance);
 
     // Build IAS
-    //sbt.createOnDevice();
+    sbt.createOnDevice();
     ias.build(context);
     params.handle = ias.handle();
     pipeline.create(context);
     CUDA_CHECK(cudaStreamCreate(&stream));
     d_params.allocate(sizeof(LaunchParams));
-    // CUDA_CHECK(cudaSetDevice(context.deviceId()));
-
-#endif
 }
 
 // ----------------------------------------------------------------
 void App::update()
 {
-#ifndef DEV
-    film.bitmapAt("result")->allocateDeviceData();
-    film.floatBitmapAt("accum")->allocateDeviceData();
-    params.result_buffer = reinterpret_cast<uchar4*>(film.bitmapAt("result")->devicePtr());
-    params.accum_buffer = reinterpret_cast<float4*>(film.floatBitmapAt("accum")->devicePtr());
-
     d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);
 
     optixLaunch(
@@ -277,16 +247,13 @@ void App::update()
     CUDA_SYNC_CHECK();
 
     film.bitmapAt("result")->copyFromDevice();
-#endif
 }
 
 // ----------------------------------------------------------------
 void App::draw()
 {
-#ifndef DEV
     Message(MSG_WARNING, "Draw called");
     film.bitmapAt("result")->draw(0, 0, film.width(), film.height());
-#endif
 }
 
 // ----------------------------------------------------------------

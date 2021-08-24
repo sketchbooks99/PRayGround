@@ -1,6 +1,7 @@
 #pragma once
 #include <prayground/prayground.h>
 #include "params.h"
+#include <map>
 
 using namespace std;
 
@@ -28,17 +29,13 @@ private:
     Pipeline pipeline;
     Context context;
     CUstream stream;
-    //CornelSBT sbt;
-    OptixShaderBindingTable sbt;
+    CornelSBT sbt;
     InstanceAccel ias;
 
     Film film;
     Camera camera;
 
     shared_ptr<EnvironmentEmitter> env;
-    shared_ptr<TriangleMesh> bunny;
-    unordered_map<string, shared_ptr<Plane>> cornel;
-    unordered_map<string, shared_ptr<Material>> materials;
+    map<shared_ptr<Shape>, shared_ptr<Material>> primitives;
     shared_ptr<AreaEmitter> ceiling_light;
-    unordered_map<string, shared_ptr<Texture>> textures;
 };

@@ -84,6 +84,6 @@ Not supported.
 - [Single GAS](https://github.com/sketchbooks99/PRayGround/tree/master/examples/single-gas)
   - ![](examples/single-gas/single-gas.gif)
 - [Cornel Box](https://github.com/sketchbooks99/PRayGround/tree/master/examples/cornel)
-  - ![](examples/cornel/cornel.jpg)
+  - <img src=examples/cornel/cornel.jpg width=320>
 
 

@@ -26,12 +26,6 @@ public:
     virtual void copyToDevice() = 0;
     virtual void buildInput( OptixBuildInput& bi ) = 0;
 
-    void attachSurface(const std::shared_ptr<Material>& material);
-    void attachSurface(const std::shared_ptr<AreaEmitter>& area_emitter);
-    std::variant<std::shared_ptr<Material>, std::shared_ptr<AreaEmitter>> surface() const;
-    SurfaceType surfaceType() const;
-    void* surfaceDevicePtr() const;
-
     void setSbtIndex(const uint32_t sbt_index);
     uint32_t sbtIndex() const;
 

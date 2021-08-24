@@ -17,8 +17,6 @@ set(sources
   core/material.h 
   core/onb.h 
   core/ray.h 
-  # core/scene.h 
-  # core/scene.cpp 
   core/shape.h 
   core/shape.cpp
   core/stream_helpers.h 
@@ -54,8 +52,6 @@ set(sources
   optix/helpers.h 
   optix/instance.h 
   optix/instance.cpp
-  # optix/shape_instance.h 
-  # optix/shape_instance.cpp
   optix/macros.h 
   optix/module.h 
   optix/module.cpp
@@ -64,7 +60,6 @@ set(sources
   optix/program.h 
   optix/program.cpp 
   optix/sbt.h 
-  optix/cuda/oprt.cu 
   optix/cuda/texture.cuh
 
   # Shapes ==========

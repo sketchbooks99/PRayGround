@@ -1,9 +1,12 @@
 #include "app.h"
 #include <prayground/core/interaction.h>
 
+#define DEV // under develppment
+
 // ----------------------------------------------------------------
 void App::setup()
 {
+#ifndef DEV
     // Initialization of device context.
     stream = 0;
     CUDA_CHECK(cudaFree(0));
@@ -243,11 +246,14 @@ void App::setup()
     CUDA_CHECK(cudaStreamCreate(&stream));
     d_params.allocate(sizeof(LaunchParams));
     // CUDA_CHECK(cudaSetDevice(context.deviceId()));
+
+#endif
 }
 
 // ----------------------------------------------------------------
 void App::update()
 {
+#ifndef DEV
     film.bitmapAt("result")->allocateDeviceData();
     film.floatBitmapAt("accum")->allocateDeviceData();
     params.result_buffer = reinterpret_cast<uchar4*>(film.bitmapAt("result")->devicePtr());
@@ -271,13 +277,16 @@ void App::update()
     CUDA_SYNC_CHECK();
 
     film.bitmapAt("result")->copyFromDevice();
+#endif
 }
 
 // ----------------------------------------------------------------
 void App::draw()
 {
+#ifndef DEV
     Message(MSG_WARNING, "Draw called");
     film.bitmapAt("result")->draw(0, 0, film.width(), film.height());
+#endif
 }
 
 // ----------------------------------------------------------------

@@ -86,19 +86,18 @@ void App::setup()
     checker_texture->copyToDevice();
 
     // Creating material and emitter programs
-    uint32_t glass_prg_id = pipeline.createCallablesProgram(context, surfaces_module, "", "__continuation_callable__diffuse");
+    uint32_t area_prg_id = pipeline.createCallablesProgram(context, surfaces_module, "__direct_callable__area_emitter", "");
     pipeline.bindCallablesRecord(&callable_records[2], 2);
     sbt.addCallablesRecord(callable_records[2]);
 
     // Preparing materials and program id
-    diffuse = make_shared<Diffuse>(checker_texture);
-    diffuse->addProgramId(glass_prg_id);
-    diffuse->copyToDevice();
+    area = make_shared<AreaEmitter>(checker_texture);
+    area->setProgramId(area_prg_id);
+    area->copyToDevice();
 
     // Prepare cornel box and construct its gas and instance
     bunny = make_shared<TriangleMesh>("uv_bunny.obj");
     bunny->setSbtIndex(0);
-    bunny->attachSurface(diffuse);
     bunny->copyToDevice();
 
     pipeline.createHitgroupProgram(context, hitgroups_module, "__closesthit__mesh");
@@ -106,9 +105,9 @@ void App::setup()
     HitgroupRecord bunny_record;
     pipeline.bindHitgroupRecord(&bunny_record, 0);
     bunny_record.data.shape_data = bunny->devicePtr();
-    bunny_record.data.surface_data = bunny->surfaceDevicePtr();
-    bunny_record.data.surface_program_id = diffuse->programIdAt(0);
-    bunny_record.data.surface_type = bunny->surfaceType();
+    bunny_record.data.surface_data = area->devicePtr();
+    bunny_record.data.surface_program_id = area->programId();
+    bunny_record.data.surface_type = SurfaceType::AreaEmitter;
     sbt.addHitgroupRecord(bunny_record);
 
     gas = GeometryAccel{GeometryAccel::Type::Mesh};
@@ -127,6 +126,10 @@ void App::setup()
 // ----------------------------------------------------------------
 void App::update()
 {
+    float time = pgGetElapsedTime<float>();
+    checker_texture->setColor1( {abs(sin(time)), 0.0f, 0.0f} );
+    checker_texture->copyToDevice();
+
     params.subframe_index++;
     d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);
 

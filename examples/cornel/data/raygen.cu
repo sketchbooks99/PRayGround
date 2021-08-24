@@ -9,7 +9,7 @@ static __forceinline__ __device__ void cameraFrame(const CameraData& camera, flo
     W = camera.lookat - camera.origin;
     float wlen = length(W);
     U = normalize(cross(W, camera.up));
-    V = normalize(cross(U, W));
+    V = normalize(cross(W, U));
 
     float vlen = wlen * tanf(0.5f * camera.fov * M_PIf / 180.0f);
     V *= vlen;
@@ -33,7 +33,7 @@ extern "C" __device__ void __raygen__pinhole()
 
     do
     {
-        const float2 subpixel_jitter = make_float2(rnd(seed) - 0.5f, rnd(seed) - 0.5f);
+        const float2 subpixel_jitter = make_float2(rnd(seed), rnd(seed));
 
         const float2 d = 2.0f * make_float2(
             (static_cast<float>(idx.x) + subpixel_jitter.x) / static_cast<float>(params.width),
@@ -82,7 +82,7 @@ extern "C" __device__ void __raygen__pinhole()
                 if (si.trace_terminate)
                     break;
             }
-            else if ( si.surface_type == SurfaceType::Material )
+            if ( si.surface_type == SurfaceType::Material )
             {
                 // Sampling surface
                 optixContinuationCall<void, SurfaceInteraction*, void*>(

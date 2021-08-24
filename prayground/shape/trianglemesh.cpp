@@ -165,8 +165,24 @@ void TriangleMesh::load(const fs::path& filename, bool is_smooth)
         loadPly(filepath.value(), m_vertices, m_normals, m_faces, m_texcoords);
     }
 
+    if (!m_normals.empty() && !is_smooth)
+    {
+        m_normals.clear();
+        m_normals.resize(m_vertices.size());
+        for (size_t i = 0; i < m_faces.size(); i++)
+        {
+            m_faces[i].normal_id = m_faces[i].vertex_id;
+            auto p0 = m_vertices[m_faces[i].vertex_id.x];
+            auto p1 = m_vertices[m_faces[i].vertex_id.y];
+            auto p2 = m_vertices[m_faces[i].vertex_id.z];
+            auto N = normalize(cross(p1 - p0, p2 - p0));
+            m_normals[m_faces[i].normal_id.x] = N;
+            m_normals[m_faces[i].normal_id.y] = N;
+            m_normals[m_faces[i].normal_id.z] = N;
+        }
+    }
     // Calculate normals if they are empty.
-    if (m_normals.empty())
+    else if (m_normals.empty())
     {
         m_normals.resize(m_vertices.size());
         auto counts = std::vector<int>(m_vertices.size(), 0);

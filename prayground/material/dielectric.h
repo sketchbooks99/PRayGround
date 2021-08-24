@@ -41,6 +41,21 @@ public:
         ));
     }
 
+    void setIor(const float ior)
+    {
+        m_ior = ior;
+    }
+
+    float ior() const
+    {
+        return m_ior;
+    }
+
+    std::shared_ptr<Texture> texture() const
+    {
+        return m_texture;
+    }
+
     void free() override
     {
         m_texture->free();

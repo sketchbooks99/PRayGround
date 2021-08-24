@@ -41,7 +41,7 @@ void App::setup()
 
     camera.setOrigin(make_float3(0.0f, 0.0f, 0.75f));
     camera.setLookat(make_float3(0.0f, 0.0f, 0.0f));
-    camera.setUp(make_float3(0.0f, -1.0f, 0.0f));
+    camera.setUp(make_float3(0.0f, 1.0f, 0.0f));
     camera.setFov(40.0f);
     camera.setFovAxis(Camera::FovAxis::Vertical);
 
@@ -69,9 +69,9 @@ void App::setup()
 
     // Prepare environment 
     env_texture = make_shared<FloatBitmapTexture>("env2.jpg");
+    env_texture->setProgramId(bitmap_prg_id);
     env_texture->copyToDevice();
     env = make_shared<EnvironmentEmitter>(env_texture);
-    env->texture()->setProgramId(bitmap_prg_id);
     env->copyToDevice();
 
     pipeline.createMissProgram(context, miss_module, "__miss__envmap");
@@ -92,7 +92,6 @@ void App::setup()
 
     // Preparing materials and program id
     area = make_shared<AreaEmitter>(checker_texture);
-    area->setProgramId(area_prg_id);
     area->copyToDevice();
 
     // Load mesh from .obj file
@@ -106,7 +105,7 @@ void App::setup()
     pipeline.bindHitgroupRecord(&bunny_record, 0);
     bunny_record.data.shape_data = bunny->devicePtr();
     bunny_record.data.surface_data = area->devicePtr();
-    bunny_record.data.surface_program_id = area->programId();
+    bunny_record.data.surface_program_id = area_prg_id;
     bunny_record.data.surface_type = SurfaceType::AreaEmitter;
     sbt.addHitgroupRecord(bunny_record);
     
@@ -131,7 +130,7 @@ void App::update()
     checker_texture->setColor1(make_float3(abs(sin(time))));
     checker_texture->copyToDevice();
 
-    params.subframe_index++;
+    //params.subframe_index++;
     d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);
 
     OPTIX_CHECK(optixLaunch(

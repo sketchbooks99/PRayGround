@@ -83,6 +83,7 @@ Not supported.
 
 - [Single GAS](https://github.com/sketchbooks99/PRayGround/tree/master/examples/single-gas)
   - ![](examples/single-gas/single-gas.gif)
-- [:exclamation: Cornel Box](https://github.com/sketchbooks99/PRayGround/tree/master/examples/cornel)
+- [Cornel Box](https://github.com/sketchbooks99/PRayGround/tree/master/examples/cornel)
+  - ![](examples/cornel/cornel.jpg)
 
 

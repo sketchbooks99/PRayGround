@@ -26,24 +26,8 @@ public:
     }
     
     void* devicePtr() const { return d_data; }
-
-    void addProgramId(const uint32_t idx)
-    {
-        m_prg_ids.push_back(idx);
-    }
-
-    int32_t programIdAt(const int32_t idx) const
-    {
-        if (idx >= m_prg_ids.size())
-        {
-            Message(MSG_ERROR, "prayground::Material::funcIdAt(): Index to get function id of material exceeds the number of functions");
-            return -1;
-        }
-        return static_cast<int32_t>(m_prg_ids[idx]);
-    }
 protected:
     void* d_data { 0 };
-    std::vector<uint32_t> m_prg_ids;
 };
 
 #endif

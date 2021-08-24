@@ -121,7 +121,7 @@ void AppRunner::loop() const
         m_app->draw();
         m_window->swap();
 
-
+        current_frame++;
     }
     close();
 }

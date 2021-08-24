@@ -5,9 +5,6 @@
 
 using namespace std;
 
-// The number of ray types of the application.
-//constexpr uint32_t NRay = 1;
-
 using RaygenRecord = Record<RaygenData>;
 using HitgroupRecord = Record<HitgroupData>;
 using MissRecord = Record<MissData>;
@@ -36,6 +33,8 @@ private:
     Camera camera;
 
     shared_ptr<EnvironmentEmitter> env;
-    map<shared_ptr<Shape>, shared_ptr<Material>> primitives;
-    shared_ptr<AreaEmitter> ceiling_light;
+    vector<pair<shared_ptr<Shape>, shared_ptr<Material>>> cornel_planes;
+    shared_ptr<AreaEmitter> area_emitter;
+    shared_ptr<Material> bunny_material;
+    shared_ptr<TriangleMesh> bunny;
 };

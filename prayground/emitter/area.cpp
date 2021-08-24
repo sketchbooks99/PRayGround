@@ -31,16 +31,6 @@ void AreaEmitter::copyToDevice()
     ));
 }
 
-void AreaEmitter::setProgramId(const int32_t prg_id)
-{
-    m_prg_id = prg_id;
-}
-
-int32_t AreaEmitter::programId() const 
-{
-    return m_prg_id;
-}
-
 std::shared_ptr<Texture> AreaEmitter::texture() const
 {
     return m_texture;

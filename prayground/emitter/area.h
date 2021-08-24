@@ -25,17 +25,12 @@ public:
     void copyToDevice() override;
     void free() override;
 
-    void setProgramId(const int32_t prg_id);
-    int32_t programId() const;
-
     EmitterType type() const override { return EmitterType::Area; }
     std::shared_ptr<Texture> texture() const;
 private:
     std::shared_ptr<Texture> m_texture;
     float m_intensity;
     bool m_twosided;
-    int32_t m_prg_id { -1 };
-    
 };
 
 #endif // __CUDACC__

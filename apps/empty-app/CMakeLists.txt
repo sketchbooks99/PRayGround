@@ -5,7 +5,7 @@ PRAYGROUND_add_executalbe(empty-app target_name
 )
 
 target_compile_definitions(
-    empty-app
+    ${target_name}
     PRIVATE
     PRAYGROUND_APP_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
     PRAYGROUND_ROOT_DIR="${PRAYGROUND_DIR}"

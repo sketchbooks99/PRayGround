@@ -4,7 +4,9 @@ Languages | English | [日本語](README_ja.md)
 
 # PRayGround
 
-This is a ray tracer based on OptiX 7. Basically, this allows you to render just by describing the scene (transformations, geometry, materials, etc.) without being aware of the OptiX API. This also provides a wrapper library for OptiX 7 and a simple registration system for user-defined geometries, materials and textures.
+PRayGround is a C++/CUDA library with OptiX 7 API that provides you with an easy and scalable environment to have fun GPU interactive ray tracing. This includes wrapper libraries of OptiX 7 API, easy management system of device side data pointer in per-instance (shape, material, textures, bitmap...) basis, intuitive setup and looping functions, and easy build system via CMake that enables you to launch tons of rays by just modifying `App.h/cpp, main.cpp` and adding your ray tracing code.
+
+This project still remain a huge room to improve its readability, performance, and scalability. I'd appreciate it if you advise me any things!
 
 ![output.png](result/016_env.jpg)
 
@@ -77,6 +79,37 @@ Building steps are as follows.
 
 ## Mac
 Not supported.
+
+# Create new application
+You can create your custom application by just adding new directory in `apps/` and modifying `App.h/.cpp, main.cpp and CMakeLists.txt`. 
+
+The procedure is as follows:
+1. Copy and paste `apps/empty-app` directory to `apps` and rename the directory. 
+2. Modifying the app-name in `CMakeLists.txt` inside the app directory. 
+```
+PRAYGROUND_add_executalbe(empty-app target_name # empty-app -> <your-app-name>
+    main.cpp 
+    app.cpp 
+    app.h
+)
+
+target_compile_definitions(
+    ${target_name}
+    PRIVATE
+    PRAYGROUND_APP_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+    PRAYGROUND_ROOT_DIR="${PRAYGROUND_DIR}"
+)
+
+target_link_libraries(${target_name} ${CUDA_LIBRARIES})
+```
+4. Adding line of `add_subdirectory(<your-app-name?)` in `PRayGround/CMakeLists.txt`.
+```
+# Executable apps
+add_subdirectory(apps/empty-app)
+add_subdirectory(apps/<your-app-name>)
+```
+5. Enjoy coding!
+6. Build your application using CMake.
 
 # :art: Examples
 :exclamation: ... doesn't work 

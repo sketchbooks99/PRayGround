@@ -4,7 +4,7 @@ Languages | English | [日本語](README_ja.md)
 
 # PRayGround
 
-PRayGround is a C++/CUDA library with OptiX 7 API that provides you with an easy and scalable environment to have fun GPU interactive ray tracing. This includes wrapper libraries of OptiX 7 API, easy management system of device side data pointer in per-instance (shape, material, textures, bitmap...) basis, intuitive setup and looping functions, and easy build system via CMake that enables you to launch tons of rays by just modifying `App.h/cpp, main.cpp` and adding your ray tracing code.
+PRayGround is a C++/CUDA library with OptiX 7 that provides you with an easy and scalable environment to have fun GPU interactive ray tracing. This includes wrapper libraries of OptiX 7 API, easy management system of device side data pointer in per-instance (shape, material, textures, bitmap...) basis, intuitive setup and looping functions, and easy build system via CMake that enables you to launch tons of rays by just modifying `App.h/cpp, main.cpp` and adding your ray tracing code.
 
 This project still remain a huge room to improve its readability, performance, and scalability. I'd appreciate it if you advise me any things!
 

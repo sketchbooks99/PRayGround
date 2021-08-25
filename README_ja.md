@@ -111,8 +111,6 @@ add_subdirectory(apps/<your-app-name>)
 4. レイトレーシングコードを記述し、CMakeを使ってビルドしてください。
 
 # :art: Examples
-:exclamation: ... 実装中です
-
 - [Single GAS](https://github.com/sketchbooks99/PRayGround/tree/master/examples/single-gas)
   - ![](examples/single-gas/single-gas.gif)
 - [Cornel Box](https://github.com/sketchbooks99/PRayGround/tree/master/examples/cornel)

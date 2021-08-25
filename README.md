@@ -80,7 +80,7 @@ Building steps are as follows.
 ## Mac
 Not supported.
 
-# Create new application
+# :bulb: Create new application
 You can create your custom application by just adding new directory in `apps/` and modifying `App.h/.cpp`, `main.cpp` and `CMakeLists.txt`. 
 
 The procedure is as follows:

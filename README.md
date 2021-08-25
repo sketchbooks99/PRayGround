@@ -81,7 +81,7 @@ Building steps are as follows.
 Not supported.
 
 # Create new application
-You can create your custom application by just adding new directory in `apps/` and modifying `App.h/.cpp, main.cpp and CMakeLists.txt`. 
+You can create your custom application by just adding new directory in `apps/` and modifying `App.h/.cpp`, `main.cpp` and `CMakeLists.txt`. 
 
 The procedure is as follows:
 1. Copy and paste `apps/empty-app` directory to `apps` and rename the directory. 

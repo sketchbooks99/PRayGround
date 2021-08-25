@@ -102,7 +102,7 @@ target_compile_definitions(
 
 target_link_libraries(${target_name} ${CUDA_LIBRARIES})
 ```
-3. Adding line of `add_subdirectory(<your-app-name>)` in `PRayGround/CMakeLists.txt`.
+3. Add line of `add_subdirectory(<your-app-name>)` in `PRayGround/CMakeLists.txt`.
 ```
 # Executable apps
 add_subdirectory(apps/empty-app)
@@ -112,8 +112,6 @@ add_subdirectory(apps/<your-app-name>)
 5. Build your application using CMake.
 
 # :art: Examples
-:exclamation: ... doesn't work 
-
 - [Single GAS](https://github.com/sketchbooks99/PRayGround/tree/master/examples/single-gas)
   - ![](examples/single-gas/single-gas.gif)
 - [Cornel Box](https://github.com/sketchbooks99/PRayGround/tree/master/examples/cornel)

@@ -102,14 +102,14 @@ target_compile_definitions(
 
 target_link_libraries(${target_name} ${CUDA_LIBRARIES})
 ```
-4. Adding line of `add_subdirectory(<your-app-name>)` in `PRayGround/CMakeLists.txt`.
+3. Adding line of `add_subdirectory(<your-app-name>)` in `PRayGround/CMakeLists.txt`.
 ```
 # Executable apps
 add_subdirectory(apps/empty-app)
 add_subdirectory(apps/<your-app-name>)
 ```
-5. Enjoy coding!
-6. Build your application using CMake.
+4. Enjoy coding!
+5. Build your application using CMake.
 
 # :art: Examples
 :exclamation: ... doesn't work 

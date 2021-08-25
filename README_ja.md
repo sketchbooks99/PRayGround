@@ -4,8 +4,9 @@ Languages | [English](README.md) | 日本語
 
 # PRayGround
 
-OptiX 7 をベースとしたレイトレーサーです。OptiXのAPIを意識することなく、基本的にはシーンの記述（座標変換やジオメトリ、マテリアル等）のみでレンダリングが可能です。
-さらに、OptiX 7 の煩雑な処理に対するラッパーライブラリと、ユーザー定義によるジオメトリやマテリアル、テクスチャの簡易な登録システムを提供します。
+PRayGroundは、OptiX 7を用いたC++/CUDAライブラリで、GPUによるインタラクティブなレイトレーシングを楽しむための、簡単でスケーラブルな環境を提供します。これには、OptiX 7 APIのラッパーライブラリ、シェイプやマテリアル等のインスタンスごとにデバイス側のポインタを簡単に管理できる仕組み、直感的なセットアップとループ関数、CMakeによるビルドシステムが含まれており、App.h/cpp、main.cppを修正して、レイトレーシングコードを追加するだけで、GPUレイトレーシングを起動できます。
+
+このプロジェクトには、読みやすさ、パフォーマンス、スケーラビリティを向上させるためにまだまだやることがたくさん残っています。何かアドバイスを頂ければ幸いです。
 
 ![output.png](result/016_env.jpg)
 
@@ -79,3 +80,40 @@ CMakeの実行では、[cmake-gui](https://cmake.org/download/)を使用して�
 ## Mac
 サポートしていません。
 
+# :bulb: Create new application
+`apps/` に新しいディレクトリを追加して、`App.h/.cpp`、`main.cpp`、`CMakeLists.txt`を修正するだけで、アプリケーションの作成が可能です。
+
+アプリケーション作成は次の手順に沿ってください
+1. `apps/empty-app `ディレクトリを `apps/` にコピー＆ペーストして、ディレクトリ名を変更します。
+2. 作成したディレクトリ内の`CMakeLists.txt`の `empty-app` を作成するアプリケーション名に変更します。
+```
+PRAYGROUND_add_executalbe(empty-app target_name # empty-app -> <your-app-name>
+    main.cpp 
+    app.cpp 
+    app.h
+)
+
+target_compile_definitions(
+    ${target_name}
+    PRIVATE
+    PRAYGROUND_APP_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+    PRAYGROUND_ROOT_DIR="${PRAYGROUND_DIR}"
+)
+
+target_link_libraries(${target_name} ${CUDA_LIBRARIES})
+```
+3. `PRayGround/CMakeLists.txt` に、`add_subdirectory(<your-app-name>)`の行を追加します。
+```
+# Executable apps
+add_subdirectory(apps/empty-app)
+add_subdirectory(apps/<your-app-name>)
+```
+4. レイトレーシングコードを記述し、CMakeを使ってビルドしてください。
+
+# :art: Examples
+:exclamation: ... 実装中です
+
+- [Single GAS](https://github.com/sketchbooks99/PRayGround/tree/master/examples/single-gas)
+  - ![](examples/single-gas/single-gas.gif)
+- [Cornel Box](https://github.com/sketchbooks99/PRayGround/tree/master/examples/cornel)
+  - <img src=examples/cornel/cornel.jpg width=320>

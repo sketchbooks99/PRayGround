@@ -271,8 +271,8 @@ void App::draw()
 {
     film.bitmapAt("result")->draw(0, 0, film.width(), film.height());
 
-    // if (pgGetFrame() == 512)
-    //     film.bitmapAt("result")->write(pathJoin(pgAppDir(), "cornel.jpg"));
+    if (pgGetFrame() == 2000)
+        film.bitmapAt("result")->write(pathJoin(pgAppDir(), "cornel.jpg"));
 }
 
 // ----------------------------------------------------------------

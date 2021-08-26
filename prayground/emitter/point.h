@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../core/emitter.h"
+#include <prayground/core/emitter.h>
 
 namespace prayground {
 

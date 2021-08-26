@@ -4,7 +4,6 @@
 #include <memory>
 #include <prayground/core/texture.h>
 #include <prayground/core/emitter.h>
-#include <prayground/texture/constant.h>
 #endif 
 
 namespace prayground {

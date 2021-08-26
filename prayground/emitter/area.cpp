@@ -1,5 +1,4 @@
 #include "area.h"
-#include <prayground/core/material.h>
 
 namespace prayground {
 

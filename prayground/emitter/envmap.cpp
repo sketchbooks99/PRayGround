@@ -1,7 +1,4 @@
 #include "envmap.h"
-#include <prayground/core/file_util.h>
-#include <prayground/core/material.h>
-#include <prayground/texture/bitmap.h>
 
 namespace prayground {
 
@@ -24,4 +21,4 @@ void EnvironmentEmitter::copyToDevice()
     ));
 }
 
-}
+} // ::prayground

@@ -1,18 +1,14 @@
 #pragma once
 
 #include <prayground/core/emitter.h>
-#include <prayground/texture/constant.h>
+#include <prayground/core/texture.h>
 
 #ifndef __CUDACC__
     #include <filesystem>
 #endif
 
 /**
- * @brief Environment emitter. In general, emittance is evaluated at a miss program.
- * 
- * @note 
- * - If you'd like to render with image based lighting, you must be use latitude-longitude format (sphere map).
- * - EnvironmentEmitter allows ordinary textures such as checker or constant.
+ * @brief Environment emitter. In general, emittance is evaluated by a miss program.
  */
 
 namespace prayground {
@@ -41,4 +37,4 @@ private:
 
 #endif
 
-}
+} // ::prayground

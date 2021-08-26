@@ -82,7 +82,7 @@ extern "C" __device__ void __raygen__pinhole()
                 if (si.trace_terminate)
                     break;
             }
-            if ( si.surface_type == SurfaceType::Material )
+            else if ( si.surface_type == SurfaceType::Material )
             {
                 // Sampling surface
                 optixContinuationCall<void, SurfaceInteraction*, void*>(
@@ -91,7 +91,7 @@ extern "C" __device__ void __raygen__pinhole()
                     si.surface_property.data
                 );
                 
-                result += si.emission * si.attenuation;
+                // result += si.emission * si.attenuation;
             }
             
             ro = si.p;
@@ -119,9 +119,4 @@ extern "C" __device__ void __raygen__pinhole()
     params.accum_buffer[image_index] = make_float4(accum_color, 1.0f);
     uchar3 color = make_color(accum_color);
     params.result_buffer[image_index] = make_uchar4(color.x, color.y, color.z, 255);
-
-    /*float3 c = make_float3((float)idx.x / (float)params.width, (float)idx.y / (float)params.height, 1.0f);
-    uchar3 color = make_color(c);
-    const unsigned int image_idx = idx.y * params.width + idx.x;
-    params.result_buffer[image_idx] = make_uchar4(color.x, color.y, color.z, 255);*/
 }

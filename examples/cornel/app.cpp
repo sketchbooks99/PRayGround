@@ -146,6 +146,7 @@ void App::setup()
     uint32_t sbt_idx = 0;
 
     ceiling_light->copyToDevice();
+    ceiling_light->setSbtIndex(sbt_idx);
     area_emitter->copyToDevice();
     GeometryAccel gas{ GeometryAccel::Type::Custom };
     gas.allowCompaction();
@@ -230,8 +231,8 @@ void App::setup()
     ias.addInstance(bunny_instance);
 
     // Build IAS
-    sbt.createOnDevice();
     ias.build(context);
+    sbt.createOnDevice();
     params.handle = ias.handle();
     pipeline.create(context);
     CUDA_CHECK(cudaStreamCreate(&stream));
@@ -267,9 +268,8 @@ void App::draw()
 {
     film.bitmapAt("result")->draw(0, 0, film.width(), film.height());
 
-    Message(MSG_NORMAL, pgGetFrame());
-    if (pgGetFrame() == 512)
-        film.bitmapAt("result")->write(pathJoin(pgAppDir(), "cornel.jpg"));
+    // if (pgGetFrame() == 512)
+    //     film.bitmapAt("result")->write(pathJoin(pgAppDir(), "cornel.jpg"));
 }
 
 // ----------------------------------------------------------------

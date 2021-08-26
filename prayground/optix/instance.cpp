@@ -6,6 +6,8 @@ namespace prayground {
 // ------------------------------------------------------------------
 Instance::Instance()
 {
+    for (int i = 0; i < 12; i++)
+        m_instance.transform[i] = i % 5 == 0 ? 1.0f : 0.0f;
     m_instance.flags = OPTIX_INSTANCE_FLAG_NONE;
 }
 
@@ -148,11 +150,6 @@ void Instance::rotateZ(const float radians)
 Transform Instance::transform() const 
 {
     return Transform(m_instance.transform);
-}
-
-Matrix4f Instance::transformMat() const 
-{
-    return Matrix4f(m_instance.transform);
 }
 
 // ------------------------------------------------------------------

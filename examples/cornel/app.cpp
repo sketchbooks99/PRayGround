@@ -42,7 +42,7 @@ void App::setup()
     params.accum_buffer = reinterpret_cast<float4*>(film.floatBitmapAt("accum")->devicePtr());
     params.result_buffer = reinterpret_cast<uchar4*>(film.bitmapAt("result")->devicePtr());
 
-    camera.setOrigin(make_float3(0.0f, 10.0f, 50.0f));
+    camera.setOrigin(make_float3(0.0f, 0.0f, 40.0f));
     camera.setLookat(make_float3(0.0f, 0.0f, 0.0f));
     camera.setUp(make_float3(0.0f, 1.0f, 0.0f));
     camera.setFov(40.0f);
@@ -141,6 +141,9 @@ void App::setup()
     wall_matrices.push_back(Matrix4f::translate({ 0.0f, -10.0f, 0.0f }));                                                              // floor
     wall_matrices.push_back(Matrix4f::translate({ 0.0f, 0.0f, -10.0f }) * Matrix4f::rotate(M_PIf / 2.0f, {1.0f, 0.0f, 0.0f})); // back
 
+    for (auto matrix : wall_matrices)
+        Message(MSG_WARNING, matrix);
+
     pipeline.createHitgroupProgram(context, hitgroups_module, "__closesthit__plane", "__intersection__plane");
 
     uint32_t sbt_idx = 0;
@@ -184,7 +187,6 @@ void App::setup()
         instance.setSBTOffset(sbt_idx);
         instance.setVisibilityMask(255);
         instance.setId(sbt_idx);
-        Message(MSG_WARNING, static_cast<OptixInstance>(instance));
         ias.addInstance(instance);
 
         HitgroupRecord hitgroup_record;

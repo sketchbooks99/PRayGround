@@ -150,6 +150,11 @@ Transform Instance::transform() const
     return Transform(m_instance.transform);
 }
 
+Matrix4f Instance::transformMat() const 
+{
+    return Matrix4f(m_instance.transform);
+}
+
 // ------------------------------------------------------------------
 bool Instance::isDataOnDevice() const 
 {

@@ -252,10 +252,10 @@ INLINE HOSTDEVICE Matrix<T, N>::Matrix(const T (&data)[N*N])
 }
 
 template <typename T, uint32_t N>
-INLINE HOSTDEVICE Matrix<T, N>::Matrix(const float (&data)[12])
+INLINE HOSTDEVICE Matrix<float, 4>::Matrix(const float (&data)[12])
 {
-    static_assert(std::is_same_v<T, float> && N == 4,
-        "This constructor is only allowed for Matrix4f");
+    // static_assert(std::is_same_v<T, float> && N == 4,
+    //     "This constructor is only allowed for Matrix4f");
 
     for (uint32_t i = 0; i < 12; i++)
         m_data[i] = data[i];

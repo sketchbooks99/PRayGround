@@ -46,6 +46,7 @@ public:
     void rotateY(const float radians);
     void rotateZ(const float radians);
     Transform transform() const;
+    Matrix4f transformMat() const;
 
     bool isDataOnDevice() const;
     CUdeviceptr devicePtr() const;

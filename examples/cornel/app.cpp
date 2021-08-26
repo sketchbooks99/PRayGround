@@ -42,7 +42,7 @@ void App::setup()
     params.accum_buffer = reinterpret_cast<float4*>(film.floatBitmapAt("accum")->devicePtr());
     params.result_buffer = reinterpret_cast<uchar4*>(film.bitmapAt("result")->devicePtr());
 
-    camera.setOrigin(make_float3(0.0f, 0.0f, 40.0f));
+    camera.setOrigin(make_float3(0.0f, 10.0f, 50.0f));
     camera.setLookat(make_float3(0.0f, 0.0f, 0.0f));
     camera.setUp(make_float3(0.0f, 1.0f, 0.0f));
     camera.setFov(40.0f);
@@ -184,6 +184,7 @@ void App::setup()
         instance.setSBTOffset(sbt_idx);
         instance.setVisibilityMask(255);
         instance.setId(sbt_idx);
+        Message(MSG_WARNING, static_cast<OptixInstance>(instance));
         ias.addInstance(instance);
 
         HitgroupRecord hitgroup_record;

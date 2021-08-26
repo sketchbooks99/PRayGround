@@ -90,7 +90,7 @@ extern "C" __device__ void __raygen__pinhole()
                     &si,
                     si.surface_property.data
                 );
-                
+
                 // result += si.emission * si.attenuation;
             }
             

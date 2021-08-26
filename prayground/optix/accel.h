@@ -26,7 +26,6 @@ public:
     void update(const Context& ctx);
     void free();
 
-    /**  */
     void enableHoldTempBuffer();
     void disableHoldTempBuffer();
 

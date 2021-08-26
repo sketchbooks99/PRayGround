@@ -119,7 +119,18 @@ void GeometryAccel::build(const Context& ctx)
 
 void GeometryAccel::update(const Context& ctx)
 {
-    TODO_MESSAGE();
+    if ((m_options.buildFlags & OPTIX_BUILD_FLAG_ALLOW_UPDATE) == 0)
+    {
+        Message(MSG_ERROR, "prayground::GeometryAccel::update(): Update of this geometry accel is not allowed. Please enable update by gas.allowUpdate()");
+        return;
+    }
+
+    m_options.operation = OPTIX_BUILD_OPERATION_UPDATE;
+
+    if (!d_temp_buffer)
+    {
+        
+    }
 }
 
 void GeometryAccel::free()

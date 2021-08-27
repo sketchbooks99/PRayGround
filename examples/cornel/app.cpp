@@ -141,9 +141,6 @@ void App::setup()
     wall_matrices.push_back(Matrix4f::translate({ 0.0f, -10.0f, 0.0f }));                                                              // floor
     wall_matrices.push_back(Matrix4f::translate({ 0.0f, 0.0f, -10.0f }) * Matrix4f::rotate(M_PIf / 2.0f, {1.0f, 0.0f, 0.0f})); // back
 
-    for (auto matrix : wall_matrices)
-        Message(MSG_WARNING, matrix);
-
     pipeline.createHitgroupProgram(context, hitgroups_module, "__closesthit__plane", "__intersection__plane");
 
     uint32_t sbt_idx = 0;

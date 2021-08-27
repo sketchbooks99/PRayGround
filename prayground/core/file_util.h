@@ -5,9 +5,7 @@
 
 namespace prayground {
 
-/**
- * @brief Join pathes recursively as like \c os.path.join() in python
- */
+// Join pathes recursively as like os.path.join() in python
 template <class ParentPath, class... SubPathes>
 inline std::filesystem::path pathJoin(
     const ParentPath& parent_path,
@@ -23,8 +21,8 @@ inline std::filesystem::path pathJoin(
     return path;
 }
 
-/// OptiX-Raytracer の ホームディレクトリと アプリケーションもしくはOptiX-Raytracer 以下の 
-/// data/ ディレクトリ以下を探索し、ファイルが見つかった場合は絶対パスを返し、見つからなかった場合は、無効値を返します。
+// OptiX-Raytracer の ホームディレクトリと アプリケーションもしくはOptiX-Raytracer 以下の 
+// data/ ディレクトリ以下を探索し、ファイルが見つかった場合は絶対パスを返し、見つからなかった場合は、無効値を返します。
 std::optional<std::filesystem::path> findDataPath( const std::filesystem::path& relative_path );
 
 std::filesystem::path pgRootDir();
@@ -33,19 +31,15 @@ std::filesystem::path pgRootDir();
 std::filesystem::path pgAppDir();
 #endif
 
-/**
- * @brief Get the extension of file.
- */
+// Get the extension of file. 
 std::string getExtension( const std::filesystem::path& filepath );
 
-/**
- * @brief Create a single directory.
- */
+std::filesystem::path getDir(const std::filesystem::path& filepath);
+
+// Create a single directory.
 void createDir( const std::string& abs_path );
 
-/**
- * @brief Create directories recursively.
- */
+// Create directories recursively.
 void createDirs( const std::string& abs_path );
 
 std::string getTextFromFile(const std::filesystem::path& filepath);

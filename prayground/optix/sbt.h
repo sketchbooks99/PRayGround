@@ -11,7 +11,7 @@
 namespace prayground {
 
 /**
- * デフォルトのレイトレ実装 <prayground/optix/cuda/oprt.cu> などが動くようにビルトインパラメータを宣言しておく
+ * デフォルトのレイトレ実装 <prayground/optix/cuda/prayground.cu> などが動くようにビルトインパラメータを宣言しておく
  */
 namespace builtin {
 
@@ -243,4 +243,4 @@ private:
 
 #endif // __CUDACC__
 
-}
+} // ::prayground

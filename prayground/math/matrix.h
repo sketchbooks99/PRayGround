@@ -351,7 +351,8 @@ INLINE HOSTDEVICE bool Matrix<T, N>::isIdentity() const
 template <typename T, uint32_t N>
 INLINE HOSTDEVICE Matrix<T, N> Matrix<T, N>::inverse()
 {
-    T inv_data[N*N];
+    Matrix<T, N> i_mat = Matrix<T, N>::identity();
+    T* inv_data = i_mat.data();
     Matrix<T, N> current_mat(*this);
     float tmp;
     for (uint32_t i = 0; i < N; i++)
@@ -425,9 +426,6 @@ INLINE HOSTDEVICE Matrix<float, 4> Matrix<float, 4>::translate(const float3 &t)
     data[0 * 4 + 3] = t.x;
     data[1 * 4 + 3] = t.y;
     data[2 * 4 + 3] = t.z;
-    for (int i=0; i<16; i++)
-        std::cout << data[i] << ' ';
-    std::cout << std::endl;
     return Matrix<float, 4>(data);
 }
 

@@ -245,7 +245,7 @@ void Pipeline::setLaunchVariableName(const char* params_name)
     m_compile_options.pipelineLaunchParamsVariableName = params_name;
 }
 
-void Pipeline::setExceptionFlags(const OptixExceptionFlags& flags)
+void Pipeline::setExceptionFlags(OptixExceptionFlags flags)
 {
     m_compile_options.exceptionFlags = flags;
 }
@@ -311,11 +311,11 @@ void Pipeline::_initCompileOptions()
     m_compile_options.numPayloadValues = 2;
     m_compile_options.numAttributeValues = 3;
     m_compile_options.pipelineLaunchParamsVariableName = "";
-//#ifdef DEBUG
+#ifdef DEBUG
     m_compile_options.exceptionFlags = OPTIX_EXCEPTION_FLAG_DEBUG | OPTIX_EXCEPTION_FLAG_TRACE_DEPTH | OPTIX_EXCEPTION_FLAG_STACK_OVERFLOW;
-//#else   
-    //m_compile_options.exceptionFlags = OPTIX_EXCEPTION_FLAG_NONE;
-//#endif
+#else   
+    m_compile_options.exceptionFlags = OPTIX_EXCEPTION_FLAG_NONE;
+#endif
 }
 
 void Pipeline::_initLinkOptions()

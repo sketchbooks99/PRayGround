@@ -1,13 +1,15 @@
+/**
+ * @brief Perfect smooth conductor material
+ */
+
 #pragma once
 
 #include <prayground/core/material.h>
-#include <prayground/texture/constant.h>
 
 namespace prayground {
 
 struct ConductorData {
     void* tex_data;
-    float fuzz;
     bool twosided;
     uint32_t tex_program_id;
 };
@@ -15,8 +17,8 @@ struct ConductorData {
 #ifndef __CUDACC__
 class Conductor final : public Material {
 public:
-    Conductor(const std::shared_ptr<Texture>& texture, float f, bool twosided=true)
-    : m_texture(texture), m_fuzz(f), m_twosided(twosided) {}
+    Conductor(const std::shared_ptr<Texture>& texture, bool twosided=true)
+    : m_texture(texture), m_twosided(twosided) {}
     
     ~Conductor() {}
 
@@ -26,7 +28,6 @@ public:
 
         ConductorData data = {
             .tex_data = m_texture->devicePtr(), 
-            .fuzz = m_fuzz,
             .twosided = m_twosided,
             .tex_program_id = m_texture->programId()
         };
@@ -47,7 +48,6 @@ public:
 
 private:
     std::shared_ptr<Texture> m_texture;
-    float m_fuzz;
     bool m_twosided;
 };
 

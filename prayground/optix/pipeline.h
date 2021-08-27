@@ -83,7 +83,7 @@ public:
     template <class SBTRecord>
     void bindExceptionRecord(SBTRecord* record)
     {
-        Assert((OptixProgramGroup)m_exception_program, "Exceptino program has not been create yet.");
+        Assert((OptixProgramGroup)m_exception_program, "Exception program has not been create yet.");
         m_exception_program.bindRecord(record);
     }
 
@@ -98,7 +98,7 @@ public:
     void setNumPayloads(const int num_payloads);
     void setNumAttributes(const int num_attributes);
     void setLaunchVariableName(const char* params_name);
-    void setExceptionFlags(const OptixExceptionFlags& flags);
+    void setExceptionFlags(OptixExceptionFlags flags);
     OptixPipelineCompileOptions compileOptions() const;
 
     /** Link options */

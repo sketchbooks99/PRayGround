@@ -84,6 +84,9 @@ public:
     void update(const Context& ctx);
     void free();
 
+    // Is this needed? ref -> optixDynamicGeometry.cpp in SDK samples
+    //void relocate(); 
+
     /** Switch flag whether to enable store  */
     void enableHoldTempBuffer();
     void disableHoldTempBuffer();

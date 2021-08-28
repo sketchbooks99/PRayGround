@@ -281,8 +281,6 @@ void App::mouseDragged(float x, float y, int button)
     float cam_length = length(camera.origin());
     float3 cam_dir = normalize(camera.origin() - camera.lookat());
 
-    // float theta = atan( (1.0 - sqrtf(cam_dir.y*cam_dir.y)) / cam_dir.y);
-
     float theta = acosf(cam_dir.y);
     float phi = atan2(cam_dir.z, cam_dir.x);
 
@@ -323,6 +321,7 @@ void App::mouseDragged(float x, float y, int button)
     d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);
 }
 
+// ----------------------------------------------------------------
 void App::mouseScrolled(float xoffset, float yoffset)
 {
     float zoom = yoffset < 0 ? 1.1f : 1.0f / 1.1f;

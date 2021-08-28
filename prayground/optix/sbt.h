@@ -112,6 +112,10 @@ public:
     {
         m_raygen_record = rg_record;
     }
+    CUdeviceptr raygenRecord() const 
+    {
+        return m_sbt.raygenRecord;
+    }
 
     template <class... MissRecordArgs>
     void setMissRecord(const MissRecordArgs&... args)

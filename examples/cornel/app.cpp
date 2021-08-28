@@ -268,12 +268,90 @@ void App::draw()
 {
     film.bitmapAt("result")->draw(0, 0, film.width(), film.height());
 
-    if (pgGetFrame() == 2000)
-        film.bitmapAt("result")->write(pathJoin(pgAppDir(), "cornel.jpg"));
+    // If you'd like to write out rendered result, please comment out following two lines.
+    // if (pgGetFrame() == 2000)
+    //     film.bitmapAt("result")->write(pathJoin(pgAppDir(), "cornel.jpg"));
 }
 
 // ----------------------------------------------------------------
 void App::mouseDragged(float x, float y, int button)
 {
-    
+    float deltaX = x - pgGetPreviousMousePosition().x;
+    float deltaY = y - pgGetPreviousMousePosition().y;
+    float cam_length = length(camera.origin());
+    float3 cam_dir = normalize(camera.origin() - camera.lookat());
+
+    // float theta = atan( (1.0 - sqrtf(cam_dir.y*cam_dir.y)) / cam_dir.y);
+
+    float theta = acosf(cam_dir.y);
+    float phi = atan2(cam_dir.z, cam_dir.x);
+
+    theta = min(constants::pi - 0.01f, max(0.01f, theta - radians(deltaY * 0.25f)));
+    phi += radians(deltaX * 0.25f);
+
+    float cam_x = cam_length * sinf(theta) * cosf(phi);
+    float cam_y = cam_length * cosf(theta);
+    float cam_z = cam_length * sinf(theta) * sinf(phi);
+
+    camera.setOrigin({ cam_x, cam_y, cam_z });
+
+    RaygenRecord* rg_record = reinterpret_cast<RaygenRecord*>(sbt.raygenRecord());
+    RaygenData rg_data;
+    rg_data.camera =
+    {
+        .origin = camera.origin(),
+        .lookat = camera.lookat(),
+        .up = camera.up(),
+        .fov = camera.fov(),
+        .aspect = 1.0f
+    };
+
+    CUDA_CHECK(cudaMemcpy(
+        reinterpret_cast<void*>(&rg_record->data),
+        &rg_data, sizeof(RaygenData),
+        cudaMemcpyHostToDevice
+    ));
+
+    CUDA_SYNC_CHECK();
+
+    film.bitmapAt("result")->allocateDevicePtr();
+    film.floatBitmapAt("accum")->allocateDevicePtr();
+    params.result_buffer = reinterpret_cast<uchar4*>(film.bitmapAt("result")->devicePtr());
+    params.accum_buffer = reinterpret_cast<float4*>(film.floatBitmapAt("accum")->devicePtr());
+    params.subframe_index = 0;
+
+    d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);
+}
+
+void App::mouseScrolled(float xoffset, float yoffset)
+{
+    float zoom = yoffset < 0 ? 1.1f : 1.0f / 1.1f;
+    camera.setOrigin(camera.lookat() + (camera.origin() - camera.lookat()) * zoom);
+
+    RaygenRecord* rg_record = reinterpret_cast<RaygenRecord*>(sbt.raygenRecord());
+    RaygenData rg_data;
+    rg_data.camera =
+    {
+        .origin = camera.origin(),
+        .lookat = camera.lookat(),
+        .up = camera.up(),
+        .fov = camera.fov(),
+        .aspect = 1.0f
+    };
+
+    CUDA_CHECK(cudaMemcpy(
+        reinterpret_cast<void*>(&rg_record->data),
+        &rg_data, sizeof(RaygenData),
+        cudaMemcpyHostToDevice
+    ));
+
+    CUDA_SYNC_CHECK();
+
+    film.bitmapAt("result")->allocateDevicePtr();
+    film.floatBitmapAt("accum")->allocateDevicePtr();
+    params.result_buffer = reinterpret_cast<uchar4*>(film.bitmapAt("result")->devicePtr());
+    params.accum_buffer = reinterpret_cast<float4*>(film.floatBitmapAt("accum")->devicePtr());
+    params.subframe_index = 0;
+
+    d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);
 }

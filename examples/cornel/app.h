@@ -20,6 +20,7 @@ public:
     void draw();
 
     void mouseDragged(float x, float y, int button);
+    void mouseScrolled(float xoffset, float yoffset);
 private:
     LaunchParams params;
     CUDABuffer<LaunchParams> d_params;

@@ -17,34 +17,14 @@ struct ConductorData {
 #ifndef __CUDACC__
 class Conductor final : public Material {
 public:
-    Conductor(const std::shared_ptr<Texture>& texture, bool twosided=true)
-    : m_texture(texture), m_twosided(twosided) {}
-    
-    ~Conductor() {}
+    Conductor(const std::shared_ptr<Texture>& texture, bool twosided=true);
+    ~Conductor();
 
-    void copyToDevice() override {
-        if (!m_texture->devicePtr())
-            m_texture->copyToDevice();
+    void copyToDevice() override;
+    void free() override;
 
-        ConductorData data = {
-            .tex_data = m_texture->devicePtr(), 
-            .twosided = m_twosided,
-            .tex_program_id = m_texture->programId()
-        };
-
-        if (!d_data)
-            CUDA_CHECK(cudaMalloc(&d_data, sizeof(ConductorData)));
-        CUDA_CHECK(cudaMemcpy(
-            d_data,
-            &data, sizeof(ConductorData), 
-            cudaMemcpyHostToDevice
-        ));
-    }
-
-    void free() override
-    {
-        m_texture->free();
-    }
+    void setTexture(const std::shared_ptr<Texture>& texture);
+    std::shared_ptr<Texture> texture() const;
 
 private:
     std::shared_ptr<Texture> m_texture;

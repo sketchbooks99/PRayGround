@@ -20,21 +20,21 @@ template <> struct Vector<float, 2> { using Type = float2; using TransformType =
 template <> struct Vector<float, 3> { using Type = float3; using TransformType = float3; };
 template <> struct Vector<float, 4> { using Type = float4; using TransformType = float3; };
 
-template <typename T, uint32_t N> bool          operator==(const Matrix<T, N>& m1, const Matrix<T, N>& m2);
-template <typename T, uint32_t N> bool          operator!=(const Matrix<T, N>& m1, const Matrix<T, N>& m2);
-template <typename T, uint32_t N> Matrix<T, N>  operator+(const Matrix<T, N>& m1, const Matrix<T, N>& m2);
-template <typename T, uint32_t N> Matrix<T, N>& operator+=(Matrix<T, N>& m1, const Matrix<T, N>& m2);
-template <typename T, uint32_t N> Matrix<T, N>  operator-(const Matrix<T, N>& m1, const Matrix<T, N>& m2);
-template <typename T, uint32_t N> Matrix<T, N>& operator-=(Matrix<T, N>& m1, const Matrix<T, N>& m2);
-template <typename T, uint32_t N> Matrix<T, N>  operator*(const Matrix<T, N>& m1, const Matrix<T, N>& m2);
-template <typename T, uint32_t N> Matrix<T, N>  operator*(const Matrix<T, N>& m, const float t);
-template <typename T, uint32_t N> Matrix<T, N>& operator*=(Matrix<T, N>& m1, const Matrix<T, N>& m2);
-template <typename T, uint32_t N> Matrix<T, N>& operator*=(Matrix<T, N>& m, const float t);
-template <typename T, uint32_t N> Matrix<T, N>  operator/(const Matrix<T, N>& m1, const float t);
-template <typename T, uint32_t N> typename Matrix<T, N>::floatN operator*(const Matrix<T, N>& m, typename Matrix<T, N>::floatN& v);
+template <typename T, uint32_t N> INLINE HOSTDEVICE bool          operator==(const Matrix<T, N>& m1, const Matrix<T, N>& m2);
+template <typename T, uint32_t N> INLINE HOSTDEVICE bool          operator!=(const Matrix<T, N>& m1, const Matrix<T, N>& m2);
+template <typename T, uint32_t N> INLINE HOSTDEVICE Matrix<T, N>  operator+(const Matrix<T, N>& m1, const Matrix<T, N>& m2);
+template <typename T, uint32_t N> INLINE HOSTDEVICE Matrix<T, N>& operator+=(Matrix<T, N>& m1, const Matrix<T, N>& m2);
+template <typename T, uint32_t N> INLINE HOSTDEVICE Matrix<T, N>  operator-(const Matrix<T, N>& m1, const Matrix<T, N>& m2);
+template <typename T, uint32_t N> INLINE HOSTDEVICE Matrix<T, N>& operator-=(Matrix<T, N>& m1, const Matrix<T, N>& m2);
+template <typename T, uint32_t N> INLINE HOSTDEVICE Matrix<T, N>  operator*(const Matrix<T, N>& m1, const Matrix<T, N>& m2);
+template <typename T, uint32_t N> INLINE HOSTDEVICE Matrix<T, N>  operator*(const Matrix<T, N>& m, const float t);
+template <typename T, uint32_t N> INLINE HOSTDEVICE Matrix<T, N>& operator*=(Matrix<T, N>& m1, const Matrix<T, N>& m2);
+template <typename T, uint32_t N> INLINE HOSTDEVICE Matrix<T, N>& operator*=(Matrix<T, N>& m, const float t);
+template <typename T, uint32_t N> INLINE HOSTDEVICE Matrix<T, N>  operator/(const Matrix<T, N>& m1, const float t);
+template <typename T, uint32_t N> INLINE HOSTDEVICE typename Matrix<T, N>::floatN operator*(const Matrix<T, N>& m, typename Matrix<T, N>::floatN& v);
 
-template <typename T> float4 operator*(const Matrix<T, 3>, const float4& v);
-template <typename T> float3 operator*(const Matrix<T, 4>, const float3& v);
+template <typename T> INLINE HOSTDEVICE float4 operator*(const Matrix<T, 3>, const float4& v);
+template <typename T> INLINE HOSTDEVICE float3 operator*(const Matrix<T, 4>, const float3& v);
  
 // Class definition
 template <typename T, uint32_t N>
@@ -100,7 +100,7 @@ inline std::ostream& operator<<(std::ostream& out, Matrix<T, N> m)
 // Operator overload
 // ----------------------------------------------------------------------------
 template <typename T, uint32_t N> 
-bool operator==(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
+INLINE HOSTDEVICE bool operator==(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
 {
     bool is_equal = true;
     for (uint32_t i = 0; i < N*N; i++)
@@ -109,14 +109,14 @@ bool operator==(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
 }
 
 template <typename T, uint32_t N>
-bool operator!=(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
+INLINE HOSTDEVICE bool operator!=(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
 {
     return !(m1 == m2);
 }
 
 // ----------------------------------------------------------------------------
 template <typename T, uint32_t N>
-Matrix<T, N> operator+(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
+INLINE HOSTDEVICE Matrix<T, N> operator+(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
 {
     Matrix<T, N> result(m1);
     result += m2;
@@ -124,14 +124,14 @@ Matrix<T, N> operator+(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
 }
 
 template <typename T, uint32_t N>
-Matrix<T, N>& operator+=(Matrix<T, N>& m1, const Matrix<T, N>& m2)
+INLINE HOSTDEVICE Matrix<T, N>& operator+=(Matrix<T, N>& m1, const Matrix<T, N>& m2)
 {
     for (uint32_t i = 0; i < N*N; i++)
         m1[i] += m2[i];
     return m1;
 }
 
-template <typename T, uint32_t N>
+INLINE HOSTDEVICE template <typename T, uint32_t N>
 Matrix<T, N> operator-(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
 {
     Matrix<T, N> result(m1);
@@ -140,7 +140,7 @@ Matrix<T, N> operator-(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
 }
 
 template <typename T, uint32_t N>
-Matrix<T, N>& operator-=(Matrix<T, N>& m1, const Matrix<T, N>& m2)
+INLINE HOSTDEVICE Matrix<T, N>& operator-=(Matrix<T, N>& m1, const Matrix<T, N>& m2)
 {
     for (uint32_t i = 0; i < N*N; i++)
         m1[i] -= m2[i];
@@ -148,7 +148,7 @@ Matrix<T, N>& operator-=(Matrix<T, N>& m1, const Matrix<T, N>& m2)
 }
 
 template <typename T, uint32_t N>
-Matrix<T, N> operator*(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
+INLINE HOSTDEVICE Matrix<T, N> operator*(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
 {
     T* data = new T[N * N];
     for (uint32_t row = 0; row < N; row++)
@@ -169,7 +169,7 @@ Matrix<T, N> operator*(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
 }
 
 template <typename T, uint32_t N>
-Matrix<T, N> operator*(const Matrix<T, N>& m, const float t)
+INLINE HOSTDEVICE Matrix<T, N> operator*(const Matrix<T, N>& m, const float t)
 {
     Matrix<T, N> result;
     for (uint32_t i = 0; i < N*N; i++)
@@ -178,7 +178,7 @@ Matrix<T, N> operator*(const Matrix<T, N>& m, const float t)
 }
 
 template <typename T, uint32_t N>
-Matrix<T, N>& operator*=(Matrix<T, N>& m1, const Matrix<T, N>& m2)
+INLINE HOSTDEVICE Matrix<T, N>& operator*=(Matrix<T, N>& m1, const Matrix<T, N>& m2)
 {
     for (uint32_t i = 0; i < N*N; i++)
         m1[i] *= m2[i];
@@ -186,14 +186,14 @@ Matrix<T, N>& operator*=(Matrix<T, N>& m1, const Matrix<T, N>& m2)
 }
 
 template <typename T, uint32_t N>
-Matrix<T, N>& operator*=(Matrix<T, N>& m1, const float t)
+INLINE HOSTDEVICE Matrix<T, N>& operator*=(Matrix<T, N>& m1, const float t)
 {
     for (uint32_t i = 0; i < N*N; i++)
         m1[i] *= t;
 }
 
 template <typename T, uint32_t N>
-Matrix<T, N> operator/(const Matrix<T, N>& m1, const float t)
+INLINE HOSTDEVICE Matrix<T, N> operator/(const Matrix<T, N>& m1, const float t)
 {
     Matrix<T, N> result;
     for (uint32_t i = 0; i < N*N; i++)
@@ -202,7 +202,7 @@ Matrix<T, N> operator/(const Matrix<T, N>& m1, const float t)
 }
 
 template <typename T, uint32_t N>
-typename Vector<T, N>::Type operator*(const Matrix<T, N>& m, const typename Matrix<T, N>::floatN& v)
+INLINE HOSTDEVICE typename Vector<T, N>::Type operator*(const Matrix<T, N>& m, const typename Matrix<T, N>::floatN& v)
 {
     using vec_t = typename Vector<T, N>::Type;
     vec_t result;
@@ -222,7 +222,7 @@ typename Vector<T, N>::Type operator*(const Matrix<T, N>& m, const typename Matr
 }
 
 template <typename T>
-float4 operator*(const Matrix<T, 3>& m, const float4& v)
+INLINE HOSTDEVICE float4 operator*(const Matrix<T, 3>& m, const float4& v)
 {
     float3 tmp = make_float3(v.x, v.y, v.z);
     tmp = m * tmp;
@@ -230,7 +230,7 @@ float4 operator*(const Matrix<T, 3>& m, const float4& v)
 }
 
 template <typename T>
-float3 operator*(const Matrix<T, 4>& m, const float3& v)
+INLINE HOSTDEVICE float3 operator*(const Matrix<T, 4>& m, const float3& v)
 {
     float4 tmp = make_float4(v.x, v.y, v.z, 1.0f);
     tmp = m * tmp;

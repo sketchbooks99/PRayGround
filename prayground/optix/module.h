@@ -1,7 +1,6 @@
 #pragma once 
 
 #include <optix.h>
-#include <sutil/sutil.h>
 #include <filesystem>
 #include "context.h"
 

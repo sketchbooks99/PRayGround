@@ -32,7 +32,6 @@
 #include <prayground/core/file_util.h>
 #include <prayground/core/util.h>
 #include <prayground/optix/macros.h>
-#include <sutil/sutil.h>
 #include <map>
 
 namespace prayground {

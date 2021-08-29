@@ -267,7 +267,6 @@ set(PRAYGROUND_EXTERNAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../prayground/ext")
 # NVRTC include paths relative to the sample path
 set(PRAYGROUND_RELATIVE_INCLUDE_DIRS "\\
   \"cuda\", \\
-  \"sutil\", \\
   \"prayground\", \\
   \"${CMAKE_CURRENT_SOURCE_DIR}\", ")
 
@@ -351,7 +350,6 @@ function(PRAYGROUND_add_executalbe target_name_base target_name_var)
   target_link_libraries( ${target_name}
     ${GLFW_LIB_NAME}
     imgui
-    sutil_7_sdk
     )
 
   if (CUDA_NVRTC_ENABLED)
@@ -383,9 +381,6 @@ endfunction()
 
 # Load PRAYGROUND library sources.
 add_subdirectory(prayground)
-
-# sutil library.  The rules to build it are found in the subdirectory.
-add_subdirectory(sutil)
 
 # External libraries
 add_subdirectory(prayground/ext)

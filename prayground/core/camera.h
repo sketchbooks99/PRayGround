@@ -4,24 +4,23 @@
 
 namespace prayground {
 
-// struct CameraData
-// {
-//     float3 origin;
-//     float3 lookat;
-//     float3 up;
-//     float aperture;
-//     float nearclip;
-//     float farclip;
-// };s
+namespace buildin {
+
+struct CameraData
+{
+    float3 origin;
+    float3 lookat;
+    float3 up;
+    float aperture;
+    float nearclip;
+    float farclip;
+};
+
+}
 
 /**
  * @brief 
- * Standard pinhole camera.
- * 
- * @note
- * Still isn't used our ray tracer. 
- * We plan to replace sutil::Camera to our Camera class 
- * for allowing to switch any type of cameras such as pinhole and lens. 
+ * Standard pinhole camera
  */
 class Camera {
 public:

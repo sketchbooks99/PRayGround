@@ -1,7 +1,6 @@
 #pragma once
 
-/// @todo <sutil/vec_math.h> -> <prayground/math/vec.h>
-#include <sutil/vec_math.h>
+#include <prayground/math/vec_math.h>
 
 #ifndef __CUDACC__
     #include <iostream>
@@ -131,8 +130,8 @@ INLINE HOSTDEVICE Matrix<T, N>& operator+=(Matrix<T, N>& m1, const Matrix<T, N>&
     return m1;
 }
 
-INLINE HOSTDEVICE template <typename T, uint32_t N>
-Matrix<T, N> operator-(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
+template <typename T, uint32_t N>
+INLINE HOSTDEVICE Matrix<T, N> operator-(const Matrix<T, N>& m1, const Matrix<T, N>& m2)
 {
     Matrix<T, N> result(m1);
     result -= m2;
@@ -478,4 +477,4 @@ INLINE HOSTDEVICE Matrix<T, N> Matrix<T, N>::identity()
     return Matrix<T, N>(data);
 }
 
-}
+} // ::prayground

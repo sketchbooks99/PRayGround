@@ -1,7 +1,7 @@
 #pragma once 
 
-#include <sutil/vec_math.h>
 #include <optix.h>
+#include <prayground/math/vec_math.h>
 #include <prayground/optix/sbt.h>
 
 namespace prayground {

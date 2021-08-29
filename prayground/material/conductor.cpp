@@ -3,7 +3,7 @@
 namespace prayground {
 
 // ------------------------------------------------------------------
-Conductor::Conductor(const std::shared_ptr<Texture>& texture, bool twosided=true)
+Conductor::Conductor(const std::shared_ptr<Texture>& texture, bool twosided)
 : m_texture(texture), m_twosided(twosided)
 {
 

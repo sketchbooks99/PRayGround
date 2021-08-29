@@ -2,7 +2,7 @@
 
 #include <cuda_runtime.h>
 #include <optix.h>
-#include <sutil/vec_math.h>
+#include <prayground/math/vec_math.h>
 #include <prayground/core/util.h>
 
 #ifndef __CUDACC__

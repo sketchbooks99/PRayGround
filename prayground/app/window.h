@@ -2,7 +2,7 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#include <sutil/vec_math.h>
+#include <prayground/math/vec_math.h>
 #include <prayground/core/util.h>
 #include <prayground/app/event.h>
 

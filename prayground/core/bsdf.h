@@ -16,7 +16,7 @@
 #pragma once
 
 #include <cuda/random.h>
-#include <sutil/vec_math.h>
+#include <prayground/math/vec_math.h>
 #include <prayground/core/util.h>
 #include <prayground/optix/macros.h>
 

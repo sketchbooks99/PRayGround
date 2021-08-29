@@ -1,6 +1,6 @@
 #pragma once
 
-#include <sutil/vec_math.h>
+#include <prayground/math/vec_math.h>
 
 namespace prayground {
 

@@ -101,4 +101,4 @@
         }                                                                      \
     } while( 0 )
 
-#endif
+#endif // __CUDACC__

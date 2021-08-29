@@ -1,6 +1,6 @@
 #pragma once
 
-#include <sutil/vec_math.h>
+#include <prayground/math/vec_math.h>
 #include <prayground/core/interaction.h>
 #include <prayground/core/bsdf.h>
 #include <prayground/core/onb.h>

@@ -39,8 +39,10 @@
 
 #include <sampleConfig.h>
 
-#include <sutil/sutil.h>
-#include <sutil/vec_math.h>
+// #include <sutil/sutil.h>
+// #include <sutil/vec_math.h>
+
+#include <prayground/math/vec_math.h>
 
 // optix utilities
 #include "optix/module.h"

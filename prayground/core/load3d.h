@@ -1,6 +1,6 @@
 #pragma once
 
-#include <sutil/vec_math.h>
+#include <prayground/math/vec_math.h>
 #include <prayground/ext/happly/happly.h>
 #include <algorithm>
 #include <prayground/shape/trianglemesh.h>

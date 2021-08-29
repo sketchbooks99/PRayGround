@@ -5,7 +5,7 @@
 #include <prayground/core/util.h>
 #endif
 
-#include <sutil/vec_math.h>
+#include <prayground/math/vec_math.h>
 #include <prayground/math/util.h>
 
 namespace prayground {

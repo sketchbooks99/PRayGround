@@ -3,7 +3,7 @@
 namespace prayground {
 
 // ------------------------------------------------------------------
-Diffuse::Diffuse(const std::shared_ptr<Texture>& texture, bool twosided=true)
+Diffuse::Diffuse(const std::shared_ptr<Texture>& texture, bool twosided)
 : m_texture(texture), m_twosided(twosided)
 {
 

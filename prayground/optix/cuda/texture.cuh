@@ -1,7 +1,7 @@
 #pragma once
 
 #include <optix.h>
-#include <sutil/vec_math.h>
+#include <prayground/math/vec_math.h>
 
 // #include "../core/util.h"
 

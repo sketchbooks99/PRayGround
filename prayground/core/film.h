@@ -1,7 +1,7 @@
 #pragma once 
 
 #include <prayground/core/bitmap.h>
-#include <sutil/vec_math.h>
+#include <prayground/math/vec_math.h>
 #include <unordered_map>
 #include <memory>
 

@@ -29,7 +29,7 @@
 #pragma once
 
 #include <vector_types.h>
-#include <sutil/vec_math.h>
+#include <prayground/math/vec_math.h>
 #include <prayground/optix/macros.h>
 
 //__forceinline__ __device__ float dequantizeUnsigned8Bits( const unsigned char i )

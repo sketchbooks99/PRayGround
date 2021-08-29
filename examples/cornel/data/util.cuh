@@ -2,8 +2,8 @@
 
 #include <optix.h>
 #include <cuda_runtime.h>
-#include <sutil/vec_math.h>
 #include <cuda/random.h>
+#include <prayground/math/vec_math.h>
 #include <prayground/optix/helpers.h>
 #include <prayground/optix/macros.h>
 #include <prayground/core/interaction.h>

@@ -3,6 +3,7 @@
 #include <prayground/material/dielectric.h>
 #include <prayground/emitter/area.h>
 #include <prayground/core/bsdf.h>
+#include <prayground/core/onb.h>
 
 using namespace prayground;
 

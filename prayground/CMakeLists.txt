@@ -28,7 +28,7 @@ set(sources
 
   # Math libraries ==========
   math/matrix.h
-  # math/vec.h
+  math/vec_math.h
   math/util.h
 
   # App libraries ==========
@@ -75,9 +75,17 @@ set(sources
  
   # Materials ==========
   material/conductor.h 
+  material/conductor.cpp 
   material/dielectric.h 
+  material/dielectric.cpp 
   material/diffuse.h 
+  material/diffuse.cpp
   material/disney.h
+  material/disney.cpp
+  material/cuda/conductor.cuh
+  material/cuda/dielectric.cuh
+  material/cuda/diffuse.cuh
+  material/cuda/disney.cuh
 
   # Textures ==========
   texture/bitmap.h

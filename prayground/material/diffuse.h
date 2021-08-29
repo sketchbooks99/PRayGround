@@ -1,6 +1,7 @@
 #pragma once
 
 #include <prayground/core/material.h>
+#include <prayground/core/texture.h>
 
 namespace prayground {
 

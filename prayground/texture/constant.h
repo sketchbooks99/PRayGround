@@ -11,31 +11,12 @@ struct ConstantTextureData {
 #ifndef __CUDACC__
 class ConstantTexture final : public Texture {
 public:
-    explicit ConstantTexture(const float3& c) : m_color(c) {}
-    ~ConstantTexture() noexcept {}
+    ConstantTexture(const float3& c);
 
-    void free() override
-    {
-        if (d_data)
-            cuda_free(d_data);
-    }
+    void setColor(const float3& c);
+    float3 color() const;
 
-    void setColor(const float3& c)
-    {
-        m_color = c;
-    }
-
-    void copyToDevice() override {
-        ConstantTextureData data = { m_color };
-
-        if (!d_data) 
-            CUDA_CHECK(cudaMalloc(&d_data, sizeof(ConstantTextureData)));
-        CUDA_CHECK(cudaMemcpy(
-            d_data,
-            &data, sizeof(ConstantTextureData),
-            cudaMemcpyHostToDevice
-        ));
-    }
+    void copyToDevice() override;
     
 private:
     float3 m_color;

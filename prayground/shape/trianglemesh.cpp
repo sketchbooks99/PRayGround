@@ -100,7 +100,7 @@ void TriangleMesh::buildInput( OptixBuildInput& bi ) {
     d_sbt_faces.copyToDevice(sbt_faces);
 
     unsigned int* triangle_input_flags = new unsigned int[1];
-    triangle_input_flags[0] = OPTIX_GEOMETRY_FLAG_DISABLE_ANYHIT;
+    triangle_input_flags[0] = OPTIX_GEOMETRY_FLAG_NONE;
     
     bi.type = OPTIX_BUILD_INPUT_TYPE_TRIANGLES;
     bi.triangleArray.vertexFormat = OPTIX_VERTEX_FORMAT_FLOAT3;

@@ -64,8 +64,11 @@ set(sources
 
   # Shapes ==========
   shape/cylinder.h 
+  shape/cylinder.cpp 
   shape/plane.h 
+  shape/plane.cpp 
   shape/sphere.h 
+  shape/sphere.cpp
   shape/trianglemesh.h
   shape/trianglemesh.cpp
   shape/cuda/cylinder.cuh 
@@ -91,7 +94,9 @@ set(sources
   texture/bitmap.h
   texture/bitmap.cpp
   texture/checker.h 
+  texture/checker.cpp 
   texture/constant.h  
+  texture/constant.cpp
 
   # Emitter ==========
   emitter/area.h 

@@ -17,11 +17,11 @@ extern "C" __device__ void __continuation_callable__diffuse(SurfaceInteraction* 
     si->trace_terminate = false;
     {
         //const float z1 = rnd(seed);
-        const float z1 = curand_uniform(si->state);
+        const float z1 = curand_uniform(si->curand_state);
         //const float z2 = rnd(seed);
-        const float z2 = curand_uniform(si->state);
+        const float z2 = curand_uniform(si->curand_state);
 
-        float3 wi = randomSampleHemisphere(si->state);
+        float3 wi = randomSampleHemisphere(si->curand_state);
         Onb onb(si->n);
         onb.inverseTransform(wi);
         si->wo = normalize(wi);
@@ -48,7 +48,7 @@ extern "C" __device__ void __continuation_callable__dielectric(SurfaceInteractio
 
     float reflect_prob = fresnel(cosine, ni, nt);
 
-    if (cannot_refract || reflect_prob > curand_uniform(si->state))
+    if (cannot_refract || reflect_prob > curand_uniform(si->curand_state))
         si->wo = reflect(si->wi, outward_normal);
     else    
         si->wo = refract(si->wi, outward_normal, cosine, ni, nt);

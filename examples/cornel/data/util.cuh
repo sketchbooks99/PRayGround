@@ -2,7 +2,6 @@
 
 #include <optix.h>
 #include <cuda_runtime.h>
-#include <cuda/random.h>
 #include <prayground/math/vec_math.h>
 #include <prayground/optix/helpers.h>
 #include <prayground/optix/macros.h>
@@ -17,8 +16,8 @@ __constant__ LaunchParams params;
 static DEVICE void init_rand_state(SurfaceInteraction* si, uint2 launch_dim, uint3 launch_idx, unsigned int frame)
 {
     curandState_t state;
-    si->state = &state;
-    curand_init(launch_idx.y * launch_dim.x + launch_idx.x, frame, 0, si->state);
+    si->curand_state = &state;
+    curand_init(launch_idx.y * launch_dim.x + launch_idx.x, frame, 0, si->curand_state);
 }
 
 template <typename T>

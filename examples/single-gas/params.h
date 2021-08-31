@@ -3,6 +3,7 @@
 #include <optix.h>
 #include <prayground/math/vec_math.h>
 #include <prayground/optix/sbt.h>
+#include <prayground/core/interaction.h>
 
 namespace prayground {
 

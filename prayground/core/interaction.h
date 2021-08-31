@@ -1,6 +1,8 @@
 #pragma once
 
 #include <prayground/math/vec_math.h>
+#include <curand.h>
+#include <curand_kernel.h>
 
 namespace prayground {
 
@@ -42,8 +44,7 @@ struct SurfaceInteraction {
     float2 dpdu;    // Tangent vector at a surface.
     float2 dpdv;    // Binormal vector at a surface.
 
-    /** Seed for random */
-    unsigned int seed;
+    curandState_t* curand_state;
 
     SurfaceProperty surface_property;
 

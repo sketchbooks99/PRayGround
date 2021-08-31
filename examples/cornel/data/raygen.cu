@@ -26,7 +26,6 @@ extern "C" __device__ void __raygen__pinhole()
     const int subframe_index = params.subframe_index;
 
     const uint3 idx = optixGetLaunchIndex();
-    unsigned int seed = tea<4>(idx.y * params.width + idx.x, subframe_index);
 
     float3 result = make_float3(0.0f, 0.0f, 0.0f);
     int i = params.samples_per_launch;
@@ -36,7 +35,7 @@ extern "C" __device__ void __raygen__pinhole()
         SurfaceInteraction si;
         init_rand_state(&si, make_uint2(params.width, params.height), idx, subframe_index);
 
-        const float2 subpixel_jitter = make_float2(curand_uniform(si.state), curand_uniform(si.state));
+        const float2 subpixel_jitter = make_float2(curand_uniform(si.curand_state), curand_uniform(si.curand_state));
 
         const float2 d = 2.0f * make_float2(
             (static_cast<float>(idx.x) + subpixel_jitter.x) / static_cast<float>(params.width),

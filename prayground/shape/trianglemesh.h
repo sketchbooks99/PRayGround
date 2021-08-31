@@ -3,6 +3,7 @@
 #ifndef __CUDACC__
 #include <prayground/core/shape.h>
 #include <prayground/core/util.h>
+#include <filesystem>
 #endif
 
 #include <prayground/math/vec_math.h>

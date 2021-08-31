@@ -1,16 +1,11 @@
 #pragma once
 
-#include <variant>
 #include <memory>
+#include <optix_types.h>
+#include <cuda_runtime.h>
 #include <prayground/core/util.h>
 #include <prayground/core/aabb.h>
-#include <prayground/core/material.h>
-#include <prayground/core/interaction.h>
-#include <prayground/emitter/area.h>
 #include <prayground/optix/macros.h>
-#include <prayground/optix/program.h>
-#include <prayground/math/vec_math.h>
-#include <optix_types.h>
 
 namespace prayground {
 
@@ -38,9 +33,6 @@ protected:
     void* d_data { 0 };
     CUdeviceptr d_aabb_buffer { 0 };
     uint32_t m_sbt_index;
-
-private:
-    std::variant<std::shared_ptr<Material>, std::shared_ptr<AreaEmitter>> m_surface;
 };
 
 #endif // __CUDACC__

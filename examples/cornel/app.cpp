@@ -1,5 +1,4 @@
 #include "app.h"
-#include <prayground/core/interaction.h>
 
 // ----------------------------------------------------------------
 void App::setup()

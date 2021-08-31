@@ -51,7 +51,7 @@
 #include "optix/accel.h"
 #include "optix/instance.h"
 
-// application utilities
+// core utilities
 #include "core/util.h"
 #include "core/file_util.h"
 #include "core/cudabuffer.h"
@@ -59,6 +59,7 @@
 #include "core/film.h"
 #include "core/camera.h"
 
+// application utilities
 #include "app/baseapp.h"
 #include "app/window.h"
 #include "app/app_runner.h"

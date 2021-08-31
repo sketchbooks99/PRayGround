@@ -19,12 +19,22 @@
 #include <prayground/math/vec_math.h>
 #include <prayground/core/util.h>
 #include <prayground/optix/macros.h>
+#include <curand.h>
+#include <curand_kernel.h>
 
 namespace prayground {
 
 HOSTDEVICE INLINE float3 randomSampleHemisphere(unsigned int& seed) {
     float a = rnd(seed) * 2.0f * M_PIf;
     float z = sqrtf(rnd(seed));
+    float r = sqrtf(fmaxf(0.0f, 1.0f - z * z));
+    return make_float3(r * cosf(a), r * sinf(a), z);
+}
+
+HOSTDEVICE INLINE float3 randomSampleHemisphere(curandState_t* state)
+{
+    float a = curand_uniform(state) * 2.0f * M_PIf;
+    float z = sqrtf(curand_uniform(state));
     float r = sqrtf(fmaxf(0.0f, 1.0f - z * z));
     return make_float3(r * cosf(a), r * sinf(a), z);
 }

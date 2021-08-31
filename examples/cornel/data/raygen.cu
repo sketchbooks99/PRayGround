@@ -33,7 +33,10 @@ extern "C" __device__ void __raygen__pinhole()
 
     do
     {
-        const float2 subpixel_jitter = make_float2(rnd(seed), rnd(seed));
+        SurfaceInteraction si;
+        init_rand_state(&si, make_uint2(params.width, params.height), idx, subframe_index);
+
+        const float2 subpixel_jitter = make_float2(curand_uniform(si.state), curand_uniform(si.state));
 
         const float2 d = 2.0f * make_float2(
             (static_cast<float>(idx.x) + subpixel_jitter.x) / static_cast<float>(params.width),
@@ -42,8 +45,6 @@ extern "C" __device__ void __raygen__pinhole()
         float3 rd = normalize(d.x * U + d.y * V + W);
         float3 ro = raygen->camera.origin;
 
-        SurfaceInteraction si;
-        si.seed = seed;
         si.emission = make_float3(0.0f);
         si.trace_terminate = false;
         si.radiance_evaled = false;

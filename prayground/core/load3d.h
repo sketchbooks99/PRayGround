@@ -2,8 +2,9 @@
 
 #include <prayground/math/vec_math.h>
 #include <prayground/ext/happly/happly.h>
-#include <algorithm>
 #include <prayground/shape/trianglemesh.h>
+#include <algorithm>
+#include <filesystem>
 
 namespace prayground {
 

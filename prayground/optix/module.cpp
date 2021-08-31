@@ -72,8 +72,8 @@ namespace {
 
         std::vector<const char*> options;
 
-#ifdef OPRT_APP_DIR
-        std::string app_dir = std::string("-I") + oprtAppDir().string();
+#ifdef PRAYGROUND_APP_DIR
+        std::string app_dir = std::string("-I") + pgAppDir().string();
         options.push_back(app_dir.c_str());
 #endif // OPRT_APP_DIR
 

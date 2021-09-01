@@ -14,13 +14,7 @@ uint32_t Shape::sbtIndex() const
 
 void Shape::free()
 {
-    freeAabbBuffer();
     cuda_free(d_data);
-}
-
-void Shape::freeAabbBuffer()
-{
-    if (d_aabb_buffer) cuda_free(d_aabb_buffer);
 }
 
 void* Shape::devicePtr() const

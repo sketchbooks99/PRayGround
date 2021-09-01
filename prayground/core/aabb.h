@@ -25,6 +25,23 @@ public:
         float dz = m_max.z - m_max.z;
         return 2*(dx*dy + dy*dz + dz*dx);
     }
+
+    static AABB surrounding(AABB box0, AABB box1)
+    {
+        float3 min_box = make_float3(
+            fmin(box0.min().x, box1.min().x),
+            fmin(box0.min().y, box1.min().y),
+            fmin(box0.min().z, box1.min().z)
+        );
+
+        float3 max_box = make_float3(
+            fmax(box0.max().x, box1.max().x),
+            fmax(box0.max().y, box1.max().y),
+            fmax(box0.max().z, box1.max().z)
+        );
+
+        return AABB(min_box, max_box);
+    }
 private:
     float3 m_min, m_max;
 };

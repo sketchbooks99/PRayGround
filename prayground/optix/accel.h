@@ -24,6 +24,7 @@ public:
    
     void build(const Context& ctx);
     void update(const Context& ctx);
+    void update(const Context& ctx, CUdeviceptr temp_buffer, size_t temp_buffer_size);
     void free();
 
     void enableHoldTempBuffer();
@@ -59,6 +60,7 @@ private:
     uint32_t m_count{ 0 };
 
     std::vector<std::shared_ptr<Shape>> m_shapes;
+    std::vector<OptixBuildInput> m_build_inputs;
 
     bool is_hold_temp_buffer{ false };
     CUdeviceptr d_buffer{ 0 }, d_temp_buffer{ 0 };
@@ -83,9 +85,6 @@ public:
     void build(const Context& ctx);
     void update(const Context& ctx);
     void free();
-
-    // Is this needed? ref -> optixDynamicGeometry.cpp in SDK samples
-    //void relocate(); 
 
     /** Switch flag whether to enable store  */
     void enableHoldTempBuffer();
@@ -118,6 +117,9 @@ private:
     uint32_t m_count{ 0 };
 
     std::vector<Instance> m_instances;
+    /// @note 
+    /// update() を考えると、自分自身でOptixBuildInput を保持している方がいい気がする。
+    /// OptixBuildInput m_instance_input;
 
     bool is_hold_temp_buffer{ false };
     CUdeviceptr d_buffer{ 0 }, d_temp_buffer{ 0 };

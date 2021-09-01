@@ -16,23 +16,22 @@ public:
     virtual ~Shape() {}
 
     virtual OptixBuildInputType buildInputType() const = 0;
-    virtual AABB bound() const = 0;
 
     virtual void copyToDevice() = 0;
-    virtual void buildInput( OptixBuildInput& bi ) = 0;
+    virtual void createBuildInput() = 0;
+    OptixBuildInput buildInput() const;
 
     void setSbtIndex(const uint32_t sbt_index);
     uint32_t sbtIndex() const;
 
     void free();
-    void freeAabbBuffer();
-    
+
     void* devicePtr() const;
 
 protected:
     void* d_data { 0 };
-    CUdeviceptr d_aabb_buffer { 0 };
     uint32_t m_sbt_index;
+    OptixBuildInput m_build_input;
 };
 
 #endif // __CUDACC__

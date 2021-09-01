@@ -46,20 +46,20 @@ void GeometryAccel::build(const Context& ctx)
         m_count = 0;
     }
 
-    std::vector<OptixBuildInput> build_inputs(m_shapes.size());
+    std::vector<OptixBuildInput> m_build_inputs(m_shapes.size());
     m_options.operation = OPTIX_BUILD_OPERATION_BUILD;
 
     for (size_t i = 0; i < m_shapes.size(); i++)
     {
-        m_shapes[i]->buildInput(build_inputs[i]);
+        m_shapes[i]->buildInput(m_build_inputs[i]);
     }
 
     OptixAccelBufferSizes gas_buffer_sizes;
     OPTIX_CHECK(optixAccelComputeMemoryUsage(
         static_cast<OptixDeviceContext>(ctx), 
         &m_options, 
-        build_inputs.data(), 
-        static_cast<uint32_t>(build_inputs.size()), 
+        m_build_inputs.data(),
+        static_cast<uint32_t>(m_build_inputs.size()), 
         &gas_buffer_sizes
     ));
 
@@ -81,8 +81,8 @@ void GeometryAccel::build(const Context& ctx)
         static_cast<OptixDeviceContext>(ctx),
         0, 
         &m_options, 
-        build_inputs.data(), 
-        build_inputs.size(), 
+        m_build_inputs.data(), 
+        m_build_inputs.size(), 
         d_temp_buffer, 
         gas_buffer_sizes.tempSizeInBytes,
         d_buffer_temp_output_gas_and_compacted_size,
@@ -92,9 +92,12 @@ void GeometryAccel::build(const Context& ctx)
         1
     ));
 
+    d_buffer_size = gas_buffer_sizes.outputSizeInBytes;
 
     if (is_hold_temp_buffer)
+    {
         d_temp_buffer_size = gas_buffer_sizes.tempSizeInBytes;
+    }
     else
     {
         cuda_free(d_temp_buffer);
@@ -110,6 +113,7 @@ void GeometryAccel::build(const Context& ctx)
             CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_buffer), compacted_gas_size));
             OPTIX_CHECK(optixAccelCompact(static_cast<OptixDeviceContext>(ctx), 0, m_handle, d_buffer, compacted_gas_size, &m_handle));
             cuda_free(d_buffer_temp_output_gas_and_compacted_size);
+            d_buffer_size = compacted_gas_size;
         }
         else {
             d_buffer = d_buffer_temp_output_gas_and_compacted_size;
@@ -125,11 +129,40 @@ void GeometryAccel::update(const Context& ctx)
         return;
     }
 
+    m_options.buildFlags |= OPTIX_BUILD_FLAG_ALLOW_UPDATE;
     m_options.operation = OPTIX_BUILD_OPERATION_UPDATE;
+    OptixAccelBufferSizes gas_buffer_sizes;
 
+    /**
+     * @note
+     * 自分自身がGASをアップデートするための一時的なバッファを保持していなかった場合，
+     * optixAccelBuild() を呼ぶためのメモリ領域を再計算する
+     */
     if (!d_temp_buffer)
     {
-        
+        /**
+         * @note 
+         * GASに含まれるOptixBuildInput を全て作り直すのは手間な気がする．
+         * どのbuildInputが更新されたかを判定する必要があって，それはそれで面倒な気がする．
+         * 各buildInput をShape単位で管理するようにすれば、GASが管理せずとも
+         * 頂点やShader binding table のインデックス周りの変更はShape単位で行える
+         * buildInputの性質上、頂点情報やAABB、Shader binding table のインデックス等は
+         * デバイス側のポインタに紐づけられているので関節的に変更が可能だと思われる
+         */
+        m_build_inputs.resize(m_shapes.size());
+
+        for (size_t i = 0; i < m_shapes.size(); i++)
+        {
+            m_shapes[i]->buildInput(m_build_inputs[i]);
+        }
+
+        OPTIX_CHECK(optixAccelComputeMemoryUsage(
+            static_cast<OptixDeviceContext>(ctx), 
+            &m_options, 
+            m_build_inputs.data(),
+            static_cast<uint32_t>(m_build_inputs.size()), 
+            &gas_buffer_sizes
+        ));
     }
 }
 

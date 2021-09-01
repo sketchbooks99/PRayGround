@@ -5,7 +5,7 @@
 namespace prayground {
 
 // GeometryAccel -------------------------------------------------------------
-GeometryAccel::GeometryAccel(Type type)
+GeometryAccel::GeometryAccel(OptixBuildInputType type)
 : m_type(type)
 {
     m_options.buildFlags = OPTIX_BUILD_FLAG_NONE;
@@ -17,22 +17,9 @@ GeometryAccel::~GeometryAccel()
 }
 
 // ---------------------------------------------------------------------------
-void GeometryAccel::addShape(const std::shared_ptr<Shape>& shape)
+void GeometryAccel::build(const Context& ctx, CUstream stream, const std::vector<std::shared_ptr<Shape>>& shapes)
 {
-    Assert(shape->buildInputType() == static_cast<OptixBuildInputType>(m_type),
-        "prayground::GeometryAccel::addShape(): The type of shape must be same as the type of GeometryAccel.");
-    m_shapes.emplace_back(shape);
-}
-
-std::shared_ptr<Shape> GeometryAccel::shapeAt(const int idx) const
-{
-    return m_shapes[idx];
-}
-
-// ---------------------------------------------------------------------------
-void GeometryAccel::build(const Context& ctx)
-{
-    if (m_shapes.size() == 0)
+    if (shapes.size() == 0)
     {
         Message(MSG_ERROR, "prayground::GeoetryAccel::build(): The number of shapes is 0.");
         return;
@@ -46,12 +33,20 @@ void GeometryAccel::build(const Context& ctx)
         m_count = 0;
     }
 
-    std::vector<OptixBuildInput> m_build_inputs(m_shapes.size());
+    std::vector<OptixBuildInput> m_build_inputs(shapes.size());
     m_options.operation = OPTIX_BUILD_OPERATION_BUILD;
 
-    for (size_t i = 0; i < m_shapes.size(); i++)
+    bool all_type_equal = true;
+    for (size_t i = 0; i < shapes.size(); i++)
     {
-        m_shapes[i]->buildInput(m_build_inputs[i]);
+        all_type_equal &= (m_type == shapes[i]->buildInputType());
+        if (!all_type_equal)
+        {
+            m_build_inputs.clear();
+            Throw("All build input types of shapes must be same as type of GeometryAccel.");
+            return;
+        }
+        m_build_inputs[i] = shapes[i]->createBuildInput();
     }
 
     OptixAccelBufferSizes gas_buffer_sizes;
@@ -79,7 +74,7 @@ void GeometryAccel::build(const Context& ctx)
 
     OPTIX_CHECK(optixAccelBuild(
         static_cast<OptixDeviceContext>(ctx),
-        0, 
+        stream, 
         &m_options, 
         m_build_inputs.data(), 
         m_build_inputs.size(), 
@@ -121,7 +116,7 @@ void GeometryAccel::build(const Context& ctx)
     }
 }
 
-void GeometryAccel::update(const Context& ctx)
+void GeometryAccel::update(const Context& ctx, CUstream stream)
 {
     if ((m_options.buildFlags & OPTIX_BUILD_FLAG_ALLOW_UPDATE) == 0)
     {
@@ -131,31 +126,21 @@ void GeometryAccel::update(const Context& ctx)
 
     m_options.buildFlags |= OPTIX_BUILD_FLAG_ALLOW_UPDATE;
     m_options.operation = OPTIX_BUILD_OPERATION_UPDATE;
-    OptixAccelBufferSizes gas_buffer_sizes;
 
     /**
      * @note
-     * 自分自身がGASをアップデートするための一時的なバッファを保持していなかった場合，
-     * optixAccelBuild() を呼ぶためのメモリ領域を再計算する
+     * - 自分自身がGASをアップデートするための一時的なバッファを保持していなかった場合，
+     *   optixAccelBuild() を呼ぶためのメモリ領域を再計算してGASの更新を行うのに
+     *   必要なだけのバッファを確保する
+     * 
+     * - is_hold_temp_buffer のフラグで更新時に必要なメモリ量を計算するか判断すると
+     *   d_temp_buffer よりも真に必要なメモリ量が多かった場合にクラッシュする。
+     *   そこまでコストが高くないなら、optixAccelComputeMemoryUsage()で
+     *   毎度メモリ量を計算するのが安全？
      */
     if (!d_temp_buffer)
     {
-        /**
-         * @note 
-         * GASに含まれるOptixBuildInput を全て作り直すのは手間な気がする．
-         * どのbuildInputが更新されたかを判定する必要があって，それはそれで面倒な気がする．
-         * 各buildInput をShape単位で管理するようにすれば、GASが管理せずとも
-         * 頂点やShader binding table のインデックス周りの変更はShape単位で行える
-         * buildInputの性質上、頂点情報やAABB、Shader binding table のインデックス等は
-         * デバイス側のポインタに紐づけられているので関節的に変更が可能だと思われる
-         */
-        m_build_inputs.resize(m_shapes.size());
-
-        for (size_t i = 0; i < m_shapes.size(); i++)
-        {
-            m_shapes[i]->buildInput(m_build_inputs[i]);
-        }
-
+        OptixAccelBufferSizes gas_buffer_sizes;
         OPTIX_CHECK(optixAccelComputeMemoryUsage(
             static_cast<OptixDeviceContext>(ctx), 
             &m_options, 
@@ -163,7 +148,25 @@ void GeometryAccel::update(const Context& ctx)
             static_cast<uint32_t>(m_build_inputs.size()), 
             &gas_buffer_sizes
         ));
+
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_temp_buffer), gas_buffer_sizes.tempUpdateSizeInBytes));
+        d_temp_buffer_size = gas_buffer_sizes.tempUpdateSizeInBytes;
     }
+
+    OPTIX_CHECK(optixAccelBuild(
+        static_cast<OptixDeviceContext>(ctx),
+        stream,
+        &m_options,
+        m_build_inputs.data(),
+        m_build_inputs.size(),
+        d_temp_buffer,
+        d_temp_buffer_size,
+        d_buffer,
+        d_buffer_size,
+        &m_handle,
+        nullptr,
+        0
+    ));
 }
 
 void GeometryAccel::free()
@@ -191,11 +194,6 @@ void GeometryAccel::setFlags(const uint32_t build_flags)
     m_options.buildFlags = build_flags;
 }
 
-void GeometryAccel::allowUpdate()
-{
-    m_options.buildFlags |= OPTIX_BUILD_FLAG_ALLOW_UPDATE;
-}
-
 void GeometryAccel::allowCompaction()
 {
     m_options.buildFlags |= OPTIX_BUILD_FLAG_ALLOW_COMPACTION;
@@ -214,11 +212,6 @@ void GeometryAccel::preferFastBuild()
 void GeometryAccel::allowRandomVertexAccess()
 {
     m_options.buildFlags |= OPTIX_BUILD_FLAG_ALLOW_RANDOM_VERTEX_ACCESS;
-}
-
-void GeometryAccel::disableUpdate()
-{
-    m_options.buildFlags &= ~OPTIX_BUILD_FLAG_ALLOW_UPDATE;
 }
 
 void GeometryAccel::disableCompaction()
@@ -362,7 +355,7 @@ void InstanceAccel::build(const Context& ctx)
 
 void InstanceAccel::update(const Context& ctx)
 {
-    TODO_MESSAGE();
+
 }
 
 void InstanceAccel::free()
@@ -390,11 +383,6 @@ void InstanceAccel::setFlags(const uint32_t build_flags)
     m_options.buildFlags = build_flags;
 }
 
-void InstanceAccel::allowUpdate()
-{
-    m_options.buildFlags |= OPTIX_BUILD_FLAG_ALLOW_UPDATE;
-}
-
 void InstanceAccel::allowCompaction()
 {
     m_options.buildFlags |= OPTIX_BUILD_FLAG_ALLOW_COMPACTION;
@@ -408,11 +396,6 @@ void InstanceAccel::preferFastTrace()
 void InstanceAccel::preferFastBuild()
 {
     m_options.buildFlags |= OPTIX_BUILD_FLAG_PREFER_FAST_BUILD;
-}
-
-void InstanceAccel::disableUpdate()
-{
-    m_options.buildFlags &= ~OPTIX_BUILD_FLAG_ALLOW_UPDATE;
 }
 
 void InstanceAccel::disableCompaction()

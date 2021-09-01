@@ -11,12 +11,6 @@ Instance::Instance()
     m_instance.flags = OPTIX_INSTANCE_FLAG_NONE;
 }
 
-Instance::Instance(const Transform& transform)
-{
-    setTransform(transform);
-    m_instance.flags = OPTIX_INSTANCE_FLAG_NONE;
-}
-
 Instance::Instance(const Matrix4f& matrix)
 {
     setTransform(matrix);
@@ -87,12 +81,6 @@ uint32_t Instance::flags() const
     return m_instance.flags;
 }
 
-// ------------------------------------------------------------------
-void Instance::setTransform(const Transform& transform)
-{
-    memcpy(m_instance.transform, transform.mat.data(), sizeof(float)*12);
-}
-
 void Instance::setTransform(const Matrix4f& matrix)
 {
     memcpy(m_instance.transform, matrix.data(), sizeof(float)*12);
@@ -147,9 +135,9 @@ void Instance::rotateZ(const float radians)
     setTransform(current_mat);
 }
 
-Transform Instance::transform() const 
+Matrix4f Instance::transform() const 
 {
-    return Transform(m_instance.transform);
+    return Matrix4f( m_instance.transform );
 }
 
 // ------------------------------------------------------------------

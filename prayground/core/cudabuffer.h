@@ -44,26 +44,26 @@ private:
 
 // --------------------------------------------------------------------
 template <class T>
-CUDABuffer<T>::CUDABuffer()
+inline CUDABuffer<T>::CUDABuffer()
 {
 
 }
 
 template <class T>
-CUDABuffer<T>::CUDABuffer(const std::vector<T>& vec)
+inline CUDABuffer<T>::CUDABuffer(const std::vector<T>& vec)
 {
     copyToDevice(vec);
 }
 
 template <class T>
-CUDABuffer<T>::CUDABuffer(const T* data, size_t size)
+inline CUDABuffer<T>::CUDABuffer(const T* data, size_t size)
 {
     copyToDevice(data, size);
 }
 
 // --------------------------------------------------------------------
 template <class T>
-void CUDABuffer<T>::allocate(size_t size)
+inline void CUDABuffer<T>::allocate(size_t size)
 {
     if (isAllocated())
         free();
@@ -72,7 +72,7 @@ void CUDABuffer<T>::allocate(size_t size)
 }
 
 template <class T>
-void CUDABuffer<T>::free()
+inline void CUDABuffer<T>::free()
 {
     if (isAllocated())
         cuda_free(d_ptr);
@@ -82,33 +82,33 @@ void CUDABuffer<T>::free()
 
 // --------------------------------------------------------------------
 template <class T>
-void CUDABuffer<T>::copyToDevice(const std::vector<T>& vec)
+inline void CUDABuffer<T>::copyToDevice(const std::vector<T>& vec)
 {
     copyToDevice(vec.data(), sizeof(T) * vec.size());
 }
 
 template <class T>
-void CUDABuffer<T>::copyToDevice(const T* data, size_t size)
+inline void CUDABuffer<T>::copyToDevice(const T* data, size_t size)
 {
-    if (!isAllocated())
+    if (!isAllocated() || m_size != size)
         allocate(size);
     
     CUDA_CHECK(cudaMemcpy(
         reinterpret_cast<void*>(d_ptr), 
-        data, m_size, 
+        data, size, 
         cudaMemcpyHostToDevice
     ));
 }
 
 // --------------------------------------------------------------------
 template <class T>
-void CUDABuffer<T>::copyToDeviceAsync(const std::vector<T>& vec, const CUstream& stream)
+inline void CUDABuffer<T>::copyToDeviceAsync(const std::vector<T>& vec, const CUstream& stream)
 {
     copyToDeviceAsync(vec.data(), sizeof(T) * vec.size(), stream);
 }
 
 template <class T>
-void CUDABuffer<T>::copyToDeviceAsync(const T* data, size_t size, const CUstream& stream)
+inline void CUDABuffer<T>::copyToDeviceAsync(const T* data, size_t size, const CUstream& stream)
 {
     if (!isAllocated())
         allocate(size);
@@ -122,7 +122,7 @@ void CUDABuffer<T>::copyToDeviceAsync(const T* data, size_t size, const CUstream
 
 // --------------------------------------------------------------------
 template <class T>
-T* CUDABuffer<T>::copyFromDevice()
+inline T* CUDABuffer<T>::copyFromDevice()
 {
     T* h_ptr = static_cast<T*>(malloc(m_size));
     if (!isAllocated())
@@ -144,25 +144,25 @@ T* CUDABuffer<T>::copyFromDevice()
 
 // --------------------------------------------------------------------
 template <class T>
-bool CUDABuffer<T>::isAllocated() const 
+inline bool CUDABuffer<T>::isAllocated() const 
 {
     return static_cast<bool>(d_ptr);
 }
 
 template <class T>
-CUdeviceptr CUDABuffer<T>::devicePtr() const 
+inline CUdeviceptr CUDABuffer<T>::devicePtr() const 
 {
     return d_ptr;
 }
 
 template <class T>
-T* CUDABuffer<T>::deviceData()
+inline T* CUDABuffer<T>::deviceData()
 {
     return reinterpret_cast<T*>(d_ptr);
 }
 
 template <class T>
-size_t CUDABuffer<T>::size() const
+inline size_t CUDABuffer<T>::size() const
 {
     return m_size;
 }

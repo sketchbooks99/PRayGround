@@ -8,23 +8,15 @@ namespace prayground {
 
 class GeometryAccel {
 public:
-    enum class Type {
-        Mesh = OPTIX_BUILD_INPUT_TYPE_TRIANGLES,
-        Custom = OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES,
-        Curves = OPTIX_BUILD_INPUT_TYPE_CURVES,
-        None
-    };
 
     GeometryAccel() = default;
-    explicit GeometryAccel(Type type);
+    explicit GeometryAccel(OptixBuildInputType type);
     ~GeometryAccel();
-
-    void addShape(const std::shared_ptr<Shape>& shape);
-    std::shared_ptr<Shape> shapeAt(const int idx) const;
    
-    void build(const Context& ctx);
-    void update(const Context& ctx);
-    void update(const Context& ctx, CUdeviceptr temp_buffer, size_t temp_buffer_size);
+    //void build(const Context& ctx);
+    void build(const Context& ctx, CUstream stream,  const std::vector<std::shared_ptr<Shape>>& shape);
+    void update(const Context& ctx, CUstream stream);
+    void update(const Context& ctx, CUstream stream, CUdeviceptr temp_buffer, size_t temp_buffer_size);
     void free();
 
     void enableHoldTempBuffer();
@@ -32,13 +24,11 @@ public:
 
     void setFlags(const uint32_t build_flags);
 
-    void allowUpdate();
     void allowCompaction();
     void preferFastTrace();
     void preferFastBuild();
     void allowRandomVertexAccess();
 
-    void disableUpdate();
     void disableCompaction();
     void disableFastTrace();
     void disableFastBuild();
@@ -54,12 +44,12 @@ public:
     CUdeviceptr deviceTempBuffer() const;
     size_t deviceTempBufferSize() const;
 private:
-    Type m_type;
+    OptixBuildInputType m_type;
     OptixTraversableHandle m_handle{ 0 };
     OptixAccelBuildOptions m_options{};
     uint32_t m_count{ 0 };
 
-    std::vector<std::shared_ptr<Shape>> m_shapes;
+    //std::vector<std::shared_ptr<Shape>> m_shapes;
     std::vector<OptixBuildInput> m_build_inputs;
 
     bool is_hold_temp_buffer{ false };
@@ -86,17 +76,15 @@ public:
     void update(const Context& ctx);
     void free();
 
-    /** Switch flag whether to enable store  */
+    /** Switch flag whether to enable store */
     void enableHoldTempBuffer();
     void disableHoldTempBuffer();
 
     void setFlags(const uint32_t build_flags);
-    void allowUpdate();
     void allowCompaction();
     void preferFastTrace();
     void preferFastBuild();
 
-    void disableUpdate();
     void disableCompaction();
     void disableFastTrace();
     void disableFastBuild();

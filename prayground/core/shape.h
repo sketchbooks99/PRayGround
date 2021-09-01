@@ -18,20 +18,18 @@ public:
     virtual OptixBuildInputType buildInputType() const = 0;
 
     virtual void copyToDevice() = 0;
-    virtual void createBuildInput() = 0;
-    OptixBuildInput buildInput() const;
+    virtual OptixBuildInput createBuildInput() = 0;
 
     void setSbtIndex(const uint32_t sbt_index);
     uint32_t sbtIndex() const;
 
-    void free();
+    virtual void free();
 
     void* devicePtr() const;
 
 protected:
     void* d_data { 0 };
     uint32_t m_sbt_index;
-    OptixBuildInput m_build_input;
 };
 
 #endif // __CUDACC__

@@ -15,19 +15,21 @@ struct CylinderData
 #ifndef __CUDACC__
 class Cylinder final : public Shape {
 public:
+    Cylinder();
     Cylinder(float radius, float height);
 
     OptixBuildInputType buildInputType() const override;
 
     void copyToDevice() override;
+    OptixBuildInput createBuildInput() override;
+    void free() override;  
 
-    void buildInput( OptixBuildInput& bi ) override;
-
-    AABB bound() const override;
+    AABB bound() const;
 
 private:
     float m_radius;
     float m_height;
+    CUdeviceptr d_aabb_buffer{ 0 };
 };
 #endif // __CUDACC__
 

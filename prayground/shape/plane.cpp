@@ -3,8 +3,14 @@
 namespace prayground {
 
 // ------------------------------------------------------------------
+Plane::Plane()
+: m_min{-1.0f, -1.0f}, m_max{1.0f, 1.0f}
+{
+
+}
+
 Plane::Plane(const float2& min, const float2& max)
-: m_min(min), m_max(max)
+: m_min{ min }, m_max{ max }
 {
 
 }
@@ -33,8 +39,9 @@ void Plane::copyToDevice()
 }
 
 // ------------------------------------------------------------------
-void Plane::buildInput( OptixBuildInput& bi )
+OptixBuildInput Plane::createBuildInput()
 {
+    OptixBuildInput bi;
     CUDABuffer<uint32_t> d_sbt_indices;
     uint32_t* sbt_indices = new uint32_t[1];
     sbt_indices[0] = m_sbt_index;
@@ -42,8 +49,6 @@ void Plane::buildInput( OptixBuildInput& bi )
 
     // Prepare bounding box information on the device.
     OptixAabb aabb = static_cast<OptixAabb>(bound());
-
-    if (d_aabb_buffer) free();
 
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_aabb_buffer), sizeof(OptixAabb)));
     CUDA_CHECK(cudaMemcpy(
@@ -63,6 +68,14 @@ void Plane::buildInput( OptixBuildInput& bi )
     bi.customPrimitiveArray.sbtIndexOffsetBuffer = d_sbt_indices.devicePtr();
     bi.customPrimitiveArray.sbtIndexOffsetSizeInBytes = sizeof(uint32_t);
     bi.customPrimitiveArray.sbtIndexOffsetStrideInBytes = sizeof(uint32_t);
+    return bi;
+}
+
+// ------------------------------------------------------------------
+void Plane::free()
+{
+    Shape::free();
+    cuda_free(d_aabb_buffer);
 }
 
 // ------------------------------------------------------------------

@@ -173,7 +173,7 @@ void App::setup()
         cornel_planes[i].first->copyToDevice();
         cornel_planes[i].second->copyToDevice();
         cornel_planes[i].first->setSbtIndex(sbt_idx);
-        GeometryAccel gas{GeometryAccel::Type::Custom};
+        GeometryAccel gas{OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES};
         gas.allowCompaction();
         gas.addShape(cornel_planes[i].first);
         gas.build(context);
@@ -217,7 +217,7 @@ void App::setup()
     bunny_record.data.surface_program_id = dielectric_prg_id;
     sbt.addHitgroupRecord(bunny_record);
 
-    GeometryAccel bunny_gas{GeometryAccel::Type::Mesh};
+    GeometryAccel bunny_gas{OPTIX_BUILD_INPUT_TYPE_TRIANGLES};
     bunny_gas.addShape(bunny);
     bunny_gas.allowCompaction();
     bunny_gas.build(context);

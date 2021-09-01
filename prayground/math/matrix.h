@@ -46,7 +46,6 @@ public:
     HOSTDEVICE Matrix();
     HOSTDEVICE Matrix(const Matrix& m);
     HOSTDEVICE Matrix(const T data[N*N]);
-    HOSTDEVICE Matrix(const T (&data)[N*N]);
     HOSTDEVICE Matrix(const float (&data)[12]);
     HOSTDEVICE Matrix(const std::initializer_list<T>& list);
 
@@ -253,13 +252,6 @@ template <typename T, uint32_t N>
 INLINE HOSTDEVICE Matrix<T, N>::Matrix(const T data[N*N])
 {
     for (uint32_t i = 0; i < N * N; i++)
-        m_data[i] = data[i];
-}
-
-template <typename T, uint32_t N>
-INLINE HOSTDEVICE Matrix<T, N>::Matrix(const T (&data)[N*N])
-{
-    for (uint32_t i = 0; i < N*N; i++)
         m_data[i] = data[i];
 }
 

@@ -14,7 +14,6 @@ namespace prayground {
 class Instance {
 public:
     Instance();
-    explicit Instance(const Transform& transform);
     explicit Instance(const Matrix4f& matrix);
 
     explicit operator OptixInstance() const { return m_instance; }
@@ -25,6 +24,7 @@ public:
     void setId(const uint32_t id);
     void setSBTOffset(const uint32_t sbt_offset);
     void setVisibilityMask(const uint32_t visibility_mask);
+    // Instance の TraversableHandle を変更する際は ASは更新ではなく再ビルドする必要がある
     void setTraversableHandle(OptixTraversableHandle handle);
     void setPadding(uint32_t pad[2]);
     void setFlags(const uint32_t flags);
@@ -36,7 +36,6 @@ public:
     uint32_t flags() const;
 
     /** Transformation of instance */
-    void setTransform(const Transform& transform);
     void setTransform(const Matrix4f& matrix);
     void translate(const float3& t);
     void scale(const float3& s);
@@ -45,7 +44,7 @@ public:
     void rotateX(const float radians);
     void rotateY(const float radians);
     void rotateZ(const float radians);
-    Transform transform() const;
+    Matrix4f transform() const;
 
     bool isDataOnDevice() const;
     CUdeviceptr devicePtr() const;

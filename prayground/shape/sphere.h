@@ -14,17 +14,19 @@ struct SphereData {
 #ifndef __CUDACC__
 class Sphere final : public Shape {
 public:
+    Sphere();
     Sphere(const float3& c, float r);
 
     OptixBuildInputType buildInputType() const override;
 
     void copyToDevice() override;
-    void buildInput( OptixBuildInput& bi ) override;
+    OptixBuildInput createBuildInput() override;
 
-    AABB bound() const override;
+    AABB bound() const;
 private:
     float3 m_center;
     float m_radius;
+    CUdeviceptr d_aabb_buffer{ 0 };
 };
 
 #endif

@@ -40,18 +40,15 @@ public:
     OptixBuildInputType buildInputType() const override { return OPTIX_BUILD_INPUT_TYPE_TRIANGLES; }
 
     void copyToDevice() override;
-    void buildInput( OptixBuildInput& bi ) override;
+    OptixBuildInput createBuildInput() override;
+
+    void free() override;
+
     /**
      * @note 
-     * Currently, triangle never need AABB for intersection test on the device side
-     * because test for triangle is built in at OptiX and automatically performed 
-     * by using input mesh information.
-     * However, in the future, I'd like to make this renderer be able to switch 
-     * computing devices (CPU or GPU) according to the need of an application, 
-     * and AABB will be needed for this.
+     * GAS/IASの更新の際に頂点数やインデックスの数を変更する際は注意が必要
+     * 必ずASをビルドし直す必要がある
      */
-    AABB bound() const override;
-
     void addVertex(const float3& v);
     void addFace(const Face& face);
     void addNormal(const float3& n);

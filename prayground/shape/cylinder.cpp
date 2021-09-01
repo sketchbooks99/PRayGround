@@ -4,6 +4,12 @@
 namespace prayground {
 
 // ------------------------------------------------------------------
+Cylinder::Cylinder()
+: m_radius(0.5f), m_height(1.0f)
+{
+
+}
+
 Cylinder::Cylinder(float radius, float height)
 : m_radius(radius), m_height(height)
 {
@@ -34,8 +40,9 @@ void Cylinder::copyToDevice()
 }
 
 // ------------------------------------------------------------------
-void Cylinder::buildInput(OptixBuildInput& bi)
+OptixBuildInput Cylinder::createBuildInput()
 {
+    OptixBuildInput bi;
     CUDABuffer<uint32_t> d_sbt_indices;
     uint32_t* sbt_indices = new uint32_t[1];
     sbt_indices[0] = m_sbt_index;
@@ -64,6 +71,14 @@ void Cylinder::buildInput(OptixBuildInput& bi)
     bi.customPrimitiveArray.sbtIndexOffsetBuffer = d_sbt_indices.devicePtr();
     bi.customPrimitiveArray.sbtIndexOffsetSizeInBytes = sizeof(uint32_t);
     bi.customPrimitiveArray.sbtIndexOffsetStrideInBytes = sizeof(uint32_t);
+    return bi;
+}
+
+// ------------------------------------------------------------------
+void Cylinder::free()
+{
+    Shape::free();
+    cuda_free(d_aabb_buffer);
 }
 
 // ------------------------------------------------------------------

@@ -1,6 +1,7 @@
 #pragma once 
 
 #include <functional>
+#include <vector>
 
 namespace prayground
 {
@@ -11,15 +12,16 @@ class Event
 public:
     void bindFunction(const std::function<ReturnType(Args...)>& function)
     {
-        m_function = function;
+        m_functions.push_back(function);
     }
 
     void invoke(const Args&... args)
     {
-        m_function(args...);
+        for (const auto& func : m_functions)
+            func(args...);
     }
 private:
-    std::function<ReturnType(Args...)> m_function;
+    std::vector<std::function<ReturnType(Args...)>> m_functions;
 };
 
 }

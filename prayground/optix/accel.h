@@ -21,12 +21,6 @@ public:
     explicit GeometryAccel(OptixBuildInputType type);
     ~GeometryAccel();
 
-    template <class ...Shapes>
-    void addShapes(const Shapes&... shapes)
-    {
-        static_assert(std::conjunction<std::);
-    }
-
     void addShape(const std::shared_ptr<Shape>& shape);
    
     void build(const Context& ctx, CUstream stream);
@@ -87,8 +81,8 @@ public:
     void addInstance(const Instance& instance);
     Instance& instanceAt(const int32_t idx);
 
-    void build(const Context& ctx);
-    void update(const Context& ctx);
+    void build(const Context& ctx, CUstream stream);
+    void update(const Context& ctx, CUstream stream);
     void free();
 
     /** Switch flag whether to enable store */
@@ -122,7 +116,7 @@ private:
     std::vector<Instance> m_instances;
     /// @note 
     /// update() を考えると、自分自身でOptixBuildInput を保持している方がいい気がする。
-    /// OptixBuildInput m_instance_input;
+    OptixBuildInput m_instance_input;
 
     bool is_hold_temp_buffer{ false };
     CUdeviceptr d_buffer{ 0 }, d_temp_buffer{ 0 };

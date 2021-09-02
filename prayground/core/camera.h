@@ -1,6 +1,7 @@
 #pragma once
 
 #include <prayground/math/vec_math.h>
+#include <prayground/app/window.h>
 
 namespace prayground {
 
@@ -17,6 +18,8 @@ struct CameraData
 };
 
 }
+
+#ifndef __CUDACC__
 
 /**
  * @brief 
@@ -73,6 +76,12 @@ public:
     const FovAxis& fovAxis() const { return m_fovaxis; }
     void setFovAxis( FovAxis fovaxis ) { m_fovaxis = fovaxis; }
 
+    void enableTracking(std::shared_ptr<Window> window);
+    void disableTracking();
+
+    void changeOrientation(float x_move, float y_move);
+    void zoom(float offset);
+
 protected:
     float3 m_origin;
     float3 m_lookat;
@@ -82,6 +91,10 @@ protected:
     float m_nearclip;
     float m_farclip;
     FovAxis m_fovaxis;
+
+private:
+    void mouseDragged(float x, float y, int button);
+    void mouseScrolled(float xoffset, float yoffset);
 };
 
 /**
@@ -111,5 +124,7 @@ private:
     float m_aperture;
     float m_focal_length;
 };
+
+#endif // __CUDACC__
 
 }

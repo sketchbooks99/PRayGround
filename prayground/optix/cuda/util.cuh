@@ -9,7 +9,10 @@
 template <typename T>
 INLINE DEVICE void swap(T& a, T& b)
 {
-    T c(a); a = b; b = c;
+    // T c(a); a = b; b = c;
+    T c{(T&&)a};
+    a = (T&&)b;
+    b = (T&&)c;
 }
 
 INLINE DEVICE void* unpackPointer( unsigned int i0, unsigned int i1 )

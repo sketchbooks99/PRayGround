@@ -86,6 +86,7 @@ void Bitmap_<PixelType>::allocate(Format format, int width, int height)
             Throw("prayground::Bitmap::allocate(): Invalid type of allocation");
     }
 
+    // iotaに書き換えられる？
     // Zero-initialization of pixel data
     std::vector<PixelType> zero_arr(m_channels * m_width * m_height, static_cast<PixelType>(0));
     m_data = new PixelType[m_channels * m_width * m_height];

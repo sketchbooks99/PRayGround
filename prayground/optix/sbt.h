@@ -128,6 +128,8 @@ public:
         push_to_vector(m_miss_records, args...);
     }
 
+
+
     /// @note 置き換えを行ったらデバイス上のデータも更新する？
     void replaceMissRecord(const MissRecord& record, const int idx)
     {

@@ -44,7 +44,9 @@ public:
     void rotateX(const float radians);
     void rotateY(const float radians);
     void rotateZ(const float radians);
-    Matrix4f transform() const;
+    // constをつけるとerrorになるのはなんでだ？
+    // Matrix<T,N> 側のコンストラクタに問題がありそう
+    Matrix4f transform();
 
     bool isDataOnDevice() const;
     CUdeviceptr devicePtr() const;

@@ -6,15 +6,30 @@
 
 namespace prayground {
 
+template <class Head, class... Args>
+static void push_to_vector(std::vector<Head>& v, const Head& head, const Args&... args)
+{
+    v.emplace_back(head);
+    if constexpr (sizeof...(args) != 0)
+        push_to_vector(v, args...);
+}
+
 class GeometryAccel {
 public:
 
     GeometryAccel() = default;
     explicit GeometryAccel(OptixBuildInputType type);
     ~GeometryAccel();
+
+    template <class ...Shapes>
+    void addShapes(const Shapes&... shapes)
+    {
+        static_assert(std::conjunction<std::);
+    }
+
+    void addShape(const std::shared_ptr<Shape>& shape);
    
-    //void build(const Context& ctx);
-    void build(const Context& ctx, CUstream stream,  const std::vector<std::shared_ptr<Shape>>& shape);
+    void build(const Context& ctx, CUstream stream);
     void update(const Context& ctx, CUstream stream);
     void update(const Context& ctx, CUstream stream, CUdeviceptr temp_buffer, size_t temp_buffer_size);
     void free();
@@ -49,7 +64,7 @@ private:
     OptixAccelBuildOptions m_options{};
     uint32_t m_count{ 0 };
 
-    //std::vector<std::shared_ptr<Shape>> m_shapes;
+    std::vector<std::shared_ptr<Shape>> m_shapes;
     std::vector<OptixBuildInput> m_build_inputs;
 
     bool is_hold_temp_buffer{ false };

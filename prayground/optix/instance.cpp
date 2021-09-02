@@ -135,9 +135,9 @@ void Instance::rotateZ(const float radians)
     setTransform(current_mat);
 }
 
-Matrix4f Instance::transform() const 
+Matrix4f Instance::transform()
 {
-    return Matrix4f( m_instance.transform );
+    return Matrix4f(m_instance.transform);
 }
 
 // ------------------------------------------------------------------

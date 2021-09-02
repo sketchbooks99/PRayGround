@@ -19,6 +19,7 @@ public:
     void update();
     void draw();
 
+    void mousePressed(float x, float y, int button);
     void mouseDragged(float x, float y, int button);
     void mouseScrolled(float xoffset, float yoffset);
 private:

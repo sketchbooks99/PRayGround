@@ -263,8 +263,8 @@ void App::update()
 
     float time = pgGetElapsedTime<float>();
 
-    bunny_instance.setTransform(Matrix4f::translate({ 0.0f, -5.0f, 0.0f }) * Matrix4f::scale(25.0f + sinf(time) * 50.0f));
-    ias.update(context, stream);
+    /*bunny_instance.setTransform(Matrix4f::translate({ 0.0f, -5.0f, 0.0f }) * Matrix4f::scale(25.0f + sinf(time) * 50.0f));
+    ias.update(context, stream);*/
 
     pgSetWindowName("fps: " + to_string(pgGetFrameRate()));
 }
@@ -277,6 +277,12 @@ void App::draw()
     // If you'd like to write out rendered result, please comment out following two lines.
     // if (pgGetFrame() == 2000)
     //     film.bitmapAt("result")->write(pathJoin(pgAppDir(), "cornel.jpg"));
+}
+
+// ----------------------------------------------------------------
+void App::mousePressed(float x, float y, int button)
+{
+    pgExit();
 }
 
 // ----------------------------------------------------------------

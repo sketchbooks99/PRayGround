@@ -87,7 +87,7 @@ void pgRunApp(const std::shared_ptr<BaseApp>& app, const std::shared_ptr<Window>
 
 void pgExit()
 {
-    
+    current_runner->window()->notifyShouldClose();
 }
 
 // AppRunner ------------------------------------------------

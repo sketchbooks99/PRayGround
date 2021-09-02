@@ -57,7 +57,7 @@ private:
         { Format::UNKNOWN, 0 }
     };
 
-    PixelType* m_data { nullptr };  // CPU側のデータ
+    PixelType* m_data { nullptr };  // CPU側のデータ -> unique_ptrにする
     PixelType* d_data { nullptr };  // GPU側のデータ
 
     Format m_format { Format::UNKNOWN };

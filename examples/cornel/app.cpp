@@ -11,6 +11,7 @@ void App::setup()
     context.create();
 
     ias = InstanceAccel(InstanceAccel::Type::Instances);
+    //ias.enableHoldTempBuffer();
 
     // Prepare pipeline
     pipeline.setLaunchVariableName("params");
@@ -73,9 +74,9 @@ void App::setup()
     sbt.addCallablesRecord(callable_records[2]);
 
     // Prepare environment 
-    shared_ptr<FloatBitmapTexture> env_texture = make_shared<FloatBitmapTexture>("env1.jpg");
+    shared_ptr<ConstantTexture> env_texture = make_shared<ConstantTexture>(make_float3(1.0f));
     env_texture->copyToDevice();
-    env_texture->setProgramId(bitmap_prg_id);
+    env_texture->setProgramId(constant_prg_id);
     env = make_shared<EnvironmentEmitter>(env_texture);
     env->copyToDevice();
 
@@ -147,10 +148,10 @@ void App::setup()
     ceiling_light->copyToDevice();
     ceiling_light->setSbtIndex(sbt_idx);
     area_emitter->copyToDevice();
-    GeometryAccel gas{ GeometryAccel::Type::Custom };
+    GeometryAccel gas{ OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES };
     gas.allowCompaction();
     gas.addShape(ceiling_light);
-    gas.build(context);
+    gas.build(context, stream);
     Instance cl_instance;
     cl_instance.setTransform(Matrix4f::translate({ 0.0f, 9.9f, 0.0f }));
     cl_instance.setTraversableHandle(gas.handle());
@@ -176,7 +177,7 @@ void App::setup()
         GeometryAccel gas{OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES};
         gas.allowCompaction();
         gas.addShape(cornel_planes[i].first);
-        gas.build(context);
+        gas.build(context, stream);
         Instance instance;
         instance.setTransform(wall_matrices[i]);
         instance.setTraversableHandle(gas.handle());
@@ -220,8 +221,7 @@ void App::setup()
     GeometryAccel bunny_gas{OPTIX_BUILD_INPUT_TYPE_TRIANGLES};
     bunny_gas.addShape(bunny);
     bunny_gas.allowCompaction();
-    bunny_gas.build(context);
-    Instance bunny_instance;
+    bunny_gas.build(context, stream);
     bunny_instance.setTransform(Matrix4f::translate({0.0f, -5.0f, 0.0f}) * Matrix4f::scale(50.0f));
     bunny_instance.setSBTOffset(sbt_idx);
     bunny_instance.setTraversableHandle(bunny_gas.handle());
@@ -230,7 +230,7 @@ void App::setup()
     ias.addInstance(bunny_instance);
 
     // Build IAS
-    ias.build(context);
+    ias.build(context, stream);
     sbt.createOnDevice();
     params.handle = ias.handle();
     pipeline.create(context);
@@ -260,6 +260,13 @@ void App::update()
     CUDA_SYNC_CHECK();
 
     film.bitmapAt("result")->copyFromDevice();
+
+    float time = pgGetElapsedTime<float>();
+
+    bunny_instance.setTransform(Matrix4f::translate({ 0.0f, -5.0f, 0.0f }) * Matrix4f::scale(25.0f + sinf(time) * 50.0f));
+    ias.update(context, stream);
+
+    pgSetWindowName("fps: " + to_string(pgGetFrameRate()));
 }
 
 // ----------------------------------------------------------------

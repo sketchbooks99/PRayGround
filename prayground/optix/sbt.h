@@ -72,7 +72,7 @@ namespace {
     };
 
     template <class Head, class... Args>
-    void push_to_vector(std::vector<Head>& v, const Head& head, const Args&... args)
+    inline void push_to_vector(std::vector<Head>& v, const Head& head, const Args&... args)
     {
         v.emplace_back(head);
         if constexpr (sizeof...(args) != 0)

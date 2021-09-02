@@ -42,7 +42,7 @@ void Sphere::copyToDevice()
 // ------------------------------------------------------------------
 OptixBuildInput Sphere::createBuildInput()
 {
-    OptixBuildInput bi;
+    OptixBuildInput bi = {};
     CUDABuffer<uint32_t> d_sbt_indices;
     uint32_t* sbt_indices = new uint32_t[1];
     sbt_indices[0] = m_sbt_index;

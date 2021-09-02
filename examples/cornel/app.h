@@ -33,6 +33,7 @@ private:
     Film film;
     Camera camera;
 
+    Instance bunny_instance;
     shared_ptr<EnvironmentEmitter> env;
     vector<pair<shared_ptr<Shape>, shared_ptr<Material>>> cornel_planes;
     shared_ptr<AreaEmitter> area_emitter;

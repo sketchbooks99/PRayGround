@@ -4,54 +4,55 @@
 namespace prayground {
 
 namespace { // nonamed-namespace
-    std::shared_ptr<Window> current_window;
+    //std::shared_ptr<Window> current_window;
+    std::unique_ptr<AppRunner> current_runner;
     int32_t current_frame{ 0 };
     std::chrono::high_resolution_clock::time_point start_time;
 } // ::nonamed-namespace
 
 float pgGetMouseX()
 {
-    return current_window->events().inputStates.mousePosition.x;
+    return current_runner->window()->events().inputStates.mousePosition.x;
 }
 
 float pgGetMouseY()
 {
-    return current_window->events().inputStates.mousePosition.y;
+    return current_runner->window()->events().inputStates.mousePosition.y;
 }
 
 float pgGetPreviousMouseX()
 {
-    return current_window->events().inputStates.mousePreviousPosition.x;
+    return current_runner->window()->events().inputStates.mousePreviousPosition.x;
 }
 
 float pgGetPreviousMouseY()
 {
-    return current_window->events().inputStates.mousePreviousPosition.y;
+    return current_runner->window()->events().inputStates.mousePreviousPosition.y;
 }
 
 float2 pgGetMousePosition()
 {
-    return current_window->events().inputStates.mousePosition;
+    return current_runner->window()->events().inputStates.mousePosition;
 }
 
 float2  pgGetPreviousMousePosition()
 {
-    return current_window->events().inputStates.mousePreviousPosition;
+    return current_runner->window()->events().inputStates.mousePreviousPosition;
 }
 
 int32_t pgGetMouseButton()
 {
-    return current_window->events().inputStates.mouseButton;
+    return current_runner->window()->events().inputStates.mouseButton;
 }
 
 int32_t pgGetWidth()
 {
-    return current_window->width();
+    return current_runner->window()->width();
 }
 
 int32_t pgGetHeight()
 {
-    return current_window->height();
+    return current_runner->window()->height();
 }
 
 int32_t pgGetFrame() 
@@ -75,20 +76,25 @@ template double pgGetElapsedTime<double>();
 
 void pgSetWindowName(const std::string& name)
 {
-    current_window->setName(name);
+    current_runner->window()->setName(name);
 }
 
 void pgRunApp(const std::shared_ptr<BaseApp>& app, const std::shared_ptr<Window>& window)
 {
-    std::shared_ptr<AppRunner> app_runner = std::make_shared<AppRunner>(app, window);
-    app_runner->run();
+    current_runner = std::make_unique<AppRunner>(app, window);
+    current_runner->run();
+}
+
+void pgExit()
+{
+    
 }
 
 // AppRunner ------------------------------------------------
 AppRunner::AppRunner(const std::shared_ptr<BaseApp>& app, const std::shared_ptr<Window>& window)
 : m_app(app), m_window(window)
 {
-    current_window = window;
+
 }
 
 // ------------------------------------------------

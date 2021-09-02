@@ -14,12 +14,10 @@ namespace prayground {
 class Instance {
 public:
     Instance();
-    explicit Instance(const Matrix4f& matrix);
+    Instance(const Matrix4f& matrix);
+    Instance(const Instance& instance);
 
-    explicit operator OptixInstance() const { return m_instance; }
-
-    /** Update instance info on device */
-    virtual void copyToDevice();
+    explicit operator OptixInstance() const { return *m_instance; }
 
     void setId(const uint32_t id);
     void setSBTOffset(const uint32_t sbt_offset);
@@ -44,15 +42,17 @@ public:
     void rotateX(const float radians);
     void rotateY(const float radians);
     void rotateZ(const float radians);
-    // constをつけるとerrorになるのはなんでだ？
-    // Matrix<T,N> 側のコンストラクタに問題がありそう
     Matrix4f transform();
 
-    bool isDataOnDevice() const;
-    CUdeviceptr devicePtr() const;
+    OptixInstance* rawInstancePtr() const;
 private:
-    OptixInstance m_instance;
-    CUdeviceptr d_instance;
+    /**
+     * @note 
+     * InstanceAccelの内部で管理しているInstanceを外部から間接的に更新できるように
+     * OptixInstance はポインタで管理しておく
+     * shared_ptr<Instance> にしてm_instance を実体にしておくかは悩みどころ
+     */
+    OptixInstance* m_instance;
 };
 
 } // ::prayground

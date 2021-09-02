@@ -105,6 +105,11 @@ void Window::close()
     glfwTerminate();
 }
 
+void Window::noticeShouldClose()
+{
+    glfwSetWindowShouldClose(m_window_ptr, GL_TRUE);
+}
+
 bool Window::shouldClose() const
 {
     return glfwWindowShouldClose(m_window_ptr);

@@ -97,7 +97,7 @@ void TriangleMesh::copyToDevice() {
 // ------------------------------------------------------------------
 OptixBuildInput TriangleMesh::createBuildInput() 
 {
-    OptixBuildInput bi;
+    OptixBuildInput bi = {};
     CUDABuffer<uint32_t> d_sbt_faces;
     std::vector<uint32_t> sbt_faces(m_faces.size(), m_sbt_index);
     d_sbt_faces.copyToDevice(sbt_faces);

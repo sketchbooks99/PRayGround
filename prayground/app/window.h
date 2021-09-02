@@ -52,6 +52,7 @@ public:
     void update();
     void swap();
     void close();
+    void noticeShouldClose();
     bool shouldClose() const;
 
     void setVisible(const bool is_visible);

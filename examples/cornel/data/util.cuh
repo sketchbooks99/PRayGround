@@ -3,6 +3,7 @@
 #include <optix.h>
 #include <cuda_runtime.h>
 #include <prayground/math/vec_math.h>
+#include <prayground/math/util.h>
 #include <prayground/optix/helpers.h>
 #include <prayground/optix/macros.h>
 #include "../params.h"

@@ -6,17 +6,8 @@
 
 namespace prayground {
 
-template <class Head, class... Args>
-static void push_to_vector(std::vector<Head>& v, const Head& head, const Args&... args)
-{
-    v.emplace_back(head);
-    if constexpr (sizeof...(args) != 0)
-        push_to_vector(v, args...);
-}
-
 class GeometryAccel {
 public:
-
     GeometryAccel() = default;
     explicit GeometryAccel(OptixBuildInputType type);
     ~GeometryAccel();
@@ -114,8 +105,7 @@ private:
     uint32_t m_count{ 0 };
 
     std::vector<Instance> m_instances;
-    /// @note 
-    /// update() を考えると、自分自身でOptixBuildInput を保持している方がいい気がする。
+    CUdeviceptr d_instances;
     OptixBuildInput m_instance_input;
 
     bool is_hold_temp_buffer{ false };

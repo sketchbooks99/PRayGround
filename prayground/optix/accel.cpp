@@ -17,6 +17,12 @@ GeometryAccel::~GeometryAccel()
 }
 
 // ---------------------------------------------------------------------------
+void GeometryAccel::addShape(const std::shared_ptr<Shape>& shape)
+{
+    m_shapes.push_back(shape);
+}
+
+// ---------------------------------------------------------------------------
 void GeometryAccel::build(const Context& ctx, CUstream stream)
 {
     if (m_shapes.size() == 0)
@@ -233,7 +239,7 @@ void GeometryAccel::setMotionOptions(const OptixMotionOptions& motion_options)
     m_options.motionOptions = motion_options;
 }
 
-// -----------------------------------C----------------------------------------
+// ---------------------------------------------------------------------------
 uint32_t GeometryAccel::count() const
 {
     return m_count;
@@ -290,16 +296,24 @@ Instance& InstanceAccel::instanceAt(const int32_t idx)
 // ---------------------------------------------------------------------------
 void InstanceAccel::build(const Context& ctx, CUstream stream)
 {
-    CUDABuffer<OptixInstance> d_instances;
+    //CUDABuffer<OptixInstance> d_instances_buffer;
     std::vector<OptixInstance> optix_instances;
     std::transform(m_instances.begin(), m_instances.end(), std::back_inserter(optix_instances),
         [](const Instance& instance) { return static_cast<OptixInstance>(instance);  });
-    d_instances.copyToDevice(optix_instances);
+    //d_instances_buffer.copyToDevice(optix_instances);
+
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_instances), sizeof(OptixInstance) * optix_instances.size()));
+    CUDA_CHECK(cudaMemcpy(
+        reinterpret_cast<void*>(d_instances),
+        optix_instances.data(), sizeof(OptixInstance) * optix_instances.size(),
+        cudaMemcpyHostToDevice
+    ));
 
     m_instance_input = {};
     m_instance_input.type = static_cast<OptixBuildInputType>(m_type);
-    m_instance_input.instanceArray.instances = d_instances.devicePtr();
+    m_instance_input.instanceArray.instances = d_instances;
     m_instance_input.instanceArray.numInstances = static_cast<uint32_t>(m_instances.size());
+    //d_instances = d_instances_buffer.devicePtr();
 
     m_options.operation = OPTIX_BUILD_OPERATION_BUILD;
 
@@ -310,48 +324,59 @@ void InstanceAccel::build(const Context& ctx, CUstream stream)
         &m_instance_input, 
         1,  // num build inputs
         &ias_buffer_sizes ));
-
+    d_buffer_size = ias_buffer_sizes.outputSizeInBytes;
+    d_temp_buffer_size = ias_buffer_sizes.tempSizeInBytes;
+        
     // Allocate buffer to build acceleration structure
     CUDA_CHECK(cudaMalloc(
         reinterpret_cast<void**>(&d_temp_buffer), 
-        ias_buffer_sizes.tempSizeInBytes ));
+        d_temp_buffer_size ));
     CUDA_CHECK(cudaMalloc(
         reinterpret_cast<void**>(&d_buffer), 
-        ias_buffer_sizes.outputSizeInBytes ));
+        d_buffer_size ));
     
     // Build instance AS contains all GASs to describe the scene.
     OPTIX_CHECK(optixAccelBuild(
         static_cast<OptixDeviceContext>(ctx), 
-        0,                  // CUDA stream
+        stream,                  // CUDA stream
         &m_options, 
         &m_instance_input, 
         1,                  // num build inputs
         d_temp_buffer, 
-        ias_buffer_sizes.tempSizeInBytes, 
+        d_temp_buffer_size, 
         d_buffer, 
-        ias_buffer_sizes.outputSizeInBytes, 
+        d_buffer_size, 
         &m_handle, 
         nullptr,            // emitted property list
         0                   // num emitted properties
     ));
 
-    if (is_hold_temp_buffer)
-        d_temp_buffer_size = ias_buffer_sizes.tempSizeInBytes;
-    else
+    if (!is_hold_temp_buffer)
     {
         cuda_free(d_temp_buffer);
         d_temp_buffer_size = 0;
     }
-    /// @note Is this release of pointer needed?
-    d_instances.free();  
+        
+    //d_instances_buffer.free();  
 }
 
 void InstanceAccel::update(const Context& ctx, CUstream stream)
 {
+    OptixInstance* instance_device_ptr = reinterpret_cast<OptixInstance*>(d_instances);
+    for (size_t i = 0; auto& instance : m_instances)
+    {
+        CUDA_CHECK(cudaMemcpy(
+            &instance_device_ptr[i].transform,
+            instance.rawInstancePtr()->transform, sizeof(float)*12,
+            cudaMemcpyHostToDevice
+        ));
+        i++;
+    }
+
     m_options.buildFlags |= OPTIX_BUILD_FLAG_ALLOW_UPDATE;
     m_options.operation = OPTIX_BUILD_OPERATION_UPDATE;
 
-    if (!d_temp_buffer)
+    if (!is_hold_temp_buffer)
     {
         OptixAccelBufferSizes gas_buffer_sizes;
         OPTIX_CHECK(optixAccelComputeMemoryUsage(
@@ -380,12 +405,14 @@ void InstanceAccel::update(const Context& ctx, CUstream stream)
         nullptr,
         0
     ));
+
+    CUDA_SYNC_CHECK();
 }
 
 void InstanceAccel::free()
 {
-    if (d_buffer) cudaFree(reinterpret_cast<void*>(d_buffer));
-    if (d_temp_buffer) cudaFree(reinterpret_cast<void*>(d_temp_buffer));
+    if (d_buffer) CUDA_CHECK(cudaFree(reinterpret_cast<void*>(d_buffer)));
+    if (d_temp_buffer) CUDA_CHECK(cudaFree(reinterpret_cast<void*>(d_temp_buffer)));
     d_buffer_size = 0;
     d_temp_buffer_size = 0;
 }

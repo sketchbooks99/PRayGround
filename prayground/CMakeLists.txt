@@ -58,6 +58,8 @@ set(sources
   optix/pipeline.cpp
   optix/program.h 
   optix/program.cpp 
+  optix/transform.h
+  optix/transform.cpp
   optix/sbt.h 
   optix/cuda/texture.cuh
 

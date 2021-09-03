@@ -7,11 +7,6 @@
 
 namespace prayground {
 
-struct EmitterInfo
-{
-
-};
-
 struct LaunchParams 
 {
     unsigned int width, height;

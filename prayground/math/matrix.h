@@ -1,6 +1,7 @@
 #pragma once
 
 #include <prayground/math/vec_math.h>
+#include <prayground/math/util.h>
 
 #ifndef __CUDACC__
     #include <iostream>
@@ -67,17 +68,14 @@ public:
 
     HOSTDEVICE bool isIdentity() const;
 
-    HOSTDEVICE Matrix inverse();
+    HOSTDEVICE Matrix inverse() const;
 
-    /**
-     * @note
-     * [JP] 以下の変換行列関数は \c N に応じて特殊化されます。
-     * [EN] The following transformation functions specilized depending on \c N.
-     */
-    static HOSTDEVICE Matrix rotate(const float radians, const TfloatN& axis);
+    static HOSTDEVICE Matrix           rotate(const float radians, const TfloatN& axis);
     static HOSTDEVICE Matrix<float, 4> translate(const float3& t);
-    static HOSTDEVICE Matrix scale(const TfloatN& s);
-    static HOSTDEVICE Matrix scale(const float s);
+    static HOSTDEVICE Matrix           scale(const TfloatN& s);
+    static HOSTDEVICE Matrix           scale(const float s);
+    static HOSTDEVICE Matrix<float, 4> shear(float a, float b, Axis axis);
+    static HOSTDEVICE Matrix<float, 4> reflection(Axis axis);
 
     static HOSTDEVICE Matrix zero();
     static HOSTDEVICE Matrix identity();
@@ -340,7 +338,7 @@ INLINE HOSTDEVICE bool Matrix<T, N>::isIdentity() const
 }
 
 template <typename T, uint32_t N>
-INLINE HOSTDEVICE Matrix<T, N> Matrix<T, N>::inverse()
+INLINE HOSTDEVICE Matrix<T, N> Matrix<T, N>::inverse() const
 {
     Matrix<T, N> i_mat = Matrix<T, N>::identity();
     T* inv_data = i_mat.data();
@@ -412,12 +410,12 @@ INLINE HOSTDEVICE Matrix<T, N> Matrix<T, N>::rotate(const float radians, const t
 template <>
 INLINE HOSTDEVICE Matrix<float, 4> Matrix<float, 4>::translate(const float3 &t)
 {
-    Matrix4f i_mat = Matrix<float, 4>::identity();
+    Matrix4f i_mat = Matrix4f::identity();
     float* data = i_mat.data();
     data[0 * 4 + 3] = t.x;
     data[1 * 4 + 3] = t.y;
     data[2 * 4 + 3] = t.z;
-    return Matrix<float, 4>(data);
+    return Matrix4f(data);
 }
 
 template <typename T, uint32_t N>
@@ -443,6 +441,36 @@ INLINE HOSTDEVICE Matrix<T, N> Matrix<T, N>::scale(const float s)
     for (size_t i = 0; i < static_cast<size_t>(sizeof(Matrix<T, N>::TfloatN) / sizeof(float)); i++)
         data[i * N + i] = s;
     return Matrix<T, N>(data);
+}
+
+template <>
+INLINE HOSTDEVICE Matrix<float, 4> Matrix<float, 4>::reflection(Axis axis)
+{
+    Matrix4f i_mat = Matrix4f::identity();
+    float* data = i_mat.data();
+    uint32_t i = static_cast<uint32_t>(axis);
+    data[i * 4 + i] *= -1;
+    return Matrix4f(data);
+}
+
+template <>
+INLINE HOSTDEVICE Matrix<float, 4> Matrix<float, 4>::shear(float a, float b, Axis axis)
+{
+    Matrix<float, 4> i_mat = Matrix<float, 4>::identity();
+    float* data = i_mat.data();
+    switch(axis)
+    {
+        case Axis::X:
+            data[4] = a; data[8] = b;
+            return Matrix4f(data);
+        case Axis::Y:
+            data[1] = a; data[9] = b;
+            return Matrix4f(data);
+        case Axis::Z:
+            data[2] = a; data[6] = b;
+            return Matrix4f(data);        
+    }
+    return Matrix4f(data);
 }
 
 // ----------------------------------------------------------------------------

@@ -16,6 +16,7 @@ public:
    
     void build(const Context& ctx, CUstream stream);
     void update(const Context& ctx, CUstream stream);
+    // void relocate() // TODO
     void free();
 
     void setFlags(const uint32_t build_flags);
@@ -69,6 +70,7 @@ public:
 
     void build(const Context& ctx, CUstream stream);
     void update(const Context& ctx, CUstream stream);
+    // void relocate(); // TODO
     void free();
 
     void setFlags(const uint32_t build_flags);

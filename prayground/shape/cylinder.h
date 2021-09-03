@@ -18,7 +18,7 @@ public:
     Cylinder();
     Cylinder(float radius, float height);
 
-    OptixBuildInputType buildInputType() const override;
+    ShapeType type() const override;
 
     void copyToDevice() override;
     OptixBuildInput createBuildInput() override;

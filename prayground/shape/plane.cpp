@@ -16,9 +16,9 @@ Plane::Plane(const float2& min, const float2& max)
 }
 
 // ------------------------------------------------------------------
-OptixBuildInputType Plane::buildInputType() const
+ShapeType Plane::type() const
 {
-    return OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES;
+    return ShapeType::Custom;
 }
 
 // ------------------------------------------------------------------
@@ -48,7 +48,7 @@ OptixBuildInput Plane::createBuildInput()
     d_sbt_indices.copyToDevice(sbt_indices, sizeof(uint32_t));
 
     // Prepare bounding box information on the device.
-    OptixAabb aabb = static_cast<OptixAabb>(bound());
+    OptixAabb aabb = static_cast<OptixAabb>(this->bound());
 
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_aabb_buffer), sizeof(OptixAabb)));
     CUDA_CHECK(cudaMemcpy(
@@ -60,7 +60,7 @@ OptixBuildInput Plane::createBuildInput()
     unsigned int* input_flags = new unsigned int[1];
     input_flags[0] = OPTIX_GEOMETRY_FLAG_NONE;
 
-    bi.type = OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES;
+    bi.type = static_cast<OptixBuildInputType>(this->type());
     bi.customPrimitiveArray.aabbBuffers = &d_aabb_buffer;
     bi.customPrimitiveArray.numPrimitives = 1;
     bi.customPrimitiveArray.flags = input_flags;

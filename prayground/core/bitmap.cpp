@@ -43,7 +43,7 @@ Bitmap_<PixelType>::Bitmap_(Format format, int width, int height, PixelType* dat
 {
     allocate(format, width, height);
     if (data)
-        memcpy(m_data, data, sizeof(PixelType) * m_width * m_height * m_channels);
+        memcpy(m_data.get(), data, sizeof(PixelType) * m_width * m_height * m_channels);
 }
 
 // --------------------------------------------------------------------
@@ -89,8 +89,8 @@ void Bitmap_<PixelType>::allocate(Format format, int width, int height)
     // iotaに書き換えられる？
     // Zero-initialization of pixel data
     std::vector<PixelType> zero_arr(m_channels * m_width * m_height, static_cast<PixelType>(0));
-    m_data = new PixelType[m_channels * m_width * m_height];
-    memcpy(m_data, zero_arr.data(), m_channels * m_width * m_height * sizeof(PixelType));
+    m_data = std::make_unique<PixelType[]>(m_channels * m_width * m_height);
+    memcpy(m_data.get(), zero_arr.data(), m_channels * m_width * m_height * sizeof(PixelType));
 
     m_gltex = prepareGL(m_shader);
 }
@@ -99,7 +99,7 @@ void Bitmap_<PixelType>::allocate(Format format, int width, int height)
 template <typename PixelType>
 void Bitmap_<PixelType>::setData(PixelType* data, int width, int height, int offset_x, int offset_y)
 {
-    Assert(m_data, "Please allocate the bitmap before filling data with specified range.");
+    Assert(m_data.get(), "Please allocate the bitmap before filling data with specified range.");
 
     if (m_width < offset_x + width || m_height < offset_y + height)
     {
@@ -161,7 +161,8 @@ void Bitmap_<unsigned char>::load(const std::filesystem::path& filename)
         Message(MSG_ERROR, "prayground::Bitmap_<unsigned char>::load(): EXR format can be loaded only in BitmapFloat.");
         return;
     }
-    m_data = stbi_load(filepath.value().string().c_str(), &m_width, &m_height, &m_channels, type2channels[m_format]);
+    uint8_t* raw_data = m_data.get();
+    raw_data = stbi_load(filepath.value().string().c_str(), &m_width, &m_height, &m_channels, type2channels[m_format]);
     m_channels = type2channels[m_format];
 
     m_gltex = prepareGL(m_shader);
@@ -182,7 +183,8 @@ void Bitmap_<float>::load(const std::filesystem::path& filename)
         m_format = m_format== Format::UNKNOWN ? Format::RGBA : m_format;
 
         const char* err = nullptr;
-        int result = LoadEXR(&m_data, &m_width, &m_height, filepath.value().string().c_str(), &err);
+        float* raw_data = m_data.get();
+        int result = LoadEXR(&raw_data, &m_width, &m_height, filepath.value().string().c_str(), &err);
         if (result != TINYEXR_SUCCESS)
         {
             if (err)
@@ -203,7 +205,8 @@ void Bitmap_<float>::load(const std::filesystem::path& filename)
 
         uint8_t* raw_data = stbi_load(filepath.value().string().c_str(), &m_width, &m_height, &m_channels, type2channels[m_format]);
         m_channels = type2channels[m_format];
-        m_data = new float[m_width * m_height * m_channels];
+        //m_data = new float[m_width * m_height * m_channels];
+        m_data = std::make_unique<float[]>(m_width * m_height * m_channels);
         for (int i = 0; i < m_width * m_height * m_channels; i += m_channels)
         {
             for (int c = 0; c < m_channels; c++)
@@ -226,7 +229,7 @@ void Bitmap_<PixelType>::write(const std::filesystem::path& filepath, int qualit
     unsigned char* data = new unsigned char[m_width * m_height * m_channels];
     if constexpr (std::is_same_v<PixelType, unsigned char>)
     {
-        memcpy(data, m_data, m_width * m_height * m_channels);
+        memcpy(data, m_data.get(), m_width * m_height * m_channels);
     }
     // Tの型がfloatの場合は中身を float [0.0f, 1.0f] -> unsigned char [0, 255] に変換する
     else 
@@ -340,19 +343,20 @@ void Bitmap_<PixelType>::draw(int32_t x, int32_t y, int32_t width, int32_t heigh
         texture_data_type = GL_UNSIGNED_BYTE;
     
     glBindTexture(GL_TEXTURE_2D, m_gltex);
+    PixelType* raw_data = m_data.get();
     switch (m_format)
     {
     case Format::GRAY:
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_R, m_width, m_height, 0, GL_R, texture_data_type, m_data);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_R, m_width, m_height, 0, GL_R, texture_data_type, raw_data);
         break;
     case Format::GRAY_ALPHA:
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RG, m_width, m_height, 0, GL_RG, texture_data_type, m_data);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RG, m_width, m_height, 0, GL_RG, texture_data_type, raw_data);
         break;
     case Format::RGB:
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_width, m_height, 0, GL_RGB, texture_data_type, m_data);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_width, m_height, 0, GL_RGB, texture_data_type, raw_data);
         break;
     case Format::RGBA:
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_RGBA, texture_data_type, m_data);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_RGBA, texture_data_type, raw_data);
         break;
     case Format::UNKNOWN:
     default:
@@ -385,11 +389,11 @@ template <typename PixelType>
 void Bitmap_<PixelType>::copyToDevice() 
 {
     // CPU側のデータが準備されているかチェック
-    Assert(m_data, "Image data in the host side has been not allocated yet.");
+    Assert(m_data.get(), "Image data in the host side has been not allocated yet.");
 
     // GPU上に画像データを準備
     CUDABuffer<PixelType> d_buffer;
-    d_buffer.copyToDevice(m_data, m_width * m_height * m_channels*sizeof(PixelType));
+    d_buffer.copyToDevice(m_data.get(), m_width * m_height * m_channels*sizeof(PixelType));
     d_data = d_buffer.deviceData();
 }
 
@@ -399,8 +403,9 @@ void Bitmap_<PixelType>::copyFromDevice()
 {
     Assert(d_data, "No data has been allocated on the device yet.");
 
+    PixelType* raw_data = m_data.get();
     CUDA_CHECK(cudaMemcpy(
-        m_data,
+        raw_data,
         d_data, m_width * m_height * m_channels * sizeof(PixelType),
         cudaMemcpyDeviceToHost
     ));

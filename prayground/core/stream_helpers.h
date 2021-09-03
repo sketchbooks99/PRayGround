@@ -274,6 +274,36 @@ inline std::ostream& operator<<(std::ostream& out, const OptixInstance& ins) {
     return out << "pad: " << ins.pad[0] << ' ' << ins.pad[1];
 }
 
+/**
+ * @enum OptixBuildFlags 
+ */
+inline std::ostream& operator<<(std::ostream& out, OptixBuildFlags build_flags)
+{
+    switch (build_flags)
+    {
+    case OPTIX_BUILD_FLAG_NONE:                       return out << "OPTIX_BUILD_FLAG_NONE";
+    case OPTIX_BUILD_FLAG_ALLOW_UPDATE:               return out << "OPTIX_BUILD_FLAG_ALLOW_UPDATE";
+    case OPTIX_BUILD_FLAG_ALLOW_COMPACTION:           return out << "OPTIX_BUILD_FLAG_ALLOW_COMPACTION";
+    case OPTIX_BUILD_FLAG_PREFER_FAST_TRACE:          return out << "OPTIX_BUILD_FLAG_PREFER_FAST_TRACE";
+    case OPTIX_BUILD_FLAG_PREFER_FAST_BUILD:          return out << "OPTIX_BUILD_FLAG_PREFER_FAST_BUILD";
+    case OPTIX_BUILD_FLAG_ALLOW_RANDOM_VERTEX_ACCESS: return out << "OPTIX_BUILD_FLAG_ALLOW_RANDOM_VERTEX_ACCESS";
+    default:                                          return out << "";
+    }
+}
+
+/**
+ * @enum OptixBuildOperation
+ */
+inline std::ostream& operator<<(std::ostream& out, OptixBuildOperation build_operation)
+{
+    switch (build_operation)
+    {
+    case OPTIX_BUILD_OPERATION_BUILD:  return out << "OPTIX_BUILD_OPERATION_BUILD";
+    case OPTIX_BUILD_OPERATION_UPDATE: return out << "OPTIX_BUILD_OPERATION_UPDATE";
+    default:                           return out;
+    }
+}
+
 // For CUDA ======================================================================
 /**
  * @enum cudaTextureAddressMode
@@ -282,11 +312,11 @@ inline std::ostream& operator<<( std::ostream& out, const cudaTextureAddressMode
 {
     switch (address_mode) 
     {
-        case cudaAddressModeWrap:   return out << "cudaAddressModeWrap";
-        case cudaAddressModeClamp:  return out << "cudaAddressModeClamp";
-        case cudaAddressModeMirror: return out << "cudaAddressModeMirror";
-        case cudaAddressModeBorder: return out << "cudaAddressModeBorder";
-        default:                    return out;
+    case cudaAddressModeWrap:   return out << "cudaAddressModeWrap";
+    case cudaAddressModeClamp:  return out << "cudaAddressModeClamp";
+    case cudaAddressModeMirror: return out << "cudaAddressModeMirror";
+    case cudaAddressModeBorder: return out << "cudaAddressModeBorder";
+    default:                    return out;
     }
 }
 
@@ -297,9 +327,9 @@ inline std::ostream& operator<<( std::ostream& out, const cudaTextureFilterMode&
 {
     switch (filter_mode)
     {
-        case cudaFilterModePoint:  return out << "cudaFilterModePoint";
-        case cudaFilterModeLinear: return out << "cudaFilterModeLinear";
-        default:                   return out;
+    case cudaFilterModePoint:  return out << "cudaFilterModePoint";
+    case cudaFilterModeLinear: return out << "cudaFilterModeLinear";
+    default:                   return out;
     }
 }
 
@@ -310,14 +340,14 @@ inline std::ostream& operator<<( std::ostream& out, const cudaTextureReadMode& r
 {
     switch (read_mode)
     {
-        case cudaReadModeElementType:     return out << "cudaReadModeElementType";
-        case cudaReadModeNormalizedFloat: return out << "cudaReadModeNormalizedFloat";
-        default:                          return out;
+    case cudaReadModeElementType:     return out << "cudaReadModeElementType";
+    case cudaReadModeNormalizedFloat: return out << "cudaReadModeNormalizedFloat";
+    default:                          return out;
     }
 }
 
 /**
- * @struct
+ * @struct cudaTextureDesc
  */
 inline std::ostream& operator<<( std::ostream& out, const cudaTextureDesc& tex_desc )
 {

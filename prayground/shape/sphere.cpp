@@ -17,9 +17,9 @@ Sphere::Sphere(const float3& c, float r)
 }
 
 // ------------------------------------------------------------------
-OptixBuildInputType Sphere::buildInputType() const
+ShapeType Sphere::type() const
 {
-    return OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES;
+    return ShapeType::Custom;
 }
 
 // ------------------------------------------------------------------
@@ -61,7 +61,7 @@ OptixBuildInput Sphere::createBuildInput()
     uint32_t* input_flags = new uint32_t[1];
     input_flags[0] = OPTIX_GEOMETRY_FLAG_NONE;
 
-    bi.type = OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES;
+    bi.type = static_cast<OptixBuildInputType>(this->type());
     bi.customPrimitiveArray.aabbBuffers = &d_aabb_buffer;
     bi.customPrimitiveArray.numPrimitives = 1;
     bi.customPrimitiveArray.flags = input_flags;

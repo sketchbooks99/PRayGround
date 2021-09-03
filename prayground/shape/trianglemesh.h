@@ -37,7 +37,7 @@ public:
         std::vector<float2> texcoords,
         bool is_smooth=true);
 
-    OptixBuildInputType buildInputType() const override { return OPTIX_BUILD_INPUT_TYPE_TRIANGLES; }
+    ShapeType type() const override;
 
     void copyToDevice() override;
     OptixBuildInput createBuildInput() override;
@@ -45,9 +45,9 @@ public:
     void free() override;
 
     /**
-     * @note 
-     * GAS/IASの更新の際に頂点数やインデックスの数を変更する際は注意が必要
-     * 必ずASをビルドし直す必要がある
+     * @note
+     * Be careful when updating GAS/IAS after modifying the number of vertices, indices
+     * because you must `rebuild` AS, not `update` 
      */
     void addVertex(const float3& v);
     void addFace(const Face& face);

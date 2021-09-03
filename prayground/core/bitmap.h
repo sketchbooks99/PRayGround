@@ -41,7 +41,7 @@ public:
     void copyToDevice();
     void copyFromDevice();
 
-    PixelType* data() const { return m_data; }
+    PixelType* data() const { return m_data.get(); }
     PixelType* devicePtr() const { return d_data; }
 
     int width() const { return m_width; }
@@ -57,7 +57,7 @@ private:
         { Format::UNKNOWN, 0 }
     };
 
-    PixelType* m_data { nullptr };  // CPU側のデータ -> unique_ptrにする
+    std::unique_ptr<PixelType[]> m_data;  // CPU側のデータ -> unique_ptrにする
     PixelType* d_data { nullptr };  // GPU側のデータ
 
     Format m_format { Format::UNKNOWN };
@@ -67,7 +67,6 @@ private:
 
     // Member variables to draw Bitmap on OpenGL context
     GLint m_gltex; 
-    // GLuint m_gl_vertex_array;
     gl::Shader m_shader;
 };
 

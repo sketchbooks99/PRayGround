@@ -283,7 +283,7 @@ endforeach()
 set(CUDA_NVRTC_OPTIONS "${CUDA_NVRTC_OPTIONS}")
 
 # TODO: deprecate this
-configure_file(sampleConfig.h.in sampleConfig.h @ONLY)
+configure_file(prayground_config.h.in prayground_config.h @ONLY)
 
 # Path to sutil.h that all the samples need
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR}
@@ -307,7 +307,6 @@ function(PRAYGROUND_add_executalbe target_name_base target_name_var)
   endif()
   source_group("CUDA Files" REGULAR_EXPRESSION ".+\\.cuh?$")
   source_group("Shader Files" REGULAR_EXPRESSION ".+\\.(vert|frag|geom|glsl|compute|comp)$")
-
 
   # Separate the sources from the CMake and CUDA options fed to the macro.  This code
   # comes from the CUDA_COMPILE_PTX macro found in FindCUDA.cmake.  We are copying the

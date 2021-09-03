@@ -9,26 +9,24 @@ namespace prayground {
 class GeometryAccel {
 public:
     GeometryAccel() = default;
-    explicit GeometryAccel(OptixBuildInputType type);
+    GeometryAccel(ShapeType shape_type);
     ~GeometryAccel();
 
     void addShape(const std::shared_ptr<Shape>& shape);
    
     void build(const Context& ctx, CUstream stream);
     void update(const Context& ctx, CUstream stream);
-    void update(const Context& ctx, CUstream stream, CUdeviceptr temp_buffer, size_t temp_buffer_size);
     void free();
-
-    void enableHoldTempBuffer();
-    void disableHoldTempBuffer();
 
     void setFlags(const uint32_t build_flags);
 
+    void allowUpdate();
     void allowCompaction();
     void preferFastTrace();
     void preferFastBuild();
     void allowRandomVertexAccess();
-
+    
+    void disableUpdate();
     void disableCompaction();
     void disableFastTrace();
     void disableFastBuild();
@@ -38,13 +36,10 @@ public:
 
     uint32_t count() const;
     OptixTraversableHandle handle() const;
-    bool isTempBuffer() const;
     CUdeviceptr deviceBuffer() const;
     size_t deviceBufferSize() const;
-    CUdeviceptr deviceTempBuffer() const;
-    size_t deviceTempBufferSize() const;
 private:
-    OptixBuildInputType m_type;
+    ShapeType m_shape_type;
     OptixTraversableHandle m_handle{ 0 };
     OptixAccelBuildOptions m_options{};
     uint32_t m_count{ 0 };
@@ -53,8 +48,8 @@ private:
     std::vector<OptixBuildInput> m_build_inputs;
 
     bool is_hold_temp_buffer{ false };
-    CUdeviceptr d_buffer{ 0 }, d_temp_buffer{ 0 };
-    size_t d_buffer_size{ 0 }, d_temp_buffer_size{ 0 };
+    CUdeviceptr d_buffer{ 0 };
+    size_t d_buffer_size{ 0 };
 };
 
 class InstanceAccel {
@@ -76,15 +71,13 @@ public:
     void update(const Context& ctx, CUstream stream);
     void free();
 
-    /** Switch flag whether to enable store */
-    void enableHoldTempBuffer();
-    void disableHoldTempBuffer();
-
     void setFlags(const uint32_t build_flags);
+    void allowUpdate();
     void allowCompaction();
     void preferFastTrace();
     void preferFastBuild();
-
+    
+    void disableUpdate();
     void disableCompaction();
     void disableFastTrace();
     void disableFastBuild();
@@ -93,11 +86,8 @@ public:
 
     uint32_t count() const;
     OptixTraversableHandle handle() const;
-    bool isTempBuffer() const;
     CUdeviceptr deviceBuffer() const;
     size_t deviceBufferSize() const;
-    CUdeviceptr deviceTempBuffer() const;
-    size_t deviceTempBufferSize() const;
 private:
     Type m_type;
     OptixTraversableHandle m_handle{ 0 };
@@ -108,9 +98,8 @@ private:
     CUdeviceptr d_instances;
     OptixBuildInput m_instance_input;
 
-    bool is_hold_temp_buffer{ false };
-    CUdeviceptr d_buffer{ 0 }, d_temp_buffer{ 0 };
-    size_t d_buffer_size{ 0 }, d_temp_buffer_size{ 0 };
+    CUdeviceptr d_buffer{ 0 };
+    size_t d_buffer_size{ 0 };
 };
 
 }

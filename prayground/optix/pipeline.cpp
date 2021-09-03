@@ -1,5 +1,5 @@
 #include "pipeline.h"
-#include <sampleConfig.h>
+#include <prayground_config.h>
 #include <optix_stubs.h>
 #include <optix_function_table_definition.h>
 #include <optix_stack_size.h>
@@ -66,83 +66,109 @@ Pipeline::Pipeline(const OptixPipelineCompileOptions& c_op, const OptixPipelineL
 }
 
 // --------------------------------------------------------------------
-void Pipeline::createRaygenProgram(const Context& ctx, const Module& module, const std::string& func_name)
+[[nodiscard]]
+ProgramGroup Pipeline::createRaygenProgram(const Context& ctx, const Module& module, const std::string& func_name)
 {
     m_raygen_program.createRaygen(ctx, module, func_name);
+    return m_raygen_program;
 }
 
-void Pipeline::createRaygenProgram(const Context& ctx, const ProgramEntry& entry)
+[[nodiscard]]
+ProgramGroup Pipeline::createRaygenProgram(const Context& ctx, const ProgramEntry& entry)
 {
     m_raygen_program.createRaygen(ctx, entry);
+    return m_raygen_program;
 }
 
-void Pipeline::createMissProgram(const Context& ctx, const Module& module, const std::string& func_name)
+[[nodiscard]]
+ProgramGroup Pipeline::createMissProgram(const Context& ctx, const Module& module, const std::string& func_name)
 {
     m_miss_programs.emplace_back(ProgramGroup{});
     m_miss_programs.back().createMiss(ctx, module, func_name);
+    return m_miss_programs.back();
 }
 
-void Pipeline::createMissProgram(const Context& ctx, const ProgramEntry& entry)
+[[nodiscard]]
+ProgramGroup Pipeline::createMissProgram(const Context& ctx, const ProgramEntry& entry)
 {
     m_miss_programs.emplace_back(ProgramGroup{});
     m_miss_programs.back().createMiss(ctx, entry);
+    return m_miss_programs.back();
 }
 
-void Pipeline::createHitgroupProgram(const Context& ctx, const Module& module, const std::string& ch_name)
+[[nodiscard]]
+ProgramGroup Pipeline::createHitgroupProgram(const Context& ctx, const Module& module, const std::string& ch_name)
 {
     m_hitgroup_programs.emplace_back(ProgramGroup{});
     m_hitgroup_programs.back().createHitgroup(ctx, module, ch_name);
+    return m_hitgroup_programs.back();
 }
 
-void Pipeline::createHitgroupProgram(const Context& ctx, const ProgramEntry& ch_entry)
+[[nodiscard]]
+ProgramGroup Pipeline::createHitgroupProgram(const Context& ctx, const ProgramEntry& ch_entry)
 {
     m_hitgroup_programs.emplace_back(ProgramGroup{});
     m_hitgroup_programs.back().createHitgroup(ctx, ch_entry);
+    return m_hitgroup_programs.back();
 }
-void Pipeline::createHitgroupProgram(const Context& ctx, const Module& module, const std::string& ch_name, const std::string& is_name)
+[[nodiscard]]
+ProgramGroup Pipeline::createHitgroupProgram(const Context& ctx, const Module& module, const std::string& ch_name, const std::string& is_name)
 {
     m_hitgroup_programs.emplace_back(ProgramGroup{});
     m_hitgroup_programs.back().createHitgroup(ctx, module, ch_name, is_name);
+    return m_hitgroup_programs.back();
 }
 
-void Pipeline::createHitgroupProgram(const Context& ctx, const ProgramEntry& ch_entry, const ProgramEntry& is_entry)
+[[nodiscard]]
+ProgramGroup Pipeline::createHitgroupProgram(const Context& ctx, const ProgramEntry& ch_entry, const ProgramEntry& is_entry)
 {
     m_hitgroup_programs.emplace_back(ProgramGroup{});
     m_hitgroup_programs.back().createHitgroup(ctx, ch_entry, is_entry);
+    return m_hitgroup_programs.back();
 }
-void Pipeline::createHitgroupProgram(const Context& ctx, const Module& module, const std::string& ch_name, const std::string& is_name, const std::string& ah_name)
+[[nodiscard]]
+ProgramGroup Pipeline::createHitgroupProgram(const Context& ctx, const Module& module, const std::string& ch_name, const std::string& is_name, const std::string& ah_name)
 {
     m_hitgroup_programs.emplace_back(ProgramGroup{});
     m_hitgroup_programs.back().createHitgroup(ctx, module, ch_name, is_name, ah_name);
+    return m_hitgroup_programs.back();
 }
-void Pipeline::createHitgroupProgram(const Context& ctx, const ProgramEntry& ch_entry, const ProgramEntry& is_entry, const ProgramEntry& ah_entry)
+[[nodiscard]]
+ProgramGroup Pipeline::createHitgroupProgram(const Context& ctx, const ProgramEntry& ch_entry, const ProgramEntry& is_entry, const ProgramEntry& ah_entry)
 {
     m_hitgroup_programs.emplace_back(ProgramGroup{});
     m_hitgroup_programs.back().createHitgroup(ctx, ch_entry, is_entry, ah_entry);
+    return m_hitgroup_programs.back();
 }
 
-uint32_t Pipeline::createCallablesProgram(const Context& ctx, const Module& module, const std::string& dc_name, const std::string& cc_name)
+[[nodiscard]]
+std::pair<ProgramGroup, uint32_t> Pipeline::createCallablesProgram(const Context& ctx, const Module& module, const std::string& dc_name, const std::string& cc_name)
 {
     m_callables_programs.emplace_back(ProgramGroup{});
     m_callables_programs.back().createCallables(ctx, module, dc_name, cc_name);
-    return static_cast<uint32_t>(m_callables_programs.size() - 1);
+    return { m_callables_programs.back(), (uint32_t)(m_callables_programs.size() - 1) };
 }
 
-uint32_t Pipeline::createCallablesProgram(const Context& ctx, const ProgramEntry& dc_entry, const ProgramEntry& cc_entry)
+[[nodiscard]]
+std::pair<ProgramGroup, uint32_t> Pipeline::createCallablesProgram(const Context& ctx, const ProgramEntry& dc_entry, const ProgramEntry& cc_entry)
 {
     m_callables_programs.emplace_back(ProgramGroup{});
     m_callables_programs.back().createCallables(ctx, dc_entry, cc_entry);
-    return static_cast<uint32_t>(m_callables_programs.size() - 1);
+    return { m_callables_programs.back(), (uint32_t)(m_callables_programs.size() - 1) };
 }
 
-void Pipeline::createExceptionProgram(const Context& ctx, const Module& module, const std::string& func_name)
+[[nodiscard]]
+ProgramGroup Pipeline::createExceptionProgram(const Context& ctx, const Module& module, const std::string& func_name)
 {
     m_exception_program.createException(ctx, module, func_name);
+    return m_exception_program;
 }
 
-void Pipeline::createExceptionProgram(const Context& ctx, const ProgramEntry& entry)
+[[nodiscard]]
+ProgramGroup Pipeline::createExceptionProgram(const Context& ctx, const ProgramEntry& entry)
 {
     m_exception_program.createException(ctx, entry);
+    return m_exception_program;
 }
 
 // --------------------------------------------------------------------

@@ -28,7 +28,7 @@
 
 #include "module.h"
 #include <nvrtc.h>
-#include <sampleConfig.h>
+#include <prayground_config.h>
 #include <prayground/core/file_util.h>
 #include <prayground/core/util.h>
 #include <prayground/optix/macros.h>

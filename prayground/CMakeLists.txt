@@ -21,7 +21,6 @@ set(sources
   core/shape.cpp
   core/stream_helpers.h 
   core/texture.h 
-  core/transform.h 
   core/util.h
   core/shaders/bitmap.vert
   core/shaders/bitmap.frag
@@ -116,6 +115,6 @@ foreach (source ${sources})
   set(prayground_sources ${prayground_sources} "${PRAYGROUND_DIR}/prayground/${source}")
 endforeach()
 
-set(prayground_sources ${prayground_sources} ${CMAKE_CURRENT_BINARY_DIR}/../sampleConfig.h)
+set(prayground_sources ${prayground_sources} ${CMAKE_CURRENT_BINARY_DIR}/../prayground_config.h)
 
 set(prayground_sources ${prayground_sources} PARENT_SCOPE)

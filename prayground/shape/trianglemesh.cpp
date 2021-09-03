@@ -61,6 +61,12 @@ TriangleMesh::TriangleMesh(
 }
 
 // ------------------------------------------------------------------
+ShapeType TriangleMesh::type() const
+{
+    return ShapeType::Mesh;
+}
+
+// ------------------------------------------------------------------
 void TriangleMesh::copyToDevice() {
 
     CUDABuffer<float3> d_vertices_buf;
@@ -105,7 +111,7 @@ OptixBuildInput TriangleMesh::createBuildInput()
     unsigned int* triangle_input_flags = new unsigned int[1];
     triangle_input_flags[0] = OPTIX_GEOMETRY_FLAG_NONE;
     
-    bi.type = OPTIX_BUILD_INPUT_TYPE_TRIANGLES;
+    bi.type = static_cast<OptixBuildInputType>(this->type());
     bi.triangleArray.vertexFormat = OPTIX_VERTEX_FORMAT_FLOAT3;
     bi.triangleArray.vertexStrideInBytes = sizeof(float3);
     bi.triangleArray.numVertices = static_cast<uint32_t>(m_vertices.size());

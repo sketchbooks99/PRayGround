@@ -14,7 +14,6 @@ struct LaunchParams
     unsigned int max_depth;
     int subframe_index;
     uchar4* result_buffer;
-    float4* accum_buffer;
     OptixTraversableHandle handle;
 };
 

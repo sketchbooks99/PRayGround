@@ -5,8 +5,8 @@
 namespace prayground {
 
 // GeometryAccel -------------------------------------------------------------
-GeometryAccel::GeometryAccel(OptixBuildInputType type)
-: m_type(type)
+GeometryAccel::GeometryAccel(ShapeType shape_type)
+: m_shape_type(shape_type)
 {
     m_options.buildFlags = OPTIX_BUILD_FLAG_NONE;
 }
@@ -45,7 +45,7 @@ void GeometryAccel::build(const Context& ctx, CUstream stream)
     bool all_type_equal = true;
     for (size_t i = 0; i < m_shapes.size(); i++)
     {
-        all_type_equal &= (m_type == m_shapes[i]->buildInputType());
+        all_type_equal &= (m_shape_type == m_shapes[i]->type());
         if (!all_type_equal)
         {
             m_build_inputs.clear();
@@ -64,6 +64,7 @@ void GeometryAccel::build(const Context& ctx, CUstream stream)
     ));
 
     // Temporarily buffer to build GAS
+    CUdeviceptr d_temp_buffer;
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_temp_buffer), gas_buffer_sizes.tempSizeInBytes));
 
     CUdeviceptr d_buffer_temp_output_gas_and_compacted_size;
@@ -94,15 +95,7 @@ void GeometryAccel::build(const Context& ctx, CUstream stream)
 
     d_buffer_size = gas_buffer_sizes.outputSizeInBytes;
 
-    if (is_hold_temp_buffer)
-    {
-        d_temp_buffer_size = gas_buffer_sizes.tempSizeInBytes;
-    }
-    else
-    {
-        cuda_free(d_temp_buffer);
-        d_temp_buffer_size = 0;
-    }
+    cuda_free(d_temp_buffer);
 
     if ((m_options.buildFlags & OPTIX_BUILD_FLAG_ALLOW_COMPACTION) != 0)
     {
@@ -123,7 +116,8 @@ void GeometryAccel::build(const Context& ctx, CUstream stream)
 
 void GeometryAccel::update(const Context& ctx, CUstream stream)
 {
-    m_options.buildFlags |= OPTIX_BUILD_FLAG_ALLOW_UPDATE;
+    Assert((m_options.buildFlags & OPTIX_BUILD_FLAG_ALLOW_UPDATE) != 0, "prayground::GeometryAccel::update(): allowUpdate() must be called when using update operation.");
+
     m_options.operation = OPTIX_BUILD_OPERATION_UPDATE;
 
     /**
@@ -137,20 +131,18 @@ void GeometryAccel::update(const Context& ctx, CUstream stream)
      *   そこまでコストが高くないなら、optixAccelComputeMemoryUsage()で
      *   毎度メモリ量を計算するのが安全？
      */
-    if (!d_temp_buffer)
-    {
-        OptixAccelBufferSizes gas_buffer_sizes;
-        OPTIX_CHECK(optixAccelComputeMemoryUsage(
-            static_cast<OptixDeviceContext>(ctx), 
-            &m_options, 
-            m_build_inputs.data(),
-            static_cast<uint32_t>(m_build_inputs.size()), 
-            &gas_buffer_sizes
-        ));
+    OptixAccelBufferSizes gas_buffer_sizes;
+    OPTIX_CHECK(optixAccelComputeMemoryUsage(
+        static_cast<OptixDeviceContext>(ctx), 
+        &m_options, 
+        m_build_inputs.data(),
+        static_cast<uint32_t>(m_build_inputs.size()), 
+        &gas_buffer_sizes
+    ));
 
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_temp_buffer), gas_buffer_sizes.tempUpdateSizeInBytes));
-        d_temp_buffer_size = gas_buffer_sizes.tempUpdateSizeInBytes;
-    }
+    CUdeviceptr d_temp_buffer;
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_temp_buffer), gas_buffer_sizes.tempUpdateSizeInBytes));
+    size_t d_temp_buffer_size = gas_buffer_sizes.tempUpdateSizeInBytes;
 
     OPTIX_CHECK(optixAccelBuild(
         static_cast<OptixDeviceContext>(ctx),
@@ -166,31 +158,25 @@ void GeometryAccel::update(const Context& ctx, CUstream stream)
         nullptr,
         0
     ));
+
+    CUDA_SYNC_CHECK();
 }
 
 void GeometryAccel::free()
 {
-    if (d_buffer) cudaFree(reinterpret_cast<void*>(d_buffer));
-    if (d_temp_buffer) cudaFree(reinterpret_cast<void*>(d_temp_buffer));
+    if (d_buffer) cuda_free(d_buffer);
     d_buffer_size = 0;
-    d_temp_buffer_size = 0;
-}
-
-// ---------------------------------------------------------------------------
-void GeometryAccel::enableHoldTempBuffer()
-{
-    is_hold_temp_buffer = true;
-}
-
-void GeometryAccel::disableHoldTempBuffer()
-{
-    is_hold_temp_buffer = false;
 }
 
 // ---------------------------------------------------------------------------
 void GeometryAccel::setFlags(const uint32_t build_flags)
 {
     m_options.buildFlags = build_flags;
+}
+
+void GeometryAccel::allowUpdate()
+{
+    m_options.buildFlags |= OPTIX_BUILD_FLAG_ALLOW_UPDATE;
 }
 
 void GeometryAccel::allowCompaction()
@@ -211,6 +197,11 @@ void GeometryAccel::preferFastBuild()
 void GeometryAccel::allowRandomVertexAccess()
 {
     m_options.buildFlags |= OPTIX_BUILD_FLAG_ALLOW_RANDOM_VERTEX_ACCESS;
+}
+
+void GeometryAccel::disableUpdate()
+{
+    m_options.buildFlags &= ~OPTIX_BUILD_FLAG_ALLOW_UPDATE;
 }
 
 void GeometryAccel::disableCompaction()
@@ -260,16 +251,6 @@ size_t GeometryAccel::deviceBufferSize() const
     return d_buffer_size;
 }
 
-CUdeviceptr GeometryAccel::deviceTempBuffer() const
-{
-    return d_temp_buffer;
-}
-
-size_t GeometryAccel::deviceTempBufferSize() const
-{
-    return d_temp_buffer_size;
-}
-
 // InstanceAccel -------------------------------------------------------------
 InstanceAccel::InstanceAccel(Type type)
 : m_type(type)
@@ -296,11 +277,9 @@ Instance& InstanceAccel::instanceAt(const int32_t idx)
 // ---------------------------------------------------------------------------
 void InstanceAccel::build(const Context& ctx, CUstream stream)
 {
-    //CUDABuffer<OptixInstance> d_instances_buffer;
     std::vector<OptixInstance> optix_instances;
     std::transform(m_instances.begin(), m_instances.end(), std::back_inserter(optix_instances),
         [](const Instance& instance) { return static_cast<OptixInstance>(instance);  });
-    //d_instances_buffer.copyToDevice(optix_instances);
 
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_instances), sizeof(OptixInstance) * optix_instances.size()));
     CUDA_CHECK(cudaMemcpy(
@@ -313,7 +292,6 @@ void InstanceAccel::build(const Context& ctx, CUstream stream)
     m_instance_input.type = static_cast<OptixBuildInputType>(m_type);
     m_instance_input.instanceArray.instances = d_instances;
     m_instance_input.instanceArray.numInstances = static_cast<uint32_t>(m_instances.size());
-    //d_instances = d_instances_buffer.devicePtr();
 
     m_options.operation = OPTIX_BUILD_OPERATION_BUILD;
 
@@ -325,9 +303,10 @@ void InstanceAccel::build(const Context& ctx, CUstream stream)
         1,  // num build inputs
         &ias_buffer_sizes ));
     d_buffer_size = ias_buffer_sizes.outputSizeInBytes;
-    d_temp_buffer_size = ias_buffer_sizes.tempSizeInBytes;
+    size_t d_temp_buffer_size = ias_buffer_sizes.tempSizeInBytes;
         
     // Allocate buffer to build acceleration structure
+    CUdeviceptr d_temp_buffer;
     CUDA_CHECK(cudaMalloc(
         reinterpret_cast<void**>(&d_temp_buffer), 
         d_temp_buffer_size ));
@@ -351,45 +330,38 @@ void InstanceAccel::build(const Context& ctx, CUstream stream)
         0                   // num emitted properties
     ));
 
-    if (!is_hold_temp_buffer)
-    {
-        cuda_free(d_temp_buffer);
-        d_temp_buffer_size = 0;
-    }
-        
-    //d_instances_buffer.free();  
+    cuda_free(d_temp_buffer);
 }
 
 void InstanceAccel::update(const Context& ctx, CUstream stream)
 {
+    Assert((m_options.buildFlags & OPTIX_BUILD_FLAG_ALLOW_UPDATE) != 0, "prayground::InstanceAccel::update(): allowUpdate() must be called when using update operation.");
+
     OptixInstance* instance_device_ptr = reinterpret_cast<OptixInstance*>(d_instances);
     for (size_t i = 0; auto& instance : m_instances)
     {
         CUDA_CHECK(cudaMemcpy(
-            &instance_device_ptr[i].transform,
-            instance.rawInstancePtr()->transform, sizeof(float)*12,
+            &instance_device_ptr[i],
+            instance.rawInstancePtr(), sizeof(OptixInstance),
             cudaMemcpyHostToDevice
         ));
         i++;
     }
 
-    m_options.buildFlags |= OPTIX_BUILD_FLAG_ALLOW_UPDATE;
     m_options.operation = OPTIX_BUILD_OPERATION_UPDATE;
 
-    if (!is_hold_temp_buffer)
-    {
-        OptixAccelBufferSizes gas_buffer_sizes;
-        OPTIX_CHECK(optixAccelComputeMemoryUsage(
-            static_cast<OptixDeviceContext>(ctx), 
-            &m_options, 
-            &m_instance_input,
-            1,
-            &gas_buffer_sizes
-        ));
+    OptixAccelBufferSizes gas_buffer_sizes;
+    OPTIX_CHECK(optixAccelComputeMemoryUsage(
+        static_cast<OptixDeviceContext>(ctx), 
+        &m_options, 
+        &m_instance_input,
+        1,
+        &gas_buffer_sizes
+    ));
 
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_temp_buffer), gas_buffer_sizes.tempUpdateSizeInBytes));
-        d_temp_buffer_size = gas_buffer_sizes.tempUpdateSizeInBytes;
-    }
+    CUdeviceptr d_temp_buffer;
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_temp_buffer), gas_buffer_sizes.tempUpdateSizeInBytes));
+    size_t d_temp_buffer_size = gas_buffer_sizes.tempUpdateSizeInBytes;
 
     OPTIX_CHECK(optixAccelBuild(
         static_cast<OptixDeviceContext>(ctx),
@@ -411,27 +383,19 @@ void InstanceAccel::update(const Context& ctx, CUstream stream)
 
 void InstanceAccel::free()
 {
-    if (d_buffer) CUDA_CHECK(cudaFree(reinterpret_cast<void*>(d_buffer)));
-    if (d_temp_buffer) CUDA_CHECK(cudaFree(reinterpret_cast<void*>(d_temp_buffer)));
+    if (d_buffer) cuda_free(d_buffer);
     d_buffer_size = 0;
-    d_temp_buffer_size = 0;
-}
-
-// ---------------------------------------------------------------------------
-void InstanceAccel::enableHoldTempBuffer()
-{
-    is_hold_temp_buffer = true;
-}
-
-void InstanceAccel::disableHoldTempBuffer()
-{
-    is_hold_temp_buffer = false;
 }
 
 // ---------------------------------------------------------------------------
 void InstanceAccel::setFlags(const uint32_t build_flags)
 {
     m_options.buildFlags = build_flags;
+}
+
+void InstanceAccel::allowUpdate()
+{
+    m_options.buildFlags |= OPTIX_BUILD_FLAG_ALLOW_UPDATE;
 }
 
 void InstanceAccel::allowCompaction()
@@ -447,6 +411,11 @@ void InstanceAccel::preferFastTrace()
 void InstanceAccel::preferFastBuild()
 {
     m_options.buildFlags |= OPTIX_BUILD_FLAG_PREFER_FAST_BUILD;
+}
+
+void InstanceAccel::disableUpdate()
+{
+    m_options.buildFlags &= ~OPTIX_BUILD_FLAG_ALLOW_UPDATE;
 }
 
 void InstanceAccel::disableCompaction()
@@ -488,16 +457,6 @@ CUdeviceptr InstanceAccel::deviceBuffer() const
 size_t InstanceAccel::deviceBufferSize() const
 {
     return d_buffer_size;
-}
-
-CUdeviceptr InstanceAccel::deviceTempBuffer() const
-{
-    return d_temp_buffer;
-}
-
-size_t InstanceAccel::deviceTempBufferSize() const
-{
-    return d_temp_buffer_size;
 }
 
 } // ::prayground

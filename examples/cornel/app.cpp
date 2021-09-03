@@ -10,8 +10,8 @@ void App::setup()
     context.setDeviceId(0);
     context.create();
 
-    ias = InstanceAccel(InstanceAccel::Type::Instances);
-    //ias.enableHoldTempBuffer();
+    ias = InstanceAccel{ InstanceAccel::Type::Instances };
+    ias.allowUpdate();
 
     // Prepare pipeline
     pipeline.setLaunchVariableName("params");
@@ -28,19 +28,17 @@ void App::setup()
     textures_module = pipeline.createModuleFromCudaFile(context, "textures.cu");
     surfaces_module = pipeline.createModuleFromCudaFile(context, "surfaces.cu");
 
-    // Prepare film to store rendered results.
-    film = Film(pgGetWidth(), pgGetHeight());
-    film.addBitmap("result", Bitmap::Format::RGBA);
-    film.addFloatBitmap("accum", FloatBitmap::Format::RGBA);
-    film.bitmapAt("result")->allocateDevicePtr();
-    film.floatBitmapAt("accum")->allocateDevicePtr();
-    params.width = film.width();
-    params.height = film.height();
+    result_bitmap.allocate(Bitmap::Format::RGBA, pgGetWidth(), pgGetHeight());
+    result_bitmap.allocateDevicePtr();
+    accum_bitmap.allocate(FloatBitmap::Format::RGBA, pgGetWidth(), pgGetHeight());
+    accum_bitmap.allocateDevicePtr();
+    params.width = result_bitmap.width();
+    params.height = result_bitmap.height();
     params.samples_per_launch = 1;
     params.max_depth = 10;
     params.subframe_index = 0;
-    params.accum_buffer = reinterpret_cast<float4*>(film.floatBitmapAt("accum")->devicePtr());
-    params.result_buffer = reinterpret_cast<uchar4*>(film.bitmapAt("result")->devicePtr());
+    params.accum_buffer = reinterpret_cast<float4*>(accum_bitmap.devicePtr());
+    params.result_buffer = reinterpret_cast<uchar4*>(result_bitmap.devicePtr());
 
     camera.setOrigin(make_float3(0.0f, 0.0f, 40.0f));
     camera.setLookat(make_float3(0.0f, 0.0f, 0.0f));
@@ -49,9 +47,9 @@ void App::setup()
     camera.setFovAxis(Camera::FovAxis::Vertical);
 
     // Create raygen program and bind record;
-    pipeline.createRaygenProgram(context, raygen_module, "__raygen__pinhole");
+    ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, raygen_module, "__raygen__pinhole");
     RaygenRecord raygen_record;
-    pipeline.bindRaygenRecord(&raygen_record);
+    raygen_prg.recordPackHeader(&raygen_record);
     raygen_record.data.camera.origin = camera.origin();
     raygen_record.data.camera.lookat = camera.lookat();
     raygen_record.data.camera.up = camera.up();
@@ -63,12 +61,12 @@ void App::setup()
     std::vector<EmptyRecord> callable_records(6, EmptyRecord{});
 
     // Creating texture programs
-    uint32_t constant_prg_id = pipeline.createCallablesProgram(context, textures_module, "__direct_callable__constant", "");
-    uint32_t checker_prg_id = pipeline.createCallablesProgram(context, textures_module, "__direct_callable__checker", "");
-    uint32_t bitmap_prg_id = pipeline.createCallablesProgram(context, textures_module, "__direct_callable__bitmap", "");
-    pipeline.bindCallablesRecord(&callable_records[0], 0);
-    pipeline.bindCallablesRecord(&callable_records[1], 1);
-    pipeline.bindCallablesRecord(&callable_records[2], 2);
+    auto [constant_prg, constant_prg_id] = pipeline.createCallablesProgram(context, textures_module, "__direct_callable__constant", "");
+    auto [checker_prg, checker_prg_id] = pipeline.createCallablesProgram(context, textures_module, "__direct_callable__checker", "");
+    auto [bitmap_prg, bitmap_prg_id] = pipeline.createCallablesProgram(context, textures_module, "__direct_callable__bitmap", "");
+    constant_prg.recordPackHeader(&callable_records[0]);
+    checker_prg.recordPackHeader(&callable_records[1]);
+    bitmap_prg.recordPackHeader(&callable_records[2]);
     sbt.addCallablesRecord(callable_records[0]);
     sbt.addCallablesRecord(callable_records[1]);
     sbt.addCallablesRecord(callable_records[2]);
@@ -80,9 +78,9 @@ void App::setup()
     env = make_shared<EnvironmentEmitter>(env_texture);
     env->copyToDevice();
 
-    pipeline.createMissProgram(context, miss_module, "__miss__envmap");
+    ProgramGroup miss_prg = pipeline.createMissProgram(context, miss_module, "__miss__envmap");
     MissRecord miss_record;
-    pipeline.bindMissRecord(&miss_record, 0);
+    miss_prg.recordPackHeader(&miss_record);
     miss_record.data.env_data = env->devicePtr();
     sbt.setMissRecord(miss_record);
 
@@ -101,12 +99,12 @@ void App::setup()
     checker->copyToDevice();
 
     // Creating material and emitter programs
-    uint32_t diffuse_prg_id = pipeline.createCallablesProgram(context, surfaces_module, "", "__continuation_callable__diffuse");
-    uint32_t dielectric_prg_id = pipeline.createCallablesProgram(context, surfaces_module, "", "__continuation_callable__dielectric");
-    uint32_t area_emitter_prg_id = pipeline.createCallablesProgram(context, surfaces_module, "__direct_callable__area_emitter", "");
-    pipeline.bindCallablesRecord(&callable_records[3], 3);
-    pipeline.bindCallablesRecord(&callable_records[4], 4);
-    pipeline.bindCallablesRecord(&callable_records[5], 5);
+    auto [diffuse_prg, diffuse_prg_id] = pipeline.createCallablesProgram(context, surfaces_module, "", "__continuation_callable__diffuse");
+    auto [dielectric_prg, dielectric_prg_id] = pipeline.createCallablesProgram(context, surfaces_module, "", "__continuation_callable__dielectric");
+    auto [area_emitter_prg, area_emitter_prg_id] = pipeline.createCallablesProgram(context, surfaces_module, "__direct_callable__area_emitter", "");
+    diffuse_prg.recordPackHeader(&callable_records[3]);
+    dielectric_prg.recordPackHeader(&callable_records[4]);
+    area_emitter_prg.recordPackHeader(&callable_records[5]);
     sbt.addCallablesRecord(callable_records[3]);
     sbt.addCallablesRecord(callable_records[4]);
     sbt.addCallablesRecord(callable_records[5]);
@@ -141,14 +139,14 @@ void App::setup()
     wall_matrices.push_back(Matrix4f::translate({ 0.0f, -10.0f, 0.0f }));                                                              // floor
     wall_matrices.push_back(Matrix4f::translate({ 0.0f, 0.0f, -10.0f }) * Matrix4f::rotate(M_PIf / 2.0f, {1.0f, 0.0f, 0.0f})); // back
 
-    pipeline.createHitgroupProgram(context, hitgroups_module, "__closesthit__plane", "__intersection__plane");
+    ProgramGroup plane_prg = pipeline.createHitgroupProgram(context, hitgroups_module, "__closesthit__plane", "__intersection__plane");
 
     uint32_t sbt_idx = 0;
 
     ceiling_light->copyToDevice();
     ceiling_light->setSbtIndex(sbt_idx);
     area_emitter->copyToDevice();
-    GeometryAccel gas{ OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES };
+    GeometryAccel gas{ ShapeType::Custom };
     gas.allowCompaction();
     gas.addShape(ceiling_light);
     gas.build(context, stream);
@@ -161,7 +159,7 @@ void App::setup()
     ias.addInstance(cl_instance);
 
     HitgroupRecord cl_record;
-    pipeline.bindHitgroupRecord(&cl_record, 0);
+    plane_prg.recordPackHeader(&cl_record);
     cl_record.data.shape_data = ceiling_light->devicePtr();
     cl_record.data.surface_data = area_emitter->devicePtr();
     cl_record.data.surface_type = SurfaceType::AreaEmitter;
@@ -174,7 +172,7 @@ void App::setup()
         cornel_planes[i].first->copyToDevice();
         cornel_planes[i].second->copyToDevice();
         cornel_planes[i].first->setSbtIndex(sbt_idx);
-        GeometryAccel gas{OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES};
+        GeometryAccel gas{ShapeType::Custom};
         gas.allowCompaction();
         gas.addShape(cornel_planes[i].first);
         gas.build(context, stream);
@@ -187,7 +185,7 @@ void App::setup()
         ias.addInstance(instance);
 
         HitgroupRecord hitgroup_record;
-        pipeline.bindHitgroupRecord(&hitgroup_record, 0);
+        plane_prg.recordPackHeader(&hitgroup_record);
         hitgroup_record.data.shape_data = cornel_planes[i].first->devicePtr();
         hitgroup_record.data.surface_data = cornel_planes[i].second->devicePtr();
         hitgroup_record.data.surface_type = SurfaceType::Material;
@@ -208,17 +206,17 @@ void App::setup()
     bunny_material = make_shared<Dielectric>(bunny_texture, 1.5f);
     bunny_material->copyToDevice();
 
-    pipeline.createHitgroupProgram(context, hitgroups_module, "__closesthit__mesh");
+    ProgramGroup mesh_prg = pipeline.createHitgroupProgram(context, hitgroups_module, "__closesthit__mesh");
 
     HitgroupRecord bunny_record; 
-    pipeline.bindHitgroupRecord(&bunny_record, 1);
+    mesh_prg.recordPackHeader(&bunny_record);
     bunny_record.data.shape_data = bunny->devicePtr();
     bunny_record.data.surface_data = bunny_material->devicePtr();
     bunny_record.data.surface_type = SurfaceType::Material;
     bunny_record.data.surface_program_id = dielectric_prg_id;
     sbt.addHitgroupRecord(bunny_record);
 
-    GeometryAccel bunny_gas{OPTIX_BUILD_INPUT_TYPE_TRIANGLES};
+    GeometryAccel bunny_gas{ShapeType::Mesh};
     bunny_gas.addShape(bunny);
     bunny_gas.allowCompaction();
     bunny_gas.build(context, stream);
@@ -233,8 +231,8 @@ void App::setup()
     ias.build(context, stream);
     sbt.createOnDevice();
     params.handle = ias.handle();
-    pipeline.create(context);
     CUDA_CHECK(cudaStreamCreate(&stream));
+    pipeline.create(context);
     d_params.allocate(sizeof(LaunchParams));
 }
 
@@ -255,34 +253,16 @@ void App::update()
         1
     );
 
-    CUDA_CHECK(cudaSetDevice(context.deviceId()));
     CUDA_CHECK(cudaStreamSynchronize(stream));
     CUDA_SYNC_CHECK();
 
-    film.bitmapAt("result")->copyFromDevice();
-
-    float time = pgGetElapsedTime<float>();
-
-    /*bunny_instance.setTransform(Matrix4f::translate({ 0.0f, -5.0f, 0.0f }) * Matrix4f::scale(25.0f + sinf(time) * 50.0f));
-    ias.update(context, stream);*/
-
-    pgSetWindowName("fps: " + to_string(pgGetFrameRate()));
+    result_bitmap.copyFromDevice();
 }
 
 // ----------------------------------------------------------------
 void App::draw()
 {
-    film.bitmapAt("result")->draw(0, 0, film.width(), film.height());
-
-    // If you'd like to write out rendered result, please comment out following two lines.
-    // if (pgGetFrame() == 2000)
-    //     film.bitmapAt("result")->write(pathJoin(pgAppDir(), "cornel.jpg"));
-}
-
-// ----------------------------------------------------------------
-void App::mousePressed(float x, float y, int button)
-{
-    pgExit();
+    result_bitmap.draw(0, 0);
 }
 
 // ----------------------------------------------------------------
@@ -324,10 +304,10 @@ void App::mouseDragged(float x, float y, int button)
 
     CUDA_SYNC_CHECK();
 
-    film.bitmapAt("result")->allocateDevicePtr();
-    film.floatBitmapAt("accum")->allocateDevicePtr();
-    params.result_buffer = reinterpret_cast<uchar4*>(film.bitmapAt("result")->devicePtr());
-    params.accum_buffer = reinterpret_cast<float4*>(film.floatBitmapAt("accum")->devicePtr());
+    result_bitmap.allocateDevicePtr();
+    accum_bitmap.allocateDevicePtr();
+    params.result_buffer = reinterpret_cast<uchar4*>(result_bitmap.devicePtr());
+    params.accum_buffer = reinterpret_cast<float4*>(accum_bitmap.devicePtr());
     params.subframe_index = 0;
 
     d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);
@@ -358,10 +338,10 @@ void App::mouseScrolled(float xoffset, float yoffset)
 
     CUDA_SYNC_CHECK();
 
-    film.bitmapAt("result")->allocateDevicePtr();
-    film.floatBitmapAt("accum")->allocateDevicePtr();
-    params.result_buffer = reinterpret_cast<uchar4*>(film.bitmapAt("result")->devicePtr());
-    params.accum_buffer = reinterpret_cast<float4*>(film.floatBitmapAt("accum")->devicePtr());
+    result_bitmap.allocateDevicePtr();
+    accum_bitmap.allocateDevicePtr();
+    params.result_buffer = reinterpret_cast<uchar4*>(result_bitmap.devicePtr());
+    params.accum_buffer = reinterpret_cast<float4*>(accum_bitmap.devicePtr());
     params.subframe_index = 0;
 
     d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);

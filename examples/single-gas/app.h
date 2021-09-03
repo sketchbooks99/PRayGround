@@ -28,12 +28,12 @@ private:
     SingleGASSBT sbt;
     GeometryAccel gas;
 
-    Film film;
+    Bitmap result_bitmap;
     Camera camera;
 
     shared_ptr<EnvironmentEmitter> env;
     shared_ptr<AreaEmitter> area;
     shared_ptr<TriangleMesh> bunny;
     shared_ptr<CheckerTexture> checker_texture;
-    shared_ptr<FloatBitmapTexture> env_texture;
+    shared_ptr<CheckerTexture> env_texture;
 };

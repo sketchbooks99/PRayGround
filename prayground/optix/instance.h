@@ -2,7 +2,7 @@
 
 #include <prayground/core/util.h>
 #include <prayground/core/shape.h>
-#include <prayground/core/transform.h>
+#include <prayground/math/matrix.h>
 #include <unordered_map>
 
 /** OptixInstanceのラッパー 

@@ -19,7 +19,6 @@ public:
     void update();
     void draw();
 
-    void mousePressed(float x, float y, int button);
     void mouseDragged(float x, float y, int button);
     void mouseScrolled(float xoffset, float yoffset);
 private:
@@ -31,7 +30,8 @@ private:
     CornelSBT sbt;
     InstanceAccel ias;
 
-    Film film;
+    Bitmap result_bitmap;
+    FloatBitmap accum_bitmap;
     Camera camera;
 
     Instance bunny_instance;

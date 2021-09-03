@@ -17,9 +17,9 @@ Cylinder::Cylinder(float radius, float height)
 }
 
 // ------------------------------------------------------------------
-OptixBuildInputType Cylinder::buildInputType() const 
+ShapeType Cylinder::type() const 
 {
-    return OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES;
+    return ShapeType::Custom;
 }
 
 // ------------------------------------------------------------------
@@ -63,7 +63,7 @@ OptixBuildInput Cylinder::createBuildInput()
     unsigned int* input_flags = new unsigned int[1];
     input_flags[0] = OPTIX_GEOMETRY_FLAG_NONE;
 
-    bi.type = OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES;
+    bi.type = static_cast<OptixBuildInputType>(this->type());
     bi.customPrimitiveArray.aabbBuffers = &d_aabb_buffer;
     bi.customPrimitiveArray.numPrimitives = 1;
     bi.customPrimitiveArray.flags = input_flags;

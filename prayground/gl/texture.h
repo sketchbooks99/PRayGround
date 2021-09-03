@@ -6,8 +6,7 @@ namespace prayground {
 
 namespace gl {
 
-class Texture 
-{
+class Texture {
 public:
     struct Settings
     {

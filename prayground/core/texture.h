@@ -26,9 +26,9 @@ public:
         return d_data;
     }
 
-    void setProgramId(const int prg_id)
+    void setProgramId(const uint32_t prg_id)
     {
-        m_prg_id = prg_id;
+        m_prg_id = static_cast<int>(prg_id);
     }
     uint32_t programId() const 
     {

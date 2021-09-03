@@ -4,16 +4,14 @@
 
 namespace prayground {
 
-namespace gl
-{
+namespace gl {
 
 /**
  * @brief 
  * Frame buffer object class
  */
 
-class Fbo
-{
+class Fbo {
 public:
     struct Settings 
     {

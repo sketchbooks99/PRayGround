@@ -26,11 +26,14 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-// Shunji Kiuchi
+// -----------------------------------------------------------------------------
 // Original source of vec_math.h is included in NVIDIA OptiX SDK.
-// I removed SUTIL_ prefix from the original to suit a coding rule of my library.
+// I removed SUTIL_ prefix from the original to suit a coding rule of mine.
 // In addition, several functions such as lerp() are modified so that
 // it works on C++20~ compilation.
+// 
+// Shunji Kiuchi
+// ----------------------------------------------------------------------------
 
 #pragma once
 

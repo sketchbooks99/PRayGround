@@ -17,7 +17,7 @@ public:
     Sphere();
     Sphere(const float3& c, float r);
 
-    OptixBuildInputType buildInputType() const override;
+    ShapeType type() const override;
 
     void copyToDevice() override;
     OptixBuildInput createBuildInput() override;

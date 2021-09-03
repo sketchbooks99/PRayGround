@@ -39,16 +39,16 @@ public:
     void destroy();
 
     template <typename SBTRecord>
-    void bindRecord(SBTRecord* record) {
+    void recordPackHeader(SBTRecord* record) {
         OPTIX_CHECK(optixSbtRecordPackHeader(m_program, record));
     }
 
     OptixProgramGroupKind kind() const;
     OptixProgramGroupOptions options() const;
 private:
-    OptixProgramGroup m_program { 0 };
-    OptixProgramGroupKind m_kind {};
-    OptixProgramGroupOptions m_options {};
+    OptixProgramGroup m_program;
+    OptixProgramGroupKind m_kind;
+    OptixProgramGroupOptions m_options;
 }; 
 
 }

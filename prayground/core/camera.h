@@ -50,7 +50,7 @@ public:
     , m_nearclip(nearclip), m_farclip(farclip), m_fovaxis(fovaxis) 
     {}
 
-    float3 direction() const { return normalize(m_lookat - m_origin); }
+    const float3& direction() const { return normalize(m_lookat - m_origin); }
 
     const float3& origin() const { return m_origin; }
     void setOrigin(const float3& origin) { m_origin = origin; }

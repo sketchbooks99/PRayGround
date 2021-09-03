@@ -37,7 +37,7 @@
 
 #include <optix.h>
 
-#include <sampleConfig.h>
+#include <prayground_config.h>
 
 #include <prayground/math/vec_math.h>
 

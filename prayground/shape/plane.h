@@ -19,7 +19,7 @@ public:
     Plane();
     Plane(const float2& min, const float2& max);
 
-    OptixBuildInputType buildInputType() const override;
+    ShapeType type() const override;
 
     void copyToDevice() override;
     OptixBuildInput createBuildInput() override;

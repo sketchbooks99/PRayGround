@@ -189,8 +189,6 @@ GLFWwindow* Window::windowPtr()
 /*****************************************************************
  Static functions 
 *****************************************************************/
-
-// ----------------------------------------------------------------
 Window* Window::_getCurrent(GLFWwindow* window)
 {
     return static_cast<Window*>(glfwGetWindowUserPointer(window));
@@ -251,7 +249,8 @@ void Window::_keyCallback(GLFWwindow* window, int key, int scancode, int action,
     }
     else if (action == GLFW_RELEASE)
     {
-        /** Not implemented */
+        current_window->events().inputStates.keyButtonPressed = false;
+        current_window->events().keyReleased.invoke(key);
     }
 }
 

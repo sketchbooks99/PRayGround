@@ -11,11 +11,18 @@ namespace prayground {
 
 #ifndef __CUDACC__
 
+enum class ShapeType
+{
+    Mesh = OPTIX_BUILD_INPUT_TYPE_TRIANGLES,
+    Custom = OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES,
+    Curves = OPTIX_BUILD_INPUT_TYPE_CURVES
+};
+
 class Shape {
 public:
     virtual ~Shape() {}
 
-    virtual OptixBuildInputType buildInputType() const = 0;
+    virtual ShapeType type() const = 0;
 
     virtual void copyToDevice() = 0;
     virtual OptixBuildInput createBuildInput() = 0;

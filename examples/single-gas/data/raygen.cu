@@ -107,17 +107,7 @@ extern "C" __device__ void __raygen__pinhole()
     if (result.x != result.x) result.x = 0.0f;
     if (result.y != result.y) result.y = 0.0f;
     if (result.z != result.z) result.z = 0.0f;
-
-    float3 accum_color = result / static_cast<float>(params.samples_per_launch);
-
-    // // レンダリング結果の平均処理を行う場合
-    // if (subframe_index > 0)
-    // {
-    //     const float a = 1.0f / static_cast<float>(subframe_index + 1);
-    //     const float3 accum_color_prev = make_float3(params.accum_buffer[image_index]);
-    //     accum_color = lerp(accum_color_prev, accum_color, a);
-    // }
-    params.accum_buffer[image_index] = make_float4(accum_color, 1.0f);
-    uchar3 color = make_color(accum_color);
+    
+    uchar3 color = make_color(result);
     params.result_buffer[image_index] = make_uchar4(color.x, color.y, color.z, 255);
 }

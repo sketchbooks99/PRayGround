@@ -25,19 +25,15 @@ void App::setup()
     textures_module = pipeline.createModuleFromCudaFile(context, "textures.cu");
     surfaces_module = pipeline.createModuleFromCudaFile(context, "surfaces.cu");
 
-    // Prepare film to store rendered results.
-    film = Film(1024, 1024);
-    film.addBitmap("result", Bitmap::Format::RGBA);
-    film.addFloatBitmap("accum", FloatBitmap::Format::RGBA);
-    film.bitmapAt("result")->allocateDevicePtr();
-    film.floatBitmapAt("accum")->allocateDevicePtr();
-    params.width = film.width();
-    params.height = film.height();
+    // Prepare bitmap to store rendered results.
+    result_bitmap.allocate(Bitmap::Format::RGBA, pgGetWidth(), pgGetHeight());
+    result_bitmap.allocateDevicePtr();
+    params.width = result_bitmap.width();
+    params.height = result_bitmap.height();
     params.samples_per_launch = 1;
     params.max_depth = 10;
     params.subframe_index = 0;
-    params.accum_buffer = reinterpret_cast<float4*>(film.floatBitmapAt("accum")->devicePtr());
-    params.result_buffer = reinterpret_cast<uchar4*>(film.bitmapAt("result")->devicePtr());
+    params.result_buffer = reinterpret_cast<uchar4*>(result_bitmap.devicePtr());
 
     camera.setOrigin(make_float3(0.0f, 0.0f, 0.75f));
     camera.setLookat(make_float3(0.0f, 0.0f, 0.0f));
@@ -46,9 +42,9 @@ void App::setup()
     camera.setFovAxis(Camera::FovAxis::Vertical);
 
     // Create raygen program and bind record;
-    pipeline.createRaygenProgram(context, raygen_module, "__raygen__pinhole");
+    ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, raygen_module, "__raygen__pinhole");
     RaygenRecord raygen_record;
-    pipeline.bindRaygenRecord(&raygen_record);
+    raygen_prg.recordPackHeader(&raygen_record);
     raygen_record.data.camera.origin = camera.origin();
     raygen_record.data.camera.lookat = camera.lookat();
     raygen_record.data.camera.up = camera.up();
@@ -60,23 +56,23 @@ void App::setup()
     std::vector<EmptyRecord> callable_records(3, EmptyRecord{});
 
     // Creating texture programs
-    uint32_t bitmap_prg_id = pipeline.createCallablesProgram(context, textures_module, "__direct_callable__bitmap", "");
-    uint32_t checker_prg_id = pipeline.createCallablesProgram(context, textures_module, "__direct_callable__checker", "");
-    pipeline.bindCallablesRecord(&callable_records[0], 0);
-    pipeline.bindCallablesRecord(&callable_records[1], 1);
+    auto [bitmap_prg, bitmap_prg_id] = pipeline.createCallablesProgram(context, textures_module, "__direct_callable__bitmap", "");
+    auto [checker_prg, checker_prg_id] = pipeline.createCallablesProgram(context, textures_module, "__direct_callable__checker", "");
+    bitmap_prg.recordPackHeader(&callable_records[0]);
+    checker_prg.recordPackHeader(&callable_records[1]);
     sbt.addCallablesRecord(callable_records[0]);
     sbt.addCallablesRecord(callable_records[1]);
 
     // Prepare environment 
-    env_texture = make_shared<FloatBitmapTexture>("env2.jpg");
-    env_texture->setProgramId(bitmap_prg_id);
+    env_texture = make_shared<CheckerTexture>(make_float3(0.9f), make_float3(0.3f), 10.0f);
+    env_texture->setProgramId(checker_prg_id);
     env_texture->copyToDevice();
     env = make_shared<EnvironmentEmitter>(env_texture);
     env->copyToDevice();
 
-    pipeline.createMissProgram(context, miss_module, "__miss__envmap");
+    ProgramGroup miss_prg = pipeline.createMissProgram(context, miss_module, "__miss__envmap");
     MissRecord miss_record;
-    pipeline.bindMissRecord(&miss_record, 0);
+    miss_prg.recordPackHeader(&miss_record);
     miss_record.data.env_data = env->devicePtr();
     sbt.setMissRecord(miss_record);
 
@@ -86,8 +82,8 @@ void App::setup()
     checker_texture->copyToDevice();
 
     // Creating material and emitter programs
-    uint32_t area_prg_id = pipeline.createCallablesProgram(context, surfaces_module, "__direct_callable__area_emitter", "");
-    pipeline.bindCallablesRecord(&callable_records[2], 2);
+    auto [area_prg, area_prg_id] = pipeline.createCallablesProgram(context, surfaces_module, "__direct_callable__area_emitter", "");
+    area_prg.recordPackHeader(&callable_records[2]);
     sbt.addCallablesRecord(callable_records[2]);
 
     // Preparing materials and program id
@@ -99,10 +95,10 @@ void App::setup()
     bunny->setSbtIndex(0);
     bunny->copyToDevice();
 
-    pipeline.createHitgroupProgram(context, hitgroups_module, "__closesthit__mesh");
+    ProgramGroup mesh_prg = pipeline.createHitgroupProgram(context, hitgroups_module, "__closesthit__mesh");
 
     HitgroupRecord bunny_record;
-    pipeline.bindHitgroupRecord(&bunny_record, 0);
+    mesh_prg.recordPackHeader(&bunny_record);
     bunny_record.data.shape_data = bunny->devicePtr();
     bunny_record.data.surface_data = area->devicePtr();
     bunny_record.data.surface_program_id = area_prg_id;
@@ -110,10 +106,10 @@ void App::setup()
     sbt.addHitgroupRecord(bunny_record);
     
     // Build GAS
-    gas = GeometryAccel{GeometryAccel::Type::Mesh};
+    gas = GeometryAccel{ShapeType::Mesh};
     gas.addShape(bunny);
     gas.allowCompaction();
-    gas.build(context);
+    gas.build(context, stream);
     
     // Create sbt and pipeline to launch ray
     sbt.createOnDevice();
@@ -147,13 +143,13 @@ void App::update()
     CUDA_CHECK(cudaStreamSynchronize(stream));
     CUDA_SYNC_CHECK();
 
-    film.bitmapAt("result")->copyFromDevice();
+    result_bitmap.copyFromDevice();
 }
 
 // ----------------------------------------------------------------
 void App::draw()
 {
-    film.bitmapAt("result")->draw(0, 0);
+    result_bitmap.draw(0, 0);
 }
 
 // ----------------------------------------------------------------

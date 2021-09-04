@@ -6,12 +6,11 @@
 #include <prayground/optix/geometry_accel.h>
 #include <vector>
 
-/** OptixInstanceのラッパー 
- * 
-*/
-
 namespace prayground {
 
+/** 
+ * OptixInstanceのWrapperクラス
+*/
 class Instance {
 public:
     Instance();
@@ -56,8 +55,11 @@ private:
     OptixInstance* m_instance;
 };
 
-// TraversableHandleはGASをビルドしたときに自動で設定されるようにして
-// 外部から変更されないようにするためにInstanceを継承せずにメンバ変数として保持する
+/**
+ * @note
+ * TraversableHandleはGASをビルドしたときに自動で設定されるようにして
+ * 外部から変更されないようにするためにInstanceを継承せずにメンバ変数として保持する
+ */
 class ShapeInstance {
 public:
     ShapeInstance();

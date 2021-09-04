@@ -112,6 +112,6 @@ add_subdirectory(apps/<your-app-name>)
 
 # :art: Examples
 - [Single GAS](https://github.com/sketchbooks99/PRayGround/tree/master/examples/single-gas)
-  - ![](examples/single-gas/single-gas.gif)
+  - ![](examples/single_gas/single-gas.gif)
 - [Cornel Box](https://github.com/sketchbooks99/PRayGround/tree/master/examples/cornel)
   - <img src=examples/cornel/cornel.gif width=320>

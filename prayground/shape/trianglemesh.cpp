@@ -2,6 +2,7 @@
 #include <prayground/core/cudabuffer.h>
 #include <prayground/core/load3d.h>
 #include <prayground/core/file_util.h>
+#include <prayground/math/util.h>
 
 namespace prayground {
 
@@ -9,9 +10,9 @@ namespace fs = std::filesystem;
 
 /** @note At present, only .obj file format is supported. */
 // ------------------------------------------------------------------
-TriangleMesh::TriangleMesh(const fs::path& filename, bool is_smooth)
+TriangleMesh::TriangleMesh(const fs::path& filename)
 {
-    load(filename, is_smooth);
+    load(filename);
 }
 
 // ------------------------------------------------------------------
@@ -19,45 +20,13 @@ TriangleMesh::TriangleMesh(
     std::vector<float3> vertices, 
     std::vector<Face> faces, 
     std::vector<float3> normals, 
-    std::vector<float2> texcoords,
-    bool is_smooth) 
+    std::vector<float2> texcoords) 
     : m_vertices(vertices), 
       m_faces(faces), 
       m_normals(normals),
       m_texcoords(texcoords)
 {
-    // Mesh smoothing
-    if (is_smooth)
-    {
-        m_normals = std::vector<float3>(vertices.size(), make_float3(0.0f));
-        auto counts = std::vector<int>(vertices.size(), 0);
-        for (size_t i = 0; i < m_faces.size(); i++)
-        {
-            m_faces[i].normal_id = m_faces[i].vertex_id;
-
-            auto p0 = m_vertices[m_faces[i].vertex_id.x];
-            auto p1 = m_vertices[m_faces[i].vertex_id.y];
-            auto p2 = m_vertices[m_faces[i].vertex_id.z];
-            auto N = normalize(cross(p2 - p0, p1 - p0));
-
-            auto idx = m_faces[i].vertex_id.x;
-            m_normals[idx] += N;
-            counts[idx]++;
-
-            idx = m_faces[i].vertex_id.y;
-            m_normals[idx] += N;
-            counts[idx]++;
-
-            idx = m_faces[i].vertex_id.z;
-            m_normals[idx] += N;
-            counts[idx]++;
-        }
-        for (size_t i = 0; i < m_vertices.size(); i++)
-        {
-            m_normals[i] /= counts[i];
-            m_normals[i] = normalize(m_normals[i]);
-        }
-    }
+    
 }
 
 // ------------------------------------------------------------------
@@ -162,7 +131,7 @@ void TriangleMesh::addTexcoord(const float2& texcoord)
 }
 
 // ------------------------------------------------------------------
-void TriangleMesh::load(const fs::path& filename, bool is_smooth)
+void TriangleMesh::load(const fs::path& filename)
 {
     if (filename.string().substr(filename.string().length() - 4) == ".obj") {
         std::optional<fs::path> filepath = findDataPath(filename);
@@ -181,24 +150,8 @@ void TriangleMesh::load(const fs::path& filename, bool is_smooth)
         loadPly(filepath.value(), m_vertices, m_normals, m_faces, m_texcoords);
     }
 
-    if (!m_normals.empty() && !is_smooth)
-    {
-        m_normals.clear();
-        m_normals.resize(m_vertices.size());
-        for (size_t i = 0; i < m_faces.size(); i++)
-        {
-            m_faces[i].normal_id = m_faces[i].vertex_id;
-            auto p0 = m_vertices[m_faces[i].vertex_id.x];
-            auto p1 = m_vertices[m_faces[i].vertex_id.y];
-            auto p2 = m_vertices[m_faces[i].vertex_id.z];
-            auto N = normalize(cross(p1 - p0, p2 - p0));
-            m_normals[m_faces[i].normal_id.x] = N;
-            m_normals[m_faces[i].normal_id.y] = N;
-            m_normals[m_faces[i].normal_id.z] = N;
-        }
-    }
     // Calculate normals if they are empty.
-    else if (m_normals.empty())
+    if (m_normals.empty())
     {
         m_normals.resize(m_vertices.size());
         auto counts = std::vector<int>(m_vertices.size(), 0);
@@ -211,30 +164,9 @@ void TriangleMesh::load(const fs::path& filename, bool is_smooth)
             auto p2 = m_vertices[m_faces[i].vertex_id.z];
             auto N = normalize(cross(p2 - p0, p1 - p0));
 
-            if (is_smooth) {
-                auto idx = m_faces[i].vertex_id.x;
-                m_normals[idx] += N;
-                counts[idx]++;
-                idx = m_faces[i].vertex_id.y;
-                m_normals[idx] += N;
-                counts[idx]++;
-                idx = m_faces[i].vertex_id.z;
-                m_normals[idx] += N;
-                counts[idx]++;
-            }
-            else
-            {
-                m_normals[m_faces[i].vertex_id.x] = N;
-                m_normals[m_faces[i].vertex_id.y] = N;
-                m_normals[m_faces[i].vertex_id.z] = N;
-            }
-        }
-        if (is_smooth) {
-            for (size_t i = 0; i < m_vertices.size(); i++)
-            {
-                m_normals[i] /= counts[i];
-                m_normals[i] = normalize(m_normals[i]);
-            }
+            m_normals[m_faces[i].vertex_id.x] = N;
+            m_normals[m_faces[i].vertex_id.y] = N;
+            m_normals[m_faces[i].vertex_id.z] = N;
         }
     }
 
@@ -243,6 +175,38 @@ void TriangleMesh::load(const fs::path& filename, bool is_smooth)
     }
 }
 
+void TriangleMesh::smooth()
+{
+    m_normals.clear();
+    m_normals = std::vector<float3>(m_vertices.size(), make_float3(0.0f));
+    auto counts = std::vector<int>(m_vertices.size(), 0);
+    for (size_t i = 0; i < m_faces.size(); i++)
+    {
+        m_faces[i].normal_id = m_faces[i].vertex_id;
+
+        auto p0 = m_vertices[m_faces[i].vertex_id.x];
+        auto p1 = m_vertices[m_faces[i].vertex_id.y];
+        auto p2 = m_vertices[m_faces[i].vertex_id.z];
+        auto N = normalize(cross(p2 - p0, p1 - p0));
+
+        auto idx = m_faces[i].vertex_id.x;
+        m_normals[idx] += N;
+        counts[idx]++;
+
+        idx = m_faces[i].vertex_id.y;
+        m_normals[idx] += N;
+        counts[idx]++;
+
+        idx = m_faces[i].vertex_id.z;
+        m_normals[idx] += N;
+        counts[idx]++;
+    }
+    for (size_t i = 0; i < m_vertices.size(); i++)
+    {
+        m_normals[i] /= counts[i];
+        m_normals[i] = normalize(m_normals[i]);
+    }
+}
 
 // ------------------------------------------------------------------
 std::shared_ptr<TriangleMesh> createQuadMesh(
@@ -295,25 +259,49 @@ std::shared_ptr<TriangleMesh> createQuadMesh(
     n[(int)axis] = 1.0f;
     std::vector<float3> normals(4, make_float3(n[0], n[1], n[2]));
 
-    return createTriangleMesh(vertices, faces, normals, texcoords, false);
+    return make_shared<TriangleMesh>(vertices, faces, normals, texcoords, false);
 }
 
 // ------------------------------------------------------------------
-std::shared_ptr<TriangleMesh> createTriangleMesh(const std::string& filename, bool is_smooth)
-{
-    return std::make_shared<TriangleMesh>(filename, is_smooth);
-}
-
-// ------------------------------------------------------------------
-std::shared_ptr<TriangleMesh> createTriangleMesh(
-    const std::vector<float3>& vertices,
-    const std::vector<Face>& faces, 
-    const std::vector<float3>& normals,
-    const std::vector<float2>& texcoords,
-    bool is_smooth
+std::shared_ptr<TriangleMesh> createPlaneMesh(
+    const float2& min, const float2& max, const float2& res, Axis axis
 )
 {
-    return std::make_shared<TriangleMesh>(vertices, faces, normals, texcoords, is_smooth);
+    
 }
 
+// ------------------------------------------------------------------
+std::shared_ptr<TriangleMesh> createSphereMesh(
+    const float radius, const float2& res
+)
+{
+
 }
+
+// ------------------------------------------------------------------
+// ref: http://www.songho.ca/opengl/gl_sphere.html
+std::shared_ptr<TriangleMesh> createIcoSphereMesh(
+    const float radius, const float subdivisions
+)
+{
+    Assert(subdivisions > 0 && subdivisions < 10, 
+        "prayground::createIsoSphereMesh(): The number of subdivision must be 1 ~ 9.");
+    
+    const float h_angle = (constants::pi / 180.0f) * 72.0f;
+    const float v_angle = atanf(1.0f / 2.0f);
+
+    std::vector<float3> vertices(12);
+    vertices[0] = make_float3(0.0f, 0.0f, radius); // top vertex
+
+    for (int i = 0; i <= 5; i++)
+    {
+
+    }
+
+    if (subdivisions > 1)
+    {
+
+    }
+}
+
+} // ::prayground

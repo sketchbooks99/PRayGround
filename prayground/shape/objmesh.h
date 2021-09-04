@@ -32,12 +32,12 @@ public:
     explicit ObjMesh(const std::filesystem::path& filename, bool is_smooth=true);
     ObjMesh(
         std::vector<float3> vertices, 
-        std::vector<Face> faces, 
+        std::vector<int3> faces, 
         std::vector<float3> normals, 
         std::vector<float2> texcoords,
         bool is_smooth=true);
 
-    OptixBuildInputType buildInputType() const override { return OPTIX_BUILD_INPUT_TYPE_TRIANGLES; }
+    ShapeType type() const override { return ShapeType::Mesh; }
 
     void copyToDevice() override;
     OptixBuildInput createBuildInput() override;
@@ -46,8 +46,8 @@ public:
 
     /**
      * @note 
-     * GAS/IAS�̍X�V�̍ۂɒ��_����C���f�b�N�X�̐���ύX����ۂ͒��ӂ��K�v
-     * �K��AS���r���h�������K�v������
+     * GAS/IASの更新の際には注意が必要
+     * 頂点数・インデックス数が変化している場合はASを更新ではなく再ビルドする必要がある
      */
     void addVertex(const float3& v);
     void addFace(const Face& face);

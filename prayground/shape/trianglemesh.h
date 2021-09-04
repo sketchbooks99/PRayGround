@@ -19,23 +19,29 @@ struct Face {
 
 struct MeshData {
     float3* vertices;
-    Face* faces;
+    Face* faces; // -> int3
     float3* normals;
     float2* texcoords;
 };
 
 #ifndef __CUDACC__
 
+/**
+ * @todo
+ * TriangleMeshはObjMeshと構造を少し変える
+ * ファイルからのローディングは禁止して、User-defined なメッシュのみを扱うようにする
+ * .obj や .ply 等のファイル読み込みはObjMeshやPlyMesh等 に委譲し
+ * TriangleMeshでは請け負わないようにする
+ */
 class TriangleMesh final : public Shape {
 public:
     TriangleMesh() {}
-    explicit TriangleMesh(const std::filesystem::path& filename, bool is_smooth=true);
+    explicit TriangleMesh(const std::filesystem::path& filename);
     TriangleMesh(
         std::vector<float3> vertices, 
         std::vector<Face> faces, 
         std::vector<float3> normals, 
-        std::vector<float2> texcoords,
-        bool is_smooth=true);
+        std::vector<float2> texcoords);
 
     ShapeType type() const override;
 
@@ -56,7 +62,9 @@ public:
     void addNormal(const float3& n);
     void addTexcoord(const float2& texcoord);
 
-    void load(const std::filesystem::path& filename, bool is_smooth=true);
+    void load(const std::filesystem::path& filename);
+
+    void smooth();
 
     std::vector<float3> vertices() const { return m_vertices; } 
     std::vector<Face> faces() const { return m_faces; } 
@@ -80,24 +88,20 @@ private:
     CUdeviceptr d_texcoords { 0 };
 };
 
-/**
- * @brief Create a quad mesh
- */
-std::shared_ptr<TriangleMesh> createQuadMesh(const float u_min, const float u_max, 
-                             const float v_min, const float v_max, 
-                             const float k, Axis axis);
+std::shared_ptr<TriangleMesh> createQuadMesh(
+    const float2& min, const float2& max, Axis axis
+);
 
-/**
- * @brief Create mesh
- */
-std::shared_ptr<TriangleMesh> createTriangleMesh(const std::string& filename, bool is_smooth=true);
+std::shared_ptr<TriangleMesh> createPlaneMesh(
+    const float2& min, const float2& max, const float2& res, Axis axis
+);
 
-std::shared_ptr<TriangleMesh> createTriangleMesh(
-    const std::vector<float3>& vertices,
-    const std::vector<Face>& faces, 
-    const std::vector<float3>& normals,
-    const std::vector<float2>& texcoords,
-    bool is_smooth = true
+std::shared_ptr<TriangleMesh> createSphereMesh(
+    const float radius, const float2& res
+);
+
+std::shared_ptr<TriangleMesh> createIcoSphereMesh(
+    const float radius, const float iterations
 );
 
 #endif // __CUDACC__

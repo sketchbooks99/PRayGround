@@ -34,7 +34,7 @@ private:
     FloatBitmap accum_bitmap;
     Camera camera;
 
-    Instance bunny_instance;
+    ShapeInstance bunny_instance;
     shared_ptr<EnvironmentEmitter> env;
     vector<pair<shared_ptr<Shape>, shared_ptr<Material>>> cornel_planes;
     shared_ptr<AreaEmitter> area_emitter;

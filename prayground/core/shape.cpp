@@ -1,4 +1,5 @@
 #include "shape.h"
+#include <prayground/core/util.h>
 
 namespace prayground {
 

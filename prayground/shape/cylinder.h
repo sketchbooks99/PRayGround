@@ -15,6 +15,8 @@ struct CylinderData
 #ifndef __CUDACC__
 class Cylinder final : public Shape {
 public:
+    using DataType = CylinderData;
+
     Cylinder();
     Cylinder(float radius, float height);
 
@@ -24,7 +26,7 @@ public:
     OptixBuildInput createBuildInput() override;
     void free() override;  
 
-    AABB bound() const;
+    AABB bound() const override;
 
 private:
     float m_radius;

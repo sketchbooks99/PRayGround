@@ -22,7 +22,7 @@ public:
     void copyToDevice() override;
     OptixBuildInput createBuildInput() override;
 
-    AABB bound() const;
+    AABB bound() const override;
 private:
     float3 m_center;
     float m_radius;

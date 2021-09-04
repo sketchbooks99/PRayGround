@@ -4,12 +4,13 @@
 
 using namespace std;
 
+// Shader Binding Table用のヘッダとデータを格納するRecordクラス
 using RaygenRecord = Record<RaygenData>;
 using HitgroupRecord = Record<HitgroupData>;
 using MissRecord = Record<MissData>;
 using EmptyRecord = Record<EmptyData>;
 
-using SingleGASSBT = ShaderBindingTable<RaygenRecord, MissRecord, HitgroupRecord, EmptyRecord, EmptyRecord, 1>;
+using DynamicUpdateSBT = ShaderBindingTable<RaygenRecord, MissRecord, HitgroupRecord, EmptyRecord, EmptyRecord, 1>;
 
 class App : public BaseApp
 {
@@ -25,15 +26,15 @@ private:
     Pipeline pipeline;
     Context context;
     CUstream stream;
-    SingleGASSBT sbt;
-    GeometryAccel gas;
+    DynamicUpdateSBT sbt;
+    GeometryAccel bunny_gas;
+    InstanceAccel ias;
 
     Bitmap result_bitmap;
     Camera camera;
 
-    shared_ptr<EnvironmentEmitter> env;
+    
     shared_ptr<AreaEmitter> area;
-    shared_ptr<TriangleMesh> bunny;
-    shared_ptr<CheckerTexture> checker_texture;
+    shared_ptr<EnvironmentEmitter> env;
     shared_ptr<CheckerTexture> env_texture;
 };

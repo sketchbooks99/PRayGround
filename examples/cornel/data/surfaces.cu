@@ -15,17 +15,10 @@ extern "C" __device__ void __continuation_callable__diffuse(SurfaceInteraction* 
         si->n = faceforward(si->n, -si->wi, si->n);
 
     si->trace_terminate = false;
-    {
-        //const float z1 = rnd(seed);
-        const float z1 = curand_uniform(si->curand_state);
-        //const float z2 = rnd(seed);
-        const float z2 = curand_uniform(si->curand_state);
-
-        float3 wi = randomSampleHemisphere(si->curand_state);
-        Onb onb(si->n);
-        onb.inverseTransform(wi);
-        si->wo = normalize(wi);
-    }
+    float3 wi = randomSampleHemisphere(si->curand_state);
+    Onb onb(si->n);
+    onb.inverseTransform(wi);
+    si->wo = normalize(wi);
     si->attenuation *= optixDirectCall<float3, SurfaceInteraction*, void*>(
         diffuse->tex_program_id, si, diffuse->tex_data);
 }

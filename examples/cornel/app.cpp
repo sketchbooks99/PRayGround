@@ -172,17 +172,13 @@ void App::setup()
         cornel_planes[i].first->copyToDevice();
         cornel_planes[i].second->copyToDevice();
         cornel_planes[i].first->setSbtIndex(sbt_idx);
-        GeometryAccel gas{ShapeType::Custom};
-        gas.allowCompaction();
-        gas.addShape(cornel_planes[i].first);
-        gas.build(context, stream);
-        Instance instance;
-        instance.setTransform(wall_matrices[i]);
-        instance.setTraversableHandle(gas.handle());
-        instance.setSBTOffset(sbt_idx);
-        instance.setVisibilityMask(255);
-        instance.setId(sbt_idx);
-        ias.addInstance(instance);
+        ShapeInstance wall_instance (ShapeType::Custom, cornel_planes[i].first, wall_matrices[i]);
+        wall_instance.allowCompaction();
+        wall_instance.buildAccel(context, stream);
+        wall_instance.setSBTOffset(sbt_idx);
+        wall_instance.setId(sbt_idx);
+
+        ias.addInstance(wall_instance);
 
         HitgroupRecord hitgroup_record;
         plane_prg.recordPackHeader(&hitgroup_record);
@@ -195,7 +191,7 @@ void App::setup()
     }
 
     // Stanford bunny mesh
-    bunny = make_shared<TriangleMesh>("uv_bunny.obj");
+    bunny = make_shared<TriangleMesh>("resources/model/uv_bunny.obj");
     bunny->setSbtIndex(sbt_idx);
     bunny->copyToDevice();
 
@@ -216,14 +212,11 @@ void App::setup()
     bunny_record.data.surface_program_id = dielectric_prg_id;
     sbt.addHitgroupRecord(bunny_record);
 
-    GeometryAccel bunny_gas{ShapeType::Mesh};
-    bunny_gas.addShape(bunny);
-    bunny_gas.allowCompaction();
-    bunny_gas.build(context, stream);
+    bunny_instance = ShapeInstance(ShapeType::Mesh, bunny);
     bunny_instance.setTransform(Matrix4f::translate({0.0f, -5.0f, 0.0f}) * Matrix4f::scale(50.0f));
+    bunny_instance.allowCompaction();
+    bunny_instance.buildAccel(context, stream);
     bunny_instance.setSBTOffset(sbt_idx);
-    bunny_instance.setTraversableHandle(bunny_gas.handle());
-    bunny_instance.setVisibilityMask(255);
     bunny_instance.setId(sbt_idx);
     ias.addInstance(bunny_instance);
 

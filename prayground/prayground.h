@@ -48,7 +48,8 @@
 #include "optix/program.h"
 #include "optix/macros.h"
 #include "optix/context.h"
-#include "optix/accel.h"
+#include "optix/geometry_accel.h"
+#include "optix/instance_accel.h"
 #include "optix/instance.h"
 
 // core utilities

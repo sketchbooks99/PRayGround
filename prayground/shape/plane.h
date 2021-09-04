@@ -16,6 +16,8 @@ struct PlaneData
 #ifndef __CUDACC__
 class Plane final : public Shape {
 public:
+    using DataType = PlaneData;
+
     Plane();
     Plane(const float2& min, const float2& max);
 
@@ -26,7 +28,7 @@ public:
 
     void free() override;
 
-    AABB bound() const;
+    AABB bound() const override;
 private:
     float2 m_min, m_max;
     CUdeviceptr d_aabb_buffer{ 0 };

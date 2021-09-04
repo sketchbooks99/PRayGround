@@ -44,11 +44,13 @@ set(sources
   gl/shader.cpp
 
   # Optix wrapper libraries ==========
-  optix/accel.h 
-  optix/accel.cpp
   optix/context.h 
-  optix/context.cpp 
+  optix/context.cpp
+  optix/geometry_accel.h 
+  optix/geometry_accel.cpp
   optix/helpers.h 
+  optix/instance_accel.h 
+  optix/instance_accel.cpp
   optix/instance.h 
   optix/instance.cpp
   optix/macros.h 

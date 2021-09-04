@@ -1,5 +1,6 @@
 #pragma once
 
+#include <prayground/core/util.h>
 #include <prayground/optix/macros.h>
 #include <vector>
 

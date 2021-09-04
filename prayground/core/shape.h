@@ -1,9 +1,6 @@
 #pragma once
 
-#include <memory>
 #include <optix_types.h>
-#include <cuda_runtime.h>
-#include <prayground/core/util.h>
 #include <prayground/core/aabb.h>
 #include <prayground/optix/macros.h>
 
@@ -20,6 +17,8 @@ enum class ShapeType
 
 class Shape {
 public:
+    
+
     virtual ~Shape() {}
 
     virtual ShapeType type() const = 0;
@@ -29,6 +28,8 @@ public:
 
     void setSbtIndex(const uint32_t sbt_index);
     uint32_t sbtIndex() const;
+
+    virtual AABB bound() const = 0;
 
     virtual void free();
 

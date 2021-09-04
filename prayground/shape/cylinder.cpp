@@ -1,5 +1,6 @@
 #include "cylinder.h"
 #include <prayground/core/cudabuffer.h>
+#include <prayground/core/util.h>
 
 namespace prayground {
 

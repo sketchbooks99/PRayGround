@@ -135,6 +135,11 @@ void TriangleMesh::free()
     cuda_frees(d_vertices, d_normals, d_faces, d_texcoords);
 }
 
+AABB TriangleMesh::bound() const 
+{
+    return AABB{};
+}
+
 // ------------------------------------------------------------------
 void TriangleMesh::addVertex(const float3& v)
 {

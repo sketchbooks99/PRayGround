@@ -44,6 +44,8 @@ public:
 
     void free() override;
 
+    AABB bound() const override;
+
     /**
      * @note
      * Be careful when updating GAS/IAS after modifying the number of vertices, indices

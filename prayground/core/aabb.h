@@ -1,8 +1,12 @@
 #pragma once
 
-#include <iostream>
-#include <prayground/math/vec_math.h>
 #include <optix.h>
+#include <prayground/math/vec_math.h>
+
+#ifndef __CUDACC__
+#include <iostream>
+#include <prayground/core/stream_helpers.h>
+#endif
 
 namespace prayground {
 
@@ -26,7 +30,7 @@ public:
         return 2*(dx*dy + dy*dz + dz*dx);
     }
 
-    static AABB surrounding(AABB box0, AABB box1)
+    static AABB merge(AABB box0, AABB box1)
     {
         float3 min_box = make_float3(
             fmin(box0.min().x, box1.min().x),

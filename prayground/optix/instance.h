@@ -3,7 +3,8 @@
 #include <prayground/core/util.h>
 #include <prayground/core/shape.h>
 #include <prayground/math/matrix.h>
-#include <unordered_map>
+#include <prayground/optix/geometry_accel.h>
+#include <vector>
 
 /** OptixInstanceのラッパー 
  * 
@@ -30,7 +31,7 @@ public:
     uint32_t id() const;
     uint32_t sbtOffset() const;
     uint32_t visibilityMask() const;
-    OptixTraversableHandle handle();
+    OptixTraversableHandle handle() const;
     uint32_t flags() const;
 
     /** Transformation of instance */
@@ -53,6 +54,59 @@ private:
      * shared_ptr<Instance> にしてm_instance を実体にしておくかは悩みどころ
      */
     OptixInstance* m_instance;
+};
+
+// TraversableHandleはGASをビルドしたときに自動で設定されるようにして
+// 外部から変更されないようにするためにInstanceを継承せずにメンバ変数として保持する
+class ShapeInstance {
+public:
+    ShapeInstance();
+    ShapeInstance(ShapeType type);
+    ShapeInstance(ShapeType type, const Matrix4f& m);
+    ShapeInstance(ShapeType type, const std::shared_ptr<Shape>& shape);
+    ShapeInstance(ShapeType type, const std::shared_ptr<Shape>& shape, const Matrix4f& m);
+
+    explicit operator OptixInstance() const { return *(m_instance.rawInstancePtr()); }
+
+    void addShape(const std::shared_ptr<Shape>& shape);
+
+    void setId(const uint32_t id);
+    void setSBTOffset(const uint32_t sbt_offset);
+    void setVisibilityMask(const uint32_t visibility_mask);
+    void setPadding(uint32_t pad[2]);
+    void setFlags(const uint32_t flags);
+
+    uint32_t id() const;
+    uint32_t sbtOffset() const;
+    uint32_t visibilityMask() const;
+    OptixTraversableHandle handle() const;
+    uint32_t flags() const;
+
+    void setTransform(const Matrix4f& matrix);
+    void translate(const float3& t);
+    void scale(const float3& s);
+    void scale(const float s);
+    void rotate(const float radians, const float3& axis);
+    void rotateX(const float radians);
+    void rotateY(const float radians);
+    void rotateZ(const float radians);
+    Matrix4f transform();
+
+    void allowUpdate();
+    void allowCompaction();
+    void preferFastTrace();
+    void preferFastBuild();
+    void allowRandomVertexAccess();
+    void buildAccel(const Context& ctx, CUstream stream);
+    void updateAccel(const Context& ctx, CUstream stream);
+
+    void destroy();
+
+    OptixInstance* rawInstancePtr() const;
+private:
+    ShapeType m_type;
+    GeometryAccel m_gas;
+    Instance m_instance;
 };
 
 } // ::prayground

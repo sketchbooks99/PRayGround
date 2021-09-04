@@ -26,13 +26,6 @@ struct MeshData {
 
 #ifndef __CUDACC__
 
-/**
- * @todo
- * TriangleMeshはObjMeshと構造を少し変える
- * ファイルからのローディングは禁止して、User-defined なメッシュのみを扱うようにする
- * .obj や .ply 等のファイル読み込みはObjMeshやPlyMesh等 に委譲し
- * TriangleMeshでは請け負わないようにする
- */
 class TriangleMesh final : public Shape {
 public:
     TriangleMesh() {}

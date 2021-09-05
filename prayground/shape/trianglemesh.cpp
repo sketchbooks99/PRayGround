@@ -8,6 +8,19 @@ namespace prayground {
 
 namespace fs = std::filesystem;
 
+namespace {
+
+float2 getSphereUV(const float3& p)
+{
+    float phi = atan2(p.z, p.x);
+    float theta = asin(p.y);
+    float u = 1.0f - (phi + constants::pi) / (constants::two_pi);
+    float v = 1.0f - (theta + constants::pi / 2.0f) / constants::pi;
+    return make_float2(u, v);
+}
+
+} // ::nonamed namespace
+
 /** @note At present, only .obj file format is supported. */
 // ------------------------------------------------------------------
 TriangleMesh::TriangleMesh(const fs::path& filename)
@@ -135,16 +148,14 @@ void TriangleMesh::load(const fs::path& filename)
 {
     if (filename.string().substr(filename.string().length() - 4) == ".obj") {
         std::optional<fs::path> filepath = findDataPath(filename);
-        if (!filepath)
-            Message(MSG_ERROR, "The OBJ file '" + filename.string() + "' is not found.");
+        Assert(filepath, "The OBJ file '" + filename.string() + "' is not found.");
 
         Message(MSG_NORMAL, "Loading OBJ file '" + filepath.value().string() + "' ...");
         loadObj(filepath.value(), m_vertices, m_normals, m_faces, m_texcoords);
     }
     else if (filename.string().substr(filename.string().length() - 4) == ".ply") {
         std::optional<fs::path> filepath = findDataPath(filename);
-        if (!filepath)
-            Message(MSG_ERROR, "The PLY file '" + filename.string() + "' is not found.");
+        Assert(filepath, "The OBJ file '" + filename.string() + "' is not found.");
             
         Message(MSG_NORMAL, "Loading PLY file '" + filepath.value().string() + "' ...");
         loadPly(filepath.value(), m_vertices, m_normals, m_faces, m_texcoords);
@@ -153,20 +164,19 @@ void TriangleMesh::load(const fs::path& filename)
     // Calculate normals if they are empty.
     if (m_normals.empty())
     {
-        m_normals.resize(m_vertices.size());
-        auto counts = std::vector<int>(m_vertices.size(), 0);
+        m_normals.resize(m_faces.size());
         for(size_t i=0; i<m_faces.size(); i++)
         {
-            m_faces[i].normal_id = m_faces[i].vertex_id;
+            m_faces[i].normal_id = make_int3(i);
 
             auto p0 = m_vertices[m_faces[i].vertex_id.x];
             auto p1 = m_vertices[m_faces[i].vertex_id.y];
             auto p2 = m_vertices[m_faces[i].vertex_id.z];
             auto N = normalize(cross(p2 - p0, p1 - p0));
 
-            m_normals[m_faces[i].vertex_id.x] = N;
-            m_normals[m_faces[i].vertex_id.y] = N;
-            m_normals[m_faces[i].vertex_id.z] = N;
+            m_normals[i] = N;
+            m_normals[i] = N;
+            m_normals[i] = N;
         }
     }
 
@@ -279,28 +289,161 @@ std::shared_ptr<TriangleMesh> createSphereMesh(
 }
 
 // ------------------------------------------------------------------
-// ref: http://www.songho.ca/opengl/gl_sphere.html
+// Icosahedral mesh
 std::shared_ptr<TriangleMesh> createIcoSphereMesh(
     const float radius, const float subdivisions
 )
 {
     Assert(subdivisions > 0 && subdivisions < 10, 
         "prayground::createIsoSphereMesh(): The number of subdivision must be 1 ~ 9.");
-    
-    const float h_angle = (constants::pi / 180.0f) * 72.0f;
-    const float v_angle = atanf(1.0f / 2.0f);
 
     std::vector<float3> vertices(12);
-    vertices[0] = make_float3(0.0f, 0.0f, radius); // top vertex
+    std::vector<Face> faces(20);
+    std::vector<float3> normals(20);
+    std::vector<float2> texcoords(12);
+    
+    const float h_angle = radians(72.0f);
+    const float v_angle = atanf(1.0f / 2.0f);
 
-    for (int i = 0; i <= 5; i++)
+    // When subdivision level = 1
+    vertices[0] = make_float3(0.0f, radius, 0.0f);   // top vertex
+    vertices[11] = make_float3(0.0f, -radius, 0.0f); // bottom vertex
+    texcoords[0] = getSphereUV(normalize(vertices[0]));
+    texcoords[11] = getSphereUV(normalize(vertices[11]));
+
+    for (int i = 1; i <= 5; i++)
     {
+        int i00 = i;
+        int i01 = i % 5 + 1;
+        int i10 = i + 5;
+        int i11 = i == 1 ? 10 : (i + 4) % 5 + 5;
 
+        float3 v00 =
+        {
+            .x = radius * cosf(v_angle) * cosf(i * h_angle),
+            .y = radius * sinf(v_angle),
+            .z = radius * cosf(v_angle) * sinf(i * h_angle)
+        };
+
+        float3 v01 =
+        {
+            .x = radius * cosf(v_angle) * cosf((i+1) * h_angle),
+            .y = radius * sinf(v_angle),
+            .z = radius * cosf(v_angle) * sinf((i+1) * h_angle)
+        };
+
+        float3 v10 =
+        {
+            .x =  radius * cosf(v_angle) * cosf(i * h_angle + h_angle / 2.0f),
+            .y = -radius * sinf(v_angle),
+            .z =  radius * cosf(v_angle) * sinf(i * h_angle + h_angle / 2.0f)
+        };
+
+        float3 v11 =
+        {
+            .x =  radius * cosf(v_angle) * cosf((i + 1) * h_angle),
+            .y = -radius * sinf(v_angle),
+            .z =  radius * cosf(v_angle) * sinf((i + 1) * h_angle)
+        };
+
+        // upper row
+        vertices[i00] = v00;
+        texcoords[i00] = getSphereUV(normalize(vertices[i00]));
+
+        // lower row
+        vertices[i10] = v10;
+        texcoords[i10] = getSphereUV(normalize(vertices[i10]));
+
+        // Faces and normals
+        int f0_id = i * 4;
+        int f1_id = i * 4 + 1;
+        int f2_id = i * 4 + 2;
+        int f3_id = i * 4 + 3;
+
+        Face f0 = {
+            .vertex_id = {0, i00, i01},
+            .normal_id = {f0_id, f0_id, f0_id},
+            .texcoord_id = {0, i00, i01}
+        };
+        normals[f0_id] = normalize(cross(v00 - vertices[0], v01 - vertices[0]));
+
+        Face f1 = {
+            .vertex_id = {i00, i10, i01},
+            .normal_id = {f1_id, f1_id, f1_id},
+            .texcoord_id = {i00, i10, i01}
+        };
+        normals[f1_id] = normalize(cross(v10 - v00, v01 - v00));
+
+        Face f2 = {
+            .vertex_id = {i10, i00, i11},
+            .normal_id = {f2_id, f2_id, f2_id},
+            .texcoord_id = {i10, i00, i11}
+        };
+        normals[f2_id] = normalize(cross(v00 - v10, v11 - v10));
+
+        Face f3 = {
+            .vertex_id = {11, i10, i11},
+            .normal_id = {f3_id, f3_id, f3_id},
+            .texcoord_id = {11, i10, i11}
+        };
+        normals[f3_id] = normalize(cross(v10 - vertices[11], v11 - vertices[11]));
     }
 
     if (subdivisions > 1)
     {
+        std::vector<float3> level1_vertices = vertices;
+        std::vector<Face> level1_faces = faces;
+        std::vector<float3> level1_normals = normals;
+        std::vector<float2> level1_texcoords = texcoords;
+        vertices.clear();
+        faces.clear();
+        normals.clear();
+        texcoords.clear();
 
+        // Level1時の各面をいくつの三角形に分割するか
+        const int num_tri_per_l1_face = subdivisions * subdivisions;
+        // TODO: 頂点ができたのでFaceとNormalを実装する．
+        // - 頂点は num_vertices_per_l1_face 等を定義してインデックスで処理した方が楽かも
+        // - 現状だと，異なるFace間での頂点共有ができていない -> smoothで困る
+
+        for (size_t l1_faceID = 0; l1_faceID < level1_faces.size(); l1_faceID++)
+        {
+            int baseID = l1_faceID * num_tri_per_l1_face;
+            int i = 0;
+
+            float3 v0 = level1_vertices[level1_faces[l1_faceID].vertex_id.x];
+            float3 v1 = level1_vertices[level1_faces[l1_faceID].vertex_id.y];
+            float3 v2 = level1_vertices[level1_faces[l1_faceID].vertex_id.z];
+
+            float3 edge01_per_tri = (v1 - v0) / (float)subdivisions;
+            float3 edge12_per_tri = (v2 - v1) / (float)subdivisions;
+
+            // 番号は新しい頂点のID
+            //        0(v0) 
+            //       / \ 
+            //      1   2
+            //     / \ / \ 
+            // 3(v1) - 4 - 5(v2)
+
+            // vertices, texcoords -> ok
+            vertices.push_back(v0);
+            texcoords.push_back( getSphereUV( normalize( v0 ) ) );
+            for (int level = 1; level <= subdivisions; level++)
+            {
+                for (int j = 0; j <= level; j++)
+                {
+                    float3 v = v0 + edge01_per_tri * (float)(level) + edge12_per_tri * (float)j;
+                    vertices.push_back( radius * normalize(v) );
+                    texcoords.push_back( getSphereUV( normalize( v ) ) );
+                }
+            }
+
+            for (int local_faceID = 0; local_faceID < num_tri_per_l1_face; local_faceID++)
+            {
+                int faceID = baseID + local_faceID;
+                
+            }
+        }
     }
 }
 

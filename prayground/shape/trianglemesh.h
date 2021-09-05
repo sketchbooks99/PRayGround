@@ -12,14 +12,14 @@
 namespace prayground {
 
 struct Face {
-    int3 vertex_id; 
-    int3 normal_id; 
+    int3 vertex_id;
+    int3 normal_id;
     int3 texcoord_id;
 };
 
 struct MeshData {
     float3* vertices;
-    Face* faces; // -> int3
+    Face* faces;
     float3* normals;
     float2* texcoords;
 };

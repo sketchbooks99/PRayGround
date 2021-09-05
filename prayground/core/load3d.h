@@ -138,7 +138,7 @@ void loadPly(
     std::vector<float3>& vertices,
     std::vector<float3>& normals,
     std::vector<Face>& faces, 
-    std::vector<float2>& coordinates
+    std::vector<float2>& texcoords
 ) 
 {
     happly::PLYData plyIn(filename.string());
@@ -149,19 +149,57 @@ void loadPly(
         Throw("The error occured while loading the PLY file.");
     }
 
-    // Get vertices.
+    // Clear arrays
+    if (vertices.size()) vertices.clear();
+    if (normals.size()) normals.clear();
+    if (faces.size()) faces.clear();
+    if (texcoords.size()) texcoords.clear();
+
+    // Get vertices
     std::vector<std::array<double, 3>> ply_vertices = plyIn.getVertexPositions();
     std::transform(ply_vertices.begin(), ply_vertices.end(), std::back_inserter(vertices), 
         [](const std::array<double, 3>& v) { return make_float3(v[0], v[1], v[2]); } );
 
-    // Get face faces.
+    // Get normals
+    if (plyIn.getElement("vertex").hasProperty("nx") && 
+        plyIn.getElement("vertex").hasProperty("ny") && 
+        plyIn.getElement("vertex").hasProperty("nz"))
+    {
+        std::vector<float> x_normals = plyIn.getElement("vertex").getProperty<float>("nx");
+        std::vector<float> y_normals = plyIn.getElement("vertex").getProperty<float>("ny");
+        std::vector<float> z_normals = plyIn.getElement("vertex").getProperty<float>("nz");
+
+        normals.resize(x_normals.size());
+        for (size_t i = 0; auto& n : normals)
+        {
+            n = make_float3(x_normals[i], y_normals[i], z_normals[i]);
+            i++;
+        }
+    }
+
+    // Get texcoords
+    if (plyIn.getElement("vertex").hasProperty("u") &&
+        plyIn.getElement("vertex").hasProperty("v"))
+    {
+        std::vector<float> u_texcoords = plyIn.getElement("vertex").getProperty<float>("u");
+        std::vector<float> v_texcoords = plyIn.getElement("vertex").getProperty<float>("v");
+
+        texcoords.resize(u_texcoords.size());
+        for (size_t i = 0; auto & texcoord : texcoords)
+        {
+            texcoord = make_float2(u_texcoords[i], v_texcoords[i]);
+            i++;
+        }
+    }
+
+    // Get face faces
     std::vector<std::vector<size_t>> ply_faces = plyIn.getFaceIndices();
     std::transform(ply_faces.begin(), ply_faces.end(), std::back_inserter(faces), 
-        [](const std::vector<size_t>& f) { 
+        [&](const std::vector<size_t>& f) { 
             return Face{
                 make_int3(f[0], f[1], f[2]), // vertex_id
-                make_int3(0),                // normal_id
-                make_int3(0)                 // texcoord_id
+                make_int3(f[0], f[1], f[2]), // normal_id
+                make_int3(f[0], f[1], f[2])  // texcoord_id
             }; 
         } );
 }

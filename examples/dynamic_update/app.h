@@ -32,7 +32,6 @@ private:
 
     Bitmap result_bitmap;
     Camera camera;
-
     
     shared_ptr<AreaEmitter> area;
     shared_ptr<EnvironmentEmitter> env;

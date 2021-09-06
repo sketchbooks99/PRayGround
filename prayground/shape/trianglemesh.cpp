@@ -28,7 +28,6 @@ TriangleMesh::TriangleMesh(const fs::path& filename)
     load(filename);
 }
 
-// ------------------------------------------------------------------
 TriangleMesh::TriangleMesh(
     std::vector<float3> vertices, 
     std::vector<Face> faces, 
@@ -289,13 +288,16 @@ std::shared_ptr<TriangleMesh> createSphereMesh(
 }
 
 // ------------------------------------------------------------------
-// Icosahedral mesh
+// Icosphere
+// ref: http://www.songho.ca/opengl/gl_sphere.html
 std::shared_ptr<TriangleMesh> createIcoSphereMesh(
-    const float radius, const float subdivisions
+    const float radius, const int subdivisions
 )
 {
-    Assert(subdivisions > 0 && subdivisions < 10, 
-        "prayground::createIsoSphereMesh(): The number of subdivision must be 1 ~ 9.");
+    Assert(subdivisions >= 0 && subdivisions < 10, 
+        "prayground::createIsoSphereMesh(): The number of subdivision must be 0 ~ 9.");
+    
+    const int num_vertices = 2 + 10 * (2 * subdivisions - 1);
 
     std::vector<float3> vertices(12);
     std::vector<Face> faces(20);
@@ -389,61 +391,9 @@ std::shared_ptr<TriangleMesh> createIcoSphereMesh(
         normals[f3_id] = normalize(cross(v10 - vertices[11], v11 - vertices[11]));
     }
 
-    if (subdivisions > 1)
+    for (int i = 0; i < subdivisions; i++)
     {
-        std::vector<float3> level1_vertices = vertices;
-        std::vector<Face> level1_faces = faces;
-        std::vector<float3> level1_normals = normals;
-        std::vector<float2> level1_texcoords = texcoords;
-        vertices.clear();
-        faces.clear();
-        normals.clear();
-        texcoords.clear();
-
-        // Level1時の各面をいくつの三角形に分割するか
-        const int num_tri_per_l1_face = subdivisions * subdivisions;
-        // TODO: 頂点ができたのでFaceとNormalを実装する．
-        // - 頂点は num_vertices_per_l1_face 等を定義してインデックスで処理した方が楽かも
-        // - 現状だと，異なるFace間での頂点共有ができていない -> smoothで困る
-
-        for (size_t l1_faceID = 0; l1_faceID < level1_faces.size(); l1_faceID++)
-        {
-            int baseID = l1_faceID * num_tri_per_l1_face;
-            int i = 0;
-
-            float3 v0 = level1_vertices[level1_faces[l1_faceID].vertex_id.x];
-            float3 v1 = level1_vertices[level1_faces[l1_faceID].vertex_id.y];
-            float3 v2 = level1_vertices[level1_faces[l1_faceID].vertex_id.z];
-
-            float3 edge01_per_tri = (v1 - v0) / (float)subdivisions;
-            float3 edge12_per_tri = (v2 - v1) / (float)subdivisions;
-
-            // 番号は新しい頂点のID
-            //        0(v0) 
-            //       / \ 
-            //      1   2
-            //     / \ / \ 
-            // 3(v1) - 4 - 5(v2)
-
-            // vertices, texcoords -> ok
-            vertices.push_back(v0);
-            texcoords.push_back( getSphereUV( normalize( v0 ) ) );
-            for (int level = 1; level <= subdivisions; level++)
-            {
-                for (int j = 0; j <= level; j++)
-                {
-                    float3 v = v0 + edge01_per_tri * (float)(level) + edge12_per_tri * (float)j;
-                    vertices.push_back( radius * normalize(v) );
-                    texcoords.push_back( getSphereUV( normalize( v ) ) );
-                }
-            }
-
-            for (int local_faceID = 0; local_faceID < num_tri_per_l1_face; local_faceID++)
-            {
-                int faceID = baseID + local_faceID;
-                
-            }
-        }
+        
     }
 }
 

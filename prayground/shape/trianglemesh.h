@@ -29,12 +29,16 @@ struct MeshData {
 class TriangleMesh final : public Shape {
 public:
     TriangleMesh() {}
-    explicit TriangleMesh(const std::filesystem::path& filename);
+    TriangleMesh(const std::filesystem::path& filename);
     TriangleMesh(
         std::vector<float3> vertices, 
         std::vector<Face> faces, 
         std::vector<float3> normals, 
         std::vector<float2> texcoords);
+    // copy constructor -> default
+    TriangleMesh(const TriangleMesh& mesh) = default;
+    // move constructor -> default
+    TriangleMesh(TriangleMesh&& mesh) = default;
 
     ShapeType type() const override;
 
@@ -94,7 +98,7 @@ std::shared_ptr<TriangleMesh> createSphereMesh(
 );
 
 std::shared_ptr<TriangleMesh> createIcoSphereMesh(
-    const float radius, const float iterations
+    const float radius, const int subdivisions
 );
 
 #endif // __CUDACC__

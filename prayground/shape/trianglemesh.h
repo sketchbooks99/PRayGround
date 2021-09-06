@@ -26,7 +26,7 @@ struct MeshData {
 
 #ifndef __CUDACC__
 
-class TriangleMesh final : public Shape {
+class TriangleMesh : public Shape {
 public:
     TriangleMesh() {}
     TriangleMesh(const std::filesystem::path& filename);
@@ -61,7 +61,7 @@ public:
 
     void load(const std::filesystem::path& filename);
 
-    void smooth();
+    virtual void smooth();
 
     std::vector<float3> vertices() const { return m_vertices; } 
     std::vector<Face> faces() const { return m_faces; } 
@@ -73,7 +73,7 @@ public:
     CUdeviceptr deviceNormals() const { return d_normals; }
     CUdeviceptr deivceTexcoords() const { return d_texcoords; }
 
-private:
+protected:
     std::vector<float3> m_vertices;
     std::vector<Face> m_faces;
     std::vector<float3> m_normals;

@@ -4,38 +4,27 @@
 
 namespace prayground {
 
-class PrimitiveMesh {
+class IcoSphereMesh final : public TriangleMesh {
 public:
-    TriangleMesh getMesh();
-private:
-    std::vector<float3> m_vertices;
-    std::vector<Face> m_faces;
-    std::vector<float3> m_normals;
-    std::vector<float2> m_texcoords;
-};
+    IcoSphereMesh(float radius=1, int level=2);
 
-class IcoSphereMesh final : public PrimitiveMesh {
-public:
-    IcoSphereMesh(float radius=1, int subdivisions=1);
-
-    void smooth();
+    void smooth() override;
     void splitVertices();
 private:
     float m_radius; 
-    int m_subdivisions;
+    int m_level;
+    std::vector<int> share_count; // 各頂点の共有数を管理する
 };
 
-class UVSphereMesh final : public PrimitiveMesh {
+class UVSphereMesh final : public TriangleMesh {
 public:
     UVSphereMesh(float radius=1, int2 res = {2,2});
-
-    void smooth();
 private:
     float m_radius;
     int2 m_resolution;
 };
 
-class CylinderMesh final : public PrimitiveMesh {
+class CylinderMesh final : public TriangleMesh {
 public:
     CylinderMesh(float radius = 1, float height = 2);
 private:
@@ -43,9 +32,9 @@ private:
     float m_height;
 };
 
-class PlaneMesh final : public PrimitiveMesh {
+class PlaneMesh final : public TriangleMesh {
 public: 
-    PlaneMesh(float2 size = {10,10}, int2 res = {2,2});
+    PlaneMesh(float2 size = {10,10}, int2 res = {2,2}, Axis axis=Axis::Y);
 private:
     float2 m_size;
     int2 m_resolution;

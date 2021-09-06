@@ -297,8 +297,6 @@ std::shared_ptr<TriangleMesh> createIcoSphereMesh(
     Assert(subdivisions >= 0 && subdivisions < 10, 
         "prayground::createIsoSphereMesh(): The number of subdivision must be 0 ~ 9.");
     
-    const int num_vertices = 2 + 10 * (2 * subdivisions - 1);
-
     std::vector<float3> vertices(12);
     std::vector<Face> faces(20);
     std::vector<float3> normals(20);

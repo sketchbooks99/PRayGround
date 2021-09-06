@@ -25,35 +25,70 @@ IcoSphereMesh::IcoSphereMesh(float radius, int level)
 
     const int l2 = (level+1) * (level+1);
     const int num_vertices = 2 + l2 * 10;
-    
-    std::vector<float3> vertices(num_vertices);
-    std::vector<Face> faces(20 * l2);
-    std::vector<float3> normals(20 * l2);
-    std::vector<float2> texcoords(num_vertices);
+    const int num_faces = 20 * l2;
 
     m_vertices.resize(num_vertices);
     m_faces.resize(num_vertices);
     m_normals.resize(num_vertices);
     m_texcoords.resize(num_vertices);
     
-    const float h_angle = radians(72.0f);
-    const float v_angle = atanf(1.0f / 2.0f);
+    const float v_ang_center = atanf(1.0f / 2.0f);
 
     float3 top_v{0.0f, radius, 0.0f};
     float3 bottom_v{0.0f, -radius, 0.0f};
 
-    vertices[0] = top_v;   // top vertex
-    vertices[num_vertices-1] = bottom_v; // bottom vertex
-    texcoords[0] = getSphereUV(normalize(top_v));
-    texcoords[num_vertices-1] = getSphereUV(normalize(bottom_v));
+    // top vertex
+    m_vertices[0] = top_v;
+    m_texcoords[0] = getSphereUV(normalize(top_v));
+    // bottom vertex
+    m_vertices[num_vertices-1] = bottom_v; 
+    m_texcoords[num_vertices-1] = getSphereUV(normalize(bottom_v));
+
+    //            . <- top vertex
+    //           / \ 
+    //          . - .            upper row
+    //         / \ / \           ------------
+    //      - . - . - . -   
+    // ... \ / \ / \ / \ / ...
+    //      . - . - . - .        center row
+    // ... / \ / \ / \ / \ ...
+    //      - . - . - . -   
+    //         \ / \ /           ------------
+    //          . - .            lower row
+    //           \ /
+    //            . <- bottom vertex
+    //
 
     int v_idx = 1;
 
     // Upper row
-    for (int ul = 1; ul <= level; ul++)
+    for (int ul = 0; ul < level; ul++)
     {
-        for (int j = 0; j < ul*5; j++)
+        float h_ang_per_tri = constants::two_pi / (float)((ul+1)*5);
+        for (int j = 0; j < (ul+1)*5; j++)
         {
+            float h_ang = j * h_ang_per_tri + (float)(ul % 5) * (h_ang_per_tri / 2.0f);
+            float v_ang = std::lerp(constants::pi / 2.0f, v_ang_center, (1.0f / (float)(level+1)) * (float)(ul+1));
+
+            float x = radius * cosf(v_ang) * cosf(h_ang);
+            float y = radius * sinf(v_ang);
+            float z = radius * cosf(v_ang) * sinf(h_ang);
+            m_vertices[v_idx] = make_float3(x, y, z);
+
+            // 頂点を1つ追加するごとに面を2つ追加する
+            // 例) v_idx = 1 (level=1)
+            //     0                      
+            //    / \   (1,2,0)
+            //   1 - 2
+            //    \ /   (1,6,2)
+            //     6
+            //
+            //
+            for (int k = 0; k < 2; k++)
+            {
+
+            }
+
             v_idx++;
         }
     }
@@ -61,17 +96,33 @@ IcoSphereMesh::IcoSphereMesh(float radius, int level)
     // Center row
     for (int cl = 0; cl <= level + 1; cl++)
     {
+        float h_ang_per_tri = constants::two_pi / (float)((level + 1) / 5.0f);
         for (int j = 0; j < (level+1) * 5; j++)
         {
+            float h_ang = j * h_ang_per_tri + (cl % 2) * (h_ang_per_tri / 2.0f);
+            float v_ang = std::lerp(-v_ang_center, v_ang_center, ((level + 1) - cl) * (1.0f / (float)(level + 1)));
+
+            float x = radius * cosf(v_ang) * cosf(h_ang);
+            float y = radius * sinf(v_ang);
+            float z = radius * cosf(v_ang) * sinf(h_ang);
+            m_vertices[v_idx] = make_float3(x, y, z);
             v_idx++;
         }
     }
 
     // Lower row
-    for (int ll = level; ll >= 1; ll--)
+    for (int ll = level-1; ll >= 0; ll--)
     {
-        for (int j = 0; j < ll*5; j++)
+        float h_ang_per_tri = constants::two_pi / (float)((ll + 1) / 5.0f);
+        for (int j = 0; j < (ll+1)*5; j++)
         {
+            float h_ang = j * h_ang_per_tri + h_ang_per_tri / 2.0f;
+            float v_ang = std::lerp(-v_ang_center, -constants::pi / 2.0f, (1.0f / (level+1)) * (float)(level - ll));
+
+            float x = radius * cosf(v_ang) * cosf(h_ang);
+            float y = radius * sinf(v_ang);
+            float z = radius * cosf(v_ang) * sinf(h_ang);
+            m_vertices[v_idx] = make_float3(x, y, z);
             v_idx++;
         }
     }

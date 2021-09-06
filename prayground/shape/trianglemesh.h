@@ -35,9 +35,7 @@ public:
         std::vector<Face> faces, 
         std::vector<float3> normals, 
         std::vector<float2> texcoords);
-    // copy constructor -> default
     TriangleMesh(const TriangleMesh& mesh) = default;
-    // move constructor -> default
     TriangleMesh(TriangleMesh&& mesh) = default;
 
     ShapeType type() const override;

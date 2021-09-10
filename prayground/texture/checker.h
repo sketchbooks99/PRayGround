@@ -12,7 +12,7 @@ struct CheckerTextureData {
 #ifndef __CUDACC__
 class CheckerTexture final : public Texture {
 public:
-    CheckerTexture(const float3& c1, const float3& c2, float s=5);
+    CheckerTexture(const float3& c1, const float3& c2, float s=5, int prg_id);
 
     void setColor1(const float3& c1);
     float3 color1() const;

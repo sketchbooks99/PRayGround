@@ -160,10 +160,13 @@ void App::setup()
 
     HitgroupRecord cl_record;
     plane_prg.recordPackHeader(&cl_record);
-    cl_record.data.shape_data = ceiling_light->devicePtr();
-    cl_record.data.surface_data = area_emitter->devicePtr();
-    cl_record.data.surface_type = SurfaceType::AreaEmitter;
-    cl_record.data.surface_program_id = area_emitter_prg_id;
+    cl_record.data = 
+    {
+        .shape_data = ceiling_light->devicePtr(),
+        .surface_data = area_emitter->devicePtr(),
+        .surface_program_id = area_emitter_prg_id,
+        .surface_type = SurfaceType::AreaEmitter
+    };
     sbt.addHitgroupRecord(cl_record);
     sbt_idx++;
 
@@ -182,10 +185,13 @@ void App::setup()
 
         HitgroupRecord hitgroup_record;
         plane_prg.recordPackHeader(&hitgroup_record);
-        hitgroup_record.data.shape_data = cornel_planes[i].first->devicePtr();
-        hitgroup_record.data.surface_data = cornel_planes[i].second->devicePtr();
-        hitgroup_record.data.surface_type = SurfaceType::Material;
-        hitgroup_record.data.surface_program_id = diffuse_prg_id;
+        hitgroup_record.data = 
+        {
+            .shape_data = cornel_planes[i].first->devicePtr(),
+            .surface_data = cornel_planes[i].second->devicePtr(),
+            .surface_program_id = diffuse_prg_id,
+            .surface_type = SurfaceType::Material
+        };
         sbt.addHitgroupRecord(hitgroup_record);
         sbt_idx++;
     }
@@ -206,10 +212,13 @@ void App::setup()
 
     HitgroupRecord bunny_record; 
     mesh_prg.recordPackHeader(&bunny_record);
-    bunny_record.data.shape_data = bunny->devicePtr();
-    bunny_record.data.surface_data = bunny_material->devicePtr();
-    bunny_record.data.surface_type = SurfaceType::Material;
-    bunny_record.data.surface_program_id = dielectric_prg_id;
+    bunny_record.data = 
+    {
+        .shape_data = bunny->devicePtr(),
+        .surface_data = bunny_material->devicePtr(),
+        .surface_program_id = dielectric_prg_id,
+        .surface_type = SurfaceType::Material
+    };
     sbt.addHitgroupRecord(bunny_record);
 
     bunny_instance = ShapeInstance(ShapeType::Mesh, bunny);

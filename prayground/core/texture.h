@@ -13,6 +13,8 @@ namespace prayground {
 
 class Texture {
 public:
+    Texture(int prg_id) : m_prg_id(prg_id) {}
+
     // Preparing texture data on the device.
     virtual void copyToDevice() = 0;
     virtual void free()
@@ -37,7 +39,7 @@ public:
     }
 protected:
     void* d_data{ nullptr };
-    int m_prg_id { -1 };
+    int m_prg_id;
 };
 
 #endif

@@ -17,7 +17,7 @@ struct BitmapTextureData {
 template <typename PixelType>
 class BitmapTexture_ final : public Texture {
 public:
-    explicit BitmapTexture_(const std::filesystem::path& filename);
+    explicit BitmapTexture_(const std::filesystem::path& filename, int prg_id);
 
     void copyToDevice() override;
     void free() override;

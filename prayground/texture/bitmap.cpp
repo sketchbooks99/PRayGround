@@ -7,7 +7,8 @@ namespace prayground {
 
 // ---------------------------------------------------------------------
 template <typename PixelType>
-BitmapTexture_<PixelType>::BitmapTexture_(const std::filesystem::path& filename)
+BitmapTexture_<PixelType>::BitmapTexture_(const std::filesystem::path& filename, int prg_id)
+: Texture(prg_id)
 {
     std::optional<std::filesystem::path> filepath = findDataPath(filename);
     if (!filepath)

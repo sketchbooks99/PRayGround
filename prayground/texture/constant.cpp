@@ -3,8 +3,8 @@
 namespace prayground {
 
 // ------------------------------------------------------------------
-ConstantTexture::ConstantTexture(const float3& c)
-: m_color(c)
+ConstantTexture::ConstantTexture(const float3& c, int prg_id)
+: m_color(c), Texture(prg_id)
 {
 
 }

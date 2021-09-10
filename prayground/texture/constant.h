@@ -11,7 +11,7 @@ struct ConstantTextureData {
 #ifndef __CUDACC__
 class ConstantTexture final : public Texture {
 public:
-    ConstantTexture(const float3& c);
+    ConstantTexture(const float3& c, int prg_id);
 
     void setColor(const float3& c);
     float3 color() const;

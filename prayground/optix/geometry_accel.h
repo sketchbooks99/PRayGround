@@ -13,6 +13,7 @@ public:
     ~GeometryAccel();
 
     void addShape(const std::shared_ptr<Shape>& shape);
+    std::vector<std::shared_ptr<Shape>> shapes() const;
    
     void build(const Context& ctx, CUstream stream);
     void update(const Context& ctx, CUstream stream);

@@ -12,7 +12,7 @@ namespace prayground {
 struct ConductorData {
     void* tex_data;
     bool twosided;
-    uint32_t tex_program_id;
+    unsigned int tex_program_id;
 };
 
 #ifndef __CUDACC__

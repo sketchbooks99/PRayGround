@@ -83,22 +83,6 @@ protected:
     CUdeviceptr d_texcoords { 0 };
 };
 
-std::shared_ptr<TriangleMesh> createQuadMesh(
-    const float2& min, const float2& max, Axis axis
-);
-
-std::shared_ptr<TriangleMesh> createPlaneMesh(
-    const float2& min, const float2& max, const float2& res, Axis axis
-);
-
-std::shared_ptr<TriangleMesh> createSphereMesh(
-    const float radius, const float2& res
-);
-
-std::shared_ptr<TriangleMesh> createIcoSphereMesh(
-    const float radius, const int subdivisions
-);
-
 #endif // __CUDACC__
 
 }

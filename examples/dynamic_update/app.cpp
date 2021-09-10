@@ -10,6 +10,8 @@ void App::setup()
     context.setDeviceId(0);
     context.create();
 
+    ias = InstanceAccel{ InstanceAccel::Type::Instances };
+
     // パイプラインの設定
     pipeline.setLaunchVariableName("params");
     pipeline.setDirectCallableDepth(2);
@@ -36,7 +38,7 @@ void App::setup()
     params.result_buffer = reinterpret_cast<uchar4*>(result_bitmap.devicePtr());
 
     // カメラの設定
-    camera.setOrigin(make_float3(0.0f, 0.0f, 0.75f));
+    camera.setOrigin(make_float3(0.0f, 0.0f, 40.0f));
     camera.setLookat(make_float3(0.0f, 0.0f, 0.0f));
     camera.setUp(make_float3(0.0f, 1.0f, 0.0f));
     camera.setFov(40.0f);
@@ -56,73 +58,278 @@ void App::setup()
     };
     sbt.setRaygenRecord(raygen_record);
 
-    // Callables プログラム用のデータ
-    std::vector<EmptyRecord> callable_records(3, EmptyRecord{});
+    EmptyRecord callable_record = {};
 
     // 単色テクスチャ用のプログラム
-    auto [bitmap_prg, bitmap_prg_id] = pipeline.createCallablesProgram(context, textures_module, "__direct_callable__bitmap", "");
-    bitmap_prg.recordPackHeader(&callable_records[0]);
-    sbt.addCallablesRecord(callable_records[0]);
+    auto [constant_prg, constant_prg_id] = pipeline.createCallablesProgram(context, textures_module, "__direct_callable__constant", "");
+    constant_prg.recordPackHeader(&callable_record);
+    sbt.addCallablesRecord(callable_record);
     // チェッカーボード用のプログラム
+    callable_record = {};
     auto [checker_prg, checker_prg_id] = pipeline.createCallablesProgram(context, textures_module, "__direct_callable__checker", "");
-    checker_prg.recordPackHeader(&callable_records[1]);
-    sbt.addCallablesRecord(callable_records[1]);
+    checker_prg.recordPackHeader(&callable_record);
+    sbt.addCallablesRecord(callable_record);
 
     // 環境マッピング用のテクスチャとデータを準備
-    env_texture = make_shared<CheckerTexture>(make_float3(0.9f), make_float3(0.3f), 10.0f);
-    env_texture->setProgramId(checker_prg_id);
-    env_texture->copyToDevice();
-    env = make_shared<EnvironmentEmitter>(env_texture);
-    env->copyToDevice();
+    auto env_color = make_shared<ConstantTexture>(make_float3(1.0), constant_prg_id);
+    env_color->copyToDevice();
+    auto env_emitter = make_shared<EnvironmentEmitter>(env_color);
+    env_emitter->copyToDevice();
 
     // Miss プログラムの生成とSBTデータの用意
     ProgramGroup miss_prg = pipeline.createMissProgram(context, miss_module, "__miss__envmap");
     MissRecord miss_record;
     miss_prg.recordPackHeader(&miss_record);
-    miss_record.data.env_data = env->devicePtr();
-    sbt.setMissRecord(miss_record);
+    miss_record.data.env_data = env_emitter->devicePtr();
+    sbt.setMissRecord(miss_record, miss_record);
 
-    // チェッカーボードテクスチャの準備
-    checker_texture = make_shared<CheckerTexture>(make_float3(1.0f), make_float3(0.3f), 15);
-    checker_texture->setProgramId(checker_prg_id);
-    checker_texture->copyToDevice();
+    // Cornel box用のテクスチャを用意
+    auto floor_checker = make_shared<CheckerTexture>(make_float3(0.9f), make_float3(0.3f), 10, checker_prg_id);
+    auto red = make_shared<ConstantTexture>(make_float3(0.8f, 0.05f, 0.05f), constant_prg_id);
+    auto green = make_shared<ConstantTexture>(make_float3(0.05f, 0.8f, 0.05f), constant_prg_id);
+    auto white = make_shared<ConstantTexture>(make_float3(0.8f), constant_prg_id);
+    // Cornel box用のマテリアルを用意
+    auto floor_diffuse = make_shared<Diffuse>(floor_checker);
+    auto red_diffuse = make_shared<Diffuse>(red);
+    auto green_diffuse = make_shared<Diffuse>(green);
+    auto white_diffuse = make_shared<Diffuse>(white);
+    floor_diffuse->copyToDevice(); // GPU上にデータをコピー
+    red_diffuse->copyToDevice();
+    green_diffuse->copyToDevice();
+    white_diffuse->copyToDevice();
 
-    // 面光源用のプログラムの生成
+    // Diffuseマテリアル用のCallableプログラムを生成
+    // Diffuseではシャドウレイ用にoptixTrace()を呼び出すため、
+    // Direct callableではなくContinuation callableにする
+    auto [diffuse_prg, diffuse_prg_id] = pipeline.createCallablesProgram(context, surfaces_module, "", "__continuation_callable__diffuse");
+    callable_record = {};
+    diffuse_prg.recordPackHeader(&callable_record);
+    sbt.addCallablesRecord(callable_record);
+
+    ShapeInstance floor {
+        ShapeType::Custom, 
+        make_shared<Plane>(make_float2(-10.0f, -10.0f), make_float2(10.0f, 10.0f)),
+        Matrix4f::translate(make_float3(0.0f, -10.0f, 0.0f))
+    };
+
+    ShapeInstance ceiling {
+        ShapeType::Custom, 
+        make_shared<Plane>(make_float2(-10.0f, -10.0f), make_float2(10.0f, 10.0f)),
+        Matrix4f::translate(make_float3(0.0f, 10.0f, 0.0f))
+    };
+
+    ShapeInstance back {
+        ShapeType::Custom, 
+        make_shared<Plane>(make_float2(-10.0f, -10.0f), make_float2(10.0f, 10.0f)),
+        // x軸中心に90度回転
+        Matrix4f::translate(make_float3(0.0f, 0.0f, -10.0f)) * Matrix4f::rotate(constants::pi / 2, {1.0f, 0.0f, 0.0f}) 
+    };
+
+    ShapeInstance right_wall {
+        ShapeType::Custom, 
+        make_shared<Plane>(make_float2(-10.0f, -10.0f), make_float2(10.0f, 10.0f)),
+        // z軸中心に90度回転
+        Matrix4f::translate(make_float3(0.0f, -10.0f, 0.0f)) * Matrix4f::rotate(constants::pi / 2, {0.0f, 0.0f, 1.0f})
+    };
+
+    ShapeInstance left_wall {
+        ShapeType::Custom, 
+        make_shared<Plane>(make_float2(-10.0f, -10.0f), make_float2(10.0f, 10.0f)),
+        // z軸中心に90度回転
+        Matrix4f::translate(make_float3(0.0f, -10.0f, 0.0f)) * Matrix4f::rotate(constants::pi / 2, {0.0f, 0.0f, 1.0f})
+    };
+
+    cornel_box.push_back({floor,         floor_diffuse});
+    cornel_box.push_back({ceiling,       white_diffuse});
+    cornel_box.push_back({back,          white_diffuse});
+    cornel_box.push_back({right_wall,    red_diffuse});
+    cornel_box.push_back({left_wall,     green_diffuse});
+
+    uint32_t sbt_idx = 0;
+    uint32_t instance_id = 0;
+
+    // Plane用のHitgroupプログラムの生成
+    auto plane_prg = pipeline.createHitgroupProgram(context, hitgroups_module, "__closesthit__plane", "__intersection__plane");
+    auto plane_shadow_prg = pipeline.createHitgroupProgram(context, hitgroups_module, "__closesthit__shadow", "__intersection__plane");
+
+    for (auto& [plane_instance, material] : cornel_box)
+    {
+        for (auto& plane : plane_instance.shapes()) {
+            // Hitgroupプログラム用のデータを準備
+            plane->copyToDevice();    
+            plane->setSbtIndex(sbt_idx);
+
+            // SBT用のHitgroupDataの生成
+            HitgroupRecord record;
+            plane_prg.recordPackHeader(&record);
+            record.data =
+            {
+                .shape_data = plane->devicePtr(),
+                .surface_data = material->devicePtr(),
+                .surface_program_id = diffuse_prg_id,
+                .surface_type = SurfaceType::Material
+            };
+
+            // シャドウレイ用のHitgroupData
+            // 衝突したかどうかをPayloadに設定するだけなので、データは設定しない
+            HitgroupRecord shadow_record;
+            plane_shadow_prg.recordPackHeader(&shadow_record);
+
+            sbt.addHitgroupRecord(record, shadow_record);
+
+            sbt_idx += DynamicUpdateSBT::NRay;
+        }
+        // Plane用のGASとインスタンスを作成
+        plane_instance.allowCompaction();
+        plane_instance.buildAccel(context, stream);
+        plane_instance.setSBTOffset(sbt_idx);
+        plane_instance.setId(instance_id);
+
+        // InstanceをInstanceAccelに追加
+        ias.addInstance(plane_instance);
+
+        instance_id++;
+    }
+
     auto [area_prg, area_prg_id] = pipeline.createCallablesProgram(context, surfaces_module, "__direct_callable__area_emitter", "");
-    area_prg.recordPackHeader(&callable_records[2]);
-    sbt.addCallablesRecord(callable_records[2]);
+    callable_record = {};
+    area_prg.recordPackHeader(&callable_record);
+    sbt.addCallablesRecord(callable_record);
 
-    // 面光源用のデータを準備
-    area = make_shared<AreaEmitter>(checker_texture);
-    area->copyToDevice();
+    // 天井の面光源
+    {
+        // チェッカーボードテクスチャの準備
+        ceiling_texture = make_shared<ConstantTexture>(make_float3(1.0f), constant_prg_id);
+        ceiling_texture->copyToDevice(); // GPU上にデータをコピー
+        // 天井の光源のデータを準備
+        ceiling_emitter = make_shared<AreaEmitter>(ceiling_texture);
+        ceiling_emitter->copyToDevice();   // GPU上にデータをコピー
 
-    // Bunnyメッシュを.objから読み込む
-    bunny = make_shared<TriangleMesh>("uv_bunny.obj");
-    bunny->setSbtIndex(0);
-    bunny->copyToDevice();
+        ShapeInstance ceiling_light {
+            ShapeType::Custom, 
+            make_shared<Plane>(make_float2(-2.5f, -2.5f), make_float2(2.5f, 2.5f)), 
+            Matrix4f::translate(make_float3(0.0f, 0.0f, 9.9f))
+        };
+        ceiling_light.shapes()[0]->copyToDevice();
+        ceiling_light.allowCompaction();
+        ceiling_light.buildAccel(context, stream);
+        ceiling_light.setSBTOffset(sbt_idx);
+        ceiling_light.setId(instance_id);
+        ias.addInstance(ceiling_light);
+        sbt_idx += DynamicUpdateSBT::NRay;
+        instance_id++;
 
-    // メッシュ用のプログラムの生成
-    ProgramGroup mesh_prg = pipeline.createHitgroupProgram(context, hitgroups_module, "__closesthit__mesh");
+        // 天井の光源用のHitgroupDataの生成
+        HitgroupRecord record;
+        plane_prg.recordPackHeader(&record);
+        record.data =
+        {
+            .shape_data = ceiling_light.shapes()[0]->devicePtr(),
+            .surface_data = ceiling_emitter->devicePtr(), 
+            .surface_program_id = area_prg_id,
+            .surface_type = SurfaceType::AreaEmitter
+        };
 
-    // Bunny用のHitgroupデータを用意し、SBTにデータをセットする
-    HitgroupRecord bunny_record;
-    mesh_prg.recordPackHeader(&bunny_record);
-    bunny_record.data.shape_data = bunny->devicePtr();
-    bunny_record.data.surface_data = area->devicePtr();
-    bunny_record.data.surface_program_id = area_prg_id;
-    bunny_record.data.surface_type = SurfaceType::AreaEmitter;
-    sbt.addHitgroupRecord(bunny_record);
+        HitgroupRecord shadow_record;
+        plane_prg.recordPackHeader(&shadow_record);
+        sbt.addHitgroupRecord(record, shadow_record);
+    }
+
+    // Sphere用のHitgroupプログラムの生成
+    auto sphere_prg = pipeline.createHitgroupProgram(context, hitgroups_module, "__closesthit__sphere", "__intersection__sphere");
+    auto sphere_shadow_prg = pipeline.createHitgroupProgram(context, hitgroups_module, "__closesthit__shadow", "__intersection__sphere");
+
+    // 金属&誘電体マテリアル用
+    auto [conductor_prg, conductor_prg_id] = pipeline.createCallablesProgram(context, surfaces_module, "", "__continuation_callable__conductor");
+    callable_record = {};
+    conductor_prg.recordPackHeader(&callable_record);
+    sbt.addCallablesRecord(callable_record);
+    auto [glass_prg, glass_prg_id] = pipeline.createCallablesProgram(context, surfaces_module, "", "__continuation_callable__dielectric");
+    callable_record = {};
+    glass_prg.recordPackHeader(&callable_record);
+    sbt.addCallablesRecord(callable_record);
+
+    // Sphere1
+    {
+        // Sphere1用の金属マテリアル
+        auto metal_texture = make_shared<CheckerTexture>(make_float3(0.8f, 0.8f, 0.05f), make_float3(0.3f), 10, checker_prg_id);
+        metal_texture->copyToDevice();
+        auto metal = make_shared<Conductor>(metal_texture);
+        metal->copyToDevice();
+        sphere1 = ShapeInstance(
+            ShapeType::Custom, 
+            make_shared<Sphere>(make_float3(0.0f), 1.0f), 
+            Matrix4f::translate(make_float3(5.0f, 5.0f, -5.0f)) * Matrix4f::scale(2.5f)
+        );
+        sphere1.shapes()[0]->copyToDevice();
+        sphere1.allowCompaction();
+        sphere1.buildAccel(context, stream);
+        sphere1.setSBTOffset(sbt_idx);
+        sphere1.setId(instance_id);
+        ias.addInstance(sphere1);
+        sbt_idx += DynamicUpdateSBT::NRay;
+        instance_id++;
+
+        // Sphere1用のHitgroupDataの生成
+        HitgroupRecord sphere1_record;
+        sphere_prg.recordPackHeader(&sphere1_record);
+        sphere1_record.data = 
+        {
+            .shape_data = sphere1.shapes()[0]->devicePtr(),
+            .surface_data = metal->devicePtr(),
+            .surface_program_id = conductor_prg_id,
+            .surface_type = SurfaceType::Material
+        };
+
+        HitgroupRecord sphere1_shadow_record;
+        sphere_prg.recordPackHeader(&sphere1_shadow_record);
+
+        sbt.addHitgroupRecord(sphere1_record, sphere1_shadow_record);
+    }
+
+    // Sphere2
+    {
+        // Sphere2用の誘電体マテリアル
+        auto glass_texture = make_shared<ConstantTexture>(make_float3(1.0f), constant_prg_id);
+        glass_texture->copyToDevice();
+        auto glass = make_shared<Dielectric>(glass_texture, 1.5f);
+        glass->copyToDevice();
+        sphere2 = ShapeInstance(
+            ShapeType::Custom, 
+            make_shared<Sphere>(make_float3(0.0f), 1.0f), 
+            Matrix4f::translate(make_float3(-5.0f, -5.0f, 5.0f)) * Matrix4f::scale(2.5f)
+        );
+        sphere2.shapes()[0]->copyToDevice();
+        sphere2.allowCompaction();
+        sphere2.buildAccel(context, stream);
+        sphere2.setSBTOffset(sbt_idx);
+        sphere2.setId(instance_id);
+        ias.addInstance(sphere2);
+        sbt_idx += DynamicUpdateSBT::NRay;
+        instance_id++;
+
+        // Sphere1用のHitgroupDataの生成
+        HitgroupRecord sphere2_record;
+        sphere_prg.recordPackHeader(&sphere2_record);
+        sphere2_record.data = 
+        {
+            .shape_data = sphere1.shapes()[0]->devicePtr(),
+            .surface_data = glass->devicePtr(),
+            .surface_program_id = glass_prg_id,
+            .surface_type = SurfaceType::Material
+        };
+
+        HitgroupRecord sphere2_shadow_record;
+        sphere_prg.recordPackHeader(&sphere2_shadow_record);
+
+        sbt.addHitgroupRecord(sphere2_record, sphere2_shadow_record);
+    }
     
-    // Bunny用のGeometry Acceleration Structure (GAS) を生成
-    bunny_gas = GeometryAccel{ShapeType::Mesh};
-    bunny_gas.addShape(bunny);
-    bunny_gas.allowCompaction();
-    bunny_gas.build(context, stream);
-    
-    // Shader Binding Table のデータをGPU上にコピーする
+    // Shader Binding Table のデータをGPU上に生成
     sbt.createOnDevice();
     // レイトレーシング用のTraversableHandle を設定
-    params.handle = bunny_gas.handle();
+    ias.build(context, stream);
+    params.handle = ias.handle();
     // レイトレーシングパイプラインを生成
     pipeline.create(context);
     // cudaStreamの生成
@@ -134,11 +341,8 @@ void App::setup()
 // ----------------------------------------------------------------
 void App::update()
 {
-    float time = pgGetElapsedTime<float>();
-    checker_texture->setColor1(make_float3(abs(sin(time))));
-    checker_texture->copyToDevice();
+    params.subframe_index++;
 
-    // 
     d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);
 
     OPTIX_CHECK(optixLaunch(

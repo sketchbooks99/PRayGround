@@ -1,6 +1,7 @@
 #include "util.cuh"
 #include <prayground/material/diffuse.h>
 #include <prayground/material/dielectric.h>
+#include <prayground/material/conductor.h>
 #include <prayground/emitter/area.h>
 #include <prayground/core/bsdf.h>
 #include <prayground/core/onb.h>
@@ -15,15 +16,12 @@ extern "C" __device__ void __continuation_callable__diffuse(SurfaceInteraction* 
         si->n = faceforward(si->n, -si->wi, si->n);
 
     si->trace_terminate = false;
-    {
-        // const float z1 = curand_uniform(si->curand_state);
-        // const float z2 = curand_uniform(si->curand_state);
-
-        float3 wi = randomSampleHemisphere(si->curand_state);
-        Onb onb(si->n);
-        onb.inverseTransform(wi);
-        si->wo = normalize(wi);
-    }
+    
+    float3 wi = randomSampleHemisphere(si->curand_state);
+    Onb onb(si->n);
+    onb.inverseTransform(wi);
+    si->wo = normalize(wi);
+    
     si->attenuation = optixDirectCall<float3, SurfaceInteraction*, void*>(
         diffuse->tex_program_id, si, diffuse->tex_data);
 }
@@ -55,6 +53,17 @@ extern "C" __device__ void __continuation_callable__dielectric(SurfaceInteractio
     si->attenuation *= optixDirectCall<float3, SurfaceInteraction*, void*>(
         dielectric->tex_program_id, si, dielectric->tex_data);
 }
+
+extern "C" __device__ void __continuation_callable__conductor(SurfaceInteraction * si, void* mat_data) {
+    const ConductorData* conductor = reinterpret_cast<ConductorData*>(mat_data);
+    if (conductor->twosided)
+        si->n = faceforward(si->n, -si->wi, si->n);
+
+    si->wo = reflect(si->wi, si->n);
+    si->trace_terminate = false;
+    si->radiance_evaled = false;
+}
+
 
 extern "C" __device__ void __direct_callable__area_emitter(SurfaceInteraction* si, void* surface_data)
 {

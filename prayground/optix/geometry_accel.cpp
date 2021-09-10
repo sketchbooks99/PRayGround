@@ -24,6 +24,11 @@ void GeometryAccel::addShape(const std::shared_ptr<Shape>& shape)
     m_count++;
 }
 
+std::vector<std::shared_ptr<Shape>> GeometryAccel::shapes() const 
+{
+    return m_shapes;
+}
+
 // ---------------------------------------------------------------------------
 void GeometryAccel::build(const Context& ctx, CUstream stream)
 {

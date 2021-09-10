@@ -98,12 +98,14 @@ struct Record
  */
 
 template <HasData RaygenRecord, HasData MissRecord, HasData HitgroupRecord, 
-          HasData CallablesRecord, HasData ExceptionRecord, unsigned int NRay>
+          HasData CallablesRecord, HasData ExceptionRecord, uint32_t N>
 class ShaderBindingTable {
 public:
+    static constexpr uint32_t NRay = N;
+
     ShaderBindingTable()
     {
-        static_assert(NRay > 0, "The number of ray types must be at least 1.");
+        static_assert(N > 0, "The number of ray types must be at least 1.");
     }
 
     explicit operator OptixShaderBindingTable() const { return m_sbt; }
@@ -120,7 +122,7 @@ public:
     template <class... MissRecordArgs>
     void setMissRecord(const MissRecordArgs&... args)
     {
-        static_assert(sizeof...(args) == NRay, 
+        static_assert(sizeof...(args) == N, 
             "prayground::ShaderBindingTable::setMissRecord(): The number of record must be same with the number of ray types.");        
         static_assert(std::conjunction<std::is_same<MissRecord, MissRecordArgs>...>::value, 
             "prayground::ShaderBindingTable::setMissRecord(): Data type must be same with 'MissRecord'.");
@@ -148,7 +150,7 @@ public:
     template <class... HitgroupRecordArgs> 
     void addHitgroupRecord(const HitgroupRecordArgs&... args)
     {
-        static_assert(sizeof...(args) == NRay, 
+        static_assert(sizeof...(args) == N, 
             "prayground::ShaderBindingTable::addHitgroupRecord(): The number of hitgroup record must be same with the number of ray types.");        
         static_assert(std::conjunction<std::is_same<HitgroupRecord, HitgroupRecordArgs>...>::value, 
             "prayground::ShaderBindingTable::addHitgroupRecord(): Record type must be same with 'HitgroupRecord'.");
@@ -218,7 +220,7 @@ public:
         m_sbt.missRecordCount = static_cast<uint32_t>(m_miss_records.size());
         m_sbt.missRecordStrideInBytes = static_cast<uint32_t>(sizeof(MissRecord));
         m_sbt.hitgroupRecordBase = d_hitgroup_records.devicePtr();
-        m_sbt.hitgroupRecordCount = static_cast<uint32_t>(m_hitgroup_records.size() * NRay);
+        m_sbt.hitgroupRecordCount = static_cast<uint32_t>(m_hitgroup_records.size() * N);
         m_sbt.hitgroupRecordStrideInBytes = static_cast<uint32_t>(sizeof(HitgroupRecord));
         m_sbt.callablesRecordBase = d_callables_records.devicePtr();
         m_sbt.callablesRecordCount = static_cast<uint32_t>(m_callables_records.size());

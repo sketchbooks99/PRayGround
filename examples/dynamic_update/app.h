@@ -10,7 +10,8 @@ using HitgroupRecord = Record<HitgroupData>;
 using MissRecord = Record<MissData>;
 using EmptyRecord = Record<EmptyData>;
 
-using DynamicUpdateSBT = ShaderBindingTable<RaygenRecord, MissRecord, HitgroupRecord, EmptyRecord, EmptyRecord, 1>;
+// Rayのタイプは2種類に設定する (0 -> 普通のレイ, 1 -> シャドウレイ)
+using DynamicUpdateSBT = ShaderBindingTable<RaygenRecord, MissRecord, HitgroupRecord, EmptyRecord, EmptyRecord, 2>;
 
 class App : public BaseApp
 {
@@ -27,13 +28,15 @@ private:
     Context context;
     CUstream stream;
     DynamicUpdateSBT sbt;
-    GeometryAccel bunny_gas;
     InstanceAccel ias;
 
     Bitmap result_bitmap;
     Camera camera;
     
-    shared_ptr<AreaEmitter> area;
-    shared_ptr<EnvironmentEmitter> env;
-    shared_ptr<CheckerTexture> env_texture;
+    ShapeInstance sphere1;
+    ShapeInstance sphere2;
+
+    vector<pair<ShapeInstance, shared_ptr<Material>>> cornel_box;
+    shared_ptr<AreaEmitter> ceiling_emitter;
+    shared_ptr<ConstantTexture> ceiling_texture;
 };

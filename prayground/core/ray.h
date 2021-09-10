@@ -41,6 +41,7 @@ struct pRay {
 
 /** Useful function on OptiX to get ray info */
 #ifdef __CUDACC__
+
 INLINE DEVICE Ray getLocalRay() {
     Ray ray;
     ray.o = optixTransformPointFromWorldToObjectSpace( optixGetWorldRayOrigin() );

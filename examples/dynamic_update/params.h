@@ -35,8 +35,7 @@ struct HitgroupData
 {
     void* shape_data;
     void* surface_data;
-
-    unsigned int surface_program_id;   
+    unsigned int surface_program_id;
     SurfaceType surface_type;
 };
 

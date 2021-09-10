@@ -188,6 +188,11 @@ void ShapeInstance::addShape(const std::shared_ptr<Shape>& shape)
     m_gas.addShape(shape);
 }
 
+std::vector<std::shared_ptr<Shape>> ShapeInstance::shapes() const 
+{
+    return m_gas.shapes();
+}
+
 // ------------------------------------------------------------------
 void ShapeInstance::setId(const uint32_t id)
 {

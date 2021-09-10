@@ -71,6 +71,7 @@ public:
     explicit operator OptixInstance() const { return *(m_instance.rawInstancePtr()); }
 
     void addShape(const std::shared_ptr<Shape>& shape);
+    std::vector<std::shared_ptr<Shape>> shapes() const;
 
     void setId(const uint32_t id);
     void setSBTOffset(const uint32_t sbt_offset);

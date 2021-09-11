@@ -11,11 +11,23 @@ struct SurfaceProperty {
     unsigned int program_id;
 };
 
-enum class SurfaceType {
-    None,        // None type (specifically, for envmap)
-    Material,    // Scene geometry
-    AreaEmitter, // Emitter sampling
-    Medium       // Meduim --- Future work
+enum class SurfaceType : unsigned int {
+    // None type ( default )
+    None            = 0,        
+    // Diffuse surface
+    Diffuse         = 1u << 0,  
+    // Specular surfaces
+    Reflection      = 1u << 1,
+    Refraction      = 1u << 2,
+    // Rough surfaces ( w/ microfacet )
+    RoughReflection = 1u << 3,
+    RoughRefraction = 1u << 4,
+    // Emitter 
+    AreaEmitter     = 1u << 5,
+    // Material
+    Material        = Diffuse | Reflection | Refraction | RoughReflection | RoughRefraction,
+    // Medium --- Future work
+    Medium 
 };
 
 /// @note Currently \c spectrum is RGB representation, not spectrum. 

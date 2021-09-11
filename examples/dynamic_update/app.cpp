@@ -11,6 +11,7 @@ void App::setup()
     context.create();
 
     ias = InstanceAccel{ InstanceAccel::Type::Instances };
+    ias.allowUpdate();
 
     // パイプラインの設定
     pipeline.setLaunchVariableName("params");
@@ -30,12 +31,21 @@ void App::setup()
     // レンダリング結果を保存する用のBitmapを用意
     result_bitmap.allocate(Bitmap::Format::RGBA, pgGetWidth(), pgGetHeight());
     result_bitmap.allocateDevicePtr();
+    accum_bitmap.allocate(FloatBitmap::Format::RGBA, pgGetWidth(), pgGetHeight());
+    accum_bitmap.allocateDevicePtr();
+    normal_bitmap.allocate(FloatBitmap::Format::RGB, pgGetWidth(), pgGetHeight());
+    normal_bitmap.allocateDevicePtr();
+    albedo_bitmap.allocate(FloatBitmap::Format::RGB, pgGetWidth(), pgGetHeight());
+    albedo_bitmap.allocateDevicePtr();
     params.width = result_bitmap.width();
     params.height = result_bitmap.height();
     params.samples_per_launch = 1;
     params.max_depth = 10;
     params.subframe_index = 0;
     params.result_buffer = reinterpret_cast<uchar4*>(result_bitmap.devicePtr());
+    params.accum_buffer = reinterpret_cast<float4*>(accum_bitmap.devicePtr());
+    params.normal_buffer = reinterpret_cast<float3*>(normal_bitmap.devicePtr());
+    params.albedo_buffer = reinterpret_cast<float3*>(albedo_bitmap.devicePtr());
 
     // カメラの設定
     camera.setOrigin(make_float3(0.0f, 0.0f, 40.0f));
@@ -71,7 +81,7 @@ void App::setup()
     sbt.addCallablesRecord(callable_record);
 
     // 環境マッピング用のテクスチャとデータを準備
-    auto env_color = make_shared<ConstantTexture>(make_float3(1.0), constant_prg_id);
+    auto env_color = make_shared<ConstantTexture>(make_float3(0.5f), constant_prg_id);
     env_color->copyToDevice();
     auto env_emitter = make_shared<EnvironmentEmitter>(env_color);
     env_emitter->copyToDevice();
@@ -129,14 +139,14 @@ void App::setup()
         ShapeType::Custom, 
         make_shared<Plane>(make_float2(-10.0f, -10.0f), make_float2(10.0f, 10.0f)),
         // z軸中心に90度回転
-        Matrix4f::translate(make_float3(0.0f, -10.0f, 0.0f)) * Matrix4f::rotate(constants::pi / 2, {0.0f, 0.0f, 1.0f})
+        Matrix4f::translate(make_float3(10.0f, 0.0f, 0.0f)) * Matrix4f::rotate(constants::pi / 2, {0.0f, 0.0f, 1.0f})
     };
 
     ShapeInstance left_wall {
         ShapeType::Custom, 
         make_shared<Plane>(make_float2(-10.0f, -10.0f), make_float2(10.0f, 10.0f)),
         // z軸中心に90度回転
-        Matrix4f::translate(make_float3(0.0f, -10.0f, 0.0f)) * Matrix4f::rotate(constants::pi / 2, {0.0f, 0.0f, 1.0f})
+        Matrix4f::translate(make_float3(-10.0f, 0.0f, 0.0f)) * Matrix4f::rotate(constants::pi / 2, {0.0f, 0.0f, 1.0f})
     };
 
     cornel_box.push_back({floor,         floor_diffuse});
@@ -145,6 +155,7 @@ void App::setup()
     cornel_box.push_back({right_wall,    red_diffuse});
     cornel_box.push_back({left_wall,     green_diffuse});
 
+    uint32_t sbt_offset = 0;
     uint32_t sbt_idx = 0;
     uint32_t instance_id = 0;
 
@@ -176,19 +187,20 @@ void App::setup()
             plane_shadow_prg.recordPackHeader(&shadow_record);
 
             sbt.addHitgroupRecord(record, shadow_record);
-
-            sbt_idx += DynamicUpdateSBT::NRay;
         }
         // Plane用のGASとインスタンスを作成
         plane_instance.allowCompaction();
         plane_instance.buildAccel(context, stream);
-        plane_instance.setSBTOffset(sbt_idx);
+        //plane_instance.setSBTOffset(0);
+        plane_instance.setSBTOffset(sbt_offset);
         plane_instance.setId(instance_id);
 
         // InstanceをInstanceAccelに追加
         ias.addInstance(plane_instance);
 
         instance_id++;
+        sbt_offset += DynamicUpdateSBT::NRay * plane_instance.shapes().size();
+        sbt_idx++;
     }
 
     auto [area_prg, area_prg_id] = pipeline.createCallablesProgram(context, surfaces_module, "__direct_callable__area_emitter", "");
@@ -198,25 +210,27 @@ void App::setup()
 
     // 天井の面光源
     {
-        // チェッカーボードテクスチャの準備
+        // 天井の面光源用のテクスチャの準備
         ceiling_texture = make_shared<ConstantTexture>(make_float3(1.0f), constant_prg_id);
         ceiling_texture->copyToDevice(); // GPU上にデータをコピー
         // 天井の光源のデータを準備
-        ceiling_emitter = make_shared<AreaEmitter>(ceiling_texture);
+        ceiling_emitter = make_shared<AreaEmitter>(ceiling_texture, 10.0f);
         ceiling_emitter->copyToDevice();   // GPU上にデータをコピー
 
         ShapeInstance ceiling_light {
             ShapeType::Custom, 
             make_shared<Plane>(make_float2(-2.5f, -2.5f), make_float2(2.5f, 2.5f)), 
-            Matrix4f::translate(make_float3(0.0f, 0.0f, 9.9f))
+            Matrix4f::translate(make_float3(0.0f, 9.9f, 0.0f))
         };
         ceiling_light.shapes()[0]->copyToDevice();
+        ceiling_light.shapes()[0]->setSbtIndex(sbt_idx);
         ceiling_light.allowCompaction();
         ceiling_light.buildAccel(context, stream);
-        ceiling_light.setSBTOffset(sbt_idx);
+        ceiling_light.setSBTOffset(sbt_offset);
         ceiling_light.setId(instance_id);
         ias.addInstance(ceiling_light);
-        sbt_idx += DynamicUpdateSBT::NRay;
+        sbt_offset += DynamicUpdateSBT::NRay;
+        sbt_idx++;
         instance_id++;
 
         // 天井の光源用のHitgroupDataの生成
@@ -231,7 +245,7 @@ void App::setup()
         };
 
         HitgroupRecord shadow_record;
-        plane_prg.recordPackHeader(&shadow_record);
+        plane_shadow_prg.recordPackHeader(&shadow_record);
         sbt.addHitgroupRecord(record, shadow_record);
     }
 
@@ -256,18 +270,21 @@ void App::setup()
         metal_texture->copyToDevice();
         auto metal = make_shared<Conductor>(metal_texture);
         metal->copyToDevice();
+        sphere1_pos = make_float3(0.0f);
         sphere1 = ShapeInstance(
             ShapeType::Custom, 
             make_shared<Sphere>(make_float3(0.0f), 1.0f), 
-            Matrix4f::translate(make_float3(5.0f, 5.0f, -5.0f)) * Matrix4f::scale(2.5f)
+            Matrix4f::translate(sphere1_pos) * Matrix4f::scale(2.5f)
         );
         sphere1.shapes()[0]->copyToDevice();
+        sphere1.shapes()[0]->setSbtIndex(sbt_idx);
         sphere1.allowCompaction();
         sphere1.buildAccel(context, stream);
-        sphere1.setSBTOffset(sbt_idx);
+        sphere1.setSBTOffset(sbt_offset);
         sphere1.setId(instance_id);
         ias.addInstance(sphere1);
-        sbt_idx += DynamicUpdateSBT::NRay;
+        sbt_offset += DynamicUpdateSBT::NRay;
+        sbt_idx++;
         instance_id++;
 
         // Sphere1用のHitgroupDataの生成
@@ -282,7 +299,7 @@ void App::setup()
         };
 
         HitgroupRecord sphere1_shadow_record;
-        sphere_prg.recordPackHeader(&sphere1_shadow_record);
+        sphere_shadow_prg.recordPackHeader(&sphere1_shadow_record);
 
         sbt.addHitgroupRecord(sphere1_record, sphere1_shadow_record);
     }
@@ -294,33 +311,33 @@ void App::setup()
         glass_texture->copyToDevice();
         auto glass = make_shared<Dielectric>(glass_texture, 1.5f);
         glass->copyToDevice();
+        sphere2_pos = make_float3(0.0f);
         sphere2 = ShapeInstance(
             ShapeType::Custom, 
             make_shared<Sphere>(make_float3(0.0f), 1.0f), 
-            Matrix4f::translate(make_float3(-5.0f, -5.0f, 5.0f)) * Matrix4f::scale(2.5f)
+            Matrix4f::translate(sphere2_pos) * Matrix4f::scale(2.5f)
         );
         sphere2.shapes()[0]->copyToDevice();
+        sphere2.shapes()[0]->setSbtIndex(sbt_idx);
         sphere2.allowCompaction();
         sphere2.buildAccel(context, stream);
-        sphere2.setSBTOffset(sbt_idx);
+        sphere2.setSBTOffset(sbt_offset);
         sphere2.setId(instance_id);
         ias.addInstance(sphere2);
-        sbt_idx += DynamicUpdateSBT::NRay;
-        instance_id++;
 
         // Sphere1用のHitgroupDataの生成
         HitgroupRecord sphere2_record;
         sphere_prg.recordPackHeader(&sphere2_record);
         sphere2_record.data = 
         {
-            .shape_data = sphere1.shapes()[0]->devicePtr(),
+            .shape_data = sphere2.shapes()[0]->devicePtr(),
             .surface_data = glass->devicePtr(),
             .surface_program_id = glass_prg_id,
             .surface_type = SurfaceType::Material
         };
 
         HitgroupRecord sphere2_shadow_record;
-        sphere_prg.recordPackHeader(&sphere2_shadow_record);
+        sphere_shadow_prg.recordPackHeader(&sphere2_shadow_record);
 
         sbt.addHitgroupRecord(sphere2_record, sphere2_shadow_record);
     }
@@ -341,7 +358,23 @@ void App::setup()
 // ----------------------------------------------------------------
 void App::update()
 {
-    params.subframe_index++;
+    result_bitmap.allocateDevicePtr();
+    accum_bitmap.allocateDevicePtr();
+    normal_bitmap.allocateDevicePtr();
+    albedo_bitmap.allocateDevicePtr();
+    params.result_buffer = reinterpret_cast<uchar4*>(result_bitmap.devicePtr());
+    params.accum_buffer = reinterpret_cast<float4*>(accum_bitmap.devicePtr());
+    params.normal_buffer = reinterpret_cast<float3*>(normal_bitmap.devicePtr());
+    params.albedo_buffer = reinterpret_cast<float3*>(albedo_bitmap.devicePtr());
+
+    float time = pgGetElapsedTime<float>();
+
+    sphere1_pos = 5.0f * make_float3(sinf(time) * sinf(time / 3.0f), cosf(time), sinf(time) * cosf(time / 3.0f));
+    sphere2_pos = 5.0f * make_float3(sinf(-time) * sinf(time / 3.0f), cosf(-time), sinf(-time) * cosf(time / 3.0f));
+    sphere1.setTransform(Matrix4f::translate(sphere1_pos) * Matrix4f::scale(2.5f + 1.25 * sinf(time)));
+    sphere2.setTransform(Matrix4f::translate(sphere2_pos) * Matrix4f::scale(2.5f + 1.25 * cosf(time)));
+
+    ias.update(context, stream);
 
     d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);
 
@@ -361,12 +394,16 @@ void App::update()
     CUDA_SYNC_CHECK();
 
     result_bitmap.copyFromDevice();
+    normal_bitmap.copyFromDevice();
+    albedo_bitmap.copyFromDevice();
 }
 
 // ----------------------------------------------------------------
 void App::draw()
 {
-    result_bitmap.draw(0, 0);
+    result_bitmap.draw(0, 0, pgGetWidth() / 2, pgGetHeight() / 2);
+    normal_bitmap.draw(pgGetWidth() / 2, 0, pgGetWidth() / 2, pgGetHeight() / 2);
+    albedo_bitmap.draw(0, pgGetHeight() / 2, pgGetWidth() / 2, pgGetHeight() / 2);
 }
 
 // ----------------------------------------------------------------

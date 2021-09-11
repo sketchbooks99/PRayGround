@@ -1,6 +1,7 @@
 #include "util.cuh"
 #include <prayground/material/diffuse.h>
 #include <prayground/material/dielectric.h>
+#include <prayground/material/conductor.h>
 #include <prayground/emitter/area.h>
 #include <prayground/core/bsdf.h>
 #include <prayground/core/onb.h>
@@ -49,6 +50,18 @@ extern "C" __device__ void __continuation_callable__dielectric(SurfaceInteractio
     si->trace_terminate = false;
     si->attenuation *= optixDirectCall<float3, SurfaceInteraction*, void*>(
         dielectric->tex_program_id, si, dielectric->tex_data);
+}
+
+extern "C" __device__ void __continuation_callable__conductor(SurfaceInteraction * si, void* surface_data) {
+    const ConductorData* conductor = reinterpret_cast<ConductorData*>(surface_data);
+    if (conductor->twosided)
+        si->n = faceforward(si->n, -si->wi, si->n);
+
+    si->wo = reflect(si->wi, si->n);
+    si->radiance_evaled = false;
+    si->trace_terminate = false;
+    si->attenuation *= optixDirectCall<float3, SurfaceInteraction*, void*>(
+        conductor->tex_program_id, si, conductor->tex_data);
 }
 
 extern "C" __device__ void __direct_callable__area_emitter(SurfaceInteraction* si, void* surface_data)

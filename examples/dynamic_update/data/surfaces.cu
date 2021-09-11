@@ -22,7 +22,7 @@ extern "C" __device__ void __continuation_callable__diffuse(SurfaceInteraction* 
     onb.inverseTransform(wi);
     si->wo = normalize(wi);
     
-    si->attenuation = optixDirectCall<float3, SurfaceInteraction*, void*>(
+    si->attenuation *= optixDirectCall<float3, SurfaceInteraction*, void*>(
         diffuse->tex_program_id, si, diffuse->tex_data);
 }
 
@@ -54,14 +54,16 @@ extern "C" __device__ void __continuation_callable__dielectric(SurfaceInteractio
         dielectric->tex_program_id, si, dielectric->tex_data);
 }
 
-extern "C" __device__ void __continuation_callable__conductor(SurfaceInteraction * si, void* mat_data) {
-    const ConductorData* conductor = reinterpret_cast<ConductorData*>(mat_data);
+extern "C" __device__ void __continuation_callable__conductor(SurfaceInteraction * si, void* surface_data) {
+    const ConductorData* conductor = reinterpret_cast<ConductorData*>(surface_data);
     if (conductor->twosided)
         si->n = faceforward(si->n, -si->wi, si->n);
 
     si->wo = reflect(si->wi, si->n);
-    si->trace_terminate = false;
     si->radiance_evaled = false;
+    si->trace_terminate = false;
+    si->attenuation *= optixDirectCall<float3, SurfaceInteraction*, void*>(
+        conductor->tex_program_id, si, conductor->tex_data);
 }
 
 

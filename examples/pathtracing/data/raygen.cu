@@ -17,6 +17,8 @@ static __forceinline__ __device__ void cameraFrame(const CameraData& camera, flo
     U *= ulen;
 }
 
+/// @todo MISの実装
+
 extern "C" __device__ void __raygen__pinhole()
 {
     const RaygenData* raygen = reinterpret_cast<RaygenData*>(optixGetSbtDataPointer());
@@ -28,15 +30,14 @@ extern "C" __device__ void __raygen__pinhole()
     const uint3 idx = optixGetLaunchIndex();
 
     float3 result = make_float3(0.0f, 0.0f, 0.0f);
-    float3 normal = make_float3(0.0f);
-    float3 albedo = make_float3(0.0f);
     int i = params.samples_per_launch;
 
     do
     {
         SurfaceInteraction si;
-        init_rand_state(&si, make_uint2(params.width, params.height), idx, subframe_index + i);
-        const float2 subpixel_jitter = make_float2(curand_uniform(si.curand_state) - 0.5f, curand_uniform(si.curand_state) - 0.5f);
+        init_rand_state(&si, make_uint2(params.width, params.height), idx, subframe_index);
+
+        const float2 subpixel_jitter = make_float2(curand_uniform(si.curand_state), curand_uniform(si.curand_state));
 
         const float2 d = 2.0f * make_float2(
             (static_cast<float>(idx.x) + subpixel_jitter.x) / static_cast<float>(params.width),
@@ -48,13 +49,12 @@ extern "C" __device__ void __raygen__pinhole()
         si.emission = make_float3(0.0f);
         si.trace_terminate = false;
         si.radiance_evaled = false;
-        si.surface_type = SurfaceType::None;
         si.attenuation = make_float3(1.0f);
 
         int depth = 0;
         for ( ;; ) {
             trace(
-                params.handle,
+                params.handle, 
                 ro, 
                 rd, 
                 0.01f, 
@@ -70,11 +70,6 @@ extern "C" __device__ void __raygen__pinhole()
                     &si, 
                     si.surface_property.data
                 );
-
-                if (depth == 0) {
-                    albedo = si.emission;
-                    normal = si.n;
-                }
             }
             else if ( si.surface_type == SurfaceType::Material )
             {
@@ -84,16 +79,11 @@ extern "C" __device__ void __raygen__pinhole()
                     &si,
                     si.surface_property.data
                 );
-
-                if (depth == 0) {
-                    albedo = si.attenuation;
-                    normal = si.n;
-                }
             }
 
             result += si.emission * si.attenuation;
 
-            if (si.trace_terminate || depth >= params.max_depth)
+            if ( si.trace_terminate || depth >= params.max_depth )
                 break;
             
             ro = si.p;
@@ -115,13 +105,10 @@ extern "C" __device__ void __raygen__pinhole()
     if (subframe_index > 0)
     {
         const float a = 1.0f / static_cast<float>(subframe_index + 1);
-        const float3 accum_prev = make_float3(params.accum_buffer[image_index]);
-        accum_color = lerp(accum_prev, accum_color, a);
+        const float3 accum_color_prev = make_float3(params.accum_buffer[image_index]);
+        accum_color = lerp(accum_color_prev, accum_color, a);
     }
-    
     params.accum_buffer[image_index] = make_float4(accum_color, 1.0f);
     uchar3 color = make_color(accum_color);
     params.result_buffer[image_index] = make_uchar4(color.x, color.y, color.z, 255);
-    params.normal_buffer[image_index] = normal;
-    params.albedo_buffer[image_index] = albedo;
 }

@@ -45,7 +45,8 @@ struct pRay {
 INLINE DEVICE Ray getLocalRay() {
     Ray ray;
     ray.o = optixTransformPointFromWorldToObjectSpace( optixGetWorldRayOrigin() );
-    ray.d = normalize( optixTransformVectorFromWorldToObjectSpace( optixGetWorldRayDirection() ) );
+    /// @note ここでnormalize()をかけるとレイをオブジェクト空間に移す変換処理が意味を成さなくなるため、正規化しない
+    ray.d = optixTransformVectorFromWorldToObjectSpace( optixGetWorldRayDirection() );
     ray.tmin = optixGetRayTmin();
     ray.tmax = optixGetRayTmax();
     ray.t = optixGetRayTime();
@@ -55,7 +56,7 @@ INLINE DEVICE Ray getLocalRay() {
 INLINE DEVICE Ray getWorldRay() {
     Ray ray;
     ray.o = optixGetWorldRayOrigin();
-    ray.d = normalize( optixGetWorldRayDirection() );
+    ray.d = normalize(optixGetWorldRayDirection());
     ray.tmin = optixGetRayTmin();
     ray.tmax = optixGetRayTmax();
     ray.t = optixGetRayTime();

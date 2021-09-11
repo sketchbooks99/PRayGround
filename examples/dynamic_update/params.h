@@ -7,6 +7,14 @@
 
 namespace prayground {
 
+struct EmitterInfo
+{
+    float3 corner;
+    float3 v1, v2;
+    float3 normal;
+    float3 emission;
+};
+
 struct LaunchParams 
 {
     unsigned int width, height;
@@ -14,6 +22,11 @@ struct LaunchParams
     unsigned int max_depth;
     int subframe_index;
     uchar4* result_buffer;
+    float4* accum_buffer;
+    float3* normal_buffer;
+    float3* albedo_buffer;
+
+    EmitterInfo emitter_info;
     OptixTraversableHandle handle;
 };
 

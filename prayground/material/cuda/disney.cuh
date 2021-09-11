@@ -130,8 +130,6 @@ CALLABLE_FUNC float DC_FUNC(pdf_disney)(SurfaceInteraction* si, void* mat_data)
 
     const float diffuse_ratio = 0.5f * (1.0f - disney->metallic);
     const float specular_ratio = 1.0f - diffuse_ratio;
-    // const float diffuse_ratio = 1.0f - disney->metallic;
-    // const float specular_ratio = disney->metallic;
 
     const float NdotL = abs(dot(N, L));
     const float NdotV = abs(dot(N, V));

@@ -51,10 +51,6 @@ extern "C" __device__ void __raygen__pinhole()
 
         int depth = 0;
         for ( ;; ) {
-
-            if ( depth >= params.max_depth )
-                break;
-
             trace(
                 params.handle, 
                 ro, 
@@ -64,12 +60,6 @@ extern "C" __device__ void __raygen__pinhole()
                 &si 
             );
 
-            if ( si.trace_terminate )
-            {
-                result += si.emission * si.attenuation;
-                break;
-            }
-
             if ( si.surface_type == SurfaceType::AreaEmitter )
             {
                 // Evaluating emission from emitter
@@ -78,9 +68,6 @@ extern "C" __device__ void __raygen__pinhole()
                     &si, 
                     si.surface_property.data
                 );
-                result += si.emission * si.attenuation;
-                if (si.trace_terminate)
-                    break;
             }
             else if ( si.surface_type == SurfaceType::Material )
             {
@@ -90,9 +77,12 @@ extern "C" __device__ void __raygen__pinhole()
                     &si,
                     si.surface_property.data
                 );
-
-                // result += si.emission * si.attenuation;
             }
+
+            result += si.emission * si.attenuation;
+
+            if ( si.trace_terminate || depth >= params.max_depth )
+                break;
             
             ro = si.p;
             rd = si.wo;

@@ -220,7 +220,7 @@ public:
         m_sbt.missRecordCount = static_cast<uint32_t>(m_miss_records.size());
         m_sbt.missRecordStrideInBytes = static_cast<uint32_t>(sizeof(MissRecord));
         m_sbt.hitgroupRecordBase = d_hitgroup_records.devicePtr();
-        m_sbt.hitgroupRecordCount = static_cast<uint32_t>(m_hitgroup_records.size() * N);
+        m_sbt.hitgroupRecordCount = static_cast<uint32_t>(m_hitgroup_records.size());
         m_sbt.hitgroupRecordStrideInBytes = static_cast<uint32_t>(sizeof(HitgroupRecord));
         m_sbt.callablesRecordBase = d_callables_records.devicePtr();
         m_sbt.callablesRecordCount = static_cast<uint32_t>(m_callables_records.size());

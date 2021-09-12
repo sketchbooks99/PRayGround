@@ -55,6 +55,7 @@ INLINE DEVICE void trace(
     float3                 ray_direction,
     float                  tmin,
     float                  tmax,
+    unsigned int           ray_type,
     prayground::SurfaceInteraction*    si
 ) 
 {
@@ -69,9 +70,9 @@ INLINE DEVICE void trace(
         0.0f,                // rayTime
         OptixVisibilityMask( 1 ),
         OPTIX_RAY_FLAG_NONE,
-        0,        
+        ray_type,        
         1,           
-        0,        
+        ray_type,        
         u0, u1 );	
 }
 

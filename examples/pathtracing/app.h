@@ -12,7 +12,13 @@ using EmptyRecord = Record<EmptyData>;
 
 using PathTracingSBT = ShaderBindingTable<RaygenRecord, MissRecord, HitgroupRecord, EmptyRecord, EmptyRecord, 2>;
 
-using Primitive = pair<ShapeInstance, variant<shared_ptr<Material>, shared_ptr<AreaEmitter>>>;
+struct Primitive
+{
+    shared_ptr<Shape> shape;
+    shared_ptr<Material> material;
+    unsigned int sample_bsdf_id;
+    unsigned int pdf_id;
+};
 
 class App : public BaseApp
 {
@@ -30,11 +36,12 @@ private:
     Context context;
     CUstream stream;
     PathTracingSBT sbt;
-    InstanceAccel ias;
+    InstanceAccel scene_ias;
 
     Bitmap result_bitmap;
     FloatBitmap accum_bitmap;
     Camera camera;
 
     vector<Primitive> primitives;
+    EnvironmentEmitter env;
 };

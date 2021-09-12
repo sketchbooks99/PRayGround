@@ -15,6 +15,12 @@ Diffuse::~Diffuse()
 }
 
 // ------------------------------------------------------------------
+SurfaceType Diffuse::surfaceType() const 
+{
+    return SurfaceType::Diffuse;
+}
+
+// ------------------------------------------------------------------
 void Diffuse::copyToDevice()
 {
     if (!m_texture->devicePtr())

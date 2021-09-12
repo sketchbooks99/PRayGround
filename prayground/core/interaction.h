@@ -6,10 +6,7 @@
 
 namespace prayground {
 
-struct SurfaceProperty {
-    void* data;
-    unsigned int program_id;
-};
+// namespace builtin { 
 
 enum class SurfaceType : unsigned int {
     // None type ( default )
@@ -24,10 +21,30 @@ enum class SurfaceType : unsigned int {
     RoughRefraction = 1u << 4,
     // Emitter 
     AreaEmitter     = 1u << 5,
+
+    // Delta
+    Delta = Reflection | Refraction,
+
+    // Rough surface
+    Rough = RoughReflection | RoughRefraction,
+
     // Material
     Material        = Diffuse | Reflection | Refraction | RoughReflection | RoughRefraction,
     // Medium --- Future work
     Medium 
+};
+
+struct SurfaceInfo 
+{
+    // Surfaceのデータ
+    void* data;
+
+    // 重点的サンプリングやbsdfの評価用のCallable関数へのID
+    unsigned int sample_id;
+    unsigned int bsdf_id;
+    unsigned int pdf_id;
+
+    SurfaceType type;
 };
 
 /// @note Currently \c spectrum is RGB representation, not spectrum. 
@@ -52,19 +69,20 @@ struct SurfaceInteraction {
     /** UV coordinate at an intersection point. */
     float2 uv;
 
-    /** Derivatives on texture coordinates. */
-    float2 dpdu;    // Tangent vector at a surface.
-    float2 dpdv;    // Binormal vector at a surface.
+    /** Partial derivatives on intersection point */
+    float3 dpdu;
+    float3 dpdv;
 
     curandState_t* curand_state;
 
-    SurfaceProperty surface_property;
+    SurfaceInfo surface_property;
 
-    SurfaceType surface_type;
-
-    int trace_terminate;
-    int radiance_evaled; // For NEE
+    bool trace_terminate;
+    bool radiance_evaled; // For NEE
+    bool is_specular;
 };
+
+// } // ::builtin
 
 } // ::prayground
 

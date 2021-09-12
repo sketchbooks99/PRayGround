@@ -33,7 +33,7 @@ void InstanceAccel::build(const Context& ctx, CUstream stream)
     std::transform(m_instances.begin(), m_instances.end(), std::back_inserter(optix_instances),
         [](const std::variant<Instance, ShapeInstance>& instance)
         {
-            return std::visit([](const auto& x) 
+            return std::visit([](const auto& x)
             {
                 Assert(x.handle() != 0, "prayground::InstanceAccel::build(): Traversable handle of instance must be set before building InstanceAccel");
                 return static_cast<OptixInstance>(x);

@@ -33,6 +33,8 @@ public:
            float clearcoat=0.0f, float clearcoat_gloss=0.0f, bool twosided=true);
     ~Disney();
 
+    SurfaceType surfaceType() const override;
+
     void copyToDevice() override;
     void free() override;
 

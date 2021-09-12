@@ -14,8 +14,8 @@ float2 getSphereUV(const float3& p)
 {
     float phi = atan2(p.z, p.x);
     float theta = asin(p.y);
-    float u = 1.0f - (phi + constants::pi) / (constants::two_pi);
-    float v = 1.0f - (theta + constants::pi / 2.0f) / constants::pi;
+    float u = 1.0f - (phi + math::pi) / (math::two_pi);
+    float v = 1.0f - (theta + math::pi / 2.0f) / math::pi;
     return make_float2(u, v);
 }
 

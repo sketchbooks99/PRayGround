@@ -9,8 +9,8 @@ float2 getSphereUV(const float3& p)
 {
     float phi = atan2(p.z, p.x);
     float theta = asin(p.y);
-    float u = 1.0f - (phi + constants::pi) / (constants::two_pi);
-    float v = 1.0f - (theta + constants::pi / 2.0f) / constants::pi;
+    float u = 1.0f - (phi + math::pi) / (math::two_pi);
+    float v = 1.0f - (theta + math::pi / 2.0f) / math::pi;
     return make_float2(u, v);
 }
 
@@ -64,11 +64,11 @@ IcoSphereMesh::IcoSphereMesh(float radius, int level)
     // Upper row
     for (int ul = 0; ul < level; ul++)
     {
-        float h_ang_per_tri = constants::two_pi / (float)((ul+1)*5);
+        float h_ang_per_tri = math::two_pi / (float)((ul+1)*5);
         for (int j = 0; j < (ul+1)*5; j++)
         {
             float h_ang = j * h_ang_per_tri + (float)(ul % 5) * (h_ang_per_tri / 2.0f);
-            float v_ang = std::lerp(constants::pi / 2.0f, v_ang_center, (1.0f / (float)(level+1)) * (float)(ul+1));
+            float v_ang = std::lerp(math::pi / 2.0f, v_ang_center, (1.0f / (float)(level+1)) * (float)(ul+1));
 
             float x = radius * cosf(v_ang) * cosf(h_ang);
             float y = radius * sinf(v_ang);
@@ -96,7 +96,7 @@ IcoSphereMesh::IcoSphereMesh(float radius, int level)
     // Center row
     for (int cl = 0; cl <= level + 1; cl++)
     {
-        float h_ang_per_tri = constants::two_pi / (float)((level + 1) / 5.0f);
+        float h_ang_per_tri = math::two_pi / (float)((level + 1) / 5.0f);
         for (int j = 0; j < (level+1) * 5; j++)
         {
             float h_ang = j * h_ang_per_tri + (cl % 2) * (h_ang_per_tri / 2.0f);
@@ -113,11 +113,11 @@ IcoSphereMesh::IcoSphereMesh(float radius, int level)
     // Lower row
     for (int ll = level-1; ll >= 0; ll--)
     {
-        float h_ang_per_tri = constants::two_pi / (float)((ll + 1) / 5.0f);
+        float h_ang_per_tri = math::two_pi / (float)((ll + 1) / 5.0f);
         for (int j = 0; j < (ll+1)*5; j++)
         {
             float h_ang = j * h_ang_per_tri + h_ang_per_tri / 2.0f;
-            float v_ang = std::lerp(-v_ang_center, -constants::pi / 2.0f, (1.0f / (level+1)) * (float)(level - ll));
+            float v_ang = std::lerp(-v_ang_center, -math::pi / 2.0f, (1.0f / (level+1)) * (float)(level - ll));
 
             float x = radius * cosf(v_ang) * cosf(h_ang);
             float y = radius * sinf(v_ang);

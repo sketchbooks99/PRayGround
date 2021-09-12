@@ -28,6 +28,12 @@ Disney::~Disney()
 }
 
 // ------------------------------------------------------------------
+SurfaceType Disney::surfaceType() const 
+{
+    return SurfaceType::RoughReflection;
+}
+
+// ------------------------------------------------------------------
 void Disney::copyToDevice()
 {
     if (!m_base->devicePtr())

@@ -7,6 +7,23 @@
 
 namespace prayground {
 
+struct Triangle
+{
+    float3 v0, v1, v2;
+};
+
+struct AreaEmitterInfo
+{
+    // 面光源がメッシュの場合はMeshDataではなくTriangleになる
+    void* shape_data;
+
+    OptixTraversableHandle gas_handle;
+    Matrix4f objToWorld;
+
+    unsigned int sample_id;
+    unsigned int pdf_id;
+};
+
 struct LaunchParams 
 {
     unsigned int width, height;
@@ -16,6 +33,8 @@ struct LaunchParams
     uchar4* result_buffer;
     float4* accum_buffer;
     OptixTraversableHandle handle;
+
+    AreaEmitterInfo* lights;
 };
 
 struct CameraData
@@ -35,10 +54,7 @@ struct RaygenData
 struct HitgroupData
 {
     void* shape_data;
-    void* surface_data;
-
-    unsigned int surface_program_id;   
-    SurfaceType surface_type;
+    SurfaceInfo surf_info;
 };
 
 struct MissData

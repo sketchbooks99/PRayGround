@@ -18,6 +18,8 @@ public:
     Diffuse(const std::shared_ptr<Texture>& texture, bool twosided=true);
     ~Diffuse();
 
+    SurfaceType surfaceType() const override;
+
     void copyToDevice() override;
     void free() override;
 private:

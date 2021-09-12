@@ -15,6 +15,12 @@ Dielectric::~Dielectric()
 }
 
 // ------------------------------------------------------------------
+SurfaceType Dielectric::surfaceType() const 
+{
+    return SurfaceType::Refraction;
+}
+
+// ------------------------------------------------------------------
 void Dielectric::copyToDevice()
 {
     if (!m_texture->devicePtr())

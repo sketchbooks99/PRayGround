@@ -282,8 +282,8 @@ void App::mouseDragged(float x, float y, int button)
     float theta = acosf(cam_dir.y);
     float phi = atan2(cam_dir.z, cam_dir.x);
 
-    theta = min(constants::pi - 0.01f, max(0.01f, theta - radians(deltaY * 0.25f)));
-    phi += radians(deltaX * 0.25f);
+    theta = min(math::pi - 0.01f, max(0.01f, theta - math::radians(deltaY * 0.25f)));
+    phi += math::radians(deltaX * 0.25f);
 
     float cam_x = cam_length * sinf(theta) * cosf(phi);
     float cam_y = cam_length * cosf(theta);

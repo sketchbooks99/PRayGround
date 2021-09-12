@@ -21,6 +21,8 @@ public:
     Conductor(const std::shared_ptr<Texture>& texture, bool twosided=true);
     ~Conductor();
 
+    SurfaceType surfaceType() const override;
+
     void copyToDevice() override;
     void free() override;
 

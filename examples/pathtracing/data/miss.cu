@@ -33,3 +33,8 @@ extern "C" __device__ void __miss__envmap()
         env->tex_program_id, si, env->tex_data
     );
 }
+
+extern "C" __device__ void __miss__shadow()
+{
+    optixSetPayload_0(1);
+}

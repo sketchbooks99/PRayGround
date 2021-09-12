@@ -3,6 +3,7 @@
 #include <cuda_runtime.h>
 #include <optix.h>
 #include <prayground/math/vec_math.h>
+#include <prayground/core/interaction.h>
 #include <prayground/core/util.h>
 
 #ifndef __CUDACC__
@@ -17,6 +18,8 @@ namespace prayground {
 class Material {
 public:
     virtual ~Material() {}
+
+    virtual SurfaceType surfaceType() const = 0;
     
     virtual void copyToDevice() = 0;
 

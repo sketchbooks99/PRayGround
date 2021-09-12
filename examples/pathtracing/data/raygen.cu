@@ -11,10 +11,19 @@ static __forceinline__ __device__ void cameraFrame(const CameraData& camera, flo
     U = normalize(cross(W, camera.up));
     V = normalize(cross(W, U));
 
-    float vlen = wlen * tanf(0.5f * camera.fov * M_PIf / 180.0f);
+    float vlen = wlen * tanf(0.5f * camera.fov * math::pi / 180.0f);
     V *= vlen;
     float ulen = vlen * camera.aspect;
     U *= ulen;
+}
+
+static __forceinline__ __device__ void getCameraRay(const CameraData& camera, const float x, const float y, float3& ro, float3& rd)
+{
+    float3 U, V, W;
+    cameraFrame(camera, U, V, W);
+
+    rd = normalize(x * U + y * V + W);
+    ro = camera.origin;
 }
 
 /// @todo MISの実装
@@ -22,14 +31,11 @@ static __forceinline__ __device__ void cameraFrame(const CameraData& camera, flo
 extern "C" __device__ void __raygen__pinhole()
 {
     const RaygenData* raygen = reinterpret_cast<RaygenData*>(optixGetSbtDataPointer());
-    float3 U, V, W;
-    cameraFrame(raygen->camera, U, V, W);
 
     const int subframe_index = params.subframe_index;
-
     const uint3 idx = optixGetLaunchIndex();
 
-    float3 result = make_float3(0.0f, 0.0f, 0.0f);
+    float3 L = make_float3(0.0f, 0.0f, 0.0f);
     int i = params.samples_per_launch;
 
     do
@@ -43,13 +49,15 @@ extern "C" __device__ void __raygen__pinhole()
             (static_cast<float>(idx.x) + subpixel_jitter.x) / static_cast<float>(params.width),
             (static_cast<float>(idx.y) + subpixel_jitter.y) / static_cast<float>(params.height)
         ) - 1.0f;
-        float3 rd = normalize(d.x * U + d.y * V + W);
-        float3 ro = raygen->camera.origin;
+
+        float3 ro, rd;
+        getCameraRay(raygen->camera, d.x, d.y, ro, rd);
 
         si.emission = make_float3(0.0f);
+        si.attenuation = make_float3(1.0f);
         si.trace_terminate = false;
         si.radiance_evaled = false;
-        si.attenuation = make_float3(1.0f);
+        si.is_specular     = false;
 
         int depth = 0;
         for ( ;; ) {
@@ -59,27 +67,8 @@ extern "C" __device__ void __raygen__pinhole()
                 rd, 
                 0.01f, 
                 1e16f, 
-                &si 
+                &si
             );
-
-            if ( si.surface_type == SurfaceType::AreaEmitter )
-            {
-                // Evaluating emission from emitter
-                optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_property.program_id, 
-                    &si, 
-                    si.surface_property.data
-                );
-            }
-            else if ( si.surface_type == SurfaceType::Material )
-            {
-                // Sampling surface
-                optixContinuationCall<void, SurfaceInteraction*, void*>(
-                    si.surface_property.program_id, 
-                    &si,
-                    si.surface_property.data
-                );
-            }
 
             result += si.emission * si.attenuation;
 

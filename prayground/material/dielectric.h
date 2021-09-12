@@ -18,6 +18,8 @@ public:
     Dielectric(const std::shared_ptr<Texture>& texture, float ior);
     ~Dielectric();
 
+    SurfaceType surfaceType() const override;
+
     void copyToDevice() override;
     void free() override;
 

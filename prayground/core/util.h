@@ -12,6 +12,7 @@
 #include <array>
 #include <iostream>
 #include <memory>
+#include <assert.h>
 #include <prayground/core/stream_helpers.h>
 
 #if defined(_WIN32) | defined(_WIN64)

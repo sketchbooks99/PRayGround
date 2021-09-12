@@ -4,6 +4,7 @@
 #include <memory>
 #include <prayground/core/texture.h>
 #include <prayground/core/emitter.h>
+#include <prayground/core/interaction.h>
 #endif 
 
 namespace prayground {
@@ -20,6 +21,8 @@ struct AreaEmitterData {
 class AreaEmitter final : public Emitter {
 public:
     AreaEmitter(const std::shared_ptr<Texture>& texture, float intensity = 1.0f, bool twosided = true);
+
+    SurfaceType surfaceType() const;
 
     void copyToDevice() override;
     void free() override;

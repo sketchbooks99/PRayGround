@@ -8,6 +8,12 @@ AreaEmitter::AreaEmitter(const std::shared_ptr<Texture>& texture, float intensit
 {
 
 }
+
+// ---------------------------------------------------------------------------
+SurfaceType AreaEmitter::surfaceType() const 
+{
+    return SurfaceType::AreaEmitter;
+}
     
 // ---------------------------------------------------------------------------
 void AreaEmitter::copyToDevice() 

@@ -15,6 +15,12 @@ Conductor::~Conductor()
 }
 
 // ------------------------------------------------------------------
+SurfaceType Conductor::surfaceType() const
+{
+    return SurfaceType::Reflection;
+}
+
+// ------------------------------------------------------------------
 void Conductor::copyToDevice()
 {
     if (!m_texture->devicePtr())

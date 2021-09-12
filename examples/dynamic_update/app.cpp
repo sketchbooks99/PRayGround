@@ -132,21 +132,21 @@ void App::setup()
         ShapeType::Custom, 
         make_shared<Plane>(make_float2(-10.0f, -10.0f), make_float2(10.0f, 10.0f)),
         // x軸中心に90度回転
-        Matrix4f::translate(make_float3(0.0f, 0.0f, -10.0f)) * Matrix4f::rotate(constants::pi / 2, {1.0f, 0.0f, 0.0f}) 
+        Matrix4f::translate(make_float3(0.0f, 0.0f, -10.0f)) * Matrix4f::rotate(math::pi / 2, {1.0f, 0.0f, 0.0f}) 
     };
 
     ShapeInstance right_wall {
         ShapeType::Custom, 
         make_shared<Plane>(make_float2(-10.0f, -10.0f), make_float2(10.0f, 10.0f)),
         // z軸中心に90度回転
-        Matrix4f::translate(make_float3(10.0f, 0.0f, 0.0f)) * Matrix4f::rotate(constants::pi / 2, {0.0f, 0.0f, 1.0f})
+        Matrix4f::translate(make_float3(10.0f, 0.0f, 0.0f)) * Matrix4f::rotate(math::pi / 2, {0.0f, 0.0f, 1.0f})
     };
 
     ShapeInstance left_wall {
         ShapeType::Custom, 
         make_shared<Plane>(make_float2(-10.0f, -10.0f), make_float2(10.0f, 10.0f)),
         // z軸中心に90度回転
-        Matrix4f::translate(make_float3(-10.0f, 0.0f, 0.0f)) * Matrix4f::rotate(constants::pi / 2, {0.0f, 0.0f, 1.0f})
+        Matrix4f::translate(make_float3(-10.0f, 0.0f, 0.0f)) * Matrix4f::rotate(math::pi / 2, {0.0f, 0.0f, 1.0f})
     };
 
     cornel_box.push_back({floor,         floor_diffuse});
@@ -191,7 +191,6 @@ void App::setup()
         // Plane用のGASとインスタンスを作成
         plane_instance.allowCompaction();
         plane_instance.buildAccel(context, stream);
-        //plane_instance.setSBTOffset(0);
         plane_instance.setSBTOffset(sbt_offset);
         plane_instance.setId(instance_id);
 

@@ -7,10 +7,12 @@
 namespace prayground {
 
 /**  
- * \brief
+ * @brief
  * The class to easily manage data on the device from host.
+ * 
+ * CUDABufferのみデバイス側のポインタをCUdeviceptrで管理している
+ * 型変換後のデバイス側のポインタを取得したい場合はdeviceData()を使う
  */
-
 template <class T>
 class CUDABuffer {
 public:

@@ -97,7 +97,6 @@ void App::setup()
     // Shape用のCallableプログラム(主に面光源サンプリング用)
     auto [sphere_sample_pdf_prg, sphere_sample_pdf_prg_id] = prepareCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_sphere"), CC_FUNC_STR("pdf_sphere"));
     auto [plane_sample_pdf_prg, plane_sample_pdf_prg_id] = prepareCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_plane"), CC_FUNC_STR("pdf_plane"));
-    auto [triangle_sample_pdf_prg, triangle_sample_pdf_prg_id] = prepareCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_triangle"), CC_FUNC_STR("pdf_triangle"));
 
     // 環境マッピング (Sphere mapping) 用のテクスチャとデータ準備
     auto env_texture = make_shared<ConstantTexture>(make_float3(0.0f), constant_prg_id);
@@ -127,6 +126,7 @@ void App::setup()
     auto mesh_shadow_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("shadow"));
 
     uint32_t sbt_idx = 0;
+    // ShapeとMaterialのデータをGPU上に準備しHitgroup用のSBTデータを追加するLambda関数
     auto preparePrimitive = [&](ProgramGroup& prg, ProgramGroup& shadow_prg, const Primitive& primitive)
     {
         primitive.shape->copyToDevice();
@@ -155,40 +155,9 @@ void App::setup()
         sbt_idx++;
     };
     
-    std::vector<AreaEmitterInfo> area_infos;
-    auto prepareAreaEmitter = [&](ProgramGroup& prg, ProgramGroup& shadow_prg, ShapeInstance shape_instance, AreaEmitter area)
-    {
-        for (auto& shape : shape_instance.shapes())
-        {
-            shape->copyToDevice();
-            area.copyToDevice();
-
-            HitgroupRecord record;
-            prg.recordPackHeader(&record);
-            unsigned int sample_pdf_id = 0;
-            if constexpr (holds_alternative<shared_ptr<Plane>>(shape))
-                sample_pdf_id = plane_sample_pdf_prg_id;
-            else if constexpr (holds_alternative<shared_ptr<Sphere>>(shape))
-                sample_pdf_id = sphere_sample_pdf_prg_id;
-            else if constexpr (holds_alternative<shared_ptr<TriangleMesh>>(shape))
-                sample_pdf_id = triangle_sample_pdf_prg_id;
-            record.data = 
-            {
-                .shape_data = shape->devicePtr(), 
-                .surf_info = 
-                {
-                    .data = area.devicePtr(),
-                    .sample_id = sample_pdf_id,
-                    .bsdf_id = area_prg_id,
-                    .pdf_id = sample_pdf_id,
-                    .type = SurfaceType::AreaEmitter
-                };
-            }
-        }
-    };
-
     uint32_t sbt_offset = 0;
     uint32_t instance_id = 0;
+    // ShapeInstanceからGASを作成しInstanceAccelにInstanceを追加するLambda関数
     auto prepareShapeInstance = [&](ShapeInstance& shape_instance)
     {
         shape_instance.allowCompaction();
@@ -201,6 +170,77 @@ void App::setup()
         instance_id++;
         sbt_offset += PathTracingSBT::NRay * shape_instance.shapes().size();
     };
+
+    std::vector<AreaEmitterInfo> area_infos;
+    // 面光源用のSBTデータを用意しグローバル情報としての光源情報を追加するLambda関数
+    // 光源サンプリング時にCallable関数ではOptixInstanceに紐づいた行列情報を取得できないので
+    // 行列情報をAreaEmitterInfoに一緒に設定しておく
+    // ついでにShapeInstanceによって光源用のGASも追加
+    auto prepareAreaEmitter = [&](ProgramGroup& prg, ProgramGroup& shadow_prg, shared_ptr<Shape> shape, AreaEmitter area, Matrix4f transform, unsigned int sample_pdf_id)
+    {
+        shape->copyToDevice();
+        shape->setSbtIndex(sbt_idx);
+        area.copyToDevice();
+
+        Assert(shape->type() == ShapeType::Custom, "A shape for area emitter must be a custom primitive");
+
+        HitgroupRecord record;
+        prg.recordPackHeader(&record);
+        record.data = 
+        {
+            .shape_data = shape->devicePtr(), 
+            .surf_info = 
+            {
+                .data = area.devicePtr(),
+                .sample_id = sample_pdf_id,
+                .bsdf_id = area_prg_id,
+                .pdf_id = sample_pdf_id,
+                .type = SurfaceType::AreaEmitter
+            }
+        };
+
+        HitgroupRecord shadow_record = {};
+        shadow_prg.recordPackHeader(&shadow_record);
+        sbt_idx++;
+
+        sbt.addHitgroupRecord(record, shadow_record);
+
+        ShapeInstance instance{shape->type(), shape, matrix};
+        prepareShapeInstance(instance);
+
+        AreaEmitterInfo area_info = 
+        {
+            .shape_data = shape->devicePtr(), 
+            .objToWorld = transform, 
+            .sample_id = sample_pdf_id, 
+            .pdf_id = sample_pdf_id
+        };
+        area_infos.push_back(area_info);
+    };
+
+    auto bunny = make_shared<TriangleMesh>("resources/model/uv_bunny.obj");
+    auto armadillo = make_shared<TriangleMesh>("resources/model/armadillo.ply");
+    auto teapot = make_shared<TriangleMesh>("resources/model/teapot_normal_merged.obj");
+    // planeとSphereはInstanceを使うのであれば1つのポインタを再利用すれば良い
+    // だけどsbt_indexが変わるのでダメな可能性もある
+    // 各ShapeへのデータはGPU側のポインタ経由で参照しているだけなのでこれでもいける？
+    // buildInputを生成するときにsbt_indexが確定していればいいので
+    // 1度GASを作ってしまえばその後にsbt_indexが変更されても大丈夫？
+    auto ground = make_shared<Plane>();
+    auto sphere = make_shared<Sphere>();
+
+    // 光源データをGPU側にコピー
+    CUDABuffer<AreaEmitterInfo> d_area_infos;
+    d_area_infos.copyToDevice(area_infos);
+    params.lights = d_area_infos.deviceData();
+    params.num_lights = static_cast<int>(d_area_info.size());
+
+    ias.build(context, stream);
+    sbt.createOnDevice();
+    params.handle = scene_ias.handle();
+    CUDA_CHECK(cudaStreamCreate(&stream));
+    pipeline.create(context);
+    d_params.allocate(sizeof(LaunchParams));
 }
 
 // ----------------------------------------------------------------

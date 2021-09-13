@@ -5,8 +5,6 @@
 #include <prayground/optix/sbt.h>
 #include <prayground/core/interaction.h>
 
-namespace prayground {
-
 struct Triangle
 {
     float3 v0, v1, v2;
@@ -33,6 +31,7 @@ struct LaunchParams
     OptixTraversableHandle handle;
 
     AreaEmitterInfo* lights;
+    int num_lights;
 };
 
 struct CameraData
@@ -64,5 +63,3 @@ struct EmptyData
 {
 
 };
-
-} // ::prayground

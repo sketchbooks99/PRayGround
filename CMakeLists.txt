@@ -390,6 +390,7 @@ add_subdirectory(examples/single_gas)
 add_subdirectory(examples/dynamic_update)
 add_subdirectory(examples/imgui_example)
 add_subdirectory(examples/motion_blur)
+add_subdirectory(examples/pathtracing)
 
 # Executable apps
 add_subdirectory(apps/empty-app)

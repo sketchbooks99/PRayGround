@@ -64,7 +64,7 @@ void App::setup()
     sbt.setRaygenRecord(raygen_record);
 
     // Callable関数とShader Binding TableにCallable関数用のデータを登録するLambda関数
-    auto prepareCallable = [&](const Module& module, const std::string& dc, const std::string& cc)
+    auto setupCallable = [&](const Module& module, const std::string& dc, const std::string& cc)
     {
         EmptyRecord callable_record = {};
         auto [prg, id] = pipeline.createCallablesProgram(context, module, dc, cc);
@@ -74,29 +74,29 @@ void App::setup()
     };
 
     // テクスチャ用のCallableプログラム
-    auto [contant_prg, constant_prg_id] = prepareCallable(textures_module, DC_FUNC_STR("constant"), "");
-    auto [checker_prg, checker_prg_id] = prepareCallable(textures_module, DC_FUNC_STR("checker"), "");
-    auto [bitmap_prg, bitmap_prg_id] = prepareCallable(textures_module, DC_FUNC_STR("bitmap"), "");
+    auto [contant_prg, constant_prg_id] = setupCallable(textures_module, DC_FUNC_STR("constant"), "");
+    auto [checker_prg, checker_prg_id] = setupCallable(textures_module, DC_FUNC_STR("checker"), "");
+    auto [bitmap_prg, bitmap_prg_id] = setupCallable(textures_module, DC_FUNC_STR("bitmap"), "");
 
     // Surface用のCallableプログラム 
     // Diffuse
-    auto [diffuse_sample_bsdf_prg, diffuse_sample_bsdf_prg_id] = prepareCallable(surfaces_module, DC_FUNC_STR("sample_diffuse"), CC_FUNC_STR("bsdf_diffuse"));
-    auto [diffuse_pdf_prg, diffuse_pdf_prg_id] = prepareCallable(surfaces_module, DC_FUNC_STR("pdf_diffuse"), "");
+    auto [diffuse_sample_bsdf_prg, diffuse_sample_bsdf_prg_id] = setupCallable(surfaces_module, DC_FUNC_STR("sample_diffuse"), CC_FUNC_STR("bsdf_diffuse"));
+    auto [diffuse_pdf_prg, diffuse_pdf_prg_id] = setupCallable(surfaces_module, DC_FUNC_STR("pdf_diffuse"), "");
     // Conductor
-    auto [conductor_sample_bsdf_prg, conductor_sample_bsdf_prg_id] = prepareCallable(surfaces_module, DC_FUNC_STR("sample_conductor"), CC_FUNC_STR("bsdf_conductor"));
-    auto [conductor_pdf_prg, conductor_pdf_prg_id] = prepareCallable(surfaces_module, DC_FUNC_STR("pdf_conductor"), "");
+    auto [conductor_sample_bsdf_prg, conductor_sample_bsdf_prg_id] = setupCallable(surfaces_module, DC_FUNC_STR("sample_conductor"), CC_FUNC_STR("bsdf_conductor"));
+    auto [conductor_pdf_prg, conductor_pdf_prg_id] = setupCallable(surfaces_module, DC_FUNC_STR("pdf_conductor"), "");
     // Dielectric
-    auto [dielectric_sample_bsdf_prg, dielectric_sample_bsdf_prg_id] = prepareCallable(surfaces_module, DC_FUNC_STR("sample_dielectric"), CC_FUNC_STR("bsdf_dielectric"));
-    auto [dielectric_pdf_prg, dielectric_pdf_prg_id] = prepareCallable(surfaces_module, DC_FUNC_STR("pdf_dielectric"), "");
+    auto [dielectric_sample_bsdf_prg, dielectric_sample_bsdf_prg_id] = setupCallable(surfaces_module, DC_FUNC_STR("sample_dielectric"), CC_FUNC_STR("bsdf_dielectric"));
+    auto [dielectric_pdf_prg, dielectric_pdf_prg_id] = setupCallable(surfaces_module, DC_FUNC_STR("pdf_dielectric"), "");
     // Disney
-    auto [disney_sample_bsdf_prg, disney_sample_bsdf_prg_id] = prepareCallable(surfaces_module, DC_FUNC_STR("sample_disney"), CC_FUNC_STR("bsdf_disney"));
-    auto [disney_pdf_prg, disney_pdf_prg_id] = prepareCallable(surfaces_module, DC_FUNC_STR("pdf_disney"), "");
+    auto [disney_sample_bsdf_prg, disney_sample_bsdf_prg_id] = setupCallable(surfaces_module, DC_FUNC_STR("sample_disney"), CC_FUNC_STR("bsdf_disney"));
+    auto [disney_pdf_prg, disney_pdf_prg_id] = setupCallable(surfaces_module, DC_FUNC_STR("pdf_disney"), "");
     // AreaEmitter
-    auto [area_emitter_prg, area_emitter_prg_id] = prepareCallable(surfaces_module, DC_FUNC_STR("area_emitter"), "");
+    auto [area_emitter_prg, area_emitter_prg_id] = setupCallable(surfaces_module, DC_FUNC_STR("area_emitter"), "");
 
     // Shape用のCallableプログラム(主に面光源サンプリング用)
-    auto [sphere_sample_pdf_prg, sphere_sample_pdf_prg_id] = prepareCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_sphere"), CC_FUNC_STR("pdf_sphere"));
-    auto [plane_sample_pdf_prg, plane_sample_pdf_prg_id] = prepareCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_plane"), CC_FUNC_STR("pdf_plane"));
+    auto [sphere_sample_pdf_prg, sphere_sample_pdf_prg_id] = setupCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_sphere"), CC_FUNC_STR("pdf_sphere"));
+    auto [plane_sample_pdf_prg, plane_sample_pdf_prg_id] = setupCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_plane"), CC_FUNC_STR("pdf_plane"));
 
     // 環境マッピング (Sphere mapping) 用のテクスチャとデータ準備
     auto env_texture = make_shared<ConstantTexture>(make_float3(0.0f), constant_prg_id);
@@ -121,24 +121,39 @@ void App::setup()
     // Sphere
     auto sphere_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("sphere"), IS_FUNC_STR("sphere"));
     auto sphere_shadow_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("shadow"), IS_FUNC_STR("sphere"));
+    // Cylinder
+    auto cylinder_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("cylinder"), IS_FUNC_STR("cylinder"));
+    auto cylinder_shadow_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("shadow"), IS_FUNC_STR("cylinder"));
     // Triangle mesh
     auto mesh_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("plane"));
     auto mesh_shadow_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("shadow"));
 
-    uint32_t sbt_idx = 0;
-    // ShapeとMaterialのデータをGPU上に準備しHitgroup用のSBTデータを追加するLambda関数
-    auto preparePrimitive = [&](ProgramGroup& prg, ProgramGroup& shadow_prg, const Primitive& primitive)
+    struct Primitive
     {
+        shared_ptr<Shape> shape;
+        shared_ptr<Material> material;
+        unsigned int sample_bsdf_id;
+        unsigned int pdf_id;
+    };
+
+    uint32_t sbt_idx = 0;
+    uint32_t sbt_offset = 0;
+    uint32_t instance_id = 0;
+    // ShapeとMaterialのデータをGPU上に準備しHitgroup用のSBTデータを追加するLambda関数
+    auto setupPrimitive = [&](ProgramGroup& prg, ProgramGroup& shadow_prg, const Primitive& primitive, const Matrix4f& transform)
+    {
+        // データをGPU側に用意
         primitive.shape->copyToDevice();
         primitive.shape->setSbtIndex(sbt_idx);
         primitive.material->copyToDevice();
 
+        // Shader Binding Table へのデータの登録
         HitgroupRecord record;
         prg.recordPackHeader(&record);
         record.data = 
         {
             .shape_data = primitive.shape->devicePtr(), 
-            .surf_info = 
+            .surface_info = 
             {
                 .data = primitive.material->devicePtr(),
                 .sample_id = primitive.sample_bsdf_id,
@@ -153,55 +168,49 @@ void App::setup()
 
         sbt.addHitgroupRecord(record, shadow_record);
         sbt_idx++;
-    };
-    
-    uint32_t sbt_offset = 0;
-    uint32_t instance_id = 0;
-    // ShapeInstanceからGASを作成しInstanceAccelにInstanceを追加するLambda関数
-    auto prepareShapeInstance = [&](ShapeInstance& shape_instance)
-    {
-        shape_instance.allowCompaction();
-        shape_instance.buildAccel(context, stream);
-        shape_instance.setSBTOffset(sbt_offset);
-        shape_instance.setId(instance_id);
 
-        scene_ias.addInstance(shape_instance);
+        // GASをビルドし、IASに追加
+        ShapeInstance instance{primitive.shape->type(), primitive.shape, transform};
+        instance.allowCompaction();
+        instance.buildAccel(context, stream);
+        instance.setSBTOffset(sbt_offset);
+        instance.setId(instance_id);
+
+        scene_ias.addInstance(instance);
 
         instance_id++;
-        sbt_offset += PathTracingSBT::NRay * shape_instance.shapes().size();
+        sbt_offset += PathTracingSBT::NRay;
     };
 
-    std::vector<AreaEmitterInfo> area_infos;
+    std::vector<AreaEmitterInfo> area_emitter_infos;
     // 面光源用のSBTデータを用意しグローバル情報としての光源情報を追加するLambda関数
     // 光源サンプリング時にCallable関数ではOptixInstanceに紐づいた行列情報を取得できないので
     // 行列情報をAreaEmitterInfoに一緒に設定しておく
     // ついでにShapeInstanceによって光源用のGASも追加
-    auto prepareAreaEmitter = [&](
+    auto setupAreaEmitter = [&](
         ProgramGroup& prg, ProgramGroup& shadow_prg, 
-        variant<shared_ptr<Plane>, shared_ptr<Sphere>> shape, 
+        shared_ptr<Shape> shape,
         AreaEmitter area, Matrix4f transform, 
         unsigned int sample_pdf_id
     )
     {
-        shared_ptr<Shape> _shape;
-        if constexpr (holds_alternative<shared_ptr<Plane>>(shape))
-            _shape = get<shared_ptr<Plane>>(shape);
-        else
-            _shape = get<shared_ptr<Sphere>>(shape);
-        _shape->copyToDevice();
-        _shape->setSbtIndex(sbt_idx);
+        // Plane or Sphereにキャスト可能かチェック
+        Assert(dynamic_pointer_cast<Plane>(shape) || dynamic_pointer_cast<Sphere>(shape), "The shape of area emitter must be a plane or sphere.");
+        
+        shape->copyToDevice();
+        shape->setSbtIndex(sbt_idx);
         area.copyToDevice();
 
         HitgroupRecord record;
         prg.recordPackHeader(&record);
         record.data = 
         {
-            .shape_data = _shape->devicePtr(), 
-            .surf_info = 
+            .shape_data = shape->devicePtr(), 
+            .surface_info = 
             {
                 .data = area.devicePtr(),
                 .sample_id = sample_pdf_id,
-                .bsdf_id = area_prg_id,
+                .bsdf_id = area_emitter_prg_id,
                 .pdf_id = sample_pdf_id,
                 .type = SurfaceType::AreaEmitter
             }
@@ -213,34 +222,168 @@ void App::setup()
 
         sbt.addHitgroupRecord(record, shadow_record);
 
-        ShapeInstance instance{_shape->type(), _shape, matrix};
-        prepareShapeInstance(instance);
+        // GASをビルドし、IASに追加
+        ShapeInstance instance{shape->type(), shape, transform};
+        instance.allowCompaction();
+        instance.buildAccel(context, stream);
+        instance.setSBTOffset(sbt_offset);
+        instance.setId(instance_id);
 
-        AreaEmitterInfo area_info = 
+        scene_ias.addInstance(instance);
+
+        instance_id++;
+        sbt_offset += PathTracingSBT::NRay;
+
+        AreaEmitterInfo area_emitter_info = 
         {
             .shape_data = shape->devicePtr(), 
             .objToWorld = transform, 
             .sample_id = sample_pdf_id, 
             .pdf_id = sample_pdf_id
         };
-        area_infos.push_back(area_info);
+        area_emitter_infos.push_back(area_emitter_info);
     };
 
-    auto bunny = make_shared<TriangleMesh>("resources/model/uv_bunny.obj");
-    auto armadillo = make_shared<TriangleMesh>("resources/model/armadillo.ply");
-    auto teapot = make_shared<TriangleMesh>("resources/model/teapot_normal_merged.obj");
-    auto earth_sphere = make_shared<Sphere>();
-    auto glass_sphere = make_shared<Sphere>();
-    auto cylinder = make_shared<Cylinder>();
-    auto ground = make_shared<Plane>();
+    // Bunny
+    {
+        // Shape
+        auto bunny = make_shared<TriangleMesh>("resources/model/uv_bunny.obj");
+        // Texture
+        auto bunny_checker = make_shared<CheckerTexture>(make_float3(0.3f), make_float3(0.8f, 0.05f, 0.05f), 10, checker_prg_id);
+        bunny_checker->copyToDevice();
+        // Material
+        auto bunny_disney = make_shared<Disney>(bunny_checker);
+        bunny_disney->setRoughness(0.05f);
+        bunny_disney->setMetallic(0.9f);
+        // Transform
+        Matrix4f transform = Matrix4f::translate({-50.0f, -272.0f, 300.0f}) * Matrix4f::rotate(math::pi, {0.0f, 1.0f, 0.0f}) * Matrix4f::scale(1200.0f);
+        Primitive primitive{bunny, bunny_disney, disney_sample_bsdf_prg_id, disney_pdf_prg_id};
+        setupPrimitive(mesh_prg, mesh_shadow_prg, primitive, transform);
+    }
+    
+    // Armadillo
+    {
+        // Shape
+        auto armadillo = make_shared<TriangleMesh>("resources/model/armadillo.ply");
+        // Texture
+        auto armadillo_checker = make_shared<CheckerTexture>(make_float3(1.0f), make_float3(0.8f, 0.05f, 0.8f), 10, checker_prg_id);
+        armadillo_checker->copyToDevice();
+        // Material
+        auto armadillo_conductor = make_shared<Conductor>(armadillo_checker);
+        // Transform
+        Matrix4f transform = Matrix4f::translate({250.0f, -210.0f, -150.0f}) * Matrix4f::scale(1.2f);
+        Primitive primitive{armadillo, armadillo_conductor, conductor_sample_bsdf_prg_id, conductor_pdf_prg_id};
+        setupPrimitive(mesh_prg, mesh_shadow_prg, primitive, transform);
+    }
+
+    // Teapot
+    {
+        // Shape
+        auto teapot = make_shared<TriangleMesh>("resources/model/teapot_normal_merged.obj");
+        // Texture
+        auto teapot_constant = make_shared<ConstantTexture>(make_float3(0.325f, 0.702f, 0.709f), constant_prg_id);
+        teapot_constant->copyToDevice();
+        // Material
+        auto teapot_diffuse = make_shared<Diffuse>(teapot_constant);
+        // Transform
+        Matrix4f transform = Matrix4f::translate({-250.0f, -275.0f, -150.0f}) * Matrix4f::scale(40.0f);
+        Primitive primitive { teapot, teapot_diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
+        setupPrimitive(mesh_prg, mesh_shadow_prg, primitive, transform);
+    }
+
+    // Earth
+    {
+        // Shape
+        auto earth_sphere = make_shared<Sphere>();
+        // Texture
+        auto earth_bitmap = make_shared<BitmapTexture>("resources/image/earth.jpg", bitmap_prg_id);
+        earth_bitmap->copyToDevice();
+        // Material
+        auto earth_diffuse = make_shared<Diffuse>(earth_bitmap);
+        // Transform
+        Matrix4f transform = Matrix4f::translate({-250.0f, -195.0f, 150.0f});
+        Primitive primitive { earth_sphere, earth_diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
+        setupPrimitive(sphere_prg, sphere_shadow_prg, primitive, transform);
+    }
+
+    // Glass sphere
+    {
+        // Shape
+        auto glass_sphere = make_shared<Sphere>(make_float3(0.0f), 90.0f);
+        // Texture
+        auto white_constant = make_shared<ConstantTexture>(make_float3(1.0f), constant_prg_id);
+        white_constant->copyToDevice();
+        // Material
+        auto glass = make_shared<Dielectric>(white_constant, 1.5f);
+        // Transform 
+        Matrix4f transform = Matrix4f::translate({250.0f, -185.0f, 150.0f}) * Matrix4f::rotate(math::pi, {0.0f, 1.0f, 0.0f});
+        Primitive primitive { glass_sphere, glass, dielectric_sample_bsdf_prg_id, dielectric_pdf_prg_id };
+        setupPrimitive(sphere_prg, sphere_shadow_prg, primitive, transform);
+    }
+
+    // Cylinder
+    {
+        // Shape
+        auto cylinder = make_shared<Cylinder>();
+        // Texture
+        auto cylinder_checker = make_shared<CheckerTexture>(make_float3(0.3f), make_float3(0.9f), 10, checker_prg_id);
+        cylinder_checker->copyToDevice();
+        // Material
+        auto cylinder_diffuse = make_shared<Diffuse>(cylinder_checker);
+        // Transform
+        Matrix4f transform = Matrix4f::translate({0.0f, -220.0f, -300.0f});
+        Primitive primitive { cylinder, cylinder_diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
+        setupPrimitive(cylinder_prg, cylinder_shadow_prg, primitive, transform);
+    }
+
+    // Ground
+    {
+        // Shape
+        auto ground = make_shared<Plane>();
+        // Texture
+        auto ground_constant = make_shared<ConstantTexture>(make_float3(0.8f), constant_prg_id);
+        ground_constant->copyToDevice();
+        // Material
+        auto ground_diffuse = make_shared<Diffuse>(ground_constant);
+        // Transform
+        Matrix4f transform = Matrix4f::translate({0.0f, -220.0f, -300.0f});
+        Primitive primitive { ground, ground_diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
+        setupPrimitive(cylinder_prg, cylinder_shadow_prg, primitive, transform);
+    }
+
+    // 面光源1 : Plane
+    {
+        // Shape
+        auto plane_light = make_shared<Plane>();
+        // Texture
+        auto white = make_shared<ConstantTexture>(make_float3(1.0f), constant_prg_id);
+        white->copyToDevice();
+        // Area emitter
+        auto plane_area_emitter = AreaEmitter(white, 15.0f);
+        Matrix4f transform = Matrix4f::translate({100.0f, 0.0f, 100.0f}) * Matrix4f::rotate(math::pi / 4.0f, {0.5f, 0.5f, 0.2f}) * Matrix4f::scale(50.0f);
+        setupAreaEmitter(plane_prg, plane_shadow_prg, plane_light, plane_area_emitter, transform, plane_sample_pdf_prg_id);
+    }
+
+    // 面光源2 : Sphere
+    {
+        // Shape
+        auto sphere_light = make_shared<Sphere>();
+        // Texture
+        auto orange = make_shared<ConstantTexture>(make_float3(0.914f, 0.639f, 0.149f), constant_prg_id);
+        orange->copyToDevice();
+        // Area emitter
+        auto sphere_area_emitter = AreaEmitter(orange, 10.0f);
+        Matrix4f transform = Matrix4f::translate({-100.0f, 0.0f, -100.0f}) * Matrix4f::scale(30.0f);
+        setupAreaEmitter(plane_prg, plane_shadow_prg, sphere_light, sphere_area_emitter, transform, sphere_sample_pdf_prg_id);
+    }
 
     // 光源データをGPU側にコピー
-    CUDABuffer<AreaEmitterInfo> d_area_infos;
-    d_area_infos.copyToDevice(area_infos);
-    params.lights = d_area_infos.deviceData();
-    params.num_lights = static_cast<int>(d_area_info.size());
+    CUDABuffer<AreaEmitterInfo> d_area_emitter_infos;
+    d_area_emitter_infos.copyToDevice(area_emitter_infos);
+    params.lights = d_area_emitter_infos.deviceData();
+    params.num_lights = static_cast<int>(d_area_emitter_infos.size());
 
-    ias.build(context, stream);
+    scene_ias.build(context, stream);
     sbt.createOnDevice();
     params.handle = scene_ias.handle();
     CUDA_CHECK(cudaStreamCreate(&stream));
@@ -251,12 +394,30 @@ void App::setup()
 // ----------------------------------------------------------------
 void App::update()
 {
-    
+    params.subframe_index++;
+    d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);
+
+    optixLaunch(
+        static_cast<OptixPipeline>(pipeline),
+        stream,
+        d_params.devicePtr(),
+        sizeof(LaunchParams),
+        &sbt.sbt(),
+        params.width,
+        params.height,
+        1
+    );
+
+    CUDA_CHECK(cudaStreamSynchronize(stream));
+    CUDA_SYNC_CHECK();
+
+    result_bitmap.copyFromDevice();
 }
 
 // ----------------------------------------------------------------
 void App::draw()
 {
+    result_bitmap.draw(0, 0);
 }
 
 // ----------------------------------------------------------------

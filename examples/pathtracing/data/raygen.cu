@@ -53,6 +53,8 @@ extern "C" __device__ void __raygen__pinhole()
         float3 ro, rd;
         getCameraRay(raygen->camera, d.x, d.y, ro, rd);
 
+        float3 throughput = make_float3(1.0f);
+
         si.emission = make_float3(0.0f);
         si.attenuation = make_float3(1.0f);
         si.trace_terminate = false;
@@ -61,6 +63,10 @@ extern "C" __device__ void __raygen__pinhole()
 
         int depth = 0;
         for ( ;; ) {
+
+            if ( depth >= params.max_depth )
+				break;
+
             trace(
                 params.handle, 
                 ro, 
@@ -69,11 +75,50 @@ extern "C" __device__ void __raygen__pinhole()
                 1e16f, 
                 &si
             );
-
-            result += si.emission * si.attenuation;
-
-            if ( si.trace_terminate || depth >= params.max_depth )
+            
+            if ( si.trace_terminate ) {
+                result += si.emission * throughput;
                 break;
+            }
+
+            if ( si.surface_type == SurfaceType::AreaEmitter )
+            {
+                // Evaluating emission from emitter
+                optixDirectCall<void, SurfaceInteraction*, void*>(
+                    si.surface_info.brdf_id, 
+                    &si, 
+                    si.surface_info.data
+                );
+                result += si.emission * throughput;
+                if (si.trace_terminate)
+                    break;
+            }
+            else if ( si.surface_type & SurfaceType::Material )
+            {
+                // Sampling scattered direction
+                optixDirectCall<void, SurfaceInteraction*, void*>(
+                    si.surface_info.sample_id, 
+                    &si,
+                    si.surface_info.data
+                );
+
+                // Evaluate bsdf 
+                float3 bsdf_val = optixContinuationCall<float3, SurfaceInteraction*, void*>(
+                    si.surface_info.bsdf_id, 
+                    &si,
+                    si.surface_info.data
+                );
+                
+                // Evaluate pdf
+                float pdf_val = optixDirectCall<float, SurfaceInteraction*, void*>(
+                    si.surface_info.pdf_id, 
+                    &si,  
+                    si.surface_info.data
+                );
+                
+                throughput *= (bsdf_val * pdf_val) / pdf_val;
+                result += si.emission * throughput;
+            }
             
             ro = si.p;
             rd = si.wo;

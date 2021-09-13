@@ -26,7 +26,7 @@ struct DisneyData {
 class Disney final : public Material {
 public:
     Disney(const std::shared_ptr<Texture>& base, 
-           float subsurface=0.8f, float metallic=0.1f,
+           float subsurface=0.8f, float metallic=0.5f,
            float specular=0.0f, float specular_tint=0.0f,
            float roughness=0.4f, float anisotropic=0.0f, 
            float sheen=0.0f, float sheen_tint=0.5f,

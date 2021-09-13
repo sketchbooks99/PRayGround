@@ -83,7 +83,7 @@ struct SurfaceInteraction {
 
     curandState_t* curand_state;
 
-    SurfaceInfo surface_property;
+    SurfaceInfo surface_info;
 
     bool trace_terminate;
     bool radiance_evaled; // For NEE

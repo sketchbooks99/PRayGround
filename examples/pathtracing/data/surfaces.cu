@@ -17,18 +17,11 @@ extern "C" __device__ void __direct_callable__sample_diffuse(SurfaceInteraction*
     if (diffuse->twosided)
         si->n = faceforward(si->n, -si->wi, si->n);
 
-    unsigned int seed = si->seed;
     si->trace_terminate = false;
-    {
-        const float z1 = rnd(seed);
-        const float z2 = rnd(seed);
-
-        float3 wi = randomSampleHemisphere(seed);
-        Onb onb(si->n);
-        onb.inverseTransform(wi);
-        si->wo = normalize(wi);
-    }
-    si->seed = seed;
+    float3 wi = randomSampleHemisphere(curand_state);
+    Onb onb(si->n);
+    onb.inverseTransform(wi);
+    si->wo = normalize(wi);
 }
 
 extern "C" __device__ float3 __continuation_callable__bsdf_diffuse(SurfaceInteraction* si, void* mat_data)
@@ -36,41 +29,6 @@ extern "C" __device__ float3 __continuation_callable__bsdf_diffuse(SurfaceIntera
     const DiffuseData* diffuse = reinterpret_cast<DiffuseData*>(mat_data);
     const float3 albedo = optixDirectCall<float3, SurfaceInteraction*, void*>(diffuse->tex_program_id, si, diffuse->tex_data);
     const float cosine = fmaxf(0.0f, dot(si->n, si->wo));
-
-    // Next event estimation
-    float3 light_emission = make_float3(0.8f, 0.8f, 0.7f) * 15.0f;
-    unsigned int seed = si->seed;
-    const float z1 = rnd(seed);
-    const float z2 = rnd(seed);
-    si->seed = seed;
-
-    float3 v1 = make_float3(-130.0f, 0.0f, 0.0f);
-    float3 v2 = make_float3(0.0f, 0.0f, 105.0f);
-    const float3 light_pos = make_float3(343.0f, 548.6f, 227.0f) + v1*z1 + v2*z2;
-    
-    const float Ldist = length(light_pos - si->p);
-    const float3 L = normalize(light_pos - si->p);
-    const float nDl = dot(si->n, L);
-    const float LnDl = -dot(make_float3(0.0f, -1.0f, 0.0f), L);
-    float weight = 0.0f;
-    if (nDl > 0.0f && LnDl > 0.0f)
-    {
-        const bool occluded = traceOcclusion(
-            params.handle, 
-            si->p, 
-            L, 
-            0.01f, 
-            Ldist - 0.01f
-        );
-
-        if (!occluded)
-        {
-            const float A = length(cross(v1, v2));
-            weight = nDl * LnDl * A / (M_PIf * Ldist * Ldist);
-        }
-    }
-    si->radiance_evaled = true;
-    si->emission = light_emission * make_float3(weight);
     return albedo * (cosine / M_PIf);
 }
 
@@ -97,13 +55,11 @@ extern "C" __device__ void __direct_callable__sample_dielectric(SurfaceInteracti
     bool cannot_refract = (ni / nt) * sine > 1.0f;
 
     float reflect_prob = fresnel(cosine, ni, nt);
-    unsigned int seed = si->seed;
 
-    if (cannot_refract || reflect_prob > rnd(seed))
+    if (cannot_refract || reflect_prob > curand_uniform(si->curand_state))
         si->wo = reflect(si->wi, outward_normal);
     else    
         si->wo = refract(si->wi, outward_normal, cosine, ni, nt);
-    si->seed = seed;
     si->radiance_evaled = false;
     si->trace_terminate = false;
 }
@@ -150,7 +106,6 @@ extern "C" __device__ void __direct_callable__sample_disney(SurfaceInteraction* 
     if (disney->twosided)
         si->n = faceforward(si->n, -si->wi, si->n);
 
-    unsigned int seed = si->seed;
     const float z1 = curand_uniform(si->curand_state);
     const float z2 = curand_uniform(si->curand_state);
     const float diffuse_ratio = 0.5f * (1.0f - disney->metallic);
@@ -171,7 +126,6 @@ extern "C" __device__ void __direct_callable__sample_disney(SurfaceInteraction* 
         onb.inverseTransform(h);
         si->wo = normalize(reflect(si->wi, h));
     }
-    si->seed = seed;
     si->radiance_evaled = false;
     si->trace_terminate = false;
 }

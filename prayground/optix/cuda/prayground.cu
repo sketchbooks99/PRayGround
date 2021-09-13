@@ -126,7 +126,6 @@ CALLABLE_FUNC void RG_FUNC(raygen)()
 					si.surface_property.data
 				);
 				
-				// attenuation += si.emission;
 				attenuation *= (bsdf_val * pdf_val) / pdf_val;
 				result += si.emission * attenuation;
 			}

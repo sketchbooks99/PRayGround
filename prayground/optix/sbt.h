@@ -1,6 +1,7 @@
 #pragma once
 
 #include <optix.h>
+#include <prayground/core/camera.h>
 
 #ifndef __CUDACC__
     #include <concepts>
@@ -22,15 +23,6 @@ struct LaunchParams
     int subframe_index;
     uchar4* result_buffer;
     OptixTraversableHandle handle;
-};
-
-struct CameraData
-{
-    float3 origin; 
-    float3 lookat; 
-    float3 up;
-    float fov;
-    float aspect;
 };
 
 struct RaygenData

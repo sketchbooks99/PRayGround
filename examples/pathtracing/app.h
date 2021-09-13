@@ -12,14 +12,6 @@ using EmptyRecord = Record<EmptyData>;
 
 using PathTracingSBT = ShaderBindingTable<RaygenRecord, MissRecord, HitgroupRecord, EmptyRecord, EmptyRecord, 2>;
 
-struct Primitive
-{
-    shared_ptr<Shape> shape;
-    shared_ptr<Material> material;
-    unsigned int sample_bsdf_id;
-    unsigned int pdf_id;
-};
-
 class App : public BaseApp
 {
 public:
@@ -42,6 +34,5 @@ private:
     FloatBitmap accum_bitmap;
     Camera camera;
 
-    vector<Primitive> primitives;
     EnvironmentEmitter env;
 };

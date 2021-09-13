@@ -16,8 +16,6 @@ struct AreaEmitterInfo
 {
     // 面光源がメッシュの場合はMeshDataではなくTriangleになる
     void* shape_data;
-
-    OptixTraversableHandle gas_handle;
     Matrix4f objToWorld;
 
     unsigned int sample_id;

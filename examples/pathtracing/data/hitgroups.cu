@@ -134,15 +134,7 @@ extern "C" __device__ void __closesthit__sphere() {
 
 extern "C" __device__ float3 __continuation_callable__pdf_sphere(AreaEmitterInfo areainfo, const float3& ro, const float3& rd)
 {
-    SurfaceInteraction si;
-    trace(
-        areainfo.gas_handle(), 
-        ro, 
-        rd, 
-        0.01f, 
-        1e16f, 
-        &si
-    );
+    
 }
 
 extern "C" __device__ float3 __direct_callable__rnd_sample_sphere(AreaEmitterInfo areaInfo)

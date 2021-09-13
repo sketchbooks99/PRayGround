@@ -154,6 +154,12 @@ void App::setup()
         sbt.addHitgroupRecord(record, shadow_record);
         sbt_idx++;
     };
+    
+    std::vector<AreaEmitterInfo> area_infos;
+    auto prepareAreaEmitter = [&](ProgramGroup& prg, ProgramGroup& shadow_prg, ShapeInstance shape_instance, AreaEmitter area)
+    {
+        
+    };
 
     uint32_t sbt_offset = 0;
     uint32_t instance_id = 0;

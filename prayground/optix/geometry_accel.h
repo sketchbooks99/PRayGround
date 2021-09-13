@@ -3,6 +3,7 @@
 #include <prayground/core/shape.h>
 #include <prayground/optix/context.h>
 #include <vector>
+#include <memory>
 
 namespace prayground {
 

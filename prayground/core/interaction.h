@@ -36,11 +36,12 @@ enum class SurfaceType : unsigned int {
     Medium          = 1u << 6
 };
 
-constexpr SurfaceType operator|(SurfaceType t1, SurfaceType t2)    { return static_cast<SurfaceType>(  (unsigned int)t1 | (unsigned int)t2 ); }
-constexpr SurfaceType operator|(unsigned int t1, SurfaceType t2)   { return static_cast<SurfaceType>(                t1 | (unsigned int)t2 ); }
-constexpr SurfaceType operator&(SurfaceType t1, SurfaceType t2)    { return static_cast<SurfaceType>(  (unsigned int)t1 & (unsigned int)t2 ); }
-constexpr SurfaceType operator&(unsigned int t1, SurfaceType t2)   { return static_cast<SurfaceType>(                t1 & (unsigned int)t2 ); }
-constexpr SurfaceType operator~(SurfaceType t1)                    { return static_cast<SurfaceType>( ~(unsigned int)t1 ); }
+constexpr SurfaceType  operator|(SurfaceType t1, SurfaceType t2)    { return static_cast<SurfaceType>(  (unsigned int)t1 | (unsigned int)t2 ); }
+constexpr SurfaceType  operator|(unsigned int t1, SurfaceType t2)   { return static_cast<SurfaceType>(                t1 | (unsigned int)t2 ); }
+constexpr SurfaceType  operator&(SurfaceType t1, SurfaceType t2)    { return static_cast<SurfaceType>(  (unsigned int)t1 & (unsigned int)t2 ); }
+constexpr SurfaceType  operator&(unsigned int t1, SurfaceType t2)   { return static_cast<SurfaceType>(                t1 & (unsigned int)t2 ); }
+constexpr SurfaceType  operator~(SurfaceType t1)                    { return static_cast<SurfaceType>( ~(unsigned int)t1 ); }
+constexpr unsigned int operator+(SurfaceType t1)                    { return static_cast<unsigned int>(t1); }
 
 struct SurfaceInfo 
 {

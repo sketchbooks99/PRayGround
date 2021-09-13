@@ -69,6 +69,10 @@
 
 #endif
 
+#include "math/util.h"
+#include "math/vec_math.h"
+#include "math/matrix.h"
+
 // shape include
 #include "shape/sphere.h"
 #include "shape/trianglemesh.h"

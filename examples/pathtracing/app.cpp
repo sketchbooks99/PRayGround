@@ -264,7 +264,7 @@ void App::setup()
     // Armadillo
     {
         // Shape
-        auto armadillo = make_shared<TriangleMesh>("resources/model/armadillo.ply");
+        auto armadillo = make_shared<TriangleMesh>("resources/model/Armadillo.ply");
         // Texture
         auto armadillo_checker = make_shared<CheckerTexture>(make_float3(1.0f), make_float3(0.8f, 0.05f, 0.8f), 10, checker_prg_id);
         armadillo_checker->copyToDevice();

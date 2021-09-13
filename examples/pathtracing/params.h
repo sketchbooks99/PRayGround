@@ -2,8 +2,11 @@
 
 #include <optix.h>
 #include <prayground/math/vec_math.h>
+#include <prayground/math/matrix.h>
 #include <prayground/optix/sbt.h>
 #include <prayground/core/interaction.h>
+
+using namespace prayground;
 
 struct Triangle
 {

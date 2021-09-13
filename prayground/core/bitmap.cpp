@@ -86,7 +86,6 @@ void Bitmap_<PixelType>::allocate(Format format, int width, int height)
             Throw("prayground::Bitmap::allocate(): Invalid type of allocation");
     }
 
-    // iotaに書き換えられる？
     // Zero-initialization of pixel data
     std::vector<PixelType> zero_arr(m_channels * m_width * m_height, static_cast<PixelType>(0));
     m_data = std::make_unique<PixelType[]>(m_channels * m_width * m_height);
@@ -161,9 +160,10 @@ void Bitmap_<unsigned char>::load(const std::filesystem::path& filename)
         Message(MSG_ERROR, "prayground::Bitmap_<unsigned char>::load(): EXR format can be loaded only in BitmapFloat.");
         return;
     }
-    uint8_t* raw_data = m_data.get();
+    uint8_t* raw_data;
     raw_data = stbi_load(filepath.value().string().c_str(), &m_width, &m_height, &m_channels, static_cast<int>(m_format));
     m_channels = static_cast<int>(m_format);
+    m_data.reset(raw_data);
 
     m_gltex = prepareGL(m_shader);
 }
@@ -180,8 +180,9 @@ void Bitmap_<float>::load(const std::filesystem::path& filename)
     // EXR 形式の場合はそのまま読み込む
     if (ext == ".exr" || ext == ".EXR")
     {
-        m_format = m_format== Format::UNKNOWN ? Format::RGBA : m_format;
+        m_format = m_format == Format::UNKNOWN ? Format::RGBA : m_format;
 
+        m_data = std::make_unique<float[]>(m_width * m_height * static_cast<int>(m_format));
         const char* err = nullptr;
         float* raw_data = m_data.get();
         int result = LoadEXR(&raw_data, &m_width, &m_height, filepath.value().string().c_str(), &err);
@@ -205,7 +206,6 @@ void Bitmap_<float>::load(const std::filesystem::path& filename)
 
         uint8_t* raw_data = stbi_load(filepath.value().string().c_str(), &m_width, &m_height, &m_channels, static_cast<int>(m_format));
         m_channels = static_cast<int>(m_format);
-        //m_data = new float[m_width * m_height * m_channels];
         m_data = std::make_unique<float[]>(m_width * m_height * m_channels);
         for (int i = 0; i < m_width * m_height * m_channels; i += m_channels)
         {

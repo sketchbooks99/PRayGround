@@ -35,7 +35,7 @@ extern "C" __device__ void __raygen__pinhole()
     const int subframe_index = params.subframe_index;
     const uint3 idx = optixGetLaunchIndex();
 
-    float3 L = make_float3(0.0f, 0.0f, 0.0f);
+    float3 result = make_float3(0.0f, 0.0f, 0.0f);
     int i = params.samples_per_launch;
 
     do
@@ -73,6 +73,7 @@ extern "C" __device__ void __raygen__pinhole()
                 rd, 
                 0.01f, 
                 1e16f, 
+                0,
                 &si
             );
             
@@ -81,11 +82,11 @@ extern "C" __device__ void __raygen__pinhole()
                 break;
             }
 
-            if ( si.surface_type == SurfaceType::AreaEmitter )
+            if ( si.surface_info.type == SurfaceType::AreaEmitter )
             {
                 // Evaluating emission from emitter
                 optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.brdf_id, 
+                    si.surface_info.bsdf_id, 
                     &si, 
                     si.surface_info.data
                 );
@@ -93,7 +94,7 @@ extern "C" __device__ void __raygen__pinhole()
                 if (si.trace_terminate)
                     break;
             }
-            else if ( si.surface_type & SurfaceType::Material )
+            else if ( +(si.surface_info.type & SurfaceType::Material) )
             {
                 // Sampling scattered direction
                 optixDirectCall<void, SurfaceInteraction*, void*>(

@@ -2,7 +2,6 @@
 
 #include <prayground/math/vec_math.h>
 #include <prayground/math/util.h>
-#include <assert.h>
 
 #ifndef __CUDACC__
     #include <iostream>
@@ -377,7 +376,8 @@ INLINE HOSTDEVICE Matrix<T, N> Matrix<T, N>::inverse() const
 template <typename T, unsigned int N>
 INLINE HOSTDEVICE float3 Matrix<T, N>::pointMul(const float3& p) const 
 {
-    static_assert(false);
+    static_assert(std::is_same_v<T, float> || std::is_same_v<N, 4>);
+    return make_float3(0.0f);
 }
 
 template<>
@@ -388,7 +388,7 @@ INLINE HOSTDEVICE float3 Matrix<float, 4>::pointMul(const float3& p) const
     float z = m_data[8]  * p.x + m_data[9]  * p.x + m_data[10] * p.z + m_data[11];
     float w = m_data[12] * p.x + m_data[13] * p.x + m_data[14] * p.z + m_data[15];
 
-    assert(w != 0.0f);
+    // w == 0のときのAssertionは必要
     if (w == 1.0f)
         return make_float3(x, y, z);
     else
@@ -398,7 +398,8 @@ INLINE HOSTDEVICE float3 Matrix<float, 4>::pointMul(const float3& p) const
 template <typename T, unsigned int N>
 INLINE HOSTDEVICE float3 Matrix<T, N>::vectorMul(const float3& n) const 
 {
-    static_assert(false);
+    static_assert(std::is_same_v<T, float> || std::is_same_v<N, 4>);
+    return make_float3(0.0f);
 }
 
 template<>
@@ -415,7 +416,8 @@ INLINE HOSTDEVICE float3 Matrix<float, 4>::vectorMul(const float3& v) const
 template <typename T, unsigned int N>
 INLINE HOSTDEVICE float3 Matrix<T, N>::normalMul(const float3& n) const 
 {
-    static_assert(false);
+    static_assert(std::is_same_v<T, float> || std::is_same_v<N, 4>);
+    return make_float3(0.0f);
 }
 
 template<>
@@ -512,7 +514,7 @@ INLINE HOSTDEVICE Matrix<float, 4> Matrix<float, 4>::reflection(Axis axis)
 {
     Matrix4f i_mat = Matrix4f::identity();
     float* data = i_mat.data();
-    unsigned int i = static_cast<uint32_t>(axis);
+    unsigned int i = static_cast<unsigned int>(axis);
     data[i * 4 + i] *= -1;
     return Matrix4f(data);
 }

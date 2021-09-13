@@ -4,7 +4,6 @@
 #include <prayground/math/vec_math.h>
 
 #ifndef __CUDACC__
-#include <iostream>
 #include <prayground/core/stream_helpers.h>
 #endif
 

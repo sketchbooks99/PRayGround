@@ -2,6 +2,7 @@
 #include <prayground/shape/plane.h>
 #include <prayground/shape/trianglemesh.h>
 #include <prayground/shape/sphere.h>
+#include <prayground/shape/cylinder.h>
 #include <prayground/core/ray.h>
 
 using namespace prayground;
@@ -53,12 +54,17 @@ extern "C" __device__ void __closesthit__plane()
     si->n = world_n;
     si->wi = ray.d;
     si->uv = uv;
+    si->surface_info = data->surface_info;
+}
 
-    si->surface_type = data->surface_type;
-    si->surface_property = {
-        data->surface_data,
-        data->surface_program_id
-    };
+extern "C" __device__ float3 __continuation_callable__pdf_plane(AreaEmitterInfo areainfo, const float3& ro, const float3& rd)
+{
+    
+}
+
+extern "C" __device__ float3 __direct_callable__rnd_sample_plane(AreaEmitterInfo areaInfo)
+{
+
 }
 
 // Sphere -------------------------------------------------------------------------------
@@ -97,7 +103,7 @@ extern "C" __device__ void __intersection__sphere() {
     }
 }
 
-static __forceinline__ __device__ float2 getUV(const float3& p) {
+static __forceinline__ __device__ float2 getSphereUV(const float3& p) {
     float phi = atan2(p.z, p.x);
     float theta = asin(p.y);
     float u = 1.0f - (phi + M_PIf) / (2.0f * M_PIf);
@@ -123,13 +129,8 @@ extern "C" __device__ void __closesthit__sphere() {
     si->p = ray.at(ray.tmax);
     si->n = world_n;
     si->wi = ray.d;
-    si->uv = getUV(local_n);
-
-    si->surface_type = data->surface_type;
-    si->surface_property = {
-        data->surface_data,
-        data->surface_program_id
-    };
+    si->uv = getSphereUV(local_n);
+    si->surface_info = data->surface_info;
 }
 
 extern "C" __device__ float3 __continuation_callable__pdf_sphere(AreaEmitterInfo areainfo, const float3& ro, const float3& rd)
@@ -140,6 +141,121 @@ extern "C" __device__ float3 __continuation_callable__pdf_sphere(AreaEmitterInfo
 extern "C" __device__ float3 __direct_callable__rnd_sample_sphere(AreaEmitterInfo areaInfo)
 {
 
+}
+
+// Cylinder -------------------------------------------------------------------------------
+static INLINE DEVICE float2 getCylinderUV(
+    const float3& p, const float radius, const float height, const bool hit_disk
+)
+{
+    if (hit_disk)
+    {
+        const float r = sqrtf(p.x*p.x + p.z*p.z) / radius;
+        const float theta = atan2(p.z, p.x);
+        float u = 1.0f - (theta + M_PIf/2.0f) / M_PIf;
+        return make_float2(u, r);
+    } 
+    else
+    {
+        const float theta = atan2(p.z, p.x);
+        const float v = (p.y + height / 2.0f) / height;
+        float u = 1.0f - (theta + M_PIf/2.0f) / M_PIf;
+        return make_float2(u, v);
+    }
+}
+
+extern "C" __device__ void __intersection__cylinder()
+{
+    const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
+    const CylinderData* cylinder = reinterpret_cast<CylinderData*>(data->shape_data);
+
+    const float radius = cylinder->radius;
+    const float height = cylinder->height;
+
+    Ray ray = getLocalRay();
+    
+    const float a = dot(ray.d, ray.d) - ray.d.y * ray.d.y;
+    const float half_b = (ray.o.x * ray.d.x + ray.o.z * ray.d.z);
+    const float c = dot(ray.o, ray.o) - ray.o.y * ray.o.y - radius*radius;
+    const float discriminant = half_b*half_b - a*c;
+
+    if (discriminant > 0.0f)
+    {
+        const float sqrtd = sqrtf(discriminant);
+        const float side_t1 = (-half_b - sqrtd) / a;
+        const float side_t2 = (-half_b + sqrtd) / a;
+
+        const float side_tmin = fmin( side_t1, side_t2 );
+        const float side_tmax = fmax( side_t1, side_t2 );
+
+        if ( side_tmin > ray.tmax || side_tmax < ray.tmin )
+            return;
+
+        const float upper = height / 2.0f;
+        const float lower = -height / 2.0f;
+        const float y_tmin = fmin( (lower - ray.o.y) / ray.d.y, (upper - ray.o.y) / ray.d.y );
+        const float y_tmax = fmax( (lower - ray.o.y) / ray.d.y, (upper - ray.o.y) / ray.d.y );
+
+        float t1 = fmax(y_tmin, side_tmin);
+        float t2 = fmin(y_tmax, side_tmax);
+        if (t1 > t2 || (t2 < ray.tmin) || (t1 > ray.tmax))
+            return;
+        
+        bool check_second = true;
+        if (ray.tmin < t1 && t1 < ray.tmax)
+        {
+            float3 P = ray.at(t1);
+            bool hit_disk = y_tmin > side_tmin;
+            float3 normal = hit_disk 
+                          ? normalize(P - make_float3(P.x, 0.0f, P.z))   // Hit at disk
+                          : normalize(P - make_float3(0.0f, P.y, 0.0f)); // Hit at side
+            float2 uv = getCylinderUV(P, radius, height, hit_disk);
+            optixReportIntersection(t1, 0, float3_as_ints(normal), float2_as_ints(uv));
+            check_second = false;
+        }
+        
+        if (check_second)
+        {
+            if (ray.tmin < t2 && t2 < ray.tmax)
+            {
+                float3 P = ray.at(t2);
+                bool hit_disk = y_tmax < side_tmax;
+                float3 normal = hit_disk
+                            ? normalize(P - make_float3(P.x, 0.0f, P.z))   // Hit at disk
+                            : normalize(P - make_float3(0.0f, P.y, 0.0f)); // Hit at side
+                float2 uv = getCylinderUV(P, radius, height, hit_disk);
+                optixReportIntersection(t2, 0, float3_as_ints(normal), float2_as_ints(uv));
+            }
+        }
+    }
+}
+
+extern "C" __device__ void __closesthit__cylinder()
+{
+    const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
+    const CylinderData* cylinder = reinterpret_cast<CylinderData*>(data->shape_data);
+
+    Ray ray = getWorldRay();
+
+    float3 local_n = make_float3(
+        int_as_float( optixGetAttribute_0() ),
+        int_as_float( optixGetAttribute_1() ), 
+        int_as_float( optixGetAttribute_2() )
+    );
+
+    float2 uv = make_float2(
+        int_as_float( optixGetAttribute_3() ),
+        int_as_float( optixGetAttribute_4() )
+    );
+
+    float3 world_n = optixTransformNormalFromObjectToWorldSpace(local_n);
+
+    SurfaceInteraction* si = getSurfaceInteraction();
+    si->p = ray.at(ray.tmax);
+    si->n = normalize(world_n);
+    si->wi = ray.d;
+    si->uv = uv;
+    si->surface_info = data->surface_info;
 }
 
 // Triangle mesh -------------------------------------------------------------------------------
@@ -174,10 +290,5 @@ extern "C" __device__ void __closesthit__mesh()
     si->n = world_n;
     si->wi = ray.d;
     si->uv = texcoords;
-
-    si->surface_type = data->surface_type;
-    si->surface_property = {
-        data->surface_data,
-        data->surface_program_id
-    };
+    si->surface_info = data->surface_info;
 }

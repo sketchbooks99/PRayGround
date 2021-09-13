@@ -1,7 +1,10 @@
 #pragma once
 
 #include <prayground/math/vec_math.h>
-#include <prayground/app/window.h>
+
+#ifndef __CUDACC__
+    #include <prayground/app/window.h>
+#endif
 
 namespace prayground {
 

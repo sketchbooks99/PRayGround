@@ -22,7 +22,8 @@ struct EnvironmentEmitterData {
 
 class EnvironmentEmitter final : public Emitter {
 public:
-    explicit EnvironmentEmitter(const std::shared_ptr<Texture>& texture)
+    EnvironmentEmitter() = default;
+    EnvironmentEmitter(const std::shared_ptr<Texture>& texture)
     : m_texture(texture) {}
 
     void copyToDevice() override;

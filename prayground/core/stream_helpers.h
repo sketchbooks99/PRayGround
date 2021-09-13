@@ -2,6 +2,7 @@
 
 #include <optix.h>
 #include <iostream>
+#include <sstream>
 
 namespace prayground {
 

@@ -2,9 +2,11 @@
 #include <prayground/material/diffuse.h>
 #include <prayground/material/dielectric.h>
 #include <prayground/material/conductor.h>
+#include <prayground/material/disney.h>
 #include <prayground/emitter/area.h>
 #include <prayground/core/bsdf.h>
 #include <prayground/core/onb.h>
+#include <prayground/core/color.h>
 
 using namespace prayground;
 
@@ -18,7 +20,7 @@ extern "C" __device__ void __direct_callable__sample_diffuse(SurfaceInteraction*
         si->n = faceforward(si->n, -si->wi, si->n);
 
     si->trace_terminate = false;
-    float3 wi = randomSampleHemisphere(curand_state);
+    float3 wi = randomSampleHemisphere(si->curand_state);
     Onb onb(si->n);
     onb.inverseTransform(wi);
     si->wo = normalize(wi);

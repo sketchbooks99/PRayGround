@@ -162,8 +162,8 @@ void Bitmap_<unsigned char>::load(const std::filesystem::path& filename)
         return;
     }
     uint8_t* raw_data = m_data.get();
-    raw_data = stbi_load(filepath.value().string().c_str(), &m_width, &m_height, &m_channels, type2channels[m_format]);
-    m_channels = type2channels[m_format];
+    raw_data = stbi_load(filepath.value().string().c_str(), &m_width, &m_height, &m_channels, static_cast<int>(m_format));
+    m_channels = static_cast<int>(m_format);
 
     m_gltex = prepareGL(m_shader);
 }
@@ -203,8 +203,8 @@ void Bitmap_<float>::load(const std::filesystem::path& filename)
         else if (ext == ".jpg" || ext == ".JPG")
             m_format = m_format == Format::UNKNOWN ? Format::RGB  : m_format;
 
-        uint8_t* raw_data = stbi_load(filepath.value().string().c_str(), &m_width, &m_height, &m_channels, type2channels[m_format]);
-        m_channels = type2channels[m_format];
+        uint8_t* raw_data = stbi_load(filepath.value().string().c_str(), &m_width, &m_height, &m_channels, static_cast<int>(m_format));
+        m_channels = static_cast<int>(m_format);
         //m_data = new float[m_width * m_height * m_channels];
         m_data = std::make_unique<float[]>(m_width * m_height * m_channels);
         for (int i = 0; i < m_width * m_height * m_channels; i += m_channels)

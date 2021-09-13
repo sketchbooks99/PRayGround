@@ -158,7 +158,33 @@ void App::setup()
     std::vector<AreaEmitterInfo> area_infos;
     auto prepareAreaEmitter = [&](ProgramGroup& prg, ProgramGroup& shadow_prg, ShapeInstance shape_instance, AreaEmitter area)
     {
-        
+        for (auto& shape : shape_instance.shapes())
+        {
+            shape->copyToDevice();
+            area.copyToDevice();
+
+            HitgroupRecord record;
+            prg.recordPackHeader(&record);
+            unsigned int sample_pdf_id = 0;
+            if constexpr (holds_alternative<shared_ptr<Plane>>(shape))
+                sample_pdf_id = plane_sample_pdf_prg_id;
+            else if constexpr (holds_alternative<shared_ptr<Sphere>>(shape))
+                sample_pdf_id = sphere_sample_pdf_prg_id;
+            else if constexpr (holds_alternative<shared_ptr<TriangleMesh>>(shape))
+                sample_pdf_id = triangle_sample_pdf_prg_id;
+            record.data = 
+            {
+                .shape_data = shape->devicePtr(), 
+                .surf_info = 
+                {
+                    .data = area.devicePtr(),
+                    .sample_id = sample_pdf_id,
+                    .bsdf_id = area_prg_id,
+                    .pdf_id = sample_pdf_id,
+                    .type = SurfaceType::AreaEmitter
+                };
+            }
+        }
     };
 
     uint32_t sbt_offset = 0;

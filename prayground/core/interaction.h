@@ -19,8 +19,6 @@ enum class SurfaceType : unsigned int {
     // Rough surfaces ( w/ microfacet )
     RoughReflection = 1u << 3,
     RoughRefraction = 1u << 4,
-    // Emitter 
-    AreaEmitter     = 1u << 5,
 
     // Delta
     Delta = Reflection | Refraction,
@@ -30,9 +28,19 @@ enum class SurfaceType : unsigned int {
 
     // Material
     Material        = Diffuse | Reflection | Refraction | RoughReflection | RoughRefraction,
+
+    // Emitter 
+    AreaEmitter     = 1u << 5,
+
     // Medium --- Future work
-    Medium 
+    Medium          = 1u << 6
 };
+
+constexpr SurfaceType operator|(SurfaceType t1, SurfaceType t2)    { return static_cast<SurfaceType>( (unsigned int)t1 | (unsigned int)t2 ); }
+constexpr SurfaceType operator|(unsigned int t1, SurfaceType t2)   { return static_cast<SurfaceType>(               t1 | (unsigned int)t2 ); }
+constexpr SurfaceType operator&(SurfaceType t1, SurfaceType t2)    { return static_cast<SurfaceType>( (unsigned int)t1 & (unsigned int)t2 ); }
+constexpr SurfaceType operator&(unsigned int t1, SurfaceType t2)   { return static_cast<SurfaceType>(               t1 & (unsigned int)t2 ); }
+constexpr SurfaceType operator~(SurfaceType t1)                  { return static_cast<SurfaceType>( ~(unsigned int)t1 ); }
 
 struct SurfaceInfo 
 {

@@ -11,13 +11,13 @@ class Bitmap_ {
 public:
     using Type = PixelType;
 
-    enum class Format 
+    enum class Format : int
     {
-        GRAY,       // 1 channels
-        GRAY_ALPHA, // 2 channels
-        RGB,        // 3 channels
-        RGBA,       // 4 channels
-        UNKNOWN
+        GRAY        = 1,       // 1 channels
+        GRAY_ALPHA  = 2,       // 2 channels
+        RGB         = 3,       // 3 channels
+        RGBA        = 4,       // 4 channels
+        UNKNOWN     = 0
     };
 
     Bitmap_();
@@ -48,15 +48,6 @@ public:
     int height() const { return m_height; }
     int channels() const { return m_channels; }
 private:
-    std::map<Format, int> type2channels = 
-    {
-        { Format::GRAY, 1 }, 
-        { Format::GRAY_ALPHA, 2}, 
-        { Format::RGB, 3 }, 
-        { Format::RGBA, 4 }, 
-        { Format::UNKNOWN, 0 }
-    };
-
     std::unique_ptr<PixelType[]> m_data;  // CPU側のデータ -> unique_ptrにする
     PixelType* d_data { nullptr };  // GPU側のデータ
 

@@ -176,19 +176,27 @@ void App::setup()
     // 光源サンプリング時にCallable関数ではOptixInstanceに紐づいた行列情報を取得できないので
     // 行列情報をAreaEmitterInfoに一緒に設定しておく
     // ついでにShapeInstanceによって光源用のGASも追加
-    auto prepareAreaEmitter = [&](ProgramGroup& prg, ProgramGroup& shadow_prg, shared_ptr<Shape> shape, AreaEmitter area, Matrix4f transform, unsigned int sample_pdf_id)
+    auto prepareAreaEmitter = [&](
+        ProgramGroup& prg, ProgramGroup& shadow_prg, 
+        variant<shared_ptr<Plane>, shared_ptr<Sphere>> shape, 
+        AreaEmitter area, Matrix4f transform, 
+        unsigned int sample_pdf_id
+    )
     {
-        shape->copyToDevice();
-        shape->setSbtIndex(sbt_idx);
+        shared_ptr<Shape> _shape;
+        if constexpr (holds_alternative<shared_ptr<Plane>>(shape))
+            _shape = get<shared_ptr<Plane>>(shape);
+        else
+            _shape = get<shared_ptr<Sphere>>(shape);
+        _shape->copyToDevice();
+        _shape->setSbtIndex(sbt_idx);
         area.copyToDevice();
-
-        Assert(shape->type() == ShapeType::Custom, "A shape for area emitter must be a custom primitive");
 
         HitgroupRecord record;
         prg.recordPackHeader(&record);
         record.data = 
         {
-            .shape_data = shape->devicePtr(), 
+            .shape_data = _shape->devicePtr(), 
             .surf_info = 
             {
                 .data = area.devicePtr(),
@@ -205,7 +213,7 @@ void App::setup()
 
         sbt.addHitgroupRecord(record, shadow_record);
 
-        ShapeInstance instance{shape->type(), shape, matrix};
+        ShapeInstance instance{_shape->type(), _shape, matrix};
         prepareShapeInstance(instance);
 
         AreaEmitterInfo area_info = 
@@ -221,13 +229,10 @@ void App::setup()
     auto bunny = make_shared<TriangleMesh>("resources/model/uv_bunny.obj");
     auto armadillo = make_shared<TriangleMesh>("resources/model/armadillo.ply");
     auto teapot = make_shared<TriangleMesh>("resources/model/teapot_normal_merged.obj");
-    // planeとSphereはInstanceを使うのであれば1つのポインタを再利用すれば良い
-    // だけどsbt_indexが変わるのでダメな可能性もある
-    // 各ShapeへのデータはGPU側のポインタ経由で参照しているだけなのでこれでもいける？
-    // buildInputを生成するときにsbt_indexが確定していればいいので
-    // 1度GASを作ってしまえばその後にsbt_indexが変更されても大丈夫？
+    auto earth_sphere = make_shared<Sphere>();
+    auto glass_sphere = make_shared<Sphere>();
+    auto cylinder = make_shared<Cylinder>();
     auto ground = make_shared<Plane>();
-    auto sphere = make_shared<Sphere>();
 
     // 光源データをGPU側にコピー
     CUDABuffer<AreaEmitterInfo> d_area_infos;

@@ -44,10 +44,7 @@ void App::handleCameraUpdate()
         cudaMemcpyHostToDevice
     ));
 
-    CUDA_SYNC_CHECK();
-
     initResultBufferOnDevice();
-    d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);
 }
 
 // ----------------------------------------------------------------
@@ -89,7 +86,7 @@ void App::setup()
     params.height = result_bitmap.height();
     params.samples_per_launch = 1;
     params.max_depth = 10;
-    params.white = 1.0f;
+    params.white = 5.0f;
 
     initResultBufferOnDevice();
 
@@ -97,7 +94,7 @@ void App::setup()
     camera.setOrigin(make_float3(-333.0f, 80.0f, -800.0f));
     camera.setLookat(make_float3(0.0f, -225.0f, 0.0f));
     camera.setUp(make_float3(0.0f, 1.0f, 0.0f));
-    camera.setFarClip(1000);
+    camera.setFarClip(5000);
     camera.setFov(35.0f);
     camera.enableTracking(pgGetCurrentWindow());
 
@@ -438,10 +435,10 @@ void App::setup()
     params.lights = d_area_emitter_infos.deviceData();
     params.num_lights = static_cast<int>(d_area_emitter_infos.size());
 
+    CUDA_CHECK(cudaStreamCreate(&stream));
     scene_ias.build(context, stream);
     sbt.createOnDevice();
     params.handle = scene_ias.handle();
-    CUDA_CHECK(cudaStreamCreate(&stream));
     pipeline.create(context);
     d_params.allocate(sizeof(LaunchParams));
 
@@ -507,6 +504,7 @@ void App::draw()
     }
 
     ImGui::Text("Frame rate: %.3f ms/frame (%.2f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+    ImGui::Text("Subframe index: %d", params.subframe_index);
 
     ImGui::End();
 
@@ -518,6 +516,9 @@ void App::draw()
     depth_bitmap.draw(pgGetWidth() / 2, pgGetHeight() / 2, pgGetWidth() / 2, pgGetHeight() / 2);
 
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+    if (params.subframe_index == 4096)
+        result_bitmap.write(pathJoin(pgAppDir(), "pathtracing.jpg"));
 }
 
 // ----------------------------------------------------------------

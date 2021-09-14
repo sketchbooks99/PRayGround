@@ -384,8 +384,8 @@ void Bitmap_<PixelType>::draw(int32_t x, int32_t y, int32_t width, int32_t heigh
 template <typename PixelType>
 void Bitmap_<PixelType>::allocateDevicePtr()
 {
-    if (d_data)
-        CUDA_CHECK(cudaFree(d_data));
+    /*if (d_data)
+        CUDA_CHECK(cudaFree(d_data));*/
     CUDA_CHECK(cudaMalloc(
         reinterpret_cast<void**>(&d_data),
         m_width * m_height * m_channels * sizeof(PixelType)

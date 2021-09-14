@@ -20,10 +20,12 @@ extern "C" __device__ void __direct_callable__sample_diffuse(SurfaceInteraction*
         si->n = faceforward(si->n, -si->wi, si->n);
 
     si->trace_terminate = false;
-    float3 wi = randomSampleHemisphere(si->curand_state);
+    unsigned int seed = si->seed;
+    float3 wi = randomSampleHemisphere(seed);
     Onb onb(si->n);
     onb.inverseTransform(wi);
     si->wo = normalize(wi);
+    si->seed = seed;
 }
 
 extern "C" __device__ float3 __continuation_callable__bsdf_diffuse(SurfaceInteraction* si, void* mat_data)
@@ -58,13 +60,15 @@ extern "C" __device__ void __direct_callable__sample_dielectric(SurfaceInteracti
     bool cannot_refract = (ni / nt) * sine > 1.0f;
 
     float reflect_prob = fresnel(cosine, ni, nt);
+    unsigned int seed = si->seed;
 
-    if (cannot_refract || reflect_prob > curand_uniform(si->curand_state))
+    if (cannot_refract || reflect_prob > rnd(seed))
         si->wo = reflect(si->wi, outward_normal);
     else    
         si->wo = refract(si->wi, outward_normal, cosine, ni, nt);
     si->radiance_evaled = false;
     si->trace_terminate = false;
+    si->seed = seed;
 }
 
 extern "C" __device__ float3 __continuation_callable__bsdf_dielectric(SurfaceInteraction* si, void* mat_data)
@@ -113,12 +117,13 @@ extern "C" __device__ void __direct_callable__sample_disney(SurfaceInteraction* 
     if (disney->twosided)
         si->n = faceforward(si->n, -si->wi, si->n);
 
-    const float z1 = curand_uniform(si->curand_state);
-    const float z2 = curand_uniform(si->curand_state);
+    unsigned int seed = si->seed;
+    const float z1 = rnd(seed);
+    const float z2 = rnd(seed);
     const float diffuse_ratio = 0.5f * (1.0f - disney->metallic);
     Onb onb(si->n);
 
-    if (curand_uniform(si->curand_state) < diffuse_ratio)
+    if (rnd(seed) < diffuse_ratio)
     {
         float3 w_in = cosineSampleHemisphere(z1, z2);
         onb.inverseTransform(w_in);
@@ -135,6 +140,7 @@ extern "C" __device__ void __direct_callable__sample_disney(SurfaceInteraction* 
     }
     si->radiance_evaled = false;
     si->trace_terminate = false;
+    si->seed = seed;
 }
 
 /**

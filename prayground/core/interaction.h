@@ -82,7 +82,7 @@ struct SurfaceInteraction {
     float3 dpdu;
     float3 dpdv;
 
-    curandState_t* curand_state;
+    unsigned int seed;
 
     SurfaceInfo surface_info;
 

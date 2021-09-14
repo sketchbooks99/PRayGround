@@ -79,6 +79,11 @@ void pgSetWindowName(const std::string& name)
     current_runner->window()->setName(name);
 }
 
+std::shared_ptr<Window> pgGetCurrentWindow()
+{
+    return current_runner->window();
+}
+
 void pgRunApp(const std::shared_ptr<BaseApp>& app, const std::shared_ptr<Window>& window)
 {
     current_runner = std::make_unique<AppRunner>(app, window);

@@ -31,10 +31,13 @@ struct LaunchParams
     int subframe_index;
     uchar4* result_buffer;
     float4* accum_buffer;
+    float3* normal_buffer;
     OptixTraversableHandle handle;
 
     AreaEmitterInfo* lights;
     int num_lights;
+
+    float exposure;
 };
 
 struct CameraData

@@ -5,31 +5,31 @@
 namespace prayground {
 
 struct Onb {
-    INLINE HOSTDEVICE Onb(const float3& normal) {
-        m_normal = normal;
+    INLINE HOSTDEVICE Onb(const float3& n) {
+        normal = n;
 
-        if (fabs(m_normal.x) > fabs(m_normal.z)) {
-            m_binormal.x = -m_normal.y;
-            m_binormal.y = m_normal.x;
-            m_binormal.z = 0;
+        if (fabs(normal.x) > fabs(normal.z)) {
+            bitangent.x = -normal.y;
+            bitangent.y = normal.x;
+            bitangent.z = 0;
         }
         else {
-            m_binormal.x = 0;
-            m_binormal.y = -m_normal.z;
-            m_binormal.z = m_normal.y;
+            bitangent.x = 0;
+            bitangent.y = -normal.z;
+            bitangent.z = normal.y;
         }
 
-        m_binormal = normalize(m_binormal);
-        m_tangent = cross( m_binormal, m_normal );
+        bitangent = normalize(bitangent);
+        tangent = cross( bitangent, normal );
     }
 
     INLINE HOSTDEVICE void inverseTransform(float3& p) const {
-        p = p.x*m_binormal + p.y*m_tangent + p.z*m_normal;
+        p = p.x*bitangent + p.y*tangent + p.z*normal;
     }
 
-    float3 m_binormal;
-    float3 m_tangent;
-    float3 m_normal;
+    float3 bitangent;
+    float3 tangent;
+    float3 normal;
 };
 
 }

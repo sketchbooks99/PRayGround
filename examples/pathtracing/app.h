@@ -1,7 +1,10 @@
 #pragma once
 #include <prayground/prayground.h>
 #include "params.h"
-#include <map>
+// ImGui
+#include <prayground/ext/imgui/imgui.h>
+#include <prayground/ext/imgui/imgui_impl_glfw.h>
+#include <prayground/ext/imgui/imgui_impl_opengl3.h>
 
 using namespace std;
 
@@ -18,10 +21,13 @@ public:
     void setup();
     void update();
     void draw();
+    void close();
 
     void mouseDragged(float x, float y, int button);
     void mouseScrolled(float xoffset, float yoffset);
 private:
+    void initResultBufferOnDevice();
+
     LaunchParams params;
     CUDABuffer<LaunchParams> d_params;
     Pipeline pipeline;
@@ -32,6 +38,7 @@ private:
 
     Bitmap result_bitmap;
     FloatBitmap accum_bitmap;
+    FloatBitmap normal_bitmap;
     Camera camera;
 
     EnvironmentEmitter env;

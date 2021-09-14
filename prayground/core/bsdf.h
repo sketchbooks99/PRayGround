@@ -16,16 +16,15 @@
 #pragma once
 
 #include <prayground/math/vec_math.h>
+#include <prayground/math/util.h>
 #include <prayground/core/util.h>
 #include <prayground/optix/macros.h>
-#include <curand.h>
-#include <curand_kernel.h>
 
 namespace prayground {
 
 HOSTDEVICE INLINE float3 randomSampleHemisphere(curandState_t* state)
 {
-    float a = curand_uniform(state) * 2.0f * M_PIf;
+    float a = curand_uniform(state) * 2.0f * math::pi;
     float z = sqrtf(curand_uniform(state));
     float r = sqrtf(fmaxf(0.0f, 1.0f - z * z));
     return make_float3(r * cosf(a), r * sinf(a), z);
@@ -35,7 +34,7 @@ HOSTDEVICE INLINE float3 cosineSampleHemisphere(const float u1, const float u2)
 {
     float3 p;
     const float r = sqrtf(u1);
-    const float phi = 2.0f * M_PIf * u2;
+    const float phi = 2.0f * math::pi * u2;
     p.x = r * cosf(phi);
     p.y = r * sinf(phi);
 
@@ -48,7 +47,7 @@ HOSTDEVICE INLINE float3 sampleGGX(const float u1, const float u2, const float r
 {
     float3 p;
     const float a = roughness * roughness;
-    const float phi = 2.0f * M_PIf * u1;
+    const float phi = 2.0f * math::pi * u1;
     const float cos_theta = sqrtf((1.0f - u2) / (1.0f + (a*a - 1.0f) * u2));
     const float sin_theta = sqrtf(1.0f - cos_theta * cos_theta);
 
@@ -62,7 +61,7 @@ HOSTDEVICE INLINE float3 sampleGTR1(const float u1, const float u2, const float 
 {
     float3 p;
     const float a = roughness * roughness;
-    const float phi = 2.0f * M_PIf * u1;
+    const float phi = 2.0f * math::pi * u1;
     const float cos_theta = 1.0f; 
 }
 
@@ -115,28 +114,33 @@ HOSTDEVICE INLINE T fresnelSchlickT(float cos_i, T f90) {
 /**
  * @ref Physically Based Shading at Disney, https://github.com/wdas/brdf/blob/main/src/brdfs/disney.brdf
  * @brief NDF from Berry (1923), GTR(gamma = 1)
- * @note Difference from original ... PI -> M_PIf
+ * @note Difference from original ... PI -> math::pi
  * @param a : roughness of the surface. [0,1]
  */
 HOSTDEVICE INLINE float GTR1(float NdotH, float a)
 {
-    if (a >= 1) return 1/M_PIf;
+    if (a >= 1) return 1/math::pi;
     float a2 = a*a;
     float t = 1 + (a2-1)*NdotH*NdotH;
-    return (a2-1) / (M_PIf*log(a2)*t);
+    return (a2-1) / (math::pi*log(a2)*t);
 }
 
 /** 
  * @ref: https://github.com/wdas/brdf/blob/main/src/brdfs/disney.brdf
  * @brief Trowbridge-Reitz GGX function for NDF, GTR(gamma = 2)
- * @note Difference from original ... PI -> M_PIf
+ * @note Difference from original ... PI -> math::pi
  * @param a : roughness of the surface. [0,1]
  **/ 
 HOSTDEVICE INLINE float GTR2(float NdotH, float a)
 {
     float a2 = a*a;
-    float t = 1 + (a2-1)*NdotH*NdotH;
-    return a2 / (M_PIf * t*t);
+    float t = 1.0f - (1.0f-a2)*NdotH*NdotH;
+    return a2 / (math::pi * t*t);
+}
+
+HOSTDEVICE INLINE float GTR2_aniso(float NdotH, float HdotX, float HdotY, float ax, float ay)
+{
+    return 1.0f / ( math::pi * ax * ay * math::sqr( math::sqr(HdotX / ax) + math::sqr(HdotY / ay) + NdotH * NdotH) );
 }
 
 /**

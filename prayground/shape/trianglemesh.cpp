@@ -48,8 +48,8 @@ ShapeType TriangleMesh::type() const
 }
 
 // ------------------------------------------------------------------
-void TriangleMesh::copyToDevice() {
-
+void TriangleMesh::copyToDevice() 
+{
     CUDABuffer<float3> d_vertices_buf;
     CUDABuffer<Face> d_faces_buf;
     CUDABuffer<float3> d_normals_buf;
@@ -196,7 +196,7 @@ void TriangleMesh::smooth()
         auto p0 = m_vertices[m_faces[i].vertex_id.x];
         auto p1 = m_vertices[m_faces[i].vertex_id.y];
         auto p2 = m_vertices[m_faces[i].vertex_id.z];
-        auto N = normalize(cross(p2 - p0, p1 - p0));
+        auto N = normalize(cross(p0 - p1, p0 - p2));
 
         auto idx = m_faces[i].vertex_id.x;
         m_normals[idx] += N;

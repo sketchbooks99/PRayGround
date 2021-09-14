@@ -103,7 +103,7 @@ INLINE HOSTDEVICE unsigned long long min(unsigned long long a, unsigned long lon
 /** lerp */
 INLINE HOSTDEVICE float lerp(const float a, const float b, const float t)
 {
-  return a + t*(b-a);
+    return a + t*(b-a);
 }
 #else 
   using std::lerp;
@@ -113,7 +113,7 @@ INLINE HOSTDEVICE float lerp(const float a, const float b, const float t)
 INLINE HOSTDEVICE float bilerp(const float x00, const float x10, const float x01, const float x11,
                                          const float u, const float v)
 {
-  return lerp( lerp( x00, x10, u ), lerp( x01, x11, u ), v );
+    return lerp( lerp( x00, x10, u ), lerp( x01, x11, u ), v );
 }
 
 template <typename IntegerType>

@@ -41,6 +41,12 @@ HOSTDEVICE INLINE T random(T _min, T _max, curandState_t* state)
     return static_cast<T>(_min + curand_uniform(state) * (float)(_max+1 - _min));
 }
 
+template <typename T>
+HOSTDEVICE INLINE T sqr(T t1)
+{
+    return t1 * t1;
+}
+
 } // ::math
 
 } // ::prayground

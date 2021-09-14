@@ -26,6 +26,11 @@ static __forceinline__ __device__ void getCameraRay(const CameraData& camera, co
     ro = camera.origin;
 }
 
+static __forceinline__ __device__ float3 toneMapping(const float3& color, const float white)
+{
+    return clamp(color * (1.0f + color / white) / (1.0f + color), 0.0f, 1.0f);
+}
+
 /// @todo MISの実装
 
 extern "C" __device__ void __raygen__pinhole()
@@ -36,6 +41,7 @@ extern "C" __device__ void __raygen__pinhole()
     const uint3 idx = optixGetLaunchIndex();
 
     float3 result = make_float3(0.0f, 0.0f, 0.0f);
+    float3 normal = make_float3(0.0f);
     int i = params.samples_per_launch;
 
     do
@@ -82,6 +88,9 @@ extern "C" __device__ void __raygen__pinhole()
                 break;
             }
 
+            if (depth == 0)
+                normal = si.n;
+
             if ( si.surface_info.type == SurfaceType::AreaEmitter )
             {
                 // Evaluating emission from emitter
@@ -117,8 +126,7 @@ extern "C" __device__ void __raygen__pinhole()
                     si.surface_info.data
                 );
                 
-                throughput *= (bsdf_val * pdf_val) / pdf_val;
-                result += si.emission * throughput;
+                throughput *= bsdf_val / pdf_val;
             }
             
             ro = si.p;
@@ -144,6 +152,8 @@ extern "C" __device__ void __raygen__pinhole()
         accum_color = lerp(accum_color_prev, accum_color, a);
     }
     params.accum_buffer[image_index] = make_float4(accum_color, 1.0f);
-    uchar3 color = make_color(accum_color);
+    float3 mapped = make_float3(1.0f) - expf(-accum_color * params.exposure);
+    uchar3 color = make_color(mapped);
     params.result_buffer[image_index] = make_uchar4(color.x, color.y, color.z, 255);
+    params.normal_buffer[image_index] = normal;
 }

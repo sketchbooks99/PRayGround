@@ -1,5 +1,18 @@
 #include "app.h"
 
+void App::initResultBufferOnDevice()
+{
+    params.subframe_index = 0;
+
+    result_bitmap.allocateDevicePtr();
+    accum_bitmap.allocateDevicePtr();
+    normal_bitmap.allocateDevicePtr();
+
+    params.result_buffer = reinterpret_cast<uchar4*>(result_bitmap.devicePtr());
+    params.accum_buffer = reinterpret_cast<float4*>(accum_bitmap.devicePtr());
+    params.normal_buffer = reinterpret_cast<float3*>(normal_bitmap.devicePtr());
+}
+
 // ----------------------------------------------------------------
 void App::setup()
 {
@@ -28,25 +41,24 @@ void App::setup()
     surfaces_module = pipeline.createModuleFromCudaFile(context, "surfaces.cu");
 
     // レンダリング結果を保存する用のBitmapを用意
-    result_bitmap.allocate(Bitmap::Format::RGBA, pgGetWidth(), pgGetHeight());
-    result_bitmap.allocateDevicePtr(); // GPU側のバッファを確保
-    accum_bitmap.allocate(FloatBitmap::Format::RGBA, pgGetWidth(), pgGetHeight());
-    accum_bitmap.allocateDevicePtr(); // GPU側のバッファを確保
+    result_bitmap.allocate(Bitmap::Format::RGBA, pgGetWidth() / 2, pgGetHeight());
+    accum_bitmap.allocate(FloatBitmap::Format::RGBA, pgGetWidth() / 2, pgGetHeight());
+    normal_bitmap.allocate(FloatBitmap::Format::RGB, pgGetWidth() / 2, pgGetHeight());
 
     // LaunchParamsの設定
     params.width = result_bitmap.width();
     params.height = result_bitmap.height();
     params.samples_per_launch = 1;
     params.max_depth = 10;
-    params.subframe_index = 0;
-    params.result_buffer = reinterpret_cast<uchar4*>(result_bitmap.devicePtr());
-    params.accum_buffer = reinterpret_cast<float4*>(accum_bitmap.devicePtr());
+
+    initResultBufferOnDevice();
+
 
     // カメラの設定
-    camera.setOrigin(make_float3(20.0f, 10.0f, 30.0f));
-    camera.setLookat(make_float3(0.0f));
+    camera.setOrigin(make_float3(-333.0f, 80.0f, -800.0f));
+    camera.setLookat(make_float3(0.0f, -225.0f, 0.0f));
     camera.setUp(make_float3(0.0f, 1.0f, 0.0f));
-    camera.setFov(40.0f);
+    camera.setFov(35.0f);
 
     // Raygenプログラム
     ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, raygen_module, "__raygen__pinhole");
@@ -99,7 +111,7 @@ void App::setup()
     auto [plane_sample_pdf_prg, plane_sample_pdf_prg_id] = setupCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_plane"), CC_FUNC_STR("pdf_plane"));
 
     // 環境マッピング (Sphere mapping) 用のテクスチャとデータ準備
-    auto env_texture = make_shared<ConstantTexture>(make_float3(0.0f), constant_prg_id);
+    auto env_texture = make_shared<ConstantTexture>(make_float3(0.01f), constant_prg_id);
     env_texture->copyToDevice();
     env = EnvironmentEmitter{env_texture};
     env.copyToDevice();
@@ -110,9 +122,9 @@ void App::setup()
     MissRecord miss_record;
     miss_prg.recordPackHeader(&miss_record);
     miss_record.data.env_data = env.devicePtr();
-    miss_record = {};
-    miss_prg.recordPackHeader(&miss_record);
-    sbt.setMissRecord(miss_record, miss_record);
+    MissRecord miss_shadow_record;
+    miss_prg.recordPackHeader(&miss_shadow_record);
+    sbt.setMissRecord(miss_record, miss_shadow_record);
 
     // Hitgroupプログラム
     // Plane
@@ -125,7 +137,7 @@ void App::setup()
     auto cylinder_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("cylinder"), IS_FUNC_STR("cylinder"));
     auto cylinder_shadow_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("shadow"), IS_FUNC_STR("cylinder"));
     // Triangle mesh
-    auto mesh_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("plane"));
+    auto mesh_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("mesh"));
     auto mesh_shadow_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("shadow"));
 
     struct Primitive
@@ -253,8 +265,8 @@ void App::setup()
         bunny_checker->copyToDevice();
         // Material
         auto bunny_disney = make_shared<Disney>(bunny_checker);
-        bunny_disney->setRoughness(0.05f);
-        bunny_disney->setMetallic(0.9f);
+        bunny_disney->setRoughness(0.01f);
+        bunny_disney->setMetallic(1.0f);
         // Transform
         Matrix4f transform = Matrix4f::translate({-50.0f, -272.0f, 300.0f}) * Matrix4f::rotate(math::pi, {0.0f, 1.0f, 0.0f}) * Matrix4f::scale(1200.0f);
         Primitive primitive{bunny, bunny_disney, disney_sample_bsdf_prg_id, disney_pdf_prg_id};
@@ -266,10 +278,10 @@ void App::setup()
         // Shape
         auto armadillo = make_shared<TriangleMesh>("resources/model/Armadillo.ply");
         // Texture
-        auto armadillo_checker = make_shared<CheckerTexture>(make_float3(1.0f), make_float3(0.8f, 0.05f, 0.8f), 10, checker_prg_id);
-        armadillo_checker->copyToDevice();
+        auto armadillo_constant = make_shared<ConstantTexture>(make_float3(0.8f, 0.05f, 0.8f), constant_prg_id);
+        armadillo_constant->copyToDevice();
         // Material
-        auto armadillo_conductor = make_shared<Conductor>(armadillo_checker);
+        auto armadillo_conductor = make_shared<Conductor>(armadillo_constant, false);
         // Transform
         Matrix4f transform = Matrix4f::translate({250.0f, -210.0f, -150.0f}) * Matrix4f::scale(1.2f);
         Primitive primitive{armadillo, armadillo_conductor, conductor_sample_bsdf_prg_id, conductor_pdf_prg_id};
@@ -294,7 +306,7 @@ void App::setup()
     // Earth
     {
         // Shape
-        auto earth_sphere = make_shared<Sphere>();
+        auto earth_sphere = make_shared<Sphere>(make_float3(0.0f), 90.0f);
         // Texture
         auto earth_bitmap = make_shared<BitmapTexture>("resources/image/earth.jpg", bitmap_prg_id);
         earth_bitmap->copyToDevice();
@@ -309,7 +321,7 @@ void App::setup()
     // Glass sphere
     {
         // Shape
-        auto glass_sphere = make_shared<Sphere>(make_float3(0.0f), 90.0f);
+        auto glass_sphere = make_shared<Sphere>(make_float3(0.0f), 80.0f);
         // Texture
         auto white_constant = make_shared<ConstantTexture>(make_float3(1.0f), constant_prg_id);
         white_constant->copyToDevice();
@@ -324,7 +336,7 @@ void App::setup()
     // Cylinder
     {
         // Shape
-        auto cylinder = make_shared<Cylinder>();
+        auto cylinder = make_shared<Cylinder>(60.0f, 100.0f);
         // Texture
         auto cylinder_checker = make_shared<CheckerTexture>(make_float3(0.3f), make_float3(0.9f), 10, checker_prg_id);
         cylinder_checker->copyToDevice();
@@ -339,16 +351,16 @@ void App::setup()
     // Ground
     {
         // Shape
-        auto ground = make_shared<Plane>();
+        auto ground = make_shared<Plane>(make_float2(-500.0f, -500.0f), make_float2(500.0f, 500.0f));
         // Texture
         auto ground_constant = make_shared<ConstantTexture>(make_float3(0.8f), constant_prg_id);
         ground_constant->copyToDevice();
         // Material
         auto ground_diffuse = make_shared<Diffuse>(ground_constant);
         // Transform
-        Matrix4f transform = Matrix4f::translate({0.0f, -220.0f, -300.0f});
+        Matrix4f transform = Matrix4f::translate({0.0f, -275.0f, 0.0f});
         Primitive primitive { ground, ground_diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
-        setupPrimitive(cylinder_prg, cylinder_shadow_prg, primitive, transform);
+        setupPrimitive(plane_prg, plane_shadow_prg, primitive, transform);
     }
 
     // 面光源1 : Plane
@@ -360,7 +372,7 @@ void App::setup()
         white->copyToDevice();
         // Area emitter
         auto plane_area_emitter = AreaEmitter(white, 15.0f);
-        Matrix4f transform = Matrix4f::translate({100.0f, 0.0f, 100.0f}) * Matrix4f::rotate(math::pi / 4.0f, {0.5f, 0.5f, 0.2f}) * Matrix4f::scale(50.0f);
+        Matrix4f transform = Matrix4f::translate({200.0f, 50.0f, 200.0f}) * Matrix4f::rotate(math::pi / 4.0f, {0.5f, 0.5f, 0.2f}) * Matrix4f::scale(50.0f);
         setupAreaEmitter(plane_prg, plane_shadow_prg, plane_light, plane_area_emitter, transform, plane_sample_pdf_prg_id);
     }
 
@@ -372,9 +384,9 @@ void App::setup()
         auto orange = make_shared<ConstantTexture>(make_float3(0.914f, 0.639f, 0.149f), constant_prg_id);
         orange->copyToDevice();
         // Area emitter
-        auto sphere_area_emitter = AreaEmitter(orange, 10.0f);
-        Matrix4f transform = Matrix4f::translate({-100.0f, 0.0f, -100.0f}) * Matrix4f::scale(30.0f);
-        setupAreaEmitter(plane_prg, plane_shadow_prg, sphere_light, sphere_area_emitter, transform, sphere_sample_pdf_prg_id);
+        auto sphere_area_emitter = AreaEmitter(orange, 15.0f);
+        Matrix4f transform = Matrix4f::translate({-200.0f, 50.0f, -200.0f}) * Matrix4f::scale(30.0f);
+        setupAreaEmitter(sphere_prg, sphere_shadow_prg, sphere_light, sphere_area_emitter, transform, sphere_sample_pdf_prg_id);
     }
 
     // 光源データをGPU側にコピー
@@ -389,6 +401,16 @@ void App::setup()
     CUDA_CHECK(cudaStreamCreate(&stream));
     pipeline.create(context);
     d_params.allocate(sizeof(LaunchParams));
+
+    // GUI setting
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+    const char* glsl_version = "#version 150";
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(pgGetCurrentWindow()->windowPtr(), true);
+    ImGui_ImplOpenGL3_Init(glsl_version);
 }
 
 // ----------------------------------------------------------------
@@ -412,12 +434,37 @@ void App::update()
     CUDA_SYNC_CHECK();
 
     result_bitmap.copyFromDevice();
+    normal_bitmap.copyFromDevice();
 }
 
 // ----------------------------------------------------------------
 void App::draw()
 {
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    ImGui::Begin("Path tracing GUI");
+
+    ImGui::SliderFloat("exposure", &params.exposure, 0.01f, 5.0f);
+
+    ImGui::End();
+
+    ImGui::Render();
+
     result_bitmap.draw(0, 0);
+    normal_bitmap.draw(pgGetWidth() / 2, 0);
+
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+// ----------------------------------------------------------------
+void App::close()
+{
+    env.free();
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 }
 
 // ----------------------------------------------------------------
@@ -425,20 +472,20 @@ void App::mouseDragged(float x, float y, int button)
 {
     float deltaX = x - pgGetPreviousMousePosition().x;
     float deltaY = y - pgGetPreviousMousePosition().y;
-    float cam_length = length(camera.origin());
+    float cam_length = length(camera.origin() - camera.lookat());
     float3 cam_dir = normalize(camera.origin() - camera.lookat());
 
     float theta = acosf(cam_dir.y);
     float phi = atan2(cam_dir.z, cam_dir.x);
 
-    theta = min(math::pi - 0.01f, max(0.01f, theta - math::radians(deltaY * 0.25f)));
+    theta = clamp(theta - math::radians(deltaY * 0.25f), math::eps, math::pi - math::eps);
     phi += math::radians(deltaX * 0.25f);
 
     float cam_x = cam_length * sinf(theta) * cosf(phi);
     float cam_y = cam_length * cosf(theta);
     float cam_z = cam_length * sinf(theta) * sinf(phi);
 
-    camera.setOrigin({ cam_x, cam_y, cam_z });
+    camera.setOrigin(camera.lookat() + make_float3(cam_x, cam_y, cam_z));
 
     RaygenRecord* rg_record = reinterpret_cast<RaygenRecord*>(sbt.raygenRecord());
     RaygenData rg_data;
@@ -459,11 +506,7 @@ void App::mouseDragged(float x, float y, int button)
 
     CUDA_SYNC_CHECK();
 
-    result_bitmap.allocateDevicePtr();
-    accum_bitmap.allocateDevicePtr();
-    params.result_buffer = reinterpret_cast<uchar4*>(result_bitmap.devicePtr());
-    params.accum_buffer = reinterpret_cast<float4*>(accum_bitmap.devicePtr());
-    params.subframe_index = 0;
+    initResultBufferOnDevice();
 
     d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);
 }
@@ -493,11 +536,7 @@ void App::mouseScrolled(float xoffset, float yoffset)
 
     CUDA_SYNC_CHECK();
 
-    result_bitmap.allocateDevicePtr();
-    accum_bitmap.allocateDevicePtr();
-    params.result_buffer = reinterpret_cast<uchar4*>(result_bitmap.devicePtr());
-    params.accum_buffer = reinterpret_cast<float4*>(accum_bitmap.devicePtr());
-    params.subframe_index = 0;
+    initResultBufferOnDevice();
 
     d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);
 }

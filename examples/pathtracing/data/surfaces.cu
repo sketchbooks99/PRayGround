@@ -81,7 +81,7 @@ extern "C" __device__ float __direct_callable__pdf_dielectric(SurfaceInteraction
 // Conductor --------------------------------------------------------------------------------------------
 extern "C" __device__ void __direct_callable__sample_conductor(SurfaceInteraction* si, void* mat_data) {
     const ConductorData* conductor = reinterpret_cast<ConductorData*>(mat_data);
-    if (conductor->twosided) 
+    if (conductor->twosided)
         si->n = faceforward(si->n, -si->wi, si->n);
 
     si->wo = reflect(si->wi, si->n);
@@ -147,16 +147,15 @@ extern "C" __device__ float3 __continuation_callable__bsdf_disney(SurfaceInterac
     const DisneyData* disney = reinterpret_cast<DisneyData*>(mat_data);
     si->emission = make_float3(0.0f);
 
-    const float3 V = -si->wi;
-    const float3 L = si->wo;
-    const float3 N = si->n;
+    const float3 V = -normalize(si->wi);
+    const float3 L = normalize(si->wo);
+    const float3 N = normalize(si->n);
 
-    const float NdotV = dot(N, V);
-    const float NdotL = dot(N, L);
+    const float NdotV = fabs(dot(N, V));
+    const float NdotL = fabs(dot(N, L));
 
-    if (NdotV <= 0.0f || NdotL <= 0.0f) {
+    if (NdotV == 0.0f || NdotL == 0.0f)
         return make_float3(0.0f);
-    }
 
     const float3 H = normalize(V + L);
     const float NdotH = dot(N, H);
@@ -171,26 +170,32 @@ extern "C" __device__ float3 __continuation_callable__bsdf_disney(SurfaceInterac
     const float Fd90 = 0.5f + 2.0f * disney->roughness * LdotH*LdotH;
     const float FVd90 = fresnelSchlickT(NdotV, Fd90);
     const float FLd90 = fresnelSchlickT(NdotL, Fd90);
-    const float3 f_diffuse = (base_color / M_PIf) * FVd90 * FLd90;
+    const float3 f_diffuse = (base_color / math::pi) * FVd90 * FLd90;
 
     // Subsurface
     const float Fss90 = disney->roughness * LdotH*LdotH;
     const float FVss90 = fresnelSchlickT(NdotV, Fss90);
     const float FLss90 = fresnelSchlickT(NdotL, Fss90); 
-    const float3 f_subsurface = (base_color / M_PIf) * 1.25f * (FVss90 * FLss90 * ((1.0f / (NdotV * NdotL)) - 0.5f) + 0.5f);
+    const float3 f_subsurface = (base_color / math::pi) * 1.25f * (FVss90 * FLss90 * ((1.0f / (NdotV * NdotL)) - 0.5f) + 0.5f);
 
     // Sheen
     const float3 rho_tint = base_color / luminance(base_color);
-    const float3 rho_sheen = lerp(make_float3(1.0f), rho_tint, disney->sheen_tint); 
+    const float3 rho_sheen = lerp(make_float3(1.0f), rho_tint, disney->sheen_tint);
     const float3 f_sheen = disney->sheen * rho_sheen * powf(1.0f - LdotH, 5.0f);
 
     // Specular term (specular, clearcoat) ============================
     // Spcular
+    Onb onb(N);
+    const float3 X = onb.tangent;
+    const float3 Y = onb.bitangent;
+    const float alpha = fmaxf(0.001f, disney->roughness * disney->roughness); // Remapping of roughness
+    const float aspect = sqrtf(1.0f - disney->anisotropic * 0.9f);
+    const float ax = fmaxf(0.001f, math::sqr(disney->roughness) / aspect);
+    const float ay = fmaxf(0.001f, math::sqr(disney->roughness) * aspect);
     const float3 rho_specular = lerp(make_float3(1.0f), rho_tint, disney->specular_tint);
     const float3 Fs0 = lerp(0.08f * disney->specular * rho_specular, base_color, disney->metallic);
     const float3 FHs0 = fresnelSchlickR(LdotH, Fs0);
-    const float alpha = fmaxf(0.001f, disney->roughness * disney->roughness); // Remapping of roughness
-    const float Ds = GTR2(NdotH, alpha);
+    const float Ds = GTR2_aniso(NdotH, dot(H, X), dot(H, Y), ax, ay);
     const float alpha_g = powf(0.5f*disney->roughness + 0.5f, 2.0f);
     const float Gs = geometrySmith(N, V, L, alpha_g);
     const float3 f_specular = FHs0 * Ds * Gs / (4.0f * NdotV * NdotL);
@@ -203,7 +208,7 @@ extern "C" __device__ float3 __continuation_callable__bsdf_disney(SurfaceInterac
     const float3 f_clearcoat = make_float3( 0.25f * disney->clearcoat * (Fcc * Dcc * Gcc) / (4.0f * NdotV * NdotL) ); 
 
     const float3 out = ( 1.0f - disney->metallic ) * ( lerp( f_diffuse, f_subsurface, disney->subsurface ) + f_sheen ) + f_specular + f_clearcoat;
-    return out * NdotL;
+    return out * clamp(NdotL, 0.0f, 1.0f) / math::pi;
 }
 
 /**
@@ -234,7 +239,7 @@ extern "C" __device__ float __direct_callable__pdf_disney(SurfaceInteraction* si
     const float pdf_Dcc = GTR1(NdotH, alpha_cc);
     const float ratio = 1.0f / (1.0f + disney->clearcoat);
     const float pdf_specular = (pdf_Dcc + ratio * (pdf_Ds - pdf_Dcc)) / (4.0f * NdotH);
-    const float pdf_diffuse = NdotL / M_PIf;
+    const float pdf_diffuse = NdotL / math::pi;
 
     return diffuse_ratio * pdf_diffuse + specular_ratio * pdf_specular;
 }

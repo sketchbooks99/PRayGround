@@ -17,6 +17,7 @@ int32_t pgGetHeight();
 int32_t pgGetFrame();
 float   pgGetFrameRate();
 template <typename T> T pgGetElapsedTime();
+std::shared_ptr<Window> pgGetCurrentWindow();
 void    pgSetWindowName(const std::string& name);
 void    pgRunApp(const std::shared_ptr<BaseApp>& app, const std::shared_ptr<Window>& window);
 void    pgExit();

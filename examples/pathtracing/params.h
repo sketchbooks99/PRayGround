@@ -39,7 +39,7 @@ struct LaunchParams
     AreaEmitterInfo* lights;
     int num_lights;
 
-    float exposure;
+    float white;
 };
 
 struct CameraData

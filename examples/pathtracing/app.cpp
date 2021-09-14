@@ -89,7 +89,7 @@ void App::setup()
     params.height = result_bitmap.height();
     params.samples_per_launch = 1;
     params.max_depth = 10;
-    params.exposure = 1.0f;
+    params.white = 1.0f;
 
     initResultBufferOnDevice();
 
@@ -154,7 +154,7 @@ void App::setup()
     auto [plane_sample_pdf_prg, plane_sample_pdf_prg_id] = setupCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_plane"), CC_FUNC_STR("pdf_plane"));
 
     // 環境マッピング (Sphere mapping) 用のテクスチャとデータ準備
-    auto env_texture = make_shared<FloatBitmapTexture>("resources/image/satara_night_no_lamps_4k.exr", bitmap_prg_id);
+    auto env_texture = make_shared<FloatBitmapTexture>("resources/image/dikhololo_night_4k.exr", bitmap_prg_id);
     env_texture->copyToDevice();
     env = EnvironmentEmitter{env_texture};
     env.copyToDevice();
@@ -493,7 +493,7 @@ void App::draw()
 
     ImGui::Begin("Path tracing GUI");
 
-    ImGui::SliderFloat("exposure", &params.exposure, 0.01f, 5.0f);
+    ImGui::SliderFloat("White", &params.white, 1.0f, 1000.0f);
     ImGui::Text("Camera info:");
     ImGui::Text("Origin: %f %f %f", camera.origin().x, camera.origin().y, camera.origin().z);
     ImGui::Text("Lookat: %f %f %f", camera.lookat().x, camera.lookat().y, camera.lookat().z);

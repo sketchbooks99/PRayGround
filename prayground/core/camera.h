@@ -15,6 +15,8 @@ struct CameraData
     float3 origin;
     float3 lookat;
     float3 up;
+    float fov;
+    float aspect;
     float nearclip;
     float farclip;
 };
@@ -24,6 +26,8 @@ struct LensCameraData
     float3 origin;
     float3 lookat;
     float3 up;
+    float fov;
+    float aspect;
     float nearclip;
     float farclip;
     float aperture;
@@ -92,9 +96,6 @@ public:
     void enableTracking(std::shared_ptr<Window> window);
     void disableTracking();
 
-    void changeOrientation(float x_move, float y_move);
-    void zoom(float offset);
-
 protected:
     float3 m_origin;
     float3 m_lookat;
@@ -104,7 +105,6 @@ protected:
     float m_nearclip;
     float m_farclip;
     FovAxis m_fovaxis;
-
 private:
     void mouseDragged(float x, float y, int button);
     void mouseScrolled(float xoffset, float yoffset);

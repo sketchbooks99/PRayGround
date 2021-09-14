@@ -32,6 +32,8 @@ struct LaunchParams
     uchar4* result_buffer;
     float4* accum_buffer;
     float3* normal_buffer;
+    float3* albedo_buffer;
+    float* depth_buffer;
     OptixTraversableHandle handle;
 
     AreaEmitterInfo* lights;
@@ -47,6 +49,8 @@ struct CameraData
     float3 up;
     float fov;
     float aspect;
+    float nearclip; 
+    float farclip;
 };
 
 struct RaygenData

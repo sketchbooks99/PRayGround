@@ -42,6 +42,9 @@ extern "C" __device__ void __raygen__pinhole()
 
     float3 result = make_float3(0.0f, 0.0f, 0.0f);
     float3 normal = make_float3(0.0f);
+    float p_depth = 1.0f;
+    float3 albedo = make_float3(0.0f);
+
     int i = params.samples_per_launch;
 
     do
@@ -62,10 +65,12 @@ extern "C" __device__ void __raygen__pinhole()
         float3 throughput = make_float3(1.0f);
 
         si.emission = make_float3(0.0f);
-        si.attenuation = make_float3(1.0f);
+        si.albedo = make_float3(0.0f);
         si.trace_terminate = false;
         si.radiance_evaled = false;
         si.is_specular     = false;
+
+        float tmax = raygen->camera.farclip / dot(rd, normalize(raygen->camera.lookat - ro));
 
         int depth = 0;
         for ( ;; ) {
@@ -78,18 +83,25 @@ extern "C" __device__ void __raygen__pinhole()
                 ro, 
                 rd, 
                 0.01f, 
-                1e16f, 
+                tmax, 
                 0,
                 &si
             );
-            
-            if ( si.trace_terminate ) {
+
+            if (si.trace_terminate) {
                 result += si.emission * throughput;
                 break;
             }
 
-            if (depth == 0)
+            if (depth == 0) {
+                float3 op = si.p - ro;
+                float op_length = length(si.p - ro);
+                p_depth = dot(normalize(op), normalize(raygen->camera.lookat - ro)) * op_length;
+                p_depth = p_depth / raygen->camera.farclip;
                 normal = si.n;
+            }
+            // プライマリーレイ以外ではtmaxは大きくしておく
+            tmax = 1e16f;
 
             if ( si.surface_info.type == SurfaceType::AreaEmitter )
             {
@@ -122,12 +134,15 @@ extern "C" __device__ void __raygen__pinhole()
                 // Evaluate pdf
                 float pdf_val = optixDirectCall<float, SurfaceInteraction*, void*>(
                     si.surface_info.pdf_id, 
-                    &si,  
+                    &si,
                     si.surface_info.data
                 );
                 
                 throughput *= bsdf_val / pdf_val;
             }
+
+            if (depth == 0)
+                albedo = si.albedo;
             
             ro = si.p;
             rd = si.wo;
@@ -156,4 +171,6 @@ extern "C" __device__ void __raygen__pinhole()
     uchar3 color = make_color(mapped);
     params.result_buffer[image_index] = make_uchar4(color.x, color.y, color.z, 255);
     params.normal_buffer[image_index] = normal;
+    params.albedo_buffer[image_index] = albedo;
+    params.depth_buffer[image_index] = p_depth;
 }

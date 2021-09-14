@@ -30,6 +30,7 @@ extern "C" __device__ float3 __continuation_callable__bsdf_diffuse(SurfaceIntera
 {
     const DiffuseData* diffuse = reinterpret_cast<DiffuseData*>(mat_data);
     const float3 albedo = optixDirectCall<float3, SurfaceInteraction*, void*>(diffuse->tex_program_id, si, diffuse->tex_data);
+    si->albedo = albedo;
     const float cosine = fmaxf(0.0f, dot(si->n, si->wo));
     return albedo * (cosine / M_PIf);
 }
@@ -70,7 +71,9 @@ extern "C" __device__ float3 __continuation_callable__bsdf_dielectric(SurfaceInt
 {
     const DielectricData* dielectric = reinterpret_cast<DielectricData*>(mat_data);
     si->emission = make_float3(0.0f);
-    return optixDirectCall<float3, SurfaceInteraction*, void*>(dielectric->tex_program_id, si, dielectric->tex_data);    
+    float3 albedo = optixDirectCall<float3, SurfaceInteraction*, void*>(dielectric->tex_program_id, si, dielectric->tex_data);
+    si->albedo = albedo;
+    return albedo;
 }
 
 extern "C" __device__ float __direct_callable__pdf_dielectric(SurfaceInteraction* si, void* mat_data)
@@ -93,7 +96,9 @@ extern "C" __device__ float3 __continuation_callable__bsdf_conductor(SurfaceInte
 {
     const ConductorData* conductor = reinterpret_cast<ConductorData*>(mat_data);
     si->emission = make_float3(0.0f);
-    return optixDirectCall<float3, SurfaceInteraction*, void*>(conductor->tex_program_id, si, conductor->tex_data);
+    float3 albedo = optixDirectCall<float3, SurfaceInteraction*, void*>(conductor->tex_program_id, si, conductor->tex_data);
+    si->albedo = albedo;
+    return albedo;
 }
 
 extern "C" __device__ float __direct_callable__pdf_conductor(SurfaceInteraction* si, void* mat_data)
@@ -164,6 +169,7 @@ extern "C" __device__ float3 __continuation_callable__bsdf_disney(SurfaceInterac
     const float3 base_color = optixDirectCall<float3, SurfaceInteraction*, void*>(
         disney->base_program_id, si, disney->base_tex_data
     );
+    si->albedo = base_color;
 
     // Diffuse term (diffuse, subsurface, sheen) ======================
     // Diffuse

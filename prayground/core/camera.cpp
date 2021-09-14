@@ -19,20 +19,20 @@ void Camera::mouseDragged(float x, float y, int button)
 {
     float deltaX = x - pgGetPreviousMousePosition().x;
     float deltaY = y - pgGetPreviousMousePosition().y;
-    float cam_length = length(this->origin());
+    float cam_length = length(this->origin() - this->lookat());
     float3 cam_dir = normalize(this->origin() - this->lookat());
 
     float theta = acosf(cam_dir.y);
     float phi = atan2(cam_dir.z, cam_dir.x);
 
-    theta = std::min(math::pi - 0.01f, std::max(0.01f, theta - math::radians(deltaY * 0.25f)));
+    theta = clamp(theta - math::radians(deltaY * 0.25f), math::eps, math::pi - math::eps);
     phi += math::radians(deltaX * 0.25f);
 
     float cam_x = cam_length * sinf(theta) * cosf(phi);
     float cam_y = cam_length * cosf(theta);
     float cam_z = cam_length * sinf(theta) * sinf(phi);
 
-    this->setOrigin({ cam_x, cam_y, cam_z });
+    this->setOrigin(this->lookat() + make_float3(cam_x, cam_y, cam_z));
 }
 
 void Camera::mouseScrolled(float xoffset, float yoffset)

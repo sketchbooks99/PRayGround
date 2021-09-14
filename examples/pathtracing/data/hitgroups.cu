@@ -57,7 +57,7 @@ extern "C" __device__ void __closesthit__plane()
     si->surface_info = data->surface_info;
 }
 
-extern "C" __device__ float3 __continuation_callable__pdf_plane(AreaEmitterInfo areainfo, const float3& ro, const float3& rd)
+extern "C" __device__ float __continuation_callable__pdf_plane(AreaEmitterInfo areainfo, const float3& ro, const float3& rd)
 {
     
 }
@@ -133,7 +133,7 @@ extern "C" __device__ void __closesthit__sphere() {
     si->surface_info = data->surface_info;
 }
 
-extern "C" __device__ float3 __continuation_callable__pdf_sphere(AreaEmitterInfo areainfo, const float3& ro, const float3& rd)
+extern "C" __device__ float __continuation_callable__pdf_sphere(AreaEmitterInfo areainfo, const float3& ro, const float3& rd)
 {
     
 }

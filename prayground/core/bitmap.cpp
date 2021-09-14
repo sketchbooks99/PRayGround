@@ -147,11 +147,13 @@ void Bitmap_<unsigned char>::load(const std::filesystem::path& filename)
 
     if (ext == ".png" || ext == ".PNG")
     {
+        Message(MSG_NORMAL, "Loading PNG file '" + filepath.value().string() + "' ...");
         if (m_format == Format::UNKNOWN)
             m_format = Format::RGBA;
     }
     else if (ext == ".jpg" || ext == ".JPG")
     {
+        Message(MSG_NORMAL, "Loading JPG file '" + filepath.value().string() + "' ...");
         if (m_format == Format::UNKNOWN)
             m_format = Format::RGB;
     }
@@ -180,12 +182,14 @@ void Bitmap_<float>::load(const std::filesystem::path& filename)
     // EXR 形式の場合はそのまま読み込む
     if (ext == ".exr" || ext == ".EXR")
     {
+        Message(MSG_NORMAL, "Loading EXR file '" + filepath.value().string() + "' ...");
         m_format = m_format == Format::UNKNOWN ? Format::RGBA : m_format;
 
-        m_data = std::make_unique<float[]>(m_width * m_height * static_cast<int>(m_format));
         const char* err = nullptr;
-        float* raw_data = m_data.get();
+        float* raw_data;
         int result = LoadEXR(&raw_data, &m_width, &m_height, filepath.value().string().c_str(), &err);
+        m_data.reset(raw_data);
+        m_channels = static_cast<int>(m_format);
         if (result != TINYEXR_SUCCESS)
         {
             if (err)
@@ -199,10 +203,14 @@ void Bitmap_<float>::load(const std::filesystem::path& filename)
     // PNG/JPG 形式の場合は uint8_t* [0, 255] -> float* [0, 1] に変換 
     else
     {
-        if (ext == ".png" || ext == ".PNG") 
+        if (ext == ".png" || ext == ".PNG") {
             m_format = m_format == Format::UNKNOWN ? Format::RGBA : m_format;
-        else if (ext == ".jpg" || ext == ".JPG")
-            m_format = m_format == Format::UNKNOWN ? Format::RGB  : m_format;
+            Message(MSG_NORMAL, "Loading EXR file '" + filepath.value().string() + "' ...");
+        }
+        else if (ext == ".jpg" || ext == ".JPG") {
+            m_format = m_format == Format::UNKNOWN ? Format::RGB : m_format;
+            Message(MSG_NORMAL, "Loading JPG file '" + filepath.value().string() + "' ...");
+        }
 
         uint8_t* raw_data = stbi_load(filepath.value().string().c_str(), &m_width, &m_height, &m_channels, static_cast<int>(m_format));
         m_channels = static_cast<int>(m_format);
@@ -336,18 +344,17 @@ void Bitmap_<PixelType>::draw(int32_t x, int32_t y, int32_t width, int32_t heigh
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
     glEnableVertexAttribArray(1);
 
-    GLenum texture_data_type;
+    bool is_gray = m_format == Format::GRAY;
+    GLenum texture_data_type = GL_UNSIGNED_BYTE;
     if constexpr (std::is_same_v<PixelType, float>)
         texture_data_type = GL_FLOAT;
-    else if constexpr (std::is_same_v<PixelType, unsigned char>)
-        texture_data_type = GL_UNSIGNED_BYTE;
     
     glBindTexture(GL_TEXTURE_2D, m_gltex);
     PixelType* raw_data = m_data.get();
     switch (m_format)
     {
     case Format::GRAY:
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_R, m_width, m_height, 0, GL_R, texture_data_type, raw_data);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, m_width, m_height, 0, GL_RED, texture_data_type, raw_data);
         break;
     case Format::GRAY_ALPHA:
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RG, m_width, m_height, 0, GL_RG, texture_data_type, raw_data);
@@ -365,6 +372,7 @@ void Bitmap_<PixelType>::draw(int32_t x, int32_t y, int32_t width, int32_t heigh
 
     m_shader.begin();
     glUniform1i(glGetUniformLocation(m_shader.program(), "tex"), 0);
+    glUniform1i(glGetUniformLocation(m_shader.program(), "is_gray"), is_gray);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_gltex);

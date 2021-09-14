@@ -22,12 +22,12 @@ BitmapTexture_<PixelType>::BitmapTexture_(const std::filesystem::path& filename,
         else 
             magenta = make_float4(1.0f, 0.0f, 1.0f, 1.0f);
         std::vector<Vec_t> pixels(width * height, magenta);
-        m_bitmap = std::make_shared<Bitmap_<PixelType>>(
+        m_bitmap = Bitmap_<PixelType>(
             Bitmap_<PixelType>::Format::RGBA, width, height, reinterpret_cast<Bitmap_<PixelType>::Type*>(pixels.data()));
     }
     else
     {
-        m_bitmap = std::make_shared<Bitmap_<PixelType>>(filepath.value(), Bitmap_<PixelType>::Format::RGBA);
+        m_bitmap = Bitmap_<PixelType>(filepath.value(), Bitmap_<PixelType>::Format::RGBA);
     }
 
     // Initialize texture description
@@ -47,12 +47,13 @@ template <typename PixelType>
 void BitmapTexture_<PixelType>::copyToDevice()
 {
     // Alloc CUDA array in device memory.
-    int32_t pitch = m_bitmap->width() * sizeof(Vec_t);
+    int32_t pitch = m_bitmap.width() * sizeof(Vec_t);
 
     cudaChannelFormatDesc channel_desc = cudaCreateChannelDesc<Vec_t>();
 
-    CUDA_CHECK( cudaMallocArray( &d_array, &channel_desc, m_bitmap->width(), m_bitmap->height() ) );
-    CUDA_CHECK( cudaMemcpy2DToArray( d_array, 0, 0, m_bitmap->data(), pitch, pitch, m_bitmap->height(), cudaMemcpyHostToDevice ) );
+    CUDA_CHECK( cudaMallocArray( &d_array, &channel_desc, m_bitmap.width(), m_bitmap.height() ) );
+    PixelType* raw_data = m_bitmap.data();
+    CUDA_CHECK( cudaMemcpy2DToArray( d_array, 0, 0, raw_data, pitch, pitch, m_bitmap.height(), cudaMemcpyHostToDevice ) );
 
     // Create texture object.
     cudaResourceDesc res_desc;

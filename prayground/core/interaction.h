@@ -71,8 +71,8 @@ struct SurfaceInteraction {
     /** Spectrum information of ray. */
     float3 spectrum;
 
-    /** Attenuation and self-emission from a surface attached with a shape. */
-    float3 attenuation;
+    /** Albedo and self-emission from a surface attached with a shape. */
+    float3 albedo;
     float3 emission;
 
     /** UV coordinate at an intersection point. */

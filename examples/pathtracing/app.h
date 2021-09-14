@@ -27,6 +27,7 @@ public:
     void mouseScrolled(float xoffset, float yoffset);
 private:
     void initResultBufferOnDevice();
+    void handleCameraUpdate();
 
     LaunchParams params;
     CUDABuffer<LaunchParams> d_params;
@@ -39,7 +40,11 @@ private:
     Bitmap result_bitmap;
     FloatBitmap accum_bitmap;
     FloatBitmap normal_bitmap;
+    FloatBitmap albedo_bitmap;
+    FloatBitmap depth_bitmap;
     Camera camera;
+    bool camera_update;
 
     EnvironmentEmitter env;
+
 };

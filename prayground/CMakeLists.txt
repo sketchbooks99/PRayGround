@@ -5,6 +5,7 @@ set(sources
   core/bitmap.h 
   core/bsdf.h 
   core/camera.h 
+  core/camera.cpp
   core/color.h 
   core/cudabuffer.h 
   core/emitter.h 

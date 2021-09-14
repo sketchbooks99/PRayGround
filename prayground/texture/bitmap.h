@@ -39,7 +39,7 @@ private:
         m_tex_desc.sRGB = 1;
     }
 
-    std::shared_ptr<Bitmap_<PixelType>> m_bitmap;
+    Bitmap_<PixelType> m_bitmap;
 
     cudaTextureDesc m_tex_desc {};
     cudaTextureObject_t d_texture;

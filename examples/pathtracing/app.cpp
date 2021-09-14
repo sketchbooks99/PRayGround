@@ -7,10 +7,47 @@ void App::initResultBufferOnDevice()
     result_bitmap.allocateDevicePtr();
     accum_bitmap.allocateDevicePtr();
     normal_bitmap.allocateDevicePtr();
+    albedo_bitmap.allocateDevicePtr();
+    depth_bitmap.allocateDevicePtr();
 
     params.result_buffer = reinterpret_cast<uchar4*>(result_bitmap.devicePtr());
     params.accum_buffer = reinterpret_cast<float4*>(accum_bitmap.devicePtr());
     params.normal_buffer = reinterpret_cast<float3*>(normal_bitmap.devicePtr());
+    params.albedo_buffer = reinterpret_cast<float3*>(albedo_bitmap.devicePtr());
+    params.depth_buffer = reinterpret_cast<float*>(depth_bitmap.devicePtr());
+
+    CUDA_SYNC_CHECK();
+}
+
+void App::handleCameraUpdate()
+{
+    if (!camera_update)
+        return;
+    camera_update = false;
+
+    RaygenRecord* rg_record = reinterpret_cast<RaygenRecord*>(sbt.raygenRecord());
+    RaygenData rg_data;
+    rg_data.camera =
+    {
+        .origin = camera.origin(),
+        .lookat = camera.lookat(),
+        .up = camera.up(),
+        .fov = camera.fov(),
+        .aspect = static_cast<float>(result_bitmap.width()) / result_bitmap.height(),
+        .nearclip = camera.nearClip(),
+        .farclip = camera.farClip()
+    };
+
+    CUDA_CHECK(cudaMemcpy(
+        reinterpret_cast<void*>(&rg_record->data),
+        &rg_data, sizeof(RaygenData),
+        cudaMemcpyHostToDevice
+    ));
+
+    CUDA_SYNC_CHECK();
+
+    initResultBufferOnDevice();
+    d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);
 }
 
 // ----------------------------------------------------------------
@@ -41,37 +78,43 @@ void App::setup()
     surfaces_module = pipeline.createModuleFromCudaFile(context, "surfaces.cu");
 
     // レンダリング結果を保存する用のBitmapを用意
-    result_bitmap.allocate(Bitmap::Format::RGBA, pgGetWidth() / 2, pgGetHeight());
-    accum_bitmap.allocate(FloatBitmap::Format::RGBA, pgGetWidth() / 2, pgGetHeight());
-    normal_bitmap.allocate(FloatBitmap::Format::RGB, pgGetWidth() / 2, pgGetHeight());
+    result_bitmap.allocate(Bitmap::Format::RGBA, pgGetWidth(), pgGetHeight());
+    accum_bitmap.allocate(FloatBitmap::Format::RGBA, pgGetWidth(), pgGetHeight());
+    normal_bitmap.allocate(FloatBitmap::Format::RGB, pgGetWidth(), pgGetHeight());
+    albedo_bitmap.allocate(FloatBitmap::Format::RGB, pgGetWidth(), pgGetHeight());
+    depth_bitmap.allocate(FloatBitmap::Format::GRAY, pgGetWidth(), pgGetHeight());
 
     // LaunchParamsの設定
     params.width = result_bitmap.width();
     params.height = result_bitmap.height();
     params.samples_per_launch = 1;
     params.max_depth = 10;
+    params.exposure = 1.0f;
 
     initResultBufferOnDevice();
-
 
     // カメラの設定
     camera.setOrigin(make_float3(-333.0f, 80.0f, -800.0f));
     camera.setLookat(make_float3(0.0f, -225.0f, 0.0f));
     camera.setUp(make_float3(0.0f, 1.0f, 0.0f));
+    camera.setFarClip(1000);
     camera.setFov(35.0f);
+    camera.enableTracking(pgGetCurrentWindow());
 
     // Raygenプログラム
     ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, raygen_module, "__raygen__pinhole");
     // Raygenプログラム用のShader Binding Tableデータ
     RaygenRecord raygen_record;
     raygen_prg.recordPackHeader(&raygen_record);
-    raygen_record.data.camera = 
+    raygen_record.data.camera =
     {
         .origin = camera.origin(),
         .lookat = camera.lookat(),
         .up = camera.up(),
-        .fov = camera.fov(), 
-        .aspect = static_cast<float>(result_bitmap.width()) / result_bitmap.height()
+        .fov = camera.fov(),
+        .aspect = static_cast<float>(result_bitmap.width()) / result_bitmap.height(),
+        .nearclip = camera.nearClip(),
+        .farclip = camera.farClip()
     };
     sbt.setRaygenRecord(raygen_record);
 
@@ -111,7 +154,7 @@ void App::setup()
     auto [plane_sample_pdf_prg, plane_sample_pdf_prg_id] = setupCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_plane"), CC_FUNC_STR("pdf_plane"));
 
     // 環境マッピング (Sphere mapping) 用のテクスチャとデータ準備
-    auto env_texture = make_shared<ConstantTexture>(make_float3(0.01f), constant_prg_id);
+    auto env_texture = make_shared<FloatBitmapTexture>("resources/image/satara_night_no_lamps_4k.exr", bitmap_prg_id);
     env_texture->copyToDevice();
     env = EnvironmentEmitter{env_texture};
     env.copyToDevice();
@@ -278,10 +321,10 @@ void App::setup()
         // Shape
         auto armadillo = make_shared<TriangleMesh>("resources/model/Armadillo.ply");
         // Texture
-        auto armadillo_constant = make_shared<ConstantTexture>(make_float3(0.8f, 0.05f, 0.8f), constant_prg_id);
+        auto armadillo_constant = make_shared<ConstantTexture>(make_float3(1.0f), constant_prg_id);
         armadillo_constant->copyToDevice();
         // Material
-        auto armadillo_conductor = make_shared<Conductor>(armadillo_constant, false);
+        auto armadillo_conductor = make_shared<Conductor>(armadillo_constant);
         // Transform
         Matrix4f transform = Matrix4f::translate({250.0f, -210.0f, -150.0f}) * Matrix4f::scale(1.2f);
         Primitive primitive{armadillo, armadillo_conductor, conductor_sample_bsdf_prg_id, conductor_pdf_prg_id};
@@ -313,7 +356,7 @@ void App::setup()
         // Material
         auto earth_diffuse = make_shared<Diffuse>(earth_bitmap);
         // Transform
-        Matrix4f transform = Matrix4f::translate({-250.0f, -195.0f, 150.0f});
+        Matrix4f transform = Matrix4f::translate({-250.0f, -185.0f, 150.0f});
         Primitive primitive { earth_sphere, earth_diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
         setupPrimitive(sphere_prg, sphere_shadow_prg, primitive, transform);
     }
@@ -328,7 +371,7 @@ void App::setup()
         // Material
         auto glass = make_shared<Dielectric>(white_constant, 1.5f);
         // Transform 
-        Matrix4f transform = Matrix4f::translate({250.0f, -185.0f, 150.0f}) * Matrix4f::rotate(math::pi, {0.0f, 1.0f, 0.0f});
+        Matrix4f transform = Matrix4f::translate({250.0f, -195.0f, 150.0f}) * Matrix4f::rotate(math::pi, {0.0f, 1.0f, 0.0f});
         Primitive primitive { glass_sphere, glass, dielectric_sample_bsdf_prg_id, dielectric_pdf_prg_id };
         setupPrimitive(sphere_prg, sphere_shadow_prg, primitive, transform);
     }
@@ -353,7 +396,7 @@ void App::setup()
         // Shape
         auto ground = make_shared<Plane>(make_float2(-500.0f, -500.0f), make_float2(500.0f, 500.0f));
         // Texture
-        auto ground_constant = make_shared<ConstantTexture>(make_float3(0.8f), constant_prg_id);
+        auto ground_constant = make_shared<ConstantTexture>(make_float3(0.25f), constant_prg_id);
         ground_constant->copyToDevice();
         // Material
         auto ground_diffuse = make_shared<Diffuse>(ground_constant);
@@ -416,6 +459,8 @@ void App::setup()
 // ----------------------------------------------------------------
 void App::update()
 {
+    handleCameraUpdate();
+
     params.subframe_index++;
     d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);
 
@@ -435,6 +480,8 @@ void App::update()
 
     result_bitmap.copyFromDevice();
     normal_bitmap.copyFromDevice();
+    albedo_bitmap.copyFromDevice();
+    depth_bitmap.copyFromDevice();
 }
 
 // ----------------------------------------------------------------
@@ -447,13 +494,28 @@ void App::draw()
     ImGui::Begin("Path tracing GUI");
 
     ImGui::SliderFloat("exposure", &params.exposure, 0.01f, 5.0f);
+    ImGui::Text("Camera info:");
+    ImGui::Text("Origin: %f %f %f", camera.origin().x, camera.origin().y, camera.origin().z);
+    ImGui::Text("Lookat: %f %f %f", camera.lookat().x, camera.lookat().y, camera.lookat().z);
+    ImGui::Text("Up: %f %f %f", camera.up().x, camera.up().y, camera.up().z);
+
+    float farclip = camera.farClip();
+    ImGui::SliderFloat("far clip", &farclip, 500.0f, 10000.0f);
+    if (farclip != camera.farClip()) {
+        camera.setFarClip(farclip);
+        camera_update = true;
+    }
+
+    ImGui::Text("Frame rate: %.3f ms/frame (%.2f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
     ImGui::End();
 
     ImGui::Render();
 
-    result_bitmap.draw(0, 0);
-    normal_bitmap.draw(pgGetWidth() / 2, 0);
+    result_bitmap.draw(0, 0, pgGetWidth() / 2, pgGetHeight() / 2);
+    normal_bitmap.draw(pgGetWidth() / 2, 0, pgGetWidth() / 2, pgGetHeight() / 2);
+    albedo_bitmap.draw(0, pgGetHeight() / 2, pgGetWidth() / 2, pgGetHeight() / 2);
+    depth_bitmap.draw(pgGetWidth() / 2, pgGetHeight() / 2, pgGetWidth() / 2, pgGetHeight() / 2);
 
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
@@ -470,73 +532,11 @@ void App::close()
 // ----------------------------------------------------------------
 void App::mouseDragged(float x, float y, int button)
 {
-    float deltaX = x - pgGetPreviousMousePosition().x;
-    float deltaY = y - pgGetPreviousMousePosition().y;
-    float cam_length = length(camera.origin() - camera.lookat());
-    float3 cam_dir = normalize(camera.origin() - camera.lookat());
-
-    float theta = acosf(cam_dir.y);
-    float phi = atan2(cam_dir.z, cam_dir.x);
-
-    theta = clamp(theta - math::radians(deltaY * 0.25f), math::eps, math::pi - math::eps);
-    phi += math::radians(deltaX * 0.25f);
-
-    float cam_x = cam_length * sinf(theta) * cosf(phi);
-    float cam_y = cam_length * cosf(theta);
-    float cam_z = cam_length * sinf(theta) * sinf(phi);
-
-    camera.setOrigin(camera.lookat() + make_float3(cam_x, cam_y, cam_z));
-
-    RaygenRecord* rg_record = reinterpret_cast<RaygenRecord*>(sbt.raygenRecord());
-    RaygenData rg_data;
-    rg_data.camera =
-    {
-        .origin = camera.origin(),
-        .lookat = camera.lookat(),
-        .up = camera.up(),
-        .fov = camera.fov(),
-        .aspect = 1.0f
-    };
-
-    CUDA_CHECK(cudaMemcpy(
-        reinterpret_cast<void*>(&rg_record->data),
-        &rg_data, sizeof(RaygenData),
-        cudaMemcpyHostToDevice
-    ));
-
-    CUDA_SYNC_CHECK();
-
-    initResultBufferOnDevice();
-
-    d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);
+    camera_update = true;
 }
 
 // ----------------------------------------------------------------
 void App::mouseScrolled(float xoffset, float yoffset)
 {
-    float zoom = yoffset < 0 ? 1.1f : 1.0f / 1.1f;
-    camera.setOrigin(camera.lookat() + (camera.origin() - camera.lookat()) * zoom);
-
-    RaygenRecord* rg_record = reinterpret_cast<RaygenRecord*>(sbt.raygenRecord());
-    RaygenData rg_data;
-    rg_data.camera =
-    {
-        .origin = camera.origin(),
-        .lookat = camera.lookat(),
-        .up = camera.up(),
-        .fov = camera.fov(),
-        .aspect = 1.0f
-    };
-
-    CUDA_CHECK(cudaMemcpy(
-        reinterpret_cast<void*>(&rg_record->data),
-        &rg_data, sizeof(RaygenData),
-        cudaMemcpyHostToDevice
-    ));
-
-    CUDA_SYNC_CHECK();
-
-    initResultBufferOnDevice();
-
-    d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);
+    camera_update = true;
 }

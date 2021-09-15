@@ -11,7 +11,7 @@ This project still remain a huge room to improve its readability, performance, a
 ![output.png](result/016_env.jpg)
 
 # :computer: Requirements
-Before building our project, please be sure to check requirements and your environment, especially if the your version of the C++ compiler supports C++20 features such as `<concepts>` header of the C++ standard libraries.
+Before building the project, please be sure to check requirements and your environment, especially if the your version of the C++ compiler supports C++20.
 
 - CUDA Toolkit (Tested : 11.1, 11.2)
 - C++ compiler which supports C++20 
@@ -29,12 +29,12 @@ git submodule update --init --recursive
 
 # :hammer: How to build
 ## Linux
-Before compiling, please be sure to export two environment variables `CC` and `CXX`. We recommend you to add them to your `~/.bashrc` file as follows so that they are automatically exported when the terminal are launched.
+Before compiling, please be sure to export two environment variables `CC` and `CXX`. We recommend you to add them to your `~/.bashrc` file as follows so that they are automatically exported when a terminal are launched.
 ```
 export CC=gcc-10
 export CXX=g++-10
 ```
-Next, you can build with following command. Please be sure to set `OptiX_INCLUDE` in terminal execution of ccmake or in the launched prompt.
+Next, you can build with following command. Please be sure to set `OptiX_INCLUDE` in terminal command of ccmake or in the launched prompt.
 ```
 cd <path/to/PRayGround>
 mkdir build
@@ -75,7 +75,7 @@ Building steps are as follows.
 
 7. Open the `PRayGround.sln` solution file in the build directory.
 
-8. Execute `Build Solution` in the IDE. When compile succeeded, the execution file will be created in the `build/bin/Debug or Release` directory. You also can run the ray tracer by setting the `<app-name>` project as start up project.
+8. Execute `Build Solution` in the IDE. When compilation is succeeded, the execution file will be created in the `build/bin/Debug or Release` directory. You also can run the ray tracer by setting the `<app-name>` project as start up project.
 
 ## Mac
 Not supported.

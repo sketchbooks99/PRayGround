@@ -67,16 +67,16 @@ CALLABLE_FUNC float3 CC_FUNC(bsdf_diffuse)(SurfaceInteraction* si, void* mat_dat
         if (!occluded)
         {
             const float A = length(cross(v1, v2));
-            weight = nDl * LnDl * A / (M_PIf * Ldist * Ldist);
+            weight = nDl * LnDl * A / (math::pi * Ldist * Ldist);
         }
     }
     si->radiance_evaled = true;
     si->emission = light_emission * make_float3(weight);
-    return albedo * (cosine / M_PIf);
+    return albedo * (cosine / math::pi);
 }
 
 CALLABLE_FUNC float DC_FUNC(pdf_diffuse)(SurfaceInteraction* si, void* mat_data)
 {
     const float cosine = fmaxf(0.0f, dot(si->n, si->wo));
-    return cosine / M_PIf;
+    return cosine / math::pi;
 }

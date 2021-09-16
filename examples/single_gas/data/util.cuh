@@ -7,17 +7,12 @@
 #include <prayground/optix/macros.h>
 #include "../params.h"
 
+using namespace prayground::builtin;
+
 namespace prayground {
 
 extern "C" {
 __constant__ LaunchParams params;
-}
-
-static DEVICE void init_rand_state(SurfaceInteraction* si, uint2 launch_dim, uint3 launch_idx, unsigned int frame)
-{
-    curandState_t state;
-    si->curand_state = &state;
-    curand_init(launch_idx.y * launch_dim.x + launch_idx.x, frame, 0, si->curand_state);
 }
 
 template <typename T>
@@ -40,11 +35,11 @@ INLINE DEVICE void packPointer(void* ptr, unsigned int& i0, unsigned int& i1)
     i1 = uptr & 0x00000000ffffffff;
 }
 
-INLINE DEVICE prayground::SurfaceInteraction* getSurfaceInteraction()
+INLINE DEVICE SurfaceInteraction* getSurfaceInteraction()
 {
     const unsigned int u0 = optixGetPayload_0();
     const unsigned int u1 = optixGetPayload_1();
-    return reinterpret_cast<prayground::SurfaceInteraction*>( unpackPointer(u0, u1) ); 
+    return reinterpret_cast<SurfaceInteraction*>( unpackPointer(u0, u1) ); 
 }
 
 // -------------------------------------------------------------------------------
@@ -54,7 +49,7 @@ INLINE DEVICE void trace(
     float3                 ray_direction,
     float                  tmin,
     float                  tmax,
-    prayground::SurfaceInteraction*    si
+    SurfaceInteraction*    si
 ) 
 {
     unsigned int u0, u1;

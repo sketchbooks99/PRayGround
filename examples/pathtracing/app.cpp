@@ -184,8 +184,8 @@ void App::setup()
     {
         shared_ptr<Shape> shape;
         shared_ptr<Material> material;
-        unsigned int sample_bsdf_id;
-        unsigned int pdf_id;
+        uint32_t sample_bsdf_id;
+        uint32_t pdf_id;
     };
 
     uint32_t sbt_idx = 0;
@@ -461,6 +461,7 @@ void App::update()
     params.subframe_index++;
     d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);
 
+    // OptiX レイトレーシングカーネルの起動
     optixLaunch(
         static_cast<OptixPipeline>(pipeline),
         stream,
@@ -475,6 +476,7 @@ void App::update()
     CUDA_CHECK(cudaStreamSynchronize(stream));
     CUDA_SYNC_CHECK();
 
+    // レンダリング結果をデバイスから取ってくる
     result_bitmap.copyFromDevice();
     normal_bitmap.copyFromDevice();
     albedo_bitmap.copyFromDevice();

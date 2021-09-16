@@ -3,30 +3,23 @@
 #include <optix.h>
 #include <prayground/math/vec_math.h>
 #include <prayground/optix/sbt.h>
-#include <prayground/core/interaction.h>
 
 namespace prayground {
 
-struct EmitterInfo
+struct Light
 {
-    float3 corner;
-    float3 v1, v2;
-    float3 normal;
-    float3 emission;
+    float3 pos;
 };
 
 struct LaunchParams 
 {
     unsigned int width, height;
-    unsigned int samples_per_launch;
-    unsigned int max_depth;
-    int subframe_index;
     uchar4* result_buffer;
-    float4* accum_buffer;
     float3* normal_buffer;
     float3* albedo_buffer;
 
-    EmitterInfo emitter_info;
+    Light light;
+
     OptixTraversableHandle handle;
 };
 
@@ -37,6 +30,8 @@ struct CameraData
     float3 up;
     float fov;
     float aspect;
+    float nearclip; 
+    float farclip;
 };
 
 struct RaygenData
@@ -44,12 +39,16 @@ struct RaygenData
     CameraData camera;
 };
 
+struct TextureData
+{
+    void* data;
+    unsigned int prg_id;
+};
+
 struct HitgroupData
 {
     void* shape_data;
-    void* surface_data;
-    unsigned int surface_program_id;
-    SurfaceType surface_type;
+    TextureData tex_data;
 };
 
 struct MissData

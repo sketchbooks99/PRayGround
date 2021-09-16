@@ -44,12 +44,12 @@ struct LaunchParams
 
 struct CameraData
 {
-    float3 origin; 
-    float3 lookat; 
+    float3 origin;
+    float3 lookat;
     float3 up;
     float fov;
     float aspect;
-    float nearclip; 
+    float nearclip;
     float farclip;
 };
 

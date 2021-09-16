@@ -14,18 +14,15 @@ extern "C" __device__ void __continuation_callable__diffuse(SurfaceInteraction* 
     if (diffuse->twosided)
         si->n = faceforward(si->n, -si->wi, si->n);
 
+    unsigned int seed = si->seed;
     si->trace_terminate = false;
-    {
-        // const float z1 = curand_uniform(si->curand_state);
-        // const float z2 = curand_uniform(si->curand_state);
-
-        float3 wi = randomSampleHemisphere(si->curand_state);
-        Onb onb(si->n);
-        onb.inverseTransform(wi);
-        si->wo = normalize(wi);
-    }
+    float3 wi = randomSampleHemisphere(seed);
+    Onb onb(si->n);
+    onb.inverseTransform(wi);
+    si->wo = normalize(wi);
     si->attenuation = optixDirectCall<float3, SurfaceInteraction*, void*>(
         diffuse->tex_program_id, si, diffuse->tex_data);
+    si->seed = seed;
 }
 
 extern "C" __device__ void __continuation_callable__dielectric(SurfaceInteraction* si, void* surface_data)
@@ -46,7 +43,8 @@ extern "C" __device__ void __continuation_callable__dielectric(SurfaceInteractio
 
     float reflect_prob = fresnel(cosine, ni, nt);
 
-    if (cannot_refract || reflect_prob > curand_uniform(si->curand_state))
+    unsigned int seed = si->seed;
+    if (cannot_refract || reflect_prob > rnd(seed))
         si->wo = reflect(si->wi, outward_normal);
     else    
         si->wo = refract(si->wi, outward_normal, cosine, ni, nt);
@@ -54,6 +52,7 @@ extern "C" __device__ void __continuation_callable__dielectric(SurfaceInteractio
     si->trace_terminate = false;
     si->attenuation *= optixDirectCall<float3, SurfaceInteraction*, void*>(
         dielectric->tex_program_id, si, dielectric->tex_data);
+    si->seed = seed;
 }
 
 extern "C" __device__ void __direct_callable__area_emitter(SurfaceInteraction* si, void* surface_data)

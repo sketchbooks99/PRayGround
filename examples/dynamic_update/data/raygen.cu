@@ -11,10 +11,19 @@ static __forceinline__ __device__ void cameraFrame(const CameraData& camera, flo
     U = normalize(cross(W, camera.up));
     V = normalize(cross(W, U));
 
-    float vlen = wlen * tanf(0.5f * camera.fov * M_PIf / 180.0f);
+    float vlen = wlen * tanf(0.5f * camera.fov * math::pi / 180.0f);
     V *= vlen;
     float ulen = vlen * camera.aspect;
     U *= ulen;
+}
+
+static __forceinline__ __device__ void getCameraRay(const CameraData& camera, const float x, const float y, float3& ro, float3& rd)
+{
+    float3 U, V, W;
+    cameraFrame(camera, U, V, W);
+
+    rd = normalize(x * U + y * V + W);
+    ro = camera.origin;
 }
 
 extern "C" __device__ void __raygen__pinhole()
@@ -23,105 +32,43 @@ extern "C" __device__ void __raygen__pinhole()
     float3 U, V, W;
     cameraFrame(raygen->camera, U, V, W);
 
-    const int subframe_index = params.subframe_index;
-
     const uint3 idx = optixGetLaunchIndex();
 
-    float3 result = make_float3(0.0f, 0.0f, 0.0f);
+    float3 color = make_float3(0.0f, 0.0f, 0.0f);
     float3 normal = make_float3(0.0f);
     float3 albedo = make_float3(0.0f);
-    int i = params.samples_per_launch;
 
-    do
-    {
-        SurfaceInteraction si;
-        init_rand_state(&si, make_uint2(params.width, params.height), idx, subframe_index + i);
-        const float2 subpixel_jitter = make_float2(curand_uniform(si.curand_state) - 0.5f, curand_uniform(si.curand_state) - 0.5f);
+    SurfaceInteraction si;
 
-        const float2 d = 2.0f * make_float2(
-            (static_cast<float>(idx.x) + subpixel_jitter.x) / static_cast<float>(params.width),
-            (static_cast<float>(idx.y) + subpixel_jitter.y) / static_cast<float>(params.height)
-        ) - 1.0f;
-        float3 rd = normalize(d.x * U + d.y * V + W);
-        float3 ro = raygen->camera.origin;
+    const float2 d = 2.0f * make_float2(
+        static_cast<float>(idx.x) / static_cast<float>(params.width),
+        static_cast<float>(idx.y) / static_cast<float>(params.height)
+    ) - 1.0f;
+    float3 ro, rd;
+    getCameraRay(raygen->camera, d.x, d.y, ro, rd);
 
-        si.emission = make_float3(0.0f);
-        si.trace_terminate = false;
-        si.radiance_evaled = false;
-        si.surface_type = SurfaceType::None;
-        si.attenuation = make_float3(1.0f);
+    trace(
+        params.handle,
+        ro, 
+        rd, 
+        0.01f, 
+        1e16f, 
+        &si
+    );
 
-        int depth = 0;
-        for ( ;; ) {
-            trace(
-                params.handle,
-                ro, 
-                rd, 
-                0.01f, 
-                1e16f, 
-                &si 
-            );
-
-            if ( si.surface_type == SurfaceType::AreaEmitter )
-            {
-                // Evaluating emission from emitter
-                optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_property.program_id, 
-                    &si, 
-                    si.surface_property.data
-                );
-
-                if (depth == 0) {
-                    albedo = si.emission;
-                    normal = si.n;
-                }
-            }
-            else if ( si.surface_type == SurfaceType::Material )
-            {
-                // Sampling surface
-                optixContinuationCall<void, SurfaceInteraction*, void*>(
-                    si.surface_property.program_id, 
-                    &si,
-                    si.surface_property.data
-                );
-
-                if (depth == 0) {
-                    albedo = si.attenuation;
-                    normal = si.n;
-                }
-            }
-
-            result += si.emission * si.attenuation;
-
-            if (si.trace_terminate || depth >= params.max_depth)
-                break;
-            
-            ro = si.p;
-            rd = si.wo;
-
-            ++depth;
-        }
-    } while (--i);
+    normal = si.n;
+    color = si.shading_val;
+    albedo = si.albedo;
 
     const uint3 launch_index = optixGetLaunchIndex();
     const unsigned int image_index = launch_index.y * params.width + launch_index.x;
 
-    if (result.x != result.x) result.x = 0.0f;
-    if (result.y != result.y) result.y = 0.0f;
-    if (result.z != result.z) result.z = 0.0f;
-
-    float3 accum_color = result / static_cast<float>(params.samples_per_launch);
-
-    if (subframe_index > 0)
-    {
-        const float a = 1.0f / static_cast<float>(subframe_index + 1);
-        const float3 accum_prev = make_float3(params.accum_buffer[image_index]);
-        accum_color = lerp(accum_prev, accum_color, a);
-    }
+    if (color.x != color.x) color.x = 0.0f;
+    if (color.y != color.y) color.y = 0.0f;
+    if (color.z != color.z) color.z = 0.0f;
     
-    params.accum_buffer[image_index] = make_float4(accum_color, 1.0f);
-    uchar3 color = make_color(accum_color);
-    params.result_buffer[image_index] = make_uchar4(color.x, color.y, color.z, 255);
+    uchar3 result = make_color(color);
+    params.result_buffer[image_index] = make_uchar4(result.x, result.y, result.z, 255);
     params.normal_buffer[image_index] = normal;
     params.albedo_buffer[image_index] = albedo;
 }

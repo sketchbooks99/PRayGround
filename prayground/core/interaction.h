@@ -6,8 +6,6 @@
 
 namespace prayground {
 
-// namespace builtin { 
-
 enum class SurfaceType : unsigned int {
     // None type ( default )
     None            = 0,        
@@ -90,8 +88,6 @@ struct SurfaceInteraction {
     bool radiance_evaled; // For NEE
     bool is_specular;
 };
-
-// } // ::builtin
 
 } // ::prayground
 

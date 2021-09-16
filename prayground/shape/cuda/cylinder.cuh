@@ -18,14 +18,14 @@ static INLINE DEVICE float2 getUV(
     {
         const float r = sqrtf(p.x*p.x + p.z*p.z) / radius;
         const float theta = atan2(p.z, p.x);
-        float u = 1.0f - (theta + M_PIf/2.0f) / M_PIf;
+        float u = 1.0f - (theta + math::pi/2.0f) / math::pi;
         return make_float2(u, r);
     } 
     else
     {
         const float theta = atan2(p.z, p.x);
         const float v = (p.y + height / 2.0f) / height;
-        float u = 1.0f - (theta + M_PIf/2.0f) / M_PIf;
+        float u = 1.0f - (theta + math::pi/2.0f) / math::pi;
         return make_float2(u, v);
     }
 }

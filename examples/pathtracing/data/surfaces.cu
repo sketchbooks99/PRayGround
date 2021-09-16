@@ -34,13 +34,13 @@ extern "C" __device__ float3 __continuation_callable__bsdf_diffuse(SurfaceIntera
     const float3 albedo = optixDirectCall<float3, SurfaceInteraction*, void*>(diffuse->tex_program_id, si, diffuse->tex_data);
     si->albedo = albedo;
     const float cosine = fmaxf(0.0f, dot(si->n, si->wo));
-    return albedo * (cosine / M_PIf);
+    return albedo * (cosine / math::pi);
 }
 
 extern "C" __device__ float __direct_callable__pdf_diffuse(SurfaceInteraction* si, void* mat_data)
 {
     const float cosine = fmaxf(0.0f, dot(si->n, si->wo));
-    return cosine / M_PIf;
+    return cosine / math::pi;
 }
 
 // Dielectric --------------------------------------------------------------------------------------------

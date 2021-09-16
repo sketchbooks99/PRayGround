@@ -44,15 +44,15 @@ extern "C" __device__ void __closesthit__plane()
     SurfaceInteraction* si = getSurfaceInteraction();
 
     si->p = ray.at(ray.tmax);
-    si->n = world_n;
-    si->wi = ray.d;
+    si->n = faceforward(world_n, -ray.d, world_n);
     si->uv = uv;
+    float3 albedo = optixDirectCall<float3, SurfaceInteraction*, void*>(
+        data->tex_data.prg_id, si, data->tex_data.data
+    );
+    si->albedo = albedo;
 
-    si->surface_type = data->surface_type;
-    si->surface_property = {
-        data->surface_data,
-        data->surface_program_id
-    };
+    const float3 light_dir = normalize(params.light.pos - si->p);
+    si->shading_val = 0.8f * fmaxf(0.0f, dot(light_dir, si->n)) * albedo + 0.2f * albedo;
 }
 
 extern "C" __device__ void __closesthit__mesh()
@@ -83,22 +83,22 @@ extern "C" __device__ void __closesthit__mesh()
 
     SurfaceInteraction* si = getSurfaceInteraction();
     si->p = ray.at(ray.tmax);
-    si->n = world_n;
-    si->wi = ray.d;
+    si->n = faceforward(world_n, -ray.d, world_n);
     si->uv = texcoords;
+    float3 albedo = optixDirectCall<float3, SurfaceInteraction*, void*>(
+        data->tex_data.prg_id, si, data->tex_data.data
+    );
+    si->albedo = albedo;
 
-    si->surface_type = data->surface_type;
-    si->surface_property = {
-        data->surface_data,
-        data->surface_program_id
-    };
+    const float3 light_dir = normalize(params.light.pos - si->p);
+    si->shading_val = 0.8f * fmaxf(0.0f, dot(light_dir, si->n)) * albedo + 0.2f * albedo;
 }
 
 static __forceinline__ __device__ float2 getUV(const float3& p) {
     float phi = atan2(p.z, p.x);
     float theta = asin(p.y);
-    float u = 1.0f - (phi + M_PIf) / (2.0f * M_PIf);
-    float v = 1.0f - (theta + M_PIf / 2.0f) / M_PIf;
+    float u = 1.0f - (phi + math::pi) / (2.0f * math::pi);
+    float v = 1.0f - (theta + math::pi / 2.0f) / math::pi;
     return make_float2(u, v);
 }
 
@@ -153,18 +153,12 @@ extern "C" __device__ void __closesthit__sphere() {
 
     SurfaceInteraction* si = getSurfaceInteraction();
     si->p = ray.at(ray.tmax);
-    si->n = world_n;
-    si->wi = ray.d;
+    si->n = faceforward(world_n, -ray.d, world_n);
     si->uv = getUV(local_n);
-
-    si->surface_type = data->surface_type;
-    si->surface_property = {
-        data->surface_data,
-        data->surface_program_id
-    };
-}
-
-extern "C" __device__ void __closesthit__shadow()
-{
-    optixSetPayload_0(1);
+    float3 albedo = optixDirectCall<float3, SurfaceInteraction*, void*>(
+        data->tex_data.prg_id, si, data->tex_data.data
+    );
+    si->albedo = albedo;
+    const float3 light_dir = normalize(params.light.pos - si->p);
+    si->shading_val = 0.8f * fmaxf(0.0f, dot(light_dir, si->n)) * albedo + 0.2f * albedo;
 }

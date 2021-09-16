@@ -46,5 +46,4 @@ private:
     bool camera_update;
 
     EnvironmentEmitter env;
-
 };

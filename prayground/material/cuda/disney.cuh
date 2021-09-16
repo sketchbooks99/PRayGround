@@ -80,13 +80,13 @@ CALLABLE_FUNC float3 CC_FUNC(bsdf_disney)(SurfaceInteraction* si, void* mat_data
     const float Fd90 = 0.5f + 2.0f * disney->roughness * LdotH*LdotH;
     const float FVd90 = fresnelSchlickT(NdotV, Fd90);
     const float FLd90 = fresnelSchlickT(NdotL, Fd90);
-    const float3 f_diffuse = (base_color / M_PIf) * FVd90 * FLd90;
+    const float3 f_diffuse = (base_color / math::pi) * FVd90 * FLd90;
 
     // Subsurface
     const float Fss90 = disney->roughness * LdotH*LdotH;
     const float FVss90 = fresnelSchlickT(NdotV, Fss90);
     const float FLss90 = fresnelSchlickT(NdotL, Fss90); 
-    const float3 f_subsurface = (base_color / M_PIf) * 1.25f * (FVss90 * FLss90 * ((1.0f / (NdotV * NdotL)) - 0.5f) + 0.5f);
+    const float3 f_subsurface = (base_color / math::pi) * 1.25f * (FVss90 * FLss90 * ((1.0f / (NdotV * NdotL)) - 0.5f) + 0.5f);
 
     // Sheen
     const float3 rho_tint = base_color / luminance(base_color);
@@ -143,7 +143,7 @@ CALLABLE_FUNC float DC_FUNC(pdf_disney)(SurfaceInteraction* si, void* mat_data)
     const float pdf_Dcc = GTR1(NdotH, alpha_cc);
     const float ratio = 1.0f / (1.0f + disney->clearcoat);
     const float pdf_specular = (pdf_Dcc + ratio * (pdf_Ds - pdf_Dcc)) / (4.0f * NdotH);
-    const float pdf_diffuse = NdotL / M_PIf;
+    const float pdf_diffuse = NdotL / math::pi;
 
     return diffuse_ratio * pdf_diffuse + specular_ratio * pdf_specular;
 }

@@ -3,6 +3,7 @@
 #include <optix.h>
 #include <cuda_runtime.h>
 #include <prayground/math/vec_math.h>
+#include <prayground/math/util.h>
 #include <prayground/optix/helpers.h>
 #include <prayground/optix/macros.h>
 #include "../params.h"
@@ -13,12 +14,14 @@ extern "C" {
 __constant__ LaunchParams params;
 }
 
-static DEVICE void init_rand_state(SurfaceInteraction* si, uint2 launch_dim, uint3 launch_idx, unsigned int frame)
+struct SurfaceInteraction
 {
-    curandState_t state;
-    si->curand_state = &state;
-    curand_init(launch_idx.y * launch_dim.x + launch_idx.x, frame, 0, si->curand_state);
-}
+    float3 p;
+    float3 n;
+    float3 albedo;
+    float3 shading_val;
+    float2 uv;
+};
 
 template <typename T>
 INLINE DEVICE void swap(T& a, T& b)
@@ -40,11 +43,11 @@ INLINE DEVICE void packPointer(void* ptr, unsigned int& i0, unsigned int& i1)
     i1 = uptr & 0x00000000ffffffff;
 }
 
-INLINE DEVICE prayground::SurfaceInteraction* getSurfaceInteraction()
+INLINE DEVICE SurfaceInteraction* getSurfaceInteraction()
 {
     const unsigned int u0 = optixGetPayload_0();
     const unsigned int u1 = optixGetPayload_1();
-    return reinterpret_cast<prayground::SurfaceInteraction*>( unpackPointer(u0, u1) ); 
+    return reinterpret_cast<SurfaceInteraction*>( unpackPointer(u0, u1) ); 
 }
 
 // -------------------------------------------------------------------------------
@@ -54,11 +57,11 @@ INLINE DEVICE void trace(
     float3                 ray_direction,
     float                  tmin,
     float                  tmax,
-    prayground::SurfaceInteraction*    si
+    SurfaceInteraction*    si
 ) 
 {
     unsigned int u0, u1;
-    packPointer( si, u0, u1 );
+    packPointer(si, u0, u1);
     optixTrace(
         handle,
         ray_origin,
@@ -71,7 +74,7 @@ INLINE DEVICE void trace(
         0,        
         1,           
         0,        
-        u0, u1 );	
+        u0, u1);	
 }
 
 }

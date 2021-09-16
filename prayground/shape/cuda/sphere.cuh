@@ -11,8 +11,8 @@ namespace prayground {
 static INLINE DEVICE float2 getUV(const float3& p) {
     float phi = atan2(p.z, p.x);
     float theta = asin(p.y);
-    float u = 1.0f - (phi + M_PIf) / (2.0f * M_PIf);
-    float v = 1.0f - (theta + M_PIf/2.0f) / M_PIf;
+    float u = 1.0f - (phi + math::pi) / (2.0f * math::pi);
+    float v = 1.0f - (theta + math::pi/2.0f) / math::pi;
     return make_float2(u, v);
 }
 

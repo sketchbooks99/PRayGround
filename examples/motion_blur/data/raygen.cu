@@ -11,7 +11,7 @@ static __forceinline__ __device__ void cameraFrame(const CameraData& camera, flo
     U = normalize(cross(W, camera.up));
     V = normalize(cross(W, U));
 
-    float vlen = wlen * tanf(0.5f * camera.fov * M_PIf / 180.0f);
+    float vlen = wlen * tanf(0.5f * camera.fov * math::pi / 180.0f);
     V *= vlen;
     float ulen = vlen * camera.aspect;
     U *= ulen;

@@ -50,16 +50,16 @@ public:
     HOSTDEVICE Matrix(const float (&data)[12]);
     HOSTDEVICE Matrix(const std::initializer_list<T>& list);
 
-    HOSTDEVICE T  operator[](unsigned int i) const;
-    HOSTDEVICE T& operator[](unsigned int i);
+    HOSTDEVICE const T& operator[](unsigned int i) const;
+    HOSTDEVICE       T& operator[](unsigned int i);
 
     HOSTDEVICE Matrix& operator=( const Matrix& a );
 
     HOSTDEVICE void setColumn(const floatN& v, unsigned int col_idx);
     HOSTDEVICE void setRow(const floatN& v, unsigned int row_idx);
 
-    HOSTDEVICE T  get(unsigned int i, unsigned int j) const;
-    HOSTDEVICE T& get(unsigned int i, unsigned int j);
+    HOSTDEVICE const T& get(unsigned int i, unsigned int j) const;
+    HOSTDEVICE       T& get(unsigned int i, unsigned int j);
 
     HOSTDEVICE void setData(const T data[N*N]);
 
@@ -288,7 +288,7 @@ INLINE HOSTDEVICE Matrix<T, N>& Matrix<T, N>::operator=(const Matrix<T, N>& a)
 
 // ----------------------------------------------------------------------------
 template <typename T, unsigned int N>
-INLINE HOSTDEVICE T Matrix<T, N>::operator[](const unsigned int i) const
+INLINE HOSTDEVICE const T& Matrix<T, N>::operator[](const unsigned int i) const
 {
     return m_data[i];
 }
@@ -301,7 +301,7 @@ INLINE HOSTDEVICE T& Matrix<T, N>::operator[](const unsigned int i)
 
 // ----------------------------------------------------------------------------
 template <typename T, unsigned int N>
-INLINE HOSTDEVICE T Matrix<T, N>::get(unsigned int i, unsigned int j) const
+INLINE HOSTDEVICE const T& Matrix<T, N>::get(unsigned int i, unsigned int j) const
 {
     unsigned int idx = i * N + j;
     return m_data[idx];

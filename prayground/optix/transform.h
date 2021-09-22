@@ -21,8 +21,6 @@ public:
     Transform(const OptixMatrixMotionTransform& matrix_motion_transform);
     Transform(const OptixSRTMotionTransform& srt_motion_transform);
     
-    // 逆行列は自動で設定されるようにする
-    // 需要があれば逆行列も設定できるようにする？
     void setStaticTransform(const Matrix4f& m);
     void setStaticTransform(const float m[12]);
     

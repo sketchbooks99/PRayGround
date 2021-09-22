@@ -146,28 +146,26 @@ extern "C" __device__ void __raygen__pinhole()
                     &si, 
                     to_light // un-normalized ray from surface
                 );
-
-                if (dot)
                 
                 // BSDFによる重点サンプリング
-                // optixDirectCall<void, SurfaceInteraction*, void*>(
-                //     si.surface_info.sample_id,
-                //     &si,
-                //     si.surface_info.data
-                // );
+                optixDirectCall<void, SurfaceInteraction*, void*>(
+                    si.surface_info.sample_id,
+                    &si,
+                    si.surface_info.data
+                );
                 
                 // // BSDFのPDFを評価
-                // float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*>(
-                //     si.surface_info.pdf_id,
-                //     &si,
-                //     si.surface_info.data
-                // );
+                float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*>(
+                    si.surface_info.pdf_id,
+                    &si,
+                    si.surface_info.data
+                );
 
                 // // MISの重み計算
-                // float light_weight = powerHeuristic(light_pdf, bsdf_pdf);
-                // if (rnd(seed) < light_weight)
-                //     si.wo = normalize(to_light);
-                si.wo = normalize(to_light);
+                float light_weight = powerHeuristic(light_pdf, bsdf_pdf);
+                if (rnd(seed) < light_weight)
+                    si.wo = normalize(to_light);
+                si.seed = seed;
     
                 // BSDFの評価
                 float3 bsdf_val = optixContinuationCall<float3, SurfaceInteraction*, void*>(
@@ -176,10 +174,11 @@ extern "C" __device__ void __raygen__pinhole()
                     si.surface_info.data
                 );
 
-                // const float pdf_val = light_weight * light_pdf + (1.0f - light_weight) * bsdf_pdf;
-                const float pdf_val = light_pdf;
+                const float pdf_val = light_weight * light_pdf + (1.0f - light_weight) * bsdf_pdf;
+                if (pdf_val <= 0.0f)
+                    break;
                 
-                throughput *= bsdf_val / bsdf_pdf;
+                throughput *= bsdf_val / pdf_val;
             }
 
             // プライマリーレイ以外ではtmaxは大きくしておく

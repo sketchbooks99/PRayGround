@@ -169,7 +169,9 @@ extern "C" __device__ void __raygen__pinhole()
                 float light_weight = powerHeuristic(light_pdf, bsdf_pdf);
                 if (rnd(seed) < light_weight)
                     si.wo = normalize(to_light);
-                si.wo = normalize(to_light);
+
+                //if (light_id == 0)
+                //    printf("light_pdf: %f, bsdf_pdf: %f, light_weight: %f\n", light_pdf, bsdf_pdf, light_weight);
 
                 // BSDFの評価
                 float3 bsdf_val = optixContinuationCall<float3, SurfaceInteraction*, void*>(
@@ -178,10 +180,9 @@ extern "C" __device__ void __raygen__pinhole()
                     si.surface_info.data
                 );
 
-                // const float pdf_val = light_weight * light_pdf + (1.0f - light_weight) * bsdf_pdf;
-                const float pdf_val = light_pdf;
+                const float pdf_val = light_weight * light_pdf + (1.0f - light_weight) * bsdf_pdf;
                 
-                throughput *= bsdf_val;
+                throughput *= bsdf_val / pdf_val;
             }
 
             if (depth == 0) {

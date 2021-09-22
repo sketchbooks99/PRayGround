@@ -65,16 +65,23 @@ extern "C" __device__ float __direct_callable__pdf_plane(AreaEmitterInfo area_in
     // 現状では正しくない．minとmaxをworld空間に動かしても正確な面積は求まらない．
     // 代替案1: scale情報をAreaEmitterInfoを介して渡す？
     const float3 world_min = area_info.objToWorld.pointMul(make_float3(plane_data->min.x, 0.0f, plane_data->min.y));
-    const float3 world_max = area_info.objToWorld.pointMul(make_float3(plane_data->max.y, 0.0f, plane_data->max.y));
+    const float3 world_max = area_info.objToWorld.pointMul(make_float3(plane_data->max.x, 0.0f, plane_data->max.y));
     const float area = (world_max.x - world_min.x) * (world_max.z - world_min.z);
-    const float distance_squared = math::sqr(length(to_light));
-    const float cosine = fabs(dot(si->n, normalize(to_light)));
+    const float distance_squared = dot(to_light, to_light);
+    if (dot(si->n, normalize(to_light)) < 0.0f)
+        return 0.0f;
+    const float3 p0 = make_float3(plane_data->min.x, 0.0f, plane_data->min.y);
+    const float3 p1 = make_float3(plane_data->max.x, 0.0f, plane_data->min.y);
+    const float3 p2 = make_float3(plane_data->min.x, 0.0f, plane_data->max.y);
+    const float3 edge0 = p1 - p0;
+    const float3 edge1 = p2 - p0;
+    const float3 world_n = area_info.objToWorld.normalMul(normalize(cross(edge0, edge1)));
+    const float cosine = fabs(dot(normalize(world_n), normalize(to_light)));
     if (cosine < math::eps)
         return 0.0f;
-    return distance_squared / cosine * area * math::pi;
+    return distance_squared / (cosine * area);
 }
 
-// グローバル空間における si.p -> 光源上の点 のベクトルを返す
 extern "C" __device__ float3 __direct_callable__rnd_sample_plane(AreaEmitterInfo area_info, SurfaceInteraction* si)
 {
     const PlaneData* plane_data = reinterpret_cast<PlaneData*>(area_info.shape_data);
@@ -84,9 +91,14 @@ extern "C" __device__ float3 __direct_callable__rnd_sample_plane(AreaEmitterInfo
     // 平面光源上のランダムな点を取得
     const float3 rnd_p = make_float3(rnd(seed, plane_data->min.x, plane_data->max.x), 0.0f, rnd(seed, plane_data->min.y, plane_data->max.y));
     float3 to_light = rnd_p - local_p;
-    to_light = area_info.objToWorld.vectorMul(to_light);
+    const float3 world_to_light = area_info.objToWorld.vectorMul(to_light);
+    printf("local_to_light: %f %f %f, world_to_light: %f %f %f\n objToWorld: %f %f %f %f, %f %f %f %f, %f %f %f %f\n", 
+        to_light.x, to_light.y, to_light.z, world_to_light.x, world_to_light.y, world_to_light.z, 
+        area_info.objToWorld[0], area_info.objToWorld[1], area_info.objToWorld[2], area_info.objToWorld[3],
+        area_info.objToWorld[4], area_info.objToWorld[5], area_info.objToWorld[6], area_info.objToWorld[7],
+        area_info.objToWorld[8], area_info.objToWorld[9], area_info.objToWorld[10], area_info.objToWorld[11]);
     si->seed = seed;
-    return to_light;
+    return world_to_light;
 }
 
 // Sphere -------------------------------------------------------------------------------

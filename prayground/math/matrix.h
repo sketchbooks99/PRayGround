@@ -383,10 +383,10 @@ INLINE HOSTDEVICE float3 Matrix<T, N>::pointMul(const float3& p) const
 template<>
 INLINE HOSTDEVICE float3 Matrix<float, 4>::pointMul(const float3& p) const
 {
-    float x = m_data[0]  * p.x + m_data[1]  * p.x + m_data[2]  * p.z + m_data[3];
-    float y = m_data[4]  * p.x + m_data[5]  * p.x + m_data[6]  * p.z + m_data[7];
-    float z = m_data[8]  * p.x + m_data[9]  * p.x + m_data[10] * p.z + m_data[11];
-    float w = m_data[12] * p.x + m_data[13] * p.x + m_data[14] * p.z + m_data[15];
+    float x = m_data[0]  * p.x + m_data[1]  * p.y + m_data[2]  * p.z + m_data[3];
+    float y = m_data[4]  * p.x + m_data[5]  * p.y + m_data[6]  * p.z + m_data[7];
+    float z = m_data[8]  * p.x + m_data[9]  * p.y + m_data[10] * p.z + m_data[11];
+    float w = m_data[12] * p.x + m_data[13] * p.y + m_data[14] * p.z + m_data[15];
 
     // w == 0のときのAssertionは必要
     if (w == 1.0f)
@@ -405,11 +405,10 @@ INLINE HOSTDEVICE float3 Matrix<T, N>::vectorMul(const float3& n) const
 template<>
 INLINE HOSTDEVICE float3 Matrix<float, 4>::vectorMul(const float3& v) const
 {
-    float x = v.x, y = v.y, z = v.z;
     return make_float3(
-        m_data[0] * x + m_data[1] * y + m_data[2]  * z,        
-        m_data[4] * x + m_data[5] * y + m_data[6]  * z,
-        m_data[8] * x + m_data[9] * y + m_data[10] * z
+        m_data[0] * v.x + m_data[1] * v.y + m_data[2]  * v.z, 
+        m_data[4] * v.x + m_data[5] * v.y + m_data[6]  * v.z,
+        m_data[8] * v.x + m_data[9] * v.y + m_data[10] * v.z
     );
 }
 

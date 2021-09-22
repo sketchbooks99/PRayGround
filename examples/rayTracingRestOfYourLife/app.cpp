@@ -86,7 +86,7 @@ void App::setup()
     camera.setLookat(make_float3(278.0f, 278.0f, 0.0f));
     camera.setUp(make_float3(0.0f, 1.0f, 0.0f));
     camera.setFarClip(5000);
-    camera.setFov(35.0f);
+    camera.setFov(40.0f);
     camera.enableTracking(pgGetCurrentWindow());
 
     // Raygenプログラム

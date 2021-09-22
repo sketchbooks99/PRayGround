@@ -30,6 +30,7 @@ set(sources
   math/matrix.h
   math/vec_math.h
   math/util.h
+  math/random.h
 
   # App libraries ==========
   app/baseapp.h 

@@ -65,13 +65,21 @@ extern "C" __device__ float __direct_callable__pdf_plane(AreaEmitterInfo area_in
     // 現状では正しくない．minとmaxをworld空間に動かしても正確な面積は求まらない．
     // 代替案1: scale情報をAreaEmitterInfoを介して渡す？
     const float3 world_min = area_info.objToWorld.pointMul(make_float3(plane_data->min.x, 0.0f, plane_data->min.y));
-    const float3 world_max = area_info.objToWorld.pointMul(make_float3(plane_data->max.y, 0.0f, plane_data->max.y));
+    const float3 world_max = area_info.objToWorld.pointMul(make_float3(plane_data->max.x, 0.0f, plane_data->max.y));
     const float area = (world_max.x - world_min.x) * (world_max.z - world_min.z);
-    const float distance_squared = math::sqr(length(to_light));
-    const float cosine = dot(si->n, normalize(to_light));
-    if (cosine < 0.0f)
+    const float distance_squared = dot(to_light, to_light);
+    if (dot(si->n, normalize(to_light)) < 0.0f)
         return 0.0f;
-    return distance_squared / cosine * area * math::pi;
+    const float3 p0 = make_float3(plane_data->min.x, 0.0f, plane_data->min.y);
+    const float3 p1 = make_float3(plane_data->max.x, 0.0f, plane_data->min.y);
+    const float3 p2 = make_float3(plane_data->min.x, 0.0f, plane_data->max.y);
+    const float3 edge0 = p1 - p0;
+    const float3 edge1 = p2 - p0;
+    const float3 world_n = area_info.objToWorld.normalMul(normalize(cross(edge0, edge1)));
+    const float cosine = fabs(dot(normalize(world_n), normalize(to_light)));
+    if (cosine < math::eps)
+        return 0.0f;
+    return distance_squared / (cosine * area);
 }
 
 // グローバル空間における si.p -> 光源上の点 のベクトルを返す

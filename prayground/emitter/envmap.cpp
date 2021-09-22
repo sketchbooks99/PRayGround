@@ -9,8 +9,8 @@ void EnvironmentEmitter::copyToDevice()
 
     EnvironmentEmitterData data =
     {
-        m_texture->devicePtr(),
-        m_texture->programId()
+        .tex_data = m_texture->devicePtr(),
+        .tex_program_id = m_texture->programId()
     };
 
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_data), sizeof(EnvironmentEmitterData)));

@@ -376,6 +376,8 @@ function(PRAYGROUND_add_executalbe target_name_base target_name_var)
   if(USING_GNU_CXX)
     target_link_libraries( ${target_name} m ) # Explicitly link against math library (C samples don't do that by default)
   endif()
+
+  target_compile_definitions(${target_name} PRIVATE PRAYGROUND_ROOT_DIR="${PRAYGROUND_DIR}")
 endfunction()
 
 # Load PRAYGROUND library sources.
@@ -385,13 +387,17 @@ add_subdirectory(prayground)
 add_subdirectory(prayground/ext)
 
 # Example apps
-add_subdirectory(examples/single_gas)
-add_subdirectory(examples/dynamic_update)
-add_subdirectory(examples/motion_blur)
+# add_subdirectory(examples/single_gas)
+# add_subdirectory(examples/dynamic_update)
+# add_subdirectory(examples/motion_blur)
 add_subdirectory(examples/pathtracing)
+add_subdirectory(examples/rayTracingRestOfYourLife)
 
 # Executable apps
 add_subdirectory(apps/empty-app)
+
+# Unit test
+add_subdirectory(unit_test/math)
 
 #################################################################
 

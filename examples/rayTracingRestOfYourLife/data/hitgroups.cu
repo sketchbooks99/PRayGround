@@ -68,8 +68,8 @@ extern "C" __device__ float __direct_callable__pdf_plane(AreaEmitterInfo area_in
     const float3 world_max = area_info.objToWorld.pointMul(make_float3(plane_data->max.y, 0.0f, plane_data->max.y));
     const float area = (world_max.x - world_min.x) * (world_max.z - world_min.z);
     const float distance_squared = math::sqr(length(to_light));
-    const float cosine = fabs(dot(si->n, normalize(to_light)));
-    if (cosine < math::eps)
+    const float cosine = dot(si->n, normalize(to_light));
+    if (cosine < 0.0f)
         return 0.0f;
     return distance_squared / cosine * area * math::pi;
 }

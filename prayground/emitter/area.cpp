@@ -22,10 +22,10 @@ void AreaEmitter::copyToDevice()
         m_texture->copyToDevice();
 
     AreaEmitterData data = {
-        m_texture->devicePtr(),
-        m_intensity,
-        m_twosided,
-        m_texture->programId()
+        .tex_data = m_texture->devicePtr(),
+        .intensity = m_intensity,
+        .twosided = m_twosided,
+        .tex_program_id = m_texture->programId()
     };
 
     CUDA_CHECK(cudaMalloc(&d_data, sizeof(AreaEmitterData)));
@@ -43,7 +43,7 @@ std::shared_ptr<Texture> AreaEmitter::texture() const
 
 void AreaEmitter::free()
 {
-
+    
 }
 
 }

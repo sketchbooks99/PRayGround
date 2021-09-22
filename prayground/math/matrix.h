@@ -346,25 +346,25 @@ INLINE HOSTDEVICE Matrix<T, N> Matrix<T, N>::inverse() const
 {
     Matrix<T, N> i_mat = Matrix<T, N>::identity();
     T* inv_data = i_mat.data();
-    Matrix<T, N> current_mat(*this);
+    Matrix<T, N> mat(*this);
     float tmp;
     for (unsigned int i = 0; i < N; i++)
     {
-        tmp = 1.0f / m_data[i * N + i];
+        tmp = 1.0f / mat[i * N + i];
         for (unsigned int j = 0; j < N; j++)
         {
-            current_mat[j * N + i] *= tmp;
-            inv_data[j * N + i] *= tmp;
+            mat[i * N + j] *= tmp;
+            inv_data[i * N + j] *= tmp;
         }
         for (unsigned int j = 0; j < N; j++)
         {
             if (i != j)
             {
-                tmp = current_mat[i * N + j];
+                tmp = mat[j * N + i];
                 for (unsigned int k = 0; k < N; k++)
                 {
-                    current_mat[k * N + j] -= current_mat[k * N + i] * tmp;
-                    inv_data[k * N + j] -= inv_data[k * N + i] * tmp;
+                    mat[j * N + k] -= mat[i * N + k] * tmp;
+                    inv_data[j * N + k] -= inv_data[i * N + k] * tmp;
                 }
             }
         }

@@ -48,9 +48,6 @@ extern "C" __device__ void __raygen__pinhole()
     unsigned seed = tea<4>(idx.x * params.width + idx.y, subframe_index);
 
     float3 result = make_float3(0.0f, 0.0f, 0.0f);
-    float3 normal = make_float3(0.0f);
-    float p_depth = 1.0f;
-    float3 albedo = make_float3(0.0f);
 
     int i = params.samples_per_launch;
 
@@ -129,7 +126,6 @@ extern "C" __device__ void __raygen__pinhole()
                     si.surface_info.data
                 );
                 throughput *= bsdf_val;
-                result += si.emission * throughput;
             }
             // Rough surface sampling with applying MIS
             else if ( +(si.surface_info.type & (SurfaceType::Rough | SurfaceType::Diffuse)) )
@@ -150,27 +146,29 @@ extern "C" __device__ void __raygen__pinhole()
                     &si, 
                     to_light // un-normalized ray from surface
                 );
+
+                if (dot)
                 
                 // BSDFによる重点サンプリング
-                optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.sample_id,
-                    &si,
-                    si.surface_info.data
-                );
+                // optixDirectCall<void, SurfaceInteraction*, void*>(
+                //     si.surface_info.sample_id,
+                //     &si,
+                //     si.surface_info.data
+                // );
                 
-                // BSDFのPDFを評価
-                float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*>(
-                    si.surface_info.pdf_id,
-                    &si,
-                    si.surface_info.data
-                );
+                // // BSDFのPDFを評価
+                // float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*>(
+                //     si.surface_info.pdf_id,
+                //     &si,
+                //     si.surface_info.data
+                // );
 
-                // MISの重み計算
-                float light_weight = powerHeuristic(light_pdf, bsdf_pdf);
-                if (rnd(seed) < light_weight)
-                    si.wo = normalize(to_light);
+                // // MISの重み計算
+                // float light_weight = powerHeuristic(light_pdf, bsdf_pdf);
+                // if (rnd(seed) < light_weight)
+                //     si.wo = normalize(to_light);
                 si.wo = normalize(to_light);
-
+    
                 // BSDFの評価
                 float3 bsdf_val = optixContinuationCall<float3, SurfaceInteraction*, void*>(
                     si.surface_info.bsdf_id,
@@ -181,16 +179,7 @@ extern "C" __device__ void __raygen__pinhole()
                 // const float pdf_val = light_weight * light_pdf + (1.0f - light_weight) * bsdf_pdf;
                 const float pdf_val = light_pdf;
                 
-                throughput *= bsdf_val;
-            }
-
-            if (depth == 0) {
-                albedo = si.albedo;
-                float3 op = si.p - ro;
-                float op_length = length(si.p - ro);
-                p_depth = dot(normalize(op), normalize(raygen->camera.lookat - ro)) * op_length;
-                p_depth = p_depth / raygen->camera.farclip;
-                normal = si.n;
+                throughput *= bsdf_val / bsdf_pdf;
             }
 
             // プライマリーレイ以外ではtmaxは大きくしておく
@@ -221,7 +210,4 @@ extern "C" __device__ void __raygen__pinhole()
     params.accum_buffer[image_index] = make_float4(accum_color, 1.0f);
     uchar3 color = make_color(reinhardToneMap(accum_color, params.white));
     params.result_buffer[image_index] = make_uchar4(color.x, color.y, color.z, 255);
-    params.normal_buffer[image_index] = normal;
-    params.albedo_buffer[image_index] = albedo;
-    params.depth_buffer[image_index] = p_depth;
 }

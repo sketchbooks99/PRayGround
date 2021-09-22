@@ -1,5 +1,6 @@
 #include "util.cuh"
 #include <prayground/core/color.h>
+#include <prayground/core/bsdf.h>
 #include "../params.h"
 
 using namespace prayground;
@@ -85,11 +86,11 @@ extern "C" __device__ void __raygen__pinhole()
 
             trace(
                 params.handle, 
-                ro, 
-                rd, 
+                ro,   
+                rd,
                 0.01f, 
                 tmax, 
-                0,
+                0,      // ray type
                 &si
             );
 
@@ -98,16 +99,7 @@ extern "C" __device__ void __raygen__pinhole()
                 break;
             }
 
-            if (depth == 0) {
-                float3 op = si.p - ro;
-                float op_length = length(si.p - ro);
-                p_depth = dot(normalize(op), normalize(raygen->camera.lookat - ro)) * op_length;
-                p_depth = p_depth / raygen->camera.farclip;
-                normal = si.n;
-            }
-            // プライマリーレイ以外ではtmaxは大きくしておく
-            tmax = 1e16f;
-
+            // Get emission from area emitter
             if ( si.surface_info.type == SurfaceType::AreaEmitter )
             {
                 // Evaluating emission from emitter
@@ -120,34 +112,88 @@ extern "C" __device__ void __raygen__pinhole()
                 if (si.trace_terminate)
                     break;
             }
-            else if ( +(si.surface_info.type & SurfaceType::Material) )
+            // Specular sampling
+            else if (+(si.surface_info.type & SurfaceType::Delta))
             {
                 // Sampling scattered direction
                 optixDirectCall<void, SurfaceInteraction*, void*>(
                     si.surface_info.sample_id, 
+                    &si, 
+                    si.surface_info.data
+                );
+                
+                // Evaluate bsdf
+                float3 bsdf_val = optixContinuationCall<float3, SurfaceInteraction*, void*>(
+                    si.surface_info.bsdf_id,
+                    &si, 
+                    si.surface_info.data
+                );
+                throughput *= bsdf_val;
+            }
+            // Rough surface sampling with applying MIS
+            else if ( +(si.surface_info.type & (SurfaceType::Rough | SurfaceType::Diffuse)) )
+            {
+                unsigned int seed = si.seed;
+                const int light_id = rnd_int(seed, 0, params.num_lights-1);
+                const AreaEmitterInfo light = params.lights[light_id];
+
+                const float3 to_light = optixDirectCall<float3, AreaEmitterInfo, SurfaceInteraction*>(
+                    light.sample_id, 
+                    light, 
+                    &si
+                );
+                // 面光源のPDFを評価
+                const float light_pdf = optixDirectCall<float, AreaEmitterInfo, SurfaceInteraction*, const float3&>(
+                    light.pdf_id, 
+                    light, 
+                    &si, 
+                    to_light // un-normalized ray from surface
+                );
+
+                // BSDFのPDFを評価
+                const float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*>(
+                    si.surface_info.pdf_id,
                     &si,
                     si.surface_info.data
                 );
 
-                // Evaluate bsdf 
+                // MISの重み計算
+                const float bsdf_weight = powerHeuristic(bsdf_pdf, light_pdf);
+
+                if (rnd(seed) < bsdf_weight)
+                {
+                    // BSDFによる重点サンプリング
+                    optixDirectCall<void, SurfaceInteraction*, void*>(
+                        si.surface_info.sample_id,
+                        &si,
+                        si.surface_info.data
+                    );
+                }
+                si.seed = seed;
+
+                // BSDFの評価
                 float3 bsdf_val = optixContinuationCall<float3, SurfaceInteraction*, void*>(
                     si.surface_info.bsdf_id, 
                     &si,
                     si.surface_info.data
                 );
-                
-                // Evaluate pdf
-                float pdf_val = optixDirectCall<float, SurfaceInteraction*, void*>(
-                    si.surface_info.pdf_id, 
-                    &si,
-                    si.surface_info.data
-                );
+
+                const float pdf_val = (1.0f - bsdf_weight) * light_pdf + bsdf_weight * bsdf_pdf;
                 
                 throughput *= bsdf_val / pdf_val;
             }
 
-            if (depth == 0)
+            if (depth == 0) {
                 albedo = si.albedo;
+                float3 op = si.p - ro;
+                float op_length = length(si.p - ro);
+                p_depth = dot(normalize(op), normalize(raygen->camera.lookat - ro)) * op_length;
+                p_depth = p_depth / raygen->camera.farclip;
+                normal = si.n;
+            }
+
+            // プライマリーレイ以外ではtmaxは大きくしておく
+            tmax = 1e16f;
             
             ro = si.p;
             rd = si.wo;

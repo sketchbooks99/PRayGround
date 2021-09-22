@@ -23,6 +23,23 @@
 
 namespace prayground {
 
+HOSTDEVICE INLINE float powerHeuristic(const float val1, const float val2)
+{
+    return val1 / (val1 + val2);
+}
+
+HOSTDEVICE INLINE float3 randomSampleToSphere(unsigned int& seed, const float radius, const float distance_squared)
+{
+    const float r1 = rnd(seed);
+    const float r2 = rnd(seed);
+    const float z = 1.0f + r2 * (sqrtf(1.0f - radius * radius / distance_squared) - 1.0f);
+
+    const float phi = 2.0f * math::pi * r1;
+    const float x = cosf(phi) * sqrtf(1.0f - z * z);
+    const float y = sinf(phi) * sqrtf(1.0f - z * z);
+    return make_float3(x, y, z);
+}
+
 HOSTDEVICE INLINE float3 randomSampleHemisphere(unsigned int& seed)
 {
     float a = rnd(seed) * 2.0f * math::pi;

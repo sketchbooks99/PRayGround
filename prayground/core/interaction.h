@@ -66,6 +66,9 @@ struct SurfaceInteraction {
     float3 wi;
     float3 wo;
 
+    /** Time of ray */
+    float t;
+
     /** Spectrum information of ray. */
     float3 spectrum;
 

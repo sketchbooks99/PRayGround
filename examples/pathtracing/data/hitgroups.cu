@@ -4,6 +4,8 @@
 #include <prayground/shape/sphere.h>
 #include <prayground/shape/cylinder.h>
 #include <prayground/core/ray.h>
+#include <prayground/core/onb.h>
+#include <prayground/core/bsdf.h>
 
 using namespace prayground;
 
@@ -51,20 +53,36 @@ extern "C" __device__ void __closesthit__plane()
     SurfaceInteraction* si = getSurfaceInteraction();
 
     si->p = ray.at(ray.tmax);
+    si->t = ray.tmax;
     si->n = world_n;
     si->wi = ray.d;
     si->uv = uv;
     si->surface_info = data->surface_info;
 }
 
-extern "C" __device__ float __continuation_callable__pdf_plane(AreaEmitterInfo areainfo, const float3& ro, const float3& rd)
+extern "C" __device__ float __direct_callable__pdf_plane(AreaEmitterInfo area_info, SurfaceInteraction* si, const float3& to_light)
 {
-    
+    /*const PlaneData* plane_data = reinterpret_cast<PlaneData*>(area_info.shape_data);
+    const float area = (plane_data->max.x - plane_data->min.x) * (plane_data->max.y - plane_data->min.y);
+    const float distance_squared = math::sqr(length(to_light));
+    const float cosine = dot(si->n, to_light);
+    if (cosine < math::eps)
+        return 0.0f;
+    return distance_squared / cosine * area;*/
+    return 0.0f;
 }
 
-extern "C" __device__ float3 __direct_callable__rnd_sample_plane(AreaEmitterInfo areaInfo)
+extern "C" __device__ float3 __direct_callable__rnd_sample_plane(AreaEmitterInfo area_info, SurfaceInteraction* si)
 {
-
+    /*const PlaneData* plane_data = reinterpret_cast<PlaneData*>(area_info.shape_data);
+    const float3 local_ro = area_info.worldToObj.pointMul(si->p);
+    unsigned int seed = si->seed;
+    const float3 rnd_p = make_float3(rnd(seed, plane_data->min.x, plane_data->max.x), 0.0f, rnd(seed, plane_data->min.y, plane_data->max.y));
+    float3 to_light = area_info.objToWorld.vectorMul(rnd_p - local_ro);
+    si->wo = normalize(to_light);
+    si->seed = seed;
+    return to_light;*/
+    return make_float3(0.0f);
 }
 
 // Sphere -------------------------------------------------------------------------------
@@ -127,20 +145,40 @@ extern "C" __device__ void __closesthit__sphere() {
 
     SurfaceInteraction* si = getSurfaceInteraction();
     si->p = ray.at(ray.tmax);
+    si->t = ray.tmax;
     si->n = world_n;
     si->wi = ray.d;
     si->uv = getSphereUV(local_n);
     si->surface_info = data->surface_info;
 }
 
-extern "C" __device__ float __continuation_callable__pdf_sphere(AreaEmitterInfo areainfo, const float3& ro, const float3& rd)
+extern "C" __device__ float __direct_callable__pdf_sphere(AreaEmitterInfo area_info, SurfaceInteraction* si, const float3& /* to_light */)
 {
-    
+    /*const SphereData* sphere_data = reinterpret_cast<SphereData*>(area_info.shape_data);
+    const float3 center = sphere_data->center;
+    const float radius = sphere_data->radius;
+    const float3 local_ro = area_info.worldToObj.pointMul(si->p);
+    const float cos_theta_max = sqrtf(1.0f - radius * radius / math::sqr(length(center - local_ro)));
+    const float solid_angle = 2.0f * math::pi * (1.0f - cos_theta_max);
+    return 1.0f / solid_angle;*/
+    return 0.0f;
 }
 
-extern "C" __device__ float3 __direct_callable__rnd_sample_sphere(AreaEmitterInfo areaInfo)
+extern "C" __device__ float3 __direct_callable__rnd_sample_sphere(AreaEmitterInfo area_info, SurfaceInteraction* si)
 {
-
+    /*const SphereData* sphere_data = reinterpret_cast<SphereData*>(area_info.shape_data);
+    const float3 center = sphere_data->center;
+    const float3 local_ro = area_info.worldToObj.pointMul(si->p);
+    const float3 oc = center - local_ro;
+    float distance_squared = math::sqr(length(oc));
+    Onb onb(oc);
+    unsigned int seed = si->seed;
+    float3 wo = randomSampleToSphere(seed, sphere_data->radius, distance_squared);
+    onb.inverseTransform(wo);
+    si->seed = seed;
+    si->wo = normalize(wo);
+    return wo;*/
+    return make_float3(0.0f);
 }
 
 // Cylinder -------------------------------------------------------------------------------
@@ -252,6 +290,7 @@ extern "C" __device__ void __closesthit__cylinder()
 
     SurfaceInteraction* si = getSurfaceInteraction();
     si->p = ray.at(ray.tmax);
+    si->t = ray.tmax;
     si->n = normalize(world_n);
     si->wi = ray.d;
     si->uv = uv;
@@ -287,6 +326,7 @@ extern "C" __device__ void __closesthit__mesh()
 
     SurfaceInteraction* si = getSurfaceInteraction();
     si->p = ray.at(ray.tmax);
+    si->t = ray.tmax;
     si->n = world_n;
     si->wi = ray.d;
     si->uv = texcoords;

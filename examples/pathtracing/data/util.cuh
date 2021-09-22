@@ -35,11 +35,11 @@ INLINE DEVICE void packPointer(void* ptr, unsigned int& i0, unsigned int& i1)
     i1 = uptr & 0x00000000ffffffff;
 }
 
-INLINE DEVICE prayground::SurfaceInteraction* getSurfaceInteraction()
+INLINE DEVICE SurfaceInteraction* getSurfaceInteraction()
 {
     const unsigned int u0 = optixGetPayload_0();
     const unsigned int u1 = optixGetPayload_1();
-    return reinterpret_cast<prayground::SurfaceInteraction*>( unpackPointer(u0, u1) ); 
+    return reinterpret_cast<SurfaceInteraction*>( unpackPointer(u0, u1) ); 
 }
 
 // -------------------------------------------------------------------------------
@@ -50,7 +50,7 @@ INLINE DEVICE void trace(
     float                  tmin,
     float                  tmax,
     unsigned int           ray_type,
-    prayground::SurfaceInteraction*    si
+    SurfaceInteraction*    si
 ) 
 {
     unsigned int u0, u1;

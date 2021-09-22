@@ -36,7 +36,7 @@ HOSTDEVICE INLINE float degrees(const float radians)
 }
 
 template <typename T>
-HOSTDEVICE INLINE T sqr(T t1)
+HOSTDEVICE INLINE T sqr(const T& t1)
 {
     return t1 * t1;
 }

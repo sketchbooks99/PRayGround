@@ -6,8 +6,7 @@
 namespace prayground {
 
 struct Ray {
-
-    float3 at(const float time) { return o + d*time; }
+    HOSTDEVICE INLINE float3 at(const float time) { return o + d*time; }
 
     /* Position of ray origin in world coordinates. */
     float3 o;
@@ -26,7 +25,7 @@ struct Ray {
 
 struct pRay {
     /** @todo Polarized ray */
-    float3 at(const float time) { return o + d*time; }
+    HOSTDEVICE INLINE float3 at(const float time) { return o + d*time; }
 
     float3 o;
     float3 d; 
@@ -39,7 +38,7 @@ struct pRay {
     float3 spectrum;
 };
 
-/** Useful function on OptiX to get ray info */
+/** Useful function to get ray info on OptiX */
 #ifdef __CUDACC__
 
 INLINE DEVICE Ray getLocalRay() {

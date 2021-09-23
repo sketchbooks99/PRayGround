@@ -262,10 +262,12 @@ extern "C" __device__ void __direct_callable__area_emitter(SurfaceInteraction* s
 {
     const AreaEmitterData* area = reinterpret_cast<AreaEmitterData*>(surface_data);
     si->trace_terminate = true;
-    float is_emitted = 1.0f;
-    if (!area->twosided)
-        is_emitted = dot(si->wi, si->n) < 0.0f ? 1.0f : 0.0f;
-    
+    float is_emitted = dot(si->wi, si->n) < 0.0f ? 1.0f : 0.0f;
+    if (area->twosided)
+    {
+        is_emitted = 1.0f;
+        si->n = faceforward(si->n, -si->wi, si->n);
+    }
 
     const float3 base = optixDirectCall<float3, SurfaceInteraction*, void*>(
         area->tex_program_id, si, area->tex_data);

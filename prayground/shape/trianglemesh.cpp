@@ -174,8 +174,6 @@ void TriangleMesh::load(const fs::path& filename)
             auto N = normalize(cross(p1 - p0, p2 - p0));
 
             m_normals[i] = N;
-            m_normals[i] = N;
-            m_normals[i] = N;
         }
     }
 

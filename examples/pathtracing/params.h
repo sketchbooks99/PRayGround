@@ -8,21 +8,17 @@
 
 using namespace prayground;
 
-struct Triangle
-{
-    float3 v0, v1, v2;
-};
-
 // GAS handleも置いておくと光源のみへの交差判定を走らせることができる？
 struct AreaEmitterInfo
 {
-    // 面光源がメッシュの場合はMeshDataではなくTriangleになる
     void* shape_data;
     Matrix4f objToWorld;
     Matrix4f worldToObj;
 
     unsigned int sample_id;
     unsigned int pdf_id;
+
+    OptixTraversableHandle gas_handle;
 };
 
 struct LaunchParams 

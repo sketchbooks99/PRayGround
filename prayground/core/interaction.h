@@ -66,6 +66,9 @@ struct SurfaceInteraction {
     float3 wi;
     float3 wo;
 
+    /** ray time */
+    float t;
+
     /** Spectrum information of ray. */
     float3 spectrum;
 
@@ -86,7 +89,6 @@ struct SurfaceInteraction {
 
     bool trace_terminate;
     bool radiance_evaled; // For NEE
-    bool is_specular;
 };
 
 } // ::prayground

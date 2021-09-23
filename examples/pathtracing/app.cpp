@@ -147,13 +147,12 @@ void App::setup()
     auto [area_emitter_prg, area_emitter_prg_id] = setupCallable(surfaces_module, DC_FUNC_STR("area_emitter"), "");
 
     // Shape用のCallableプログラム(主に面光源サンプリング用)
-    auto [sphere_sample_prg, sphere_sample_prg_id] = setupCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_sphere"), "");
-    auto [sphere_pdf_prg, sphere_pdf_prg_id] = setupCallable(hitgroups_module, DC_FUNC_STR("pdf_sphere"), "");
-    auto [plane_sample_prg, plane_sample_prg_id] = setupCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_plane"), "");
-    auto [plane_pdf_prg, plane_pdf_prg_id] = setupCallable(hitgroups_module, DC_FUNC_STR("pdf_plane"), "");
+    auto [sphere_sample_pdf_prg, sphere_sample_pdf_prg_id] = setupCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_sphere"), CC_FUNC_STR("pdf_sphere"));
+    auto [plane_sample_pdf_prg, plane_sample_pdf_prg_id] = setupCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_plane"), CC_FUNC_STR("pdf_plane"));
 
     // 環境マッピング (Sphere mapping) 用のテクスチャとデータ準備
-    auto env_texture = make_shared<FloatBitmapTexture>("resources/image/dikhololo_night_4k.exr", bitmap_prg_id);
+    //auto env_texture = make_shared<FloatBitmapTexture>("resources/image/dikhololo_night_4k.exr", bitmap_prg_id);
+    auto env_texture = make_shared<ConstantTexture>(make_float3(0.0f), constant_prg_id);
     env_texture->copyToDevice();
     env = EnvironmentEmitter{env_texture};
     env.copyToDevice();
@@ -245,8 +244,7 @@ void App::setup()
         ProgramGroup& prg, ProgramGroup& shadow_prg, 
         shared_ptr<Shape> shape,
         AreaEmitter area, Matrix4f transform, 
-        uint32_t sample_id, 
-        uint32_t pdf_id
+        uint32_t sample_pdf_id
     )
     {
         // Plane or Sphereにキャスト可能かチェック
@@ -264,9 +262,9 @@ void App::setup()
             .surface_info = 
             {
                 .data = area.devicePtr(),
-                .sample_id = sample_id,
+                .sample_id = sample_pdf_id,
                 .bsdf_id = area_emitter_prg_id,
-                .pdf_id = pdf_id,
+                .pdf_id = sample_pdf_id,
                 .type = SurfaceType::AreaEmitter
             }
         };
@@ -294,8 +292,9 @@ void App::setup()
             .shape_data = shape->devicePtr(), 
             .objToWorld = transform,
             .worldToObj = transform.inverse(), 
-            .sample_id = sample_id, 
-            .pdf_id = pdf_id
+            .sample_id = sample_pdf_id, 
+            .pdf_id = sample_pdf_id, 
+            .gas_handle = instance.handle()
         };
         area_emitter_infos.push_back(area_emitter_info);
     };
@@ -335,7 +334,7 @@ void App::setup()
     // Teapot
     {
         // Shape
-        auto teapot = make_shared<TriangleMesh>("resources/model/teapot_normal_merged.obj");
+        auto teapot = make_shared<TriangleMesh>("resources/model/teapot.obj");
         // Texture
         auto teapot_constant = make_shared<ConstantTexture>(make_float3(0.325f, 0.702f, 0.709f), constant_prg_id);
         teapot_constant->copyToDevice();
@@ -417,7 +416,7 @@ void App::setup()
         // Area emitter
         auto plane_area_emitter = AreaEmitter(white, 15.0f);
         Matrix4f transform = Matrix4f::translate({200.0f, 50.0f, 200.0f}) * Matrix4f::rotate(math::pi / 4.0f, {0.5f, 0.5f, 0.2f}) * Matrix4f::scale(50.0f);
-        setupAreaEmitter(plane_prg, plane_shadow_prg, plane_light, plane_area_emitter, transform, plane_sample_prg_id, plane_pdf_prg_id);
+        setupAreaEmitter(plane_prg, plane_shadow_prg, plane_light, plane_area_emitter, transform, plane_sample_pdf_prg_id);
     }
 
     // 面光源2 : Sphere
@@ -430,7 +429,7 @@ void App::setup()
         // Area emitter
         auto sphere_area_emitter = AreaEmitter(orange, 15.0f);
         Matrix4f transform = Matrix4f::translate({-200.0f, 50.0f, -200.0f}) * Matrix4f::scale(30.0f);
-        setupAreaEmitter(sphere_prg, sphere_shadow_prg, sphere_light, sphere_area_emitter, transform, sphere_sample_prg_id, sphere_pdf_prg_id);
+        setupAreaEmitter(sphere_prg, sphere_shadow_prg, sphere_light, sphere_area_emitter, transform, sphere_sample_pdf_prg_id);
     }
 
     // 光源データをGPU側にコピー

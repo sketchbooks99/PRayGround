@@ -388,8 +388,7 @@ INLINE HOSTDEVICE float3 Matrix<float, 4>::pointMul(const float3& p) const
     float z = m_data[8]  * p.x + m_data[9]  * p.y + m_data[10] * p.z + m_data[11];
     float w = m_data[12] * p.x + m_data[13] * p.y + m_data[14] * p.z + m_data[15];
 
-    // w == 0のときのAssertionは必要
-    if (w == 1.0f)
+    if (w == 1.0f || w == 0.0f)
         return make_float3(x, y, z);
     else
         return make_float3(x, y, z) / w;

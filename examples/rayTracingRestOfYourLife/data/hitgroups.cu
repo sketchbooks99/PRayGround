@@ -15,6 +15,27 @@ extern "C" __device__ void __closesthit__shadow()
 }
 
 // Plane -------------------------------------------------------------------------------
+static __forceinline__ __device__ bool hitPlane(void* data, const float3& o, const float3& v, const float tmin, const float tmax, SurfaceInteraction& si)
+{
+    const PlaneData* plane_data = reinterpret_cast<PlaneData*>(data);
+    const float2 min = plane_data->min;
+    const float2 max = plane_data->max;
+    
+    const float t = -o.y / v.y;
+    const float x = o.x + t * v.x;
+    const float z = o.z + t * v.z;
+
+    if (min.x < x && x < max.x && min.y < z && z < max.y && tmin < t && t < tmax)
+    {
+        si.uv = make_float2(x / (max.x - min.x), z / max.y - min.y);
+        si.n = make_float3(0, 1, 0);
+        si.t = t;
+        si.p = o + t*v;
+        return true;
+    }
+    return false;
+}
+
 extern "C" __device__ void __intersection__plane()
 {
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
@@ -54,36 +75,38 @@ extern "C" __device__ void __closesthit__plane()
 
     si->p = ray.at(ray.tmax);
     si->n = world_n;
+    si->t = ray.tmax;
     si->wi = ray.d;
     si->uv = uv;
     si->surface_info = data->surface_info;
 }
 
-extern "C" __device__ float __direct_callable__pdf_plane(AreaEmitterInfo area_info, SurfaceInteraction* si, const float3& to_light)
+extern "C" __device__ float __continuation_callable__pdf_plane(AreaEmitterInfo area_info, const float3 & origin, const float3 & direction)
 {
     const PlaneData* plane_data = reinterpret_cast<PlaneData*>(area_info.shape_data);
+
+    SurfaceInteraction si;
+    const float3 local_o = area_info.worldToObj.pointMul(origin);
+    const float3 local_d = area_info.worldToObj.vectorMul(direction);
+
+    if (!hitPlane(area_info.shape_data, local_o, local_d, 0.01f, 1e16f, si))
+        return 0.0f;
+
     // 現状では正しくない．minとmaxをworld空間に動かしても正確な面積は求まらない．
     // 代替案1: scale情報をAreaEmitterInfoを介して渡す？
     const float3 world_min = area_info.objToWorld.pointMul(make_float3(plane_data->min.x, 0.0f, plane_data->min.y));
     const float3 world_max = area_info.objToWorld.pointMul(make_float3(plane_data->max.x, 0.0f, plane_data->max.y));
+    si.n = area_info.objToWorld.normalMul(si.n);
     const float area = (world_max.x - world_min.x) * (world_max.z - world_min.z);
-    const float distance_squared = dot(to_light, to_light);
-    if (dot(si->n, normalize(to_light)) < 0.0f)
-        return 0.0f;
-    const float3 p0 = make_float3(plane_data->min.x, 0.0f, plane_data->min.y);
-    const float3 p1 = make_float3(plane_data->max.x, 0.0f, plane_data->min.y);
-    const float3 p2 = make_float3(plane_data->min.x, 0.0f, plane_data->max.y);
-    const float3 edge0 = p1 - p0;
-    const float3 edge1 = p2 - p0;
-    const float3 world_n = area_info.objToWorld.normalMul(normalize(cross(edge0, edge1)));
-    const float cosine = fabs(dot(normalize(world_n), normalize(to_light)));
+    const float distance_squared = si.t * si.t * dot(direction, direction);
+    const float cosine = fabs(dot(si.n, direction));
     if (cosine < math::eps)
         return 0.0f;
     return distance_squared / (cosine * area);
 }
 
 // グローバル空間における si.p -> 光源上の点 のベクトルを返す
-extern "C" __device__ float3 __direct_callable__rnd_sample_plane(AreaEmitterInfo area_info, SurfaceInteraction* si)
+extern "C" __device__ float3 __direct_callable__rnd_sample_plane(AreaEmitterInfo area_info, SurfaceInteraction * si)
 {
     const PlaneData* plane_data = reinterpret_cast<PlaneData*>(area_info.shape_data);
     // サーフェスの原点をローカル空間に移す
@@ -98,6 +121,46 @@ extern "C" __device__ float3 __direct_callable__rnd_sample_plane(AreaEmitterInfo
 }
 
 // Sphere -------------------------------------------------------------------------------
+static __forceinline__ __device__ float2 getSphereUV(const float3& p) {
+    float phi = atan2(p.z, p.x);
+    float theta = asin(p.y);
+    float u = 1.0f - (phi + math::pi) / (2.0f * math::pi);
+    float v = 1.0f - (theta + math::pi / 2.0f) / math::pi;
+    return make_float2(u, v);
+}
+
+static __forceinline__ __device__ bool hitSphere(void* data, const float3& o, const float3& v, const float tmin, const float tmax, SurfaceInteraction& si)
+{
+    const SphereData* sphere_data = reinterpret_cast<SphereData*>(data);
+
+    const float3 center = sphere_data->center;
+    const float radius = sphere_data->radius;
+
+    const float3 oc = o - center;
+    const float a = dot(v, v);
+    const float half_b = dot(oc, v);
+    const float c = dot(oc, oc) - radius * radius;
+    const float discriminant = half_b * half_b - a * c;
+
+    if (discriminant <= 0.0f) return false;
+
+    const float sqrtd = sqrtf(discriminant);
+
+    float t = (-half_b - sqrtd) / a;
+    if (t < tmin || tmax < t)
+    {
+        t = (-half_b + sqrtd) / a;
+        if (t < tmin || tmax < t)
+            return false;
+    }
+
+    si.t = t;
+    si.p = o + t * v;
+    si.n = si.p / radius;
+    si.uv = getSphereUV(si.n);
+    return true;
+}
+
 extern "C" __device__ void __intersection__sphere() {
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
     const SphereData* sphere_data = reinterpret_cast<SphereData*>(data->shape_data);
@@ -133,14 +196,6 @@ extern "C" __device__ void __intersection__sphere() {
     }
 }
 
-static __forceinline__ __device__ float2 getSphereUV(const float3& p) {
-    float phi = atan2(p.z, p.x);
-    float theta = asin(p.y);
-    float u = 1.0f - (phi + math::pi) / (2.0f * math::pi);
-    float v = 1.0f - (theta + math::pi / 2.0f) / math::pi;
-    return make_float2(u, v);
-}
-
 extern "C" __device__ void __closesthit__sphere() {
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
     const SphereData* sphere_data = reinterpret_cast<SphereData*>(data->shape_data);
@@ -158,18 +213,25 @@ extern "C" __device__ void __closesthit__sphere() {
     SurfaceInteraction* si = getSurfaceInteraction();
     si->p = ray.at(ray.tmax);
     si->n = world_n;
+    si->t = ray.tmax;
     si->wi = ray.d;
     si->uv = getSphereUV(local_n);
     si->surface_info = data->surface_info;
 }
 
-extern "C" __device__ float __direct_callable__pdf_sphere(AreaEmitterInfo area_info, SurfaceInteraction* si, const float3& /* to_light */)
+extern "C" __device__ float __continuation_callable__pdf_sphere(AreaEmitterInfo area_info, const float3 & origin, const float3 & direction)
 {
+    SurfaceInteraction si;
+    const float3 local_o = area_info.worldToObj.pointMul(origin);
+    const float3 local_d = area_info.worldToObj.vectorMul(direction);
+
+    if (!hitSphere(area_info.shape_data, local_o, local_d, 0.01f, 1e16f, si))
+        return 0.0f;
+
     const SphereData* sphere_data = reinterpret_cast<SphereData*>(area_info.shape_data);
     const float3 center = sphere_data->center;
     const float radius = sphere_data->radius;
-    const float3 local_ro = area_info.worldToObj.pointMul(si->p);
-    const float cos_theta_max = sqrtf(1.0f - radius * radius / math::sqr(length(center - local_ro)));
+    const float cos_theta_max = sqrtf(1.0f - radius * radius / math::sqr(length(center - local_o)));
     const float solid_angle = 2.0f * math::pi * (1.0f - cos_theta_max);
     return 1.0f / solid_angle;
 }
@@ -183,10 +245,10 @@ extern "C" __device__ float3 __direct_callable__rnd_sample_sphere(AreaEmitterInf
     float distance_squared = math::sqr(length(oc));
     Onb onb(oc);
     unsigned int seed = si->seed;
-    float3 wo = randomSampleToSphere(seed, sphere_data->radius, distance_squared);
-    onb.inverseTransform(wo);
+    float3 to_light = randomSampleToSphere(seed, sphere_data->radius, distance_squared);
+    onb.inverseTransform(to_light);
     si->seed = seed;
-    return wo;
+    return area_info.worldToObj.vectorMul(to_light);
 }
 
 // Cylinder -------------------------------------------------------------------------------
@@ -299,6 +361,7 @@ extern "C" __device__ void __closesthit__cylinder()
     SurfaceInteraction* si = getSurfaceInteraction();
     si->p = ray.at(ray.tmax);
     si->n = normalize(world_n);
+    si->t = ray.tmax;
     si->wi = ray.d;
     si->uv = uv;
     si->surface_info = data->surface_info;
@@ -334,6 +397,7 @@ extern "C" __device__ void __closesthit__mesh()
     SurfaceInteraction* si = getSurfaceInteraction();
     si->p = ray.at(ray.tmax);
     si->n = world_n;
+    si->t = ray.tmax;
     si->wi = ray.d;
     si->uv = texcoords;
     si->surface_info = data->surface_info;

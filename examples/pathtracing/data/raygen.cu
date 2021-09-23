@@ -29,7 +29,8 @@ static __forceinline__ __device__ void getCameraRay(const CameraData& camera, co
 
 static __forceinline__ __device__ float3 reinhardToneMap(const float3& color, const float white)
 {
-    return (color / (make_float3(1.0f) + color)) * (1.0 + color / math::sqr(white));
+    const float l = luminance(color);
+    return (color * 1.0f) / (1.0f + l / white);
 }
 
 static __forceinline__ __device__ float3 exposureToneMap(const float3& color, const float exposure)
@@ -74,7 +75,6 @@ extern "C" __device__ void __raygen__pinhole()
         si.albedo = make_float3(0.0f);
         si.trace_terminate = false;
         si.radiance_evaled = false;
-        si.is_specular     = false;
 
         float tmax = raygen->camera.farclip / dot(rd, normalize(raygen->camera.lookat - ro));
 
@@ -129,34 +129,47 @@ extern "C" __device__ void __raygen__pinhole()
                     si.surface_info.data
                 );
                 throughput *= bsdf_val;
-                result += si.emission * throughput;
             }
             // Rough surface sampling with applying MIS
             else if ( +(si.surface_info.type & (SurfaceType::Rough | SurfaceType::Diffuse)) )
             {
                 unsigned int seed = si.seed;
-                const int light_id = rnd_int(seed, 0, params.num_lights-1);
-                const AreaEmitterInfo light = params.lights[light_id];
 
-                float3 to_light = optixDirectCall<float3, AreaEmitterInfo, SurfaceInteraction*>(
-                    light.sample_id, 
-                    light, 
-                    &si
-                );
-                // 面光源のPDFを評価
-                float light_pdf = optixDirectCall<float, AreaEmitterInfo, SurfaceInteraction*, const float3&>(
-                    light.pdf_id, 
-                    light, 
-                    &si, 
-                    to_light // un-normalized ray from surface
-                );
-                
+                float weight = 1.0f / (params.num_lights + 1);
+                float pdf_val = 0.0f;
+
                 // BSDFによる重点サンプリング
                 optixDirectCall<void, SurfaceInteraction*, void*>(
                     si.surface_info.sample_id,
                     &si,
                     si.surface_info.data
-                );
+                    );
+
+                if (rnd(seed) < (weight * params.num_lights)) {
+                    const int light_id = rnd_int(seed, 0, params.num_lights - 1);
+                    const AreaEmitterInfo light = params.lights[light_id];
+                    float3 to_light = optixDirectCall<float3, AreaEmitterInfo, SurfaceInteraction*>(
+                        light.sample_id,
+                        light,
+                        &si
+                        );
+                    if (dot(to_light, si.n) >= 0.0f)
+                        si.wo = normalize(to_light);
+                }
+                si.seed = seed;
+
+                for (int i = 0; i < params.num_lights; i++)
+                {
+                    // 面光源のPDFを評価
+                    const float light_pdf = optixContinuationCall<float, AreaEmitterInfo, const float3&, const float3&>(
+                        params.lights[i].pdf_id,
+                        params.lights[i],
+                        si.p,
+                        si.wo
+                        );
+                    if (dot(si.n, si.wo) >= 0.0f)
+                        pdf_val += weight * light_pdf;
+                }
                 
                 // BSDFのPDFを評価
                 float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*>(
@@ -165,13 +178,7 @@ extern "C" __device__ void __raygen__pinhole()
                     si.surface_info.data
                 );
 
-                // MISの重み計算
-                float light_weight = powerHeuristic(light_pdf, bsdf_pdf);
-                if (rnd(seed) < light_weight)
-                    si.wo = normalize(to_light);
-
-                //if (light_id == 0)
-                //    printf("light_pdf: %f, bsdf_pdf: %f, light_weight: %f\n", light_pdf, bsdf_pdf, light_weight);
+                pdf_val += weight * bsdf_pdf;
 
                 // BSDFの評価
                 float3 bsdf_val = optixContinuationCall<float3, SurfaceInteraction*, void*>(
@@ -179,8 +186,6 @@ extern "C" __device__ void __raygen__pinhole()
                     &si,
                     si.surface_info.data
                 );
-
-                const float pdf_val = light_weight * light_pdf + (1.0f - light_weight) * bsdf_pdf;
                 
                 throughput *= bsdf_val / pdf_val;
             }

@@ -23,7 +23,6 @@ void App::setup()
     miss_module = pipeline.createModuleFromCudaFile(context, "cuda/miss.cu");
     hitgroups_module = pipeline.createModuleFromCudaFile(context, "cuda/hitgroups.cu");
     textures_module = pipeline.createModuleFromCudaFile(context, "cuda/textures.cu");
-    surfaces_module = pipeline.createModuleFromCudaFile(context, "cuda/surfaces.cu");
 
     // Prepare bitmap to store rendered results.
     result_bitmap.allocate(Bitmap::Format::RGBA, pgGetWidth(), pgGetHeight());
@@ -41,31 +40,39 @@ void App::setup()
     camera.setFov(40.0f);
     camera.setFovAxis(Camera::FovAxis::Vertical);
 
+    float3 U, V, W;
+    camera.UVWFrame(U, V, W);
+
     // Create raygen program and bind record;
     ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, raygen_module, "__raygen__pinhole");
     RaygenRecord raygen_record;
     raygen_prg.recordPackHeader(&raygen_record);
-    raygen_record.data.camera.origin = camera.origin();
-    raygen_record.data.camera.lookat = camera.lookat();
-    raygen_record.data.camera.up = camera.up();
-    raygen_record.data.camera.fov = camera.fov();
-    raygen_record.data.camera.aspect = 1.0f;
+    raygen_record.data.camera = 
+    {
+        .origin = camera.origin(), 
+        .lookat = camera.lookat(), 
+        .U = U, 
+        .V = V, 
+        .W = W
+    };
     sbt.setRaygenRecord(raygen_record);
 
-    // SBT record for callable programs
-    std::vector<EmptyRecord> callable_records(3, EmptyRecord{});
-
+    // Callable関数とShader Binding TableにCallable関数用のデータを登録するLambda関数
+    auto setupCallable = [&](const Module& module, const std::string& dc, const std::string& cc)
+    {
+        EmptyRecord callable_record = {};
+        auto [prg, id] = pipeline.createCallablesProgram(context, module, dc, cc);
+        prg.recordPackHeader(&callable_record);
+        sbt.addCallablesRecord(callable_record);
+        return id;
+    };
+    
     // Creating texture programs
-    auto [bitmap_prg, bitmap_prg_id] = pipeline.createCallablesProgram(context, textures_module, "__direct_callable__bitmap", "");
-    auto [checker_prg, checker_prg_id] = pipeline.createCallablesProgram(context, textures_module, "__direct_callable__checker", "");
-    bitmap_prg.recordPackHeader(&callable_records[0]);
-    checker_prg.recordPackHeader(&callable_records[1]);
-    sbt.addCallablesRecord(callable_records[0]);
-    sbt.addCallablesRecord(callable_records[1]);
+    uint32_t checker_prg_id = setupCallable(textures_module, "__direct_callable__checker", "");
+    uint32_t bitmap_prg_id = setupCallable(textures_module, "__direct_callable__bitmap", "");
 
     // Prepare environment 
-    env_texture = make_shared<CheckerTexture>(make_float3(0.9f), make_float3(0.3f), 10.0f);
-    env_texture->setProgramId(checker_prg_id);
+    env_texture = make_shared<CheckerTexture>(make_float3(0.9f), make_float3(0.3f), 10.0f, checker_prg_id);
     env_texture->copyToDevice();
     env = make_shared<EnvironmentEmitter>(env_texture);
     env->copyToDevice();
@@ -77,14 +84,8 @@ void App::setup()
     sbt.setMissRecord(miss_record);
 
     // Preparing textures
-    checker_texture = make_shared<CheckerTexture>(make_float3(1.0f), make_float3(0.3f), 15);
-    checker_texture->setProgramId(checker_prg_id);
+    checker_texture = make_shared<CheckerTexture>(make_float3(1.0f), make_float3(0.3f), 15, checker_prg_id);
     checker_texture->copyToDevice();
-
-    // Creating material and emitter programs
-    auto [area_prg, area_prg_id] = pipeline.createCallablesProgram(context, surfaces_module, "__direct_callable__area_emitter", "");
-    area_prg.recordPackHeader(&callable_records[2]);
-    sbt.addCallablesRecord(callable_records[2]);
 
     // Preparing materials and program id
     area = make_shared<AreaEmitter>(checker_texture);
@@ -99,10 +100,15 @@ void App::setup()
 
     HitgroupRecord bunny_record;
     mesh_prg.recordPackHeader(&bunny_record);
-    bunny_record.data.shape_data = bunny->devicePtr();
-    bunny_record.data.surface_data = area->devicePtr();
-    bunny_record.data.surface_program_id = area_prg_id;
-    bunny_record.data.surface_type = SurfaceType::AreaEmitter;
+    bunny_record.data = 
+    {
+        .shape_data = bunny->devicePtr(),
+        .tex_data = 
+        {
+            .data = checker_texture->devicePtr(), 
+            .prg_id = checker_prg_id
+        }
+    };
     sbt.addHitgroupRecord(bunny_record);
     
     // Build GAS
@@ -150,10 +156,4 @@ void App::update()
 void App::draw()
 {
     result_bitmap.draw(0, 0);
-}
-
-// ----------------------------------------------------------------
-void App::mouseDragged(float x, float y, int button)
-{
-    /// @todo カメラの位置変更
 }

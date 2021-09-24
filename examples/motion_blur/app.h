@@ -17,7 +17,10 @@ public:
     void setup();
     void update();
     void draw();
+    void keyPressed(int key);
 private:
+    void initResultBufferOnDevice();
+
     LaunchParams params;
     CUDABuffer<LaunchParams> d_params;
     Pipeline pipeline;
@@ -28,7 +31,12 @@ private:
     InstanceAccel instance_accel;
 
     Bitmap result_bitmap;
+    FloatBitmap accum_bitmap;
     Camera camera;
 
-    float3 sphere_pos;
+    float3 sphere_pos, sphere_prev_pos;
+
+    Transform matrix_transform;
+
+    bool is_move = true;
 };

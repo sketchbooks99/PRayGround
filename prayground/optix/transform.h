@@ -48,6 +48,8 @@ public:
     void setChildHandle(OptixTraversableHandle handle);
     OptixTraversableHandle childHandle() const;
 
+    void copyToDevice();
+
     void buildHandle(const Context& ctx);
     OptixTraversableHandle handle() const;
 
@@ -55,8 +57,8 @@ public:
 private:
     TransformType m_type;
     std::variant<OptixStaticTransform*, OptixMatrixMotionTransform*, OptixSRTMotionTransform*> m_transform; 
-    OptixTraversableHandle m_handle;
-    CUdeviceptr d_transform;
+    OptixTraversableHandle m_handle{ 0 };
+    CUdeviceptr d_transform{ 0 };
 };
 
 } // ::prayground

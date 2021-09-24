@@ -44,14 +44,10 @@ extern "C" __device__ void __closesthit__plane()
 
     si->p = ray.at(ray.tmax);
     si->n = world_n;
-    si->wi = ray.d;
     si->uv = uv;
-
-    si->surface_type = data->surface_type;
-    si->surface_property = {
-        data->surface_data,
-        data->surface_program_id
-    };
+    si->albedo = optixDirectCall<float3, SurfaceInteraction*, void*>(
+        data->tex_data.prg_id, si, data->tex_data.data
+    );
 }
 
 extern "C" __device__ void __closesthit__mesh()
@@ -83,12 +79,8 @@ extern "C" __device__ void __closesthit__mesh()
     SurfaceInteraction* si = getSurfaceInteraction();
     si->p = ray.at(ray.tmax);
     si->n = world_n;
-    si->wi = ray.d;
     si->uv = texcoords;
-
-    si->surface_type = data->surface_type;
-    si->surface_property = {
-        data->surface_data,
-        data->surface_program_id
-    };
+    si->albedo = optixDirectCall<float3, SurfaceInteraction*, void*>(
+        data->tex_data.prg_id, si, data->tex_data.data
+    );
 }

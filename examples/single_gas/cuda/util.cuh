@@ -3,17 +3,24 @@
 #include <optix.h>
 #include <cuda_runtime.h>
 #include <prayground/math/vec_math.h>
+#include <prayground/math/util.h>
 #include <prayground/optix/helpers.h>
 #include <prayground/optix/macros.h>
 #include "../params.h"
-
-using namespace prayground::builtin;
 
 namespace prayground {
 
 extern "C" {
 __constant__ LaunchParams params;
 }
+
+struct SurfaceInteraction
+{
+    float3 p;
+    float3 n;
+    float2 uv;
+    float3 albedo;
+};
 
 template <typename T>
 INLINE DEVICE void swap(T& a, T& b)

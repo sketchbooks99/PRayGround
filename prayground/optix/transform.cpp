@@ -278,49 +278,60 @@ TransformType Transform::type() const
 }
 
 // ---------------------------------------------------------------------------
-void Transform::buildHandle(const Context& ctx)
+void Transform::copyToDevice()
 {
     switch (m_type)
     {
-        case TransformType::Static:
+    case TransformType::Static:
+        if (!d_transform) {
             CUDA_CHECK(cudaMalloc(
                 reinterpret_cast<void**>(&d_transform),
                 sizeof(OptixStaticTransform)
             ));
-            CUDA_CHECK(cudaMemcpy(
-                reinterpret_cast<void*>(d_transform),
-                std::get<OptixStaticTransform*>(m_transform),
-                sizeof(OptixStaticTransform),
-                cudaMemcpyHostToDevice
-            ));
-            break;
-        case TransformType::MatrixMotion:
+        }
+        CUDA_CHECK(cudaMemcpy(
+            reinterpret_cast<void*>(d_transform),
+            std::get<OptixStaticTransform*>(m_transform),
+            sizeof(OptixStaticTransform),
+            cudaMemcpyHostToDevice
+        ));
+        break;
+    case TransformType::MatrixMotion:
+        if (!d_transform) {
             CUDA_CHECK(cudaMalloc(
                 reinterpret_cast<void**>(&d_transform),
                 sizeof(OptixMatrixMotionTransform)
             ));
-            CUDA_CHECK(cudaMemcpy(
-                reinterpret_cast<void*>(d_transform),
-                std::get<OptixMatrixMotionTransform*>(m_transform),
-                sizeof(OptixMatrixMotionTransform),
-                cudaMemcpyHostToDevice
-            ));
-            break;
-        case TransformType::SRTMotion:
+        }
+        CUDA_CHECK(cudaMemcpy(
+            reinterpret_cast<void*>(d_transform),
+            std::get<OptixMatrixMotionTransform*>(m_transform),
+            sizeof(OptixMatrixMotionTransform),
+            cudaMemcpyHostToDevice
+        ));
+        break;
+    case TransformType::SRTMotion:
+        if (!d_transform) {
             CUDA_CHECK(cudaMalloc(
                 reinterpret_cast<void**>(&d_transform),
                 sizeof(OptixSRTMotionTransform)
             ));
-            CUDA_CHECK(cudaMemcpy(
-                reinterpret_cast<void*>(d_transform),
-                std::get<OptixSRTMotionTransform*>(m_transform),
-                sizeof(OptixSRTMotionTransform),
-                cudaMemcpyHostToDevice
-            ));
-            break;
-        default:
-            break;
+        }
+        CUDA_CHECK(cudaMemcpy(
+            reinterpret_cast<void*>(d_transform),
+            std::get<OptixSRTMotionTransform*>(m_transform),
+            sizeof(OptixSRTMotionTransform),
+            cudaMemcpyHostToDevice
+        ));
+        break;
+    default:
+        break;
     }
+}
+
+// ---------------------------------------------------------------------------
+void Transform::buildHandle(const Context& ctx)
+{
     OPTIX_CHECK(optixConvertPointerToTraversableHandle(
         static_cast<OptixDeviceContext>(ctx), 
         d_transform, 

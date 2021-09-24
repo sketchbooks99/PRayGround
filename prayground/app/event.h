@@ -7,8 +7,6 @@ namespace prayground {
 
 template <typename ReturnType, typename... Args> class Event;
 
-void pgAddListener();
-
 template <typename ReturnType, typename... Args>
 class Event
 {

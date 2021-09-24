@@ -39,8 +39,6 @@
 
 #include <prayground_config.h>
 
-#include <prayground/math/vec_math.h>
-
 // optix utilities
 #include "optix/module.h"
 #include "optix/pipeline.h"
@@ -64,11 +62,13 @@
 #include "app/baseapp.h"
 #include "app/window.h"
 #include "app/app_runner.h"
+#include "app/input.h"
 
 #include "gl/shader.h"
 
 #endif
 
+// math utilities
 #include "math/util.h"
 #include "math/vec_math.h"
 #include "math/matrix.h"

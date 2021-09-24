@@ -35,7 +35,8 @@ set(sources
   # App libraries ==========
   app/baseapp.h 
   app/baseapp.cpp 
-  app/event.h 
+  app/event.h
+  app/input.h
   app/window.h
   app/window.cpp
   app/app_runner.h 

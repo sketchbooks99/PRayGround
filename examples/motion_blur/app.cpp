@@ -1,5 +1,23 @@
 #include "app.h"
 
+float easeOutExpo(float x)
+{
+    return x == 1.0f ? 1.0f : 1.0f - powf(2, -10.0f * x);
+}
+
+void App::initResultBufferOnDevice()
+{
+    params.subframe_index = 0;
+
+    result_bitmap.allocateDevicePtr();
+    accum_bitmap.allocateDevicePtr();
+
+    params.result_buffer = reinterpret_cast<uchar4*>(result_bitmap.devicePtr());
+    params.accum_buffer = reinterpret_cast<float4*>(accum_bitmap.devicePtr());
+
+    CUDA_SYNC_CHECK();
+}
+
 // ----------------------------------------------------------------
 void App::setup()
 {
@@ -38,11 +56,15 @@ void App::setup()
     // レンダリング結果を保存する用のBitmapを用意
     result_bitmap.allocate(Bitmap::Format::RGBA, pgGetWidth(), pgGetHeight());
     result_bitmap.allocateDevicePtr();
+    accum_bitmap.allocate(FloatBitmap::Format::RGBA, pgGetWidth(), pgGetHeight());
+    accum_bitmap.allocateDevicePtr();
     params.width = result_bitmap.width();
     params.height = result_bitmap.height();
     params.subframe_index = 0;
+    params.samples_per_launch = 4;
     params.light.pos = make_float3(0.0f, 9.9f, 0.0f);
     params.result_buffer = reinterpret_cast<uchar4*>(result_bitmap.devicePtr());
+    params.accum_buffer = reinterpret_cast<float4*>(accum_bitmap.devicePtr());
 
     // カメラの設定
     camera.setOrigin(make_float3(0.0f, 0.0f, 40.0f));
@@ -123,8 +145,6 @@ void App::setup()
         sbt.addHitgroupRecord(record);
 
         instance.allowCompaction();
-        instance.allowUpdate();
-        instance.allowRandomVertexAccess();
         instance.setSBTOffset(sbt_offset);
         instance.setId(instance_id);
         instance.buildAccel(context, stream);
@@ -190,6 +210,8 @@ void App::setup()
 
     // Sphere
     {
+        sphere_pos = sphere_prev_pos = make_float3(0.0f);
+
         auto sphere_texture = make_shared<ConstantTexture>(make_float3(0.8f), constant_prg_id);
         sphere_texture->copyToDevice();
 
@@ -219,14 +241,15 @@ void App::setup()
         sphere_gas.build(context, stream);
 
         // Motion blur用の開始と終了点における変換行列を用意
-        Matrix4f begin_matrix = Matrix4f::translate({5.0f, 0.0f, 0.0f}) * Matrix4f::scale(3.0f);
-        Matrix4f end_matrix = Matrix4f::translate({-5.0f, 0.0f, 0.0f}) * Matrix4f::scale(3.0f);
+        Matrix4f begin_matrix = Matrix4f::translate(sphere_prev_pos) * Matrix4f::scale(3.0f);
+        Matrix4f end_matrix = Matrix4f::translate(sphere_pos) * Matrix4f::scale(3.0f);
 
         // Matrix motion 用のTransformを用意
-        Transform matrix_transform{TransformType::MatrixMotion};
+        matrix_transform = Transform{TransformType::MatrixMotion};
         matrix_transform.setChildHandle(sphere_gas.handle());
         matrix_transform.setMotionOptions(instance_accel.motionOptions());
         matrix_transform.setMatrixMotionTransform(begin_matrix, end_matrix);
+        matrix_transform.copyToDevice();
         // childHandleからTransformのTraversableHandleを生成
         matrix_transform.buildHandle(context);
 
@@ -255,6 +278,23 @@ void App::setup()
 // ----------------------------------------------------------------
 void App::update()
 {
+    initResultBufferOnDevice();
+
+    float time = pgGetElapsedTime<float>();
+    if (is_move) {
+        float x = fmodf(time, 1.0f);
+        sphere_prev_pos = sphere_pos;
+        sphere_pos.x = -5.0f + easeOutExpo(x) * 10.0f;
+
+        Matrix4f begin_matrix = Matrix4f::translate(sphere_prev_pos) * Matrix4f::scale(3.0f);
+        Matrix4f end_matrix = Matrix4f::translate(sphere_pos) * Matrix4f::scale(3.0f);
+
+        matrix_transform.setMatrixMotionTransform(begin_matrix, end_matrix);
+        matrix_transform.copyToDevice();
+    }
+
+    instance_accel.update(context, stream);
+
     params.subframe_index++;
     d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);
 
@@ -279,4 +319,13 @@ void App::update()
 void App::draw()
 {
     result_bitmap.draw(0, 0);
+}
+
+// ----------------------------------------------------------------
+void App::keyPressed(int key)
+{
+    if (key == Key::S)
+    {
+        is_move = !is_move;
+    }
 }

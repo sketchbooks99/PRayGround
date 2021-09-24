@@ -15,7 +15,9 @@ struct LaunchParams
 {
     unsigned int width, height;
     uchar4* result_buffer;
+    float4* accum_buffer;
     unsigned int subframe_index;
+    unsigned int samples_per_launch;
 
     Light light;
 

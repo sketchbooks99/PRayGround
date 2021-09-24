@@ -17,8 +17,6 @@ public:
     void setup();
     void update();
     void draw();
-
-    void mouseDragged(float x, float y, int button);
 private:
     LaunchParams params;
     CUDABuffer<LaunchParams> d_params;

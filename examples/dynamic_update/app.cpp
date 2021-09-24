@@ -218,8 +218,8 @@ void App::setup()
 
         setupShapeInstance(plane_prg, floor, floor_checker);
         setupShapeInstance(plane_prg, ceiling, white);
-        setupShapeInstance(plane_prg, right_wall, green);
-        setupShapeInstance(plane_prg, left_wall, red);
+        setupShapeInstance(plane_prg, right_wall, red);
+        setupShapeInstance(plane_prg, left_wall, green);
         setupShapeInstance(plane_prg, back, white);
     }
 

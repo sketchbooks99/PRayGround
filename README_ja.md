@@ -111,7 +111,14 @@ add_subdirectory(apps/<your-app-name>)
 4. レイトレーシングコードを記述し、CMakeを使ってビルドしてください。
 
 # :art: Examples
-- [Single GAS](https://github.com/sketchbooks99/PRayGround/tree/master/examples/single-gas)
-  - ![](examples/single_gas/single-gas.gif)
-- [Cornel Box](https://github.com/sketchbooks99/PRayGround/tree/master/examples/cornel)
-  - <img src=examples/cornel/cornel.gif width=320>
+- [Single GAS](examples/single_gas/)
+  - ![](examples/single_gas/single_gas.gif)
+- [Path tracing](examples/pathtracing/)
+  - <img src=examples/pathtracing/pathtracing.jpg width=640> 
+  - <img src=examples/pathtracing/screenshot.png width=640> 
+- [Ray Tracing -- The Rest Of Your Life --](examples/rayTracingRestOfYourLife/)
+  - <img src=examples/rayTracingRestOfYourLife/rtRestOfYourLife.jpg width=320> 
+- [Dynamic update](examples/dynamic_update/)
+  - ![](examples/dynamic_update/dynamic_update.gif)
+- [Motion blur](examples/motion_blur/)
+  - <img src=examples/motion_blur/motion_blur.png width=320>

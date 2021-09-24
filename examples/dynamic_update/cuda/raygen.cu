@@ -4,33 +4,15 @@
 
 using namespace prayground;
 
-static __forceinline__ __device__ void cameraFrame(const CameraData& camera, float3& U, float3& V, float3& W)
-{
-    W = camera.lookat - camera.origin;
-    float wlen = length(W);
-    U = normalize(cross(W, camera.up));
-    V = normalize(cross(W, U));
-
-    float vlen = wlen * tanf(0.5f * camera.fov * math::pi / 180.0f);
-    V *= vlen;
-    float ulen = vlen * camera.aspect;
-    U *= ulen;
-}
-
 static __forceinline__ __device__ void getCameraRay(const CameraData& camera, const float x, const float y, float3& ro, float3& rd)
 {
-    float3 U, V, W;
-    cameraFrame(camera, U, V, W);
-
-    rd = normalize(x * U + y * V + W);
+    rd = normalize(x * camera.U + y * camera.V + camera.W);
     ro = camera.origin;
 }
 
 extern "C" __device__ void __raygen__pinhole()
 {
     const RaygenData* raygen = reinterpret_cast<RaygenData*>(optixGetSbtDataPointer());
-    float3 U, V, W;
-    cameraFrame(raygen->camera, U, V, W);
 
     const uint3 idx = optixGetLaunchIndex();
 

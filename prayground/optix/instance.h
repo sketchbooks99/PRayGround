@@ -42,6 +42,7 @@ public:
     void rotateX(const float radians);
     void rotateY(const float radians);
     void rotateZ(const float radians);
+    void reflect(Axis axis);
     Matrix4f transform();
 
     OptixInstance* rawInstancePtr() const;
@@ -62,7 +63,7 @@ private:
  */
 class ShapeInstance {
 public:
-    ShapeInstance();
+    ShapeInstance() = default;
     ShapeInstance(ShapeType type);
     ShapeInstance(ShapeType type, const Matrix4f& m);
     ShapeInstance(ShapeType type, const std::shared_ptr<Shape>& shape);
@@ -93,6 +94,7 @@ public:
     void rotateX(const float radians);
     void rotateY(const float radians);
     void rotateZ(const float radians);
+    void reflect(Axis axis);
     Matrix4f transform();
 
     void allowUpdate();
@@ -108,8 +110,8 @@ public:
     OptixInstance* rawInstancePtr() const;
 private:
     ShapeType m_type;
-    GeometryAccel m_gas;
     Instance m_instance;
+    GeometryAccel m_gas;
 };
 
 } // ::prayground

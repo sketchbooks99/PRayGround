@@ -4,102 +4,42 @@
 
 using namespace prayground;
 
-static __forceinline__ __device__ void cameraFrame(const CameraData& camera, float3& U, float3& V, float3& W)
+static __forceinline__ __device__ void getCameraRay(const CameraData& camera, const float x, const float y, float3& ro, float3& rd)
 {
-    W = camera.lookat - camera.origin;
-    float wlen = length(W);
-    U = normalize(cross(W, camera.up));
-    V = normalize(cross(W, U));
-
-    float vlen = wlen * tanf(0.5f * camera.fov * math::pi / 180.0f);
-    V *= vlen;
-    float ulen = vlen * camera.aspect;
-    U *= ulen;
+    rd = normalize(x * camera.U + y * camera.V + camera.W);
+    ro = camera.origin;
 }
 
 extern "C" __device__ void __raygen__pinhole()
 {
     const RaygenData* raygen = reinterpret_cast<RaygenData*>(optixGetSbtDataPointer());
-    float3 U, V, W;
-    cameraFrame(raygen->camera, U, V, W);
-
-    const int subframe_index = params.subframe_index;
 
     const uint3 idx = optixGetLaunchIndex();
 
-    float3 result = make_float3(0.0f, 0.0f, 0.0f);
-    int i = params.samples_per_launch;
+    float3 result = make_float3(0.0f);
 
-    do
-    {
-        SurfaceInteraction si;
-        init_rand_state(&si, make_uint2(params.width, params.height), idx, subframe_index);
+    SurfaceInteraction si;
 
-        const float2 subpixel_jitter = make_float2(curand_uniform(si.curand_state) - 0.5f, curand_uniform(si.curand_state) - 0.5f);
+    unsigned int seed = tea<4>(idx.y * params.width + idx.x, params.subframe_index);
 
-        const float2 d = 2.0f * make_float2(
-            (static_cast<float>(idx.x) + subpixel_jitter.x) / static_cast<float>(params.width),
-            (static_cast<float>(idx.y) + subpixel_jitter.y) / static_cast<float>(params.height)
-        ) - 1.0f;
-        float3 rd = normalize(d.x * U + d.y * V + W);
-        float3 ro = raygen->camera.origin;
+    const float2 d = 2.0f * make_float2(
+        static_cast<float>(idx.x) / static_cast<float>(params.width), 
+        static_cast<float>(idx.y) / static_cast<float>(params.height)
+    ) - 1.0f;
+    float3 ro, rd;
+    getCameraRay(raygen->camera, d.x, d.y, ro, rd);
 
-        si.emission = make_float3(0.0f);
-        si.trace_terminate = false;
-        si.radiance_evaled = false;
-        si.attenuation = make_float3(1.0f);
+    trace(
+        params.handle,
+        ro, 
+        rd, 
+        0.01f, 
+        1e16f,
+        rnd(seed),
+        &si
+    );
 
-        int depth = 0;
-        for ( ;; ) {
-
-            if (depth >= params.max_depth)
-            {
-                break;
-            }
-
-            trace(
-                params.handle,
-                ro, 
-                rd, 
-                0.01f, 
-                1e16f, 
-                &si 
-            );
-
-            if (si.trace_terminate)
-            {
-                result += si.emission * si.attenuation;
-                break;
-            }
-
-            if ( si.surface_type == SurfaceType::AreaEmitter )
-            {
-                // Evaluating emission from emitter
-                optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_property.program_id, 
-                    &si, 
-                    si.surface_property.data
-                );
-                result += si.emission * si.attenuation;
-                if (si.trace_terminate)
-                    break;
-            }
-            else if ( si.surface_type == SurfaceType::Material )
-            {
-                // Sampling surface
-                optixContinuationCall<void, SurfaceInteraction*, void*>(
-                    si.surface_property.program_id, 
-                    &si,
-                    si.surface_property.data
-                );
-            }
-            
-            ro = si.p;
-            rd = si.wo;
-
-            ++depth;
-        }
-    } while (--i);
+    result = si.shading_val;
 
     const uint3 launch_index = optixGetLaunchIndex();
     const unsigned int image_index = launch_index.y * params.width + launch_index.x;

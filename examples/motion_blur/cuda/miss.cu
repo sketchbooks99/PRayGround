@@ -26,9 +26,13 @@ extern "C" __device__ void __miss__envmap()
     float theta = asin(p.y);
     float u = 1.0f - (phi + math::pi) / (2.0f * math::pi);
     float v = 1.0f - (theta + math::pi / 2.0f) / math::pi;
+    
     si->uv = make_float2(u, v);
-    si->trace_terminate = true;
-    si->emission = optixDirectCall<float3, SurfaceInteraction*, void*>(
+    si->n = make_float3(0.0f);
+    si->p = p;
+    float3 color = optixDirectCall<float3, SurfaceInteraction*, void*>(
         env->tex_program_id, si, env->tex_data
     );
+    si->shading_val = color;
+    si->albedo = color;
 }

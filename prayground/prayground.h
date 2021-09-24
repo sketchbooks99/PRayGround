@@ -51,13 +51,13 @@
 #include "optix/geometry_accel.h"
 #include "optix/instance_accel.h"
 #include "optix/instance.h"
+#include "optix/transform.h"
 
 // core utilities
 #include "core/util.h"
 #include "core/file_util.h"
 #include "core/cudabuffer.h"
 #include "core/bitmap.h"
-#include "core/film.h"
 #include "core/camera.h"
 
 // application utilities

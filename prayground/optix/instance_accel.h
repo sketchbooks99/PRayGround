@@ -38,6 +38,7 @@ public:
     void disableFastBuild();
 
     void setMotionOptions(const OptixMotionOptions& motion_options);
+    const OptixMotionOptions& motionOptions() const;
 
     uint32_t count() const;
     OptixTraversableHandle handle() const;

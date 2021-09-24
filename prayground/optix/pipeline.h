@@ -58,7 +58,8 @@ public:
 
     /** Compile options. */
     void setCompileOptions( const OptixPipelineCompileOptions& op );
-    void usesMotionBlur(const bool is_use);
+    void enableMotionBlur();
+    void disableMotionBlur();
     void setTraversableGraphFlags(const uint32_t flags);
     void setNumPayloads(const int num_payloads);
     void setNumAttributes(const int num_attributes);

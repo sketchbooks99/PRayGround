@@ -246,9 +246,14 @@ void Pipeline::setCompileOptions(const OptixPipelineCompileOptions& c_op)
     m_compile_options = c_op;
 }
 
-void Pipeline::usesMotionBlur(const bool is_use)
+void Pipeline::enableMotionBlur()
 {
-    m_compile_options.usesMotionBlur = is_use;
+    m_compile_options.usesMotionBlur = true;
+}
+
+void Pipeline::disableMotionBlur()
+{
+    m_compile_options.usesMotionBlur = false;
 }
 
 void Pipeline::setTraversableGraphFlags(const uint32_t flags)

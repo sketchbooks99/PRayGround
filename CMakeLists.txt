@@ -388,7 +388,7 @@ add_subdirectory(prayground/ext)
 # Example apps
 # add_subdirectory(examples/single_gas)
 add_subdirectory(examples/dynamic_update)
-# add_subdirectory(examples/motion_blur)
+add_subdirectory(examples/motion_blur)
 add_subdirectory(examples/pathtracing)
 add_subdirectory(examples/rayTracingRestOfYourLife)
 

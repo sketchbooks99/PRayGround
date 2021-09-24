@@ -17,8 +17,6 @@ public:
     void setup();
     void update();
     void draw();
-
-    void mouseDragged(float x, float y, int button);
 private:
     LaunchParams params;
     CUDABuffer<LaunchParams> d_params;
@@ -27,12 +25,10 @@ private:
     CUstream stream;
     MotionBlurSBT sbt;
 
+    InstanceAccel instance_accel;
+
     Bitmap result_bitmap;
     Camera camera;
 
-    shared_ptr<EnvironmentEmitter> env;
-    shared_ptr<AreaEmitter> area;
-    shared_ptr<TriangleMesh> bunny;
-    shared_ptr<CheckerTexture> checker_texture;
-    shared_ptr<ConstantTexture> env_texture;
+    float3 sphere_pos;
 };

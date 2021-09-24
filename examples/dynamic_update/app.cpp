@@ -84,6 +84,8 @@ void App::setup()
     camera.setLookat(make_float3(0.0f, 0.0f, 0.0f));
     camera.setUp(make_float3(0.0f, 1.0f, 0.0f));
     camera.setFov(40.0f);
+    float3 U, V, W;
+    camera.UVWFrame(U, V, W);
 
     // Raygen プログラム用のデータ準備
     ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, raygen_module, "__raygen__pinhole");
@@ -93,10 +95,9 @@ void App::setup()
     {
         .origin = camera.origin(), 
         .lookat = camera.lookat(), 
-        .up = camera.up(), 
-        .fov = camera.fov(), 
-        .aspect = 1.0f,
-        .nearclip = camera.nearClip(), 
+        .U = U, 
+        .V = V, 
+        .W = W,
         .farclip = camera.farClip()
     };
     sbt.setRaygenRecord(raygen_record);
@@ -112,9 +113,8 @@ void App::setup()
     };
 
     // テクスチャ用のCallableプログラム
-    uint32_t constant_prg_id = setupCallable(textures_module, DC_FUNC_STR("constant"), "");
-    uint32_t checker_prg_id = setupCallable(textures_module, DC_FUNC_STR("checker"), "");
-    uint32_t bitmap_prg_id = setupCallable(textures_module, DC_FUNC_STR("bitmap"), "");
+    uint32_t constant_prg_id = setupCallable(textures_module, "__direct_callable__constant", "");
+    uint32_t checker_prg_id = setupCallable(textures_module, "__direct_callable__checker", "");
 
     // 環境マッピング用のテクスチャとデータを準備
     auto env_color = make_shared<ConstantTexture>(make_float3(0.5f), constant_prg_id);

@@ -98,6 +98,7 @@ void App::setup()
     camera.setUp(make_float3(0.0f, 1.0f, 0.0f));
     camera.setFarClip(5000);
     camera.setFov(40.0f);
+    camera.setAspect(static_cast<float>(params.width) / params.height);
     camera.enableTracking(pgGetCurrentWindow());
     float3 U, V, W;
     camera.UVWFrame(U, V, W);

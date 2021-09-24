@@ -7,8 +7,7 @@ namespace prayground {
 Instance::Instance()
 {
     m_instance = new OptixInstance;
-    for (int i = 0; i < 12; i++)
-        m_instance->transform[i] = i % 5 == 0 ? 1.0f : 0.0f;
+    setTransform(Matrix4f::identity());
     m_instance->flags = OPTIX_INSTANCE_FLAG_NONE;
     m_instance->visibilityMask = 255;
 }
@@ -137,6 +136,13 @@ void Instance::rotateZ(const float radians)
     setTransform(current_mat);
 }
 
+void Instance::reflect(Axis axis)
+{
+    Matrix4f current_mat(m_instance->transform);
+    current_mat *= Matrix4f::reflection(axis);
+    setTransform(current_mat);
+}
+
 Matrix4f Instance::transform()
 {
     return Matrix4f(m_instance->transform);
@@ -152,12 +158,6 @@ OptixInstance* Instance::rawInstancePtr() const
  ShapeInstance                                                     
 ********************************************************************/
 // ------------------------------------------------------------------
-ShapeInstance::ShapeInstance()
-: m_instance(Instance{})
-{
-
-}
-
 ShapeInstance::ShapeInstance(ShapeType type)
 : m_type{type}, m_instance(Instance{}), m_gas{type}
 {
@@ -284,6 +284,11 @@ void ShapeInstance::rotateY(const float radians)
 void ShapeInstance::rotateZ(const float radians)
 {
     m_instance.rotateZ(radians);
+}
+
+void ShapeInstance::reflect(Axis axis)
+{
+    m_instance.reflect(axis);
 }
 
 Matrix4f ShapeInstance::transform()

@@ -4,7 +4,6 @@ PRAYGROUND_add_executalbe(motion_blur target_name
     app.h
     params.h
     cuda/hitgroups.cu
-    cuda/surfaces.cu
     cuda/miss.cu
     cuda/raygen.cu
     cuda/textures.cu

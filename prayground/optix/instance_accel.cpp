@@ -197,6 +197,11 @@ void InstanceAccel::setMotionOptions(const OptixMotionOptions& motion_options)
     m_options.motionOptions = motion_options;
 }
 
+const OptixMotionOptions& InstanceAccel::motionOptions() const
+{
+    return m_options.motionOptions;
+}
+
 // ---------------------------------------------------------------------------
 uint32_t InstanceAccel::count() const
 {

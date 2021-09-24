@@ -8,19 +8,6 @@ namespace prayground {
 
 namespace fs = std::filesystem;
 
-namespace {
-
-float2 getSphereUV(const float3& p)
-{
-    float phi = atan2(p.z, p.x);
-    float theta = asin(p.y);
-    float u = 1.0f - (phi + math::pi) / (math::two_pi);
-    float v = 1.0f - (theta + math::pi / 2.0f) / math::pi;
-    return make_float2(u, v);
-}
-
-} // ::nonamed namespace
-
 /** @note At present, only .obj file format is supported. */
 // ------------------------------------------------------------------
 TriangleMesh::TriangleMesh(const fs::path& filename)

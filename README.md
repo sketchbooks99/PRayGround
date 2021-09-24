@@ -87,7 +87,7 @@ The procedure is as follows:
 1. Copy and paste `apps/empty-app` directory to `apps/` and rename the directory. 
 2. Modifying the app-name in `CMakeLists.txt` inside the app directory. 
 ```
-PRAYGROUND_add_executalbe(empty-app target_name # empty-app -> <your-app-name>
+PRAYGROUND_add_executalbe(empty_app target_name # empty_app -> <your-app-name>
     main.cpp 
     app.cpp 
     app.h
@@ -97,7 +97,6 @@ target_compile_definitions(
     ${target_name}
     PRIVATE
     PRAYGROUND_APP_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
-    PRAYGROUND_ROOT_DIR="${PRAYGROUND_DIR}"
 )
 
 target_link_libraries(${target_name} ${CUDA_LIBRARIES})
@@ -105,8 +104,8 @@ target_link_libraries(${target_name} ${CUDA_LIBRARIES})
 3. Add line of `add_subdirectory(<your-app-name>)` in `PRayGround/CMakeLists.txt`.
 ```
 # Executable apps
-add_subdirectory(apps/empty-app)
-add_subdirectory(apps/<your-app-name>)
+add_subdirectory(apps/empty_app)
+add_subdirectory(apps/<your-app-name>) # Add this line
 ```
 4. Enjoy coding!
 5. Build your application using CMake.

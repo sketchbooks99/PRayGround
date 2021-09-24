@@ -25,16 +25,18 @@ void App::handleCameraUpdate()
         return;
     camera_update = false;
 
+    float3 U, V, W;
+    camera.UVWFrame(U, V, W);
+
     RaygenRecord* rg_record = reinterpret_cast<RaygenRecord*>(sbt.raygenRecord());
     RaygenData rg_data;
     rg_data.camera =
     {
         .origin = camera.origin(),
         .lookat = camera.lookat(),
-        .up = camera.up(),
-        .fov = camera.fov(),
-        .aspect = static_cast<float>(result_bitmap.width()) / result_bitmap.height(),
-        .nearclip = camera.nearClip(),
+        .U = U, 
+        .V = V, 
+        .W = W,
         .farclip = camera.farClip()
     };
 
@@ -68,11 +70,11 @@ void App::setup()
 
     // OptixModuleをCUDAファイルから生成
     Module raygen_module, miss_module, hitgroups_module, textures_module, surfaces_module;
-    raygen_module = pipeline.createModuleFromCudaFile(context, "raygen.cu");
-    miss_module = pipeline.createModuleFromCudaFile(context, "miss.cu");
-    hitgroups_module = pipeline.createModuleFromCudaFile(context, "hitgroups.cu");
-    textures_module = pipeline.createModuleFromCudaFile(context, "textures.cu");
-    surfaces_module = pipeline.createModuleFromCudaFile(context, "surfaces.cu");
+    raygen_module = pipeline.createModuleFromCudaFile(context, "cuda/raygen.cu");
+    miss_module = pipeline.createModuleFromCudaFile(context, "cuda/miss.cu");
+    hitgroups_module = pipeline.createModuleFromCudaFile(context, "cuda/hitgroups.cu");
+    textures_module = pipeline.createModuleFromCudaFile(context, "cuda/textures.cu");
+    surfaces_module = pipeline.createModuleFromCudaFile(context, "cuda/surfaces.cu");
 
     // レンダリング結果を保存する用のBitmapを用意
     result_bitmap.allocate(Bitmap::Format::RGBA, pgGetWidth(), pgGetHeight());
@@ -95,8 +97,10 @@ void App::setup()
     camera.setLookat(make_float3(0.0f, -225.0f, 0.0f));
     camera.setUp(make_float3(0.0f, 1.0f, 0.0f));
     camera.setFarClip(5000);
-    camera.setFov(35.0f);
+    camera.setFov(40.0f);
     camera.enableTracking(pgGetCurrentWindow());
+    float3 U, V, W;
+    camera.UVWFrame(U, V, W);
 
     // Raygenプログラム
     ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, raygen_module, "__raygen__pinhole");
@@ -107,10 +111,9 @@ void App::setup()
     {
         .origin = camera.origin(),
         .lookat = camera.lookat(),
-        .up = camera.up(),
-        .fov = camera.fov(),
-        .aspect = static_cast<float>(result_bitmap.width()) / result_bitmap.height(),
-        .nearclip = camera.nearClip(),
+        .U = U, 
+        .V = V, 
+        .W = W,
         .farclip = camera.farClip()
     };
     sbt.setRaygenRecord(raygen_record);
@@ -122,37 +125,36 @@ void App::setup()
         auto [prg, id] = pipeline.createCallablesProgram(context, module, dc, cc);
         prg.recordPackHeader(&callable_record);
         sbt.addCallablesRecord(callable_record);
-        return pair<ProgramGroup, uint32_t>{prg, id};
+        return id;
     };
 
     // テクスチャ用のCallableプログラム
-    auto [contant_prg, constant_prg_id] = setupCallable(textures_module, DC_FUNC_STR("constant"), "");
-    auto [checker_prg, checker_prg_id] = setupCallable(textures_module, DC_FUNC_STR("checker"), "");
-    auto [bitmap_prg, bitmap_prg_id] = setupCallable(textures_module, DC_FUNC_STR("bitmap"), "");
+    uint32_t constant_prg_id = setupCallable(textures_module, DC_FUNC_STR("constant"), "");
+    uint32_t checker_prg_id = setupCallable(textures_module, DC_FUNC_STR("checker"), "");
+    uint32_t bitmap_prg_id = setupCallable(textures_module, DC_FUNC_STR("bitmap"), "");
 
     // Surface用のCallableプログラム 
     // Diffuse
-    auto [diffuse_sample_bsdf_prg, diffuse_sample_bsdf_prg_id] = setupCallable(surfaces_module, DC_FUNC_STR("sample_diffuse"), CC_FUNC_STR("bsdf_diffuse"));
-    auto [diffuse_pdf_prg, diffuse_pdf_prg_id] = setupCallable(surfaces_module, DC_FUNC_STR("pdf_diffuse"), "");
+    uint32_t diffuse_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_diffuse"), CC_FUNC_STR("bsdf_diffuse"));
+    uint32_t diffuse_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_diffuse"), "");
     // Conductor
-    auto [conductor_sample_bsdf_prg, conductor_sample_bsdf_prg_id] = setupCallable(surfaces_module, DC_FUNC_STR("sample_conductor"), CC_FUNC_STR("bsdf_conductor"));
-    auto [conductor_pdf_prg, conductor_pdf_prg_id] = setupCallable(surfaces_module, DC_FUNC_STR("pdf_conductor"), "");
+    uint32_t conductor_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_conductor"), CC_FUNC_STR("bsdf_conductor"));
+    uint32_t conductor_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_conductor"), "");
     // Dielectric
-    auto [dielectric_sample_bsdf_prg, dielectric_sample_bsdf_prg_id] = setupCallable(surfaces_module, DC_FUNC_STR("sample_dielectric"), CC_FUNC_STR("bsdf_dielectric"));
-    auto [dielectric_pdf_prg, dielectric_pdf_prg_id] = setupCallable(surfaces_module, DC_FUNC_STR("pdf_dielectric"), "");
+    uint32_t dielectric_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_dielectric"), CC_FUNC_STR("bsdf_dielectric"));
+    uint32_t dielectric_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_dielectric"), "");
     // Disney
-    auto [disney_sample_bsdf_prg, disney_sample_bsdf_prg_id] = setupCallable(surfaces_module, DC_FUNC_STR("sample_disney"), CC_FUNC_STR("bsdf_disney"));
-    auto [disney_pdf_prg, disney_pdf_prg_id] = setupCallable(surfaces_module, DC_FUNC_STR("pdf_disney"), "");
+    uint32_t disney_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_disney"), CC_FUNC_STR("bsdf_disney"));
+    uint32_t disney_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_disney"), "");
     // AreaEmitter
-    auto [area_emitter_prg, area_emitter_prg_id] = setupCallable(surfaces_module, DC_FUNC_STR("area_emitter"), "");
+    uint32_t area_emitter_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("area_emitter"), "");
 
     // Shape用のCallableプログラム(主に面光源サンプリング用)
-    auto [sphere_sample_pdf_prg, sphere_sample_pdf_prg_id] = setupCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_sphere"), CC_FUNC_STR("pdf_sphere"));
-    auto [plane_sample_pdf_prg, plane_sample_pdf_prg_id] = setupCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_plane"), CC_FUNC_STR("pdf_plane"));
+    uint32_t sphere_sample_pdf_prg_id = setupCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_sphere"), CC_FUNC_STR("pdf_sphere"));
+    uint32_t plane_sample_pdf_prg_id = setupCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_plane"), CC_FUNC_STR("pdf_plane"));
 
     // 環境マッピング (Sphere mapping) 用のテクスチャとデータ準備
-    //auto env_texture = make_shared<FloatBitmapTexture>("resources/image/dikhololo_night_4k.exr", bitmap_prg_id);
-    auto env_texture = make_shared<ConstantTexture>(make_float3(0.0f), constant_prg_id);
+    auto env_texture = make_shared<FloatBitmapTexture>("resources/image/dikhololo_night_4k.exr", bitmap_prg_id);
     env_texture->copyToDevice();
     env = EnvironmentEmitter{env_texture};
     env.copyToDevice();
@@ -308,7 +310,7 @@ void App::setup()
         bunny_checker->copyToDevice();
         // Material
         auto bunny_disney = make_shared<Disney>(bunny_checker);
-        bunny_disney->setRoughness(0.01f);
+        bunny_disney->setRoughness(0.2f);
         bunny_disney->setMetallic(1.0f);
         // Transform
         Matrix4f transform = Matrix4f::translate({-50.0f, -272.0f, 300.0f}) * Matrix4f::rotate(math::pi, {0.0f, 1.0f, 0.0f}) * Matrix4f::scale(1200.0f);
@@ -414,7 +416,7 @@ void App::setup()
         auto white = make_shared<ConstantTexture>(make_float3(1.0f), constant_prg_id);
         white->copyToDevice();
         // Area emitter
-        auto plane_area_emitter = AreaEmitter(white, 15.0f);
+        auto plane_area_emitter = AreaEmitter(white, 50.0f);
         Matrix4f transform = Matrix4f::translate({200.0f, 50.0f, 200.0f}) * Matrix4f::rotate(math::pi / 4.0f, {0.5f, 0.5f, 0.2f}) * Matrix4f::scale(50.0f);
         setupAreaEmitter(plane_prg, plane_shadow_prg, plane_light, plane_area_emitter, transform, plane_sample_pdf_prg_id);
     }
@@ -427,7 +429,7 @@ void App::setup()
         auto orange = make_shared<ConstantTexture>(make_float3(0.914f, 0.639f, 0.149f), constant_prg_id);
         orange->copyToDevice();
         // Area emitter
-        auto sphere_area_emitter = AreaEmitter(orange, 15.0f);
+        auto sphere_area_emitter = AreaEmitter(orange, 50.0f);
         Matrix4f transform = Matrix4f::translate({-200.0f, 50.0f, -200.0f}) * Matrix4f::scale(30.0f);
         setupAreaEmitter(sphere_prg, sphere_shadow_prg, sphere_light, sphere_area_emitter, transform, sphere_sample_pdf_prg_id);
     }

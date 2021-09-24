@@ -4,7 +4,7 @@ namespace prayground {
 
 // ------------------------------------------------------------------
 CheckerTexture::CheckerTexture(const float3& c1, const float3& c2, float s, int prg_id)
-: m_color1(c1), m_color2(c2), m_scale(s), Texture(prg_id)
+: Texture(prg_id), m_color1(c1), m_color2(c2), m_scale(s)
 {
 
 }

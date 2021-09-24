@@ -19,16 +19,18 @@ void App::handleCameraUpdate()
         return;
     camera_update = false;
 
+    float3 U, V, W;
+    camera.UVWFrame(U, V, W);
+
     RaygenRecord* rg_record = reinterpret_cast<RaygenRecord*>(sbt.raygenRecord());
     RaygenData rg_data;
     rg_data.camera =
     {
         .origin = camera.origin(),
         .lookat = camera.lookat(),
-        .up = camera.up(),
-        .fov = camera.fov(),
-        .aspect = static_cast<float>(result_bitmap.width()) / result_bitmap.height(),
-        .nearclip = camera.nearClip(),
+        .U = U, 
+        .V = V, 
+        .W = W,
         .farclip = camera.farClip()
     };
 
@@ -63,10 +65,10 @@ void App::setup()
 
     // OptiXのModuleをCUDAファイルから生成
     Module raygen_module, miss_module, hitgroups_module, textures_module;
-    raygen_module = pipeline.createModuleFromCudaFile(context, "raygen.cu");
-    miss_module = pipeline.createModuleFromCudaFile(context, "miss.cu");
-    hitgroups_module = pipeline.createModuleFromCudaFile(context, "hitgroups.cu");
-    textures_module = pipeline.createModuleFromCudaFile(context, "textures.cu");
+    raygen_module = pipeline.createModuleFromCudaFile(context, "cuda/raygen.cu");
+    miss_module = pipeline.createModuleFromCudaFile(context, "cuda/miss.cu");
+    hitgroups_module = pipeline.createModuleFromCudaFile(context, "cuda/hitgroups.cu");
+    textures_module = pipeline.createModuleFromCudaFile(context, "cuda/textures.cu");
 
     // レンダリング結果を保存する用のBitmapを用意
     result_bitmap.allocate(Bitmap::Format::RGBA, pgGetWidth(), pgGetHeight());
@@ -106,13 +108,13 @@ void App::setup()
         auto [prg, id] = pipeline.createCallablesProgram(context, module, dc, cc);
         prg.recordPackHeader(&callable_record);
         sbt.addCallablesRecord(callable_record);
-        return pair<ProgramGroup, uint32_t>{prg, id};
+        return id;
     };
 
     // テクスチャ用のCallableプログラム
-    auto [constant_prg, constant_prg_id] = setupCallable(textures_module, DC_FUNC_STR("constant"), "");
-    auto [checker_prg, checker_prg_id] = setupCallable(textures_module, DC_FUNC_STR("checker"), "");
-    auto [bitmap_prg, bitmap_prg_id] = setupCallable(textures_module, DC_FUNC_STR("bitmap"), "");
+    uint32_t constant_prg_id = setupCallable(textures_module, DC_FUNC_STR("constant"), "");
+    uint32_t checker_prg_id = setupCallable(textures_module, DC_FUNC_STR("checker"), "");
+    uint32_t bitmap_prg_id = setupCallable(textures_module, DC_FUNC_STR("bitmap"), "");
 
     // 環境マッピング用のテクスチャとデータを準備
     auto env_color = make_shared<ConstantTexture>(make_float3(0.5f), constant_prg_id);

@@ -19,11 +19,11 @@ void App::setup()
 
     // Create modules
     Module raygen_module, miss_module, hitgroups_module, textures_module, surfaces_module;
-    raygen_module = pipeline.createModuleFromCudaFile(context, "raygen.cu");
-    miss_module = pipeline.createModuleFromCudaFile(context, "miss.cu");
-    hitgroups_module = pipeline.createModuleFromCudaFile(context, "hitgroups.cu");
-    textures_module = pipeline.createModuleFromCudaFile(context, "textures.cu");
-    surfaces_module = pipeline.createModuleFromCudaFile(context, "surfaces.cu");
+    raygen_module = pipeline.createModuleFromCudaFile(context, "cuda/raygen.cu");
+    miss_module = pipeline.createModuleFromCudaFile(context, "cuda/miss.cu");
+    hitgroups_module = pipeline.createModuleFromCudaFile(context, "cuda/hitgroups.cu");
+    textures_module = pipeline.createModuleFromCudaFile(context, "cuda/textures.cu");
+    surfaces_module = pipeline.createModuleFromCudaFile(context, "cuda/surfaces.cu");
 
     // Prepare bitmap to store rendered results.
     result_bitmap.allocate(Bitmap::Format::RGBA, pgGetWidth(), pgGetHeight());

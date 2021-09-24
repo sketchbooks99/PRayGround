@@ -112,8 +112,12 @@ add_subdirectory(apps/<your-app-name>)
 5. Build your application using CMake.
 
 # :art: Examples
-- [Single GAS](https://github.com/sketchbooks99/PRayGround/tree/master/examples/single_gas)
+- Single GAS
   - ![](examples/single_gas/single_gas.gif)
 - Path tracing
   - <img src=examples/pathtracing/pathtracing.jpg width=640> 
   - <img src=examples/pathtracing/screenshot.png width=640> 
+- Ray Tracing -- The Rest Of Your Life --
+  - <img src=examples/rayTracingRestOfYourLife/rtRestOfYourLife.jpg width=320> 
+- Dynamic update
+  - ![](examples/dynamic_update/dynamic_update.gif)

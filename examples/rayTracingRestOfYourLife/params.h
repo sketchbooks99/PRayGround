@@ -40,10 +40,9 @@ struct CameraData
 {
     float3 origin;
     float3 lookat;
-    float3 up;
-    float fov;
-    float aspect;
-    float nearclip;
+    float3 U;
+    float3 V;
+    float3 W;
     float farclip;
 };
 

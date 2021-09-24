@@ -15,6 +15,20 @@ void Camera::disableTracking()
     TODO_MESSAGE();
 }
 
+/// @todo FoxAxisへの対応
+void Camera::UVWFrame(float3& U, float3& V, float3& W) const
+{
+    W = m_lookat - m_origin;
+    float wlen = length(W);
+    U = normalize(cross(W, m_up));
+    V = normalize(cross(W, U));
+
+    float vlen = wlen * tanf(0.5f * m_fov * math::pi / 180.0f);
+    V *= vlen;
+    float ulen = vlen * m_aspect;
+    U *= ulen;
+}
+
 void Camera::mouseDragged(float x, float y, int button)
 {
     float deltaX = x - pgGetPreviousMousePosition().x;

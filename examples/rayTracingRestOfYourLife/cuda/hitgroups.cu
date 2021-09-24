@@ -15,9 +15,8 @@ extern "C" __device__ void __closesthit__shadow()
 }
 
 // Plane -------------------------------------------------------------------------------
-static __forceinline__ __device__ bool hitPlane(void* data, const float3& o, const float3& v, const float tmin, const float tmax, SurfaceInteraction& si)
+static __forceinline__ __device__ bool hitPlane(const PlaneData* plane_data, const float3& o, const float3& v, const float tmin, const float tmax, SurfaceInteraction& si)
 {
-    const PlaneData* plane_data = reinterpret_cast<PlaneData*>(data);
     const float2 min = plane_data->min;
     const float2 max = plane_data->max;
     
@@ -89,16 +88,15 @@ extern "C" __device__ float __continuation_callable__pdf_plane(AreaEmitterInfo a
     const float3 local_o = area_info.worldToObj.pointMul(origin);
     const float3 local_d = area_info.worldToObj.vectorMul(direction);
 
-    if (!hitPlane(area_info.shape_data, local_o, local_d, 0.01f, 1e16f, si))
+    if (!hitPlane(plane_data, local_o, local_d, 0.01f, 1e16f, si))
         return 0.0f;
 
-    // 現状では正しくない．minとmaxをworld空間に動かしても正確な面積は求まらない．
-    // 代替案1: scale情報をAreaEmitterInfoを介して渡す？
-    const float3 world_min = area_info.objToWorld.pointMul(make_float3(plane_data->min.x, 0.0f, plane_data->min.y));
-    const float3 world_max = area_info.objToWorld.pointMul(make_float3(plane_data->max.x, 0.0f, plane_data->max.y));
-    si.n = area_info.objToWorld.normalMul(si.n);
-    const float area = (world_max.x - world_min.x) * (world_max.z - world_min.z);
-    const float distance_squared = si.t * si.t * dot(direction, direction);
+    const float3 corner0 = area_info.objToWorld.pointMul(make_float3(plane_data->min.x, 0.0f, plane_data->min.y));
+    const float3 corner1 = area_info.objToWorld.pointMul(make_float3(plane_data->max.x, 0.0f, plane_data->min.y));
+    const float3 corner2 = area_info.objToWorld.pointMul(make_float3(plane_data->min.x, 0.0f, plane_data->max.y));
+    si.n = normalize(area_info.objToWorld.vectorMul(si.n));
+    const float area = length(cross(corner1 - corner0, corner2 - corner0));
+    const float distance_squared = si.t * si.t;
     const float cosine = fabs(dot(si.n, direction));
     if (cosine < math::eps)
         return 0.0f;
@@ -129,10 +127,8 @@ static __forceinline__ __device__ float2 getSphereUV(const float3& p) {
     return make_float2(u, v);
 }
 
-static __forceinline__ __device__ bool hitSphere(void* data, const float3& o, const float3& v, const float tmin, const float tmax, SurfaceInteraction& si)
+static __forceinline__ __device__ bool hitSphere(const SphereData* sphere_data, const float3& o, const float3& v, const float tmin, const float tmax, SurfaceInteraction& si)
 {
-    const SphereData* sphere_data = reinterpret_cast<SphereData*>(data);
-
     const float3 center = sphere_data->center;
     const float radius = sphere_data->radius;
 
@@ -221,14 +217,14 @@ extern "C" __device__ void __closesthit__sphere() {
 
 extern "C" __device__ float __continuation_callable__pdf_sphere(AreaEmitterInfo area_info, const float3 & origin, const float3 & direction)
 {
+    const SphereData* sphere_data = reinterpret_cast<SphereData*>(area_info.shape_data);
     SurfaceInteraction si;
     const float3 local_o = area_info.worldToObj.pointMul(origin);
     const float3 local_d = area_info.worldToObj.vectorMul(direction);
-
-    if (!hitSphere(area_info.shape_data, local_o, local_d, 0.01f, 1e16f, si))
+    
+    if (!hitSphere(sphere_data, local_o, local_d, 0.01f, 1e16f, si))
         return 0.0f;
 
-    const SphereData* sphere_data = reinterpret_cast<SphereData*>(area_info.shape_data);
     const float3 center = sphere_data->center;
     const float radius = sphere_data->radius;
     const float cos_theta_max = sqrtf(1.0f - radius * radius / math::sqr(length(center - local_o)));
@@ -240,15 +236,15 @@ extern "C" __device__ float3 __direct_callable__rnd_sample_sphere(AreaEmitterInf
 {
     const SphereData* sphere_data = reinterpret_cast<SphereData*>(area_info.shape_data);
     const float3 center = sphere_data->center;
-    const float3 local_ro = area_info.worldToObj.pointMul(si->p);
-    const float3 oc = center - local_ro;
-    float distance_squared = math::sqr(length(oc));
-    Onb onb(oc);
+    const float3 local_o = area_info.worldToObj.pointMul(si->p);
+    const float3 oc = center - local_o;
+    float distance_squared = dot(oc, oc);
+    Onb onb(normalize(oc));
     unsigned int seed = si->seed;
     float3 to_light = randomSampleToSphere(seed, sphere_data->radius, distance_squared);
     onb.inverseTransform(to_light);
     si->seed = seed;
-    return area_info.worldToObj.vectorMul(to_light);
+    return normalize(area_info.objToWorld.vectorMul(to_light));
 }
 
 // Cylinder -------------------------------------------------------------------------------
@@ -385,9 +381,9 @@ extern "C" __device__ void __closesthit__mesh()
     const float2 texcoord2 = mesh_data->texcoords[face.texcoord_id.z];
     const float2 texcoords = (1-u-v)*texcoord0 + u*texcoord1 + v*texcoord2;
 
-    float3 n0 = normalize(mesh_data->normals[face.normal_id.x]);
-	float3 n1 = normalize(mesh_data->normals[face.normal_id.y]);
-	float3 n2 = normalize(mesh_data->normals[face.normal_id.z]);
+    float3 n0 = mesh_data->normals[face.normal_id.x];
+	float3 n1 = mesh_data->normals[face.normal_id.y];
+	float3 n2 = mesh_data->normals[face.normal_id.z];
 
     // Linear interpolation of normal by barycentric coordinates.
     float3 local_n = (1.0f-u-v)*n0 + u*n1 + v*n2;

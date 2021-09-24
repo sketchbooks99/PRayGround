@@ -266,7 +266,6 @@ set(PRAYGROUND_EXTERNAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../prayground/ext")
 
 # NVRTC include paths relative to the sample path
 set(PRAYGROUND_RELATIVE_INCLUDE_DIRS "\\
-  \"cuda\", \\
   \"prayground\", \\
   \"${CMAKE_CURRENT_SOURCE_DIR}\", ")
 
@@ -388,7 +387,7 @@ add_subdirectory(prayground/ext)
 
 # Example apps
 # add_subdirectory(examples/single_gas)
-# add_subdirectory(examples/dynamic_update)
+add_subdirectory(examples/dynamic_update)
 # add_subdirectory(examples/motion_blur)
 add_subdirectory(examples/pathtracing)
 add_subdirectory(examples/rayTracingRestOfYourLife)

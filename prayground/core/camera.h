@@ -67,7 +67,7 @@ public:
     , m_nearclip(nearclip), m_farclip(farclip), m_fovaxis(fovaxis) 
     {}
 
-    const float3& direction() const { return normalize(m_lookat - m_origin); }
+    float3 direction() const { return normalize(m_lookat - m_origin); }
 
     const float3& origin() const { return m_origin; }
     void setOrigin(const float3& origin) { m_origin = origin; }
@@ -96,6 +96,8 @@ public:
     void enableTracking(std::shared_ptr<Window> window);
     void disableTracking();
 
+    void UVWFrame(float3& U, float3& V, float3& W) const;
+
 protected:
     float3 m_origin;
     float3 m_lookat;
@@ -117,20 +119,18 @@ private:
  */
 class LensCamera final : public Camera {
 public:
-    LensCamera() : m_aperture(0.01f), m_focal_length(100.0f), Camera() {}
+    LensCamera() : Camera(), m_aperture(0.01f), m_focal_length(100.0) {}
     LensCamera(
         const float3& origin, const float3& lookat, const float3& up, float fov, float aspect, 
         float nearclip = 0.01f, float farclip = 10000.0f, 
         float aperture = 0.01f, float focal_length = 100.0f,
         FovAxis fovaxis=FovAxis::Horizontal)
-    : m_aperture(aperture), m_focal_length(focal_length), Camera(origin, lookat, up, fov, aspect, nearclip, farclip, fovaxis)
+    : Camera(origin, lookat, up, fov, aspect, nearclip, farclip, fovaxis), m_aperture(aperture), m_focal_length(focal_length)
     {}
 
-    /** @brief Aperture of lens */
     const float& aperture() const { return m_aperture; }
     void setAperture( const float& aperture ) { m_aperture = aperture; }
 
-    /** @brief Focus length of lens */
     const float& focalLength() const { return m_focal_length; }
     void setFocalLength( const float& focal_length ) { m_focal_length = focal_length; }
 private:

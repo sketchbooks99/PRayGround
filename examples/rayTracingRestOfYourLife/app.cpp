@@ -19,16 +19,18 @@ void App::handleCameraUpdate()
         return;
     camera_update = false;
 
+    float3 U, V, W;
+    camera.UVWFrame(U, V, W);
+
     RaygenRecord* rg_record = reinterpret_cast<RaygenRecord*>(sbt.raygenRecord());
     RaygenData rg_data;
     rg_data.camera =
     {
         .origin = camera.origin(),
         .lookat = camera.lookat(),
-        .up = camera.up(),
-        .fov = camera.fov(),
-        .aspect = static_cast<float>(result_bitmap.width()) / result_bitmap.height(),
-        .nearclip = camera.nearClip(),
+        .U = U, 
+        .V = V, 
+        .W = W,
         .farclip = camera.farClip()
     };
 
@@ -62,11 +64,11 @@ void App::setup()
 
     // OptixModuleをCUDAファイルから生成
     Module raygen_module, miss_module, hitgroups_module, textures_module, surfaces_module;
-    raygen_module = pipeline.createModuleFromCudaFile(context, "raygen.cu");
-    miss_module = pipeline.createModuleFromCudaFile(context, "miss.cu");
-    hitgroups_module = pipeline.createModuleFromCudaFile(context, "hitgroups.cu");
-    textures_module = pipeline.createModuleFromCudaFile(context, "textures.cu");
-    surfaces_module = pipeline.createModuleFromCudaFile(context, "surfaces.cu");
+    raygen_module = pipeline.createModuleFromCudaFile(context, "cuda/raygen.cu");
+    miss_module = pipeline.createModuleFromCudaFile(context, "cuda/miss.cu");
+    hitgroups_module = pipeline.createModuleFromCudaFile(context, "cuda/hitgroups.cu");
+    textures_module = pipeline.createModuleFromCudaFile(context, "cuda/textures.cu");
+    surfaces_module = pipeline.createModuleFromCudaFile(context, "cuda/surfaces.cu");
 
     // レンダリング結果を保存する用のBitmapを用意
     result_bitmap.allocate(Bitmap::Format::RGBA, pgGetWidth(), pgGetHeight());
@@ -87,6 +89,8 @@ void App::setup()
     camera.setUp(make_float3(0.0f, 1.0f, 0.0f));
     camera.setFarClip(5000);
     camera.setFov(40.0f);
+    float3 U, V, W;
+    camera.UVWFrame(U, V, W);
     camera.enableTracking(pgGetCurrentWindow());
 
     // Raygenプログラム
@@ -98,10 +102,9 @@ void App::setup()
     {
         .origin = camera.origin(),
         .lookat = camera.lookat(),
-        .up = camera.up(),
-        .fov = camera.fov(),
-        .aspect = static_cast<float>(result_bitmap.width()) / result_bitmap.height(),
-        .nearclip = camera.nearClip(),
+        .U = U,
+        .V = V,
+        .W = W,
         .farclip = camera.farClip()
     };
     sbt.setRaygenRecord(raygen_record);
@@ -113,29 +116,24 @@ void App::setup()
         auto [prg, id] = pipeline.createCallablesProgram(context, module, dc, cc);
         prg.recordPackHeader(&callable_record);
         sbt.addCallablesRecord(callable_record);
-        return pair<ProgramGroup, uint32_t>{prg, id};
+        return id;
     };
 
     // テクスチャ用のCallableプログラム
-    auto [contant_prg, constant_prg_id] = setupCallable(textures_module, DC_FUNC_STR("constant"), "");
-    auto [checker_prg, checker_prg_id] = setupCallable(textures_module, DC_FUNC_STR("checker"), "");
+    uint32_t constant_prg_id = setupCallable(textures_module, DC_FUNC_STR("constant"), "");
 
     // Surface用のCallableプログラム 
     // Diffuse
-    auto [diffuse_sample_bsdf_prg, diffuse_sample_bsdf_prg_id] = setupCallable(surfaces_module, DC_FUNC_STR("sample_diffuse"), CC_FUNC_STR("bsdf_diffuse"));
-    auto [diffuse_pdf_prg, diffuse_pdf_prg_id] = setupCallable(surfaces_module, DC_FUNC_STR("pdf_diffuse"), "");
-    // Conductor
-    auto [conductor_sample_bsdf_prg, conductor_sample_bsdf_prg_id] = setupCallable(surfaces_module, DC_FUNC_STR("sample_conductor"), CC_FUNC_STR("bsdf_conductor"));
-    auto [conductor_pdf_prg, conductor_pdf_prg_id] = setupCallable(surfaces_module, DC_FUNC_STR("pdf_conductor"), "");
+    uint32_t diffuse_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_diffuse"), CC_FUNC_STR("bsdf_diffuse"));
+    uint32_t diffuse_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_diffuse"), "");
     // Dielectric
-    auto [dielectric_sample_bsdf_prg, dielectric_sample_bsdf_prg_id] = setupCallable(surfaces_module, DC_FUNC_STR("sample_dielectric"), CC_FUNC_STR("bsdf_dielectric"));
-    auto [dielectric_pdf_prg, dielectric_pdf_prg_id] = setupCallable(surfaces_module, DC_FUNC_STR("pdf_dielectric"), "");
+    uint32_t dielectric_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_dielectric"), CC_FUNC_STR("bsdf_dielectric"));
+    uint32_t dielectric_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_dielectric"), "");
     // AreaEmitter
-    auto [area_emitter_prg, area_emitter_prg_id] = setupCallable(surfaces_module, DC_FUNC_STR("area_emitter"), "");
+    uint32_t area_emitter_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("area_emitter"), "");
 
     // Shape用のCallableプログラム(主に面光源サンプリング用)
-    auto [sphere_sample_pdf_prg, sphere_sample_pdf_prg_id] = setupCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_sphere"), CC_FUNC_STR("pdf_sphere"));
-    auto [plane_sample_pdf_prg, plane_sample_pdf_prg_id] = setupCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_plane"), CC_FUNC_STR("pdf_plane"));
+    uint32_t plane_sample_pdf_prg_id = setupCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_plane"), CC_FUNC_STR("pdf_plane"));
 
     // 環境マッピング (Sphere mapping) 用のテクスチャとデータ準備
     auto env_texture = make_shared<ConstantTexture>(make_float3(0.0f), constant_prg_id);

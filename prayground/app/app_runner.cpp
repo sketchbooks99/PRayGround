@@ -4,7 +4,6 @@
 namespace prayground {
 
 namespace { // nonamed-namespace
-    //std::shared_ptr<Window> current_window;
     std::unique_ptr<AppRunner> current_runner;
     int32_t current_frame{ 0 };
     std::chrono::high_resolution_clock::time_point start_time;

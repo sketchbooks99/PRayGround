@@ -117,11 +117,35 @@ set(sources
   # OPTIONS -rdc true
 )
 
-set(prayground_sources)
-foreach (source ${sources})
-  set(prayground_sources ${prayground_sources} "${PRAYGROUND_DIR}/prayground/${source}")
-endforeach()
+set(pg_target "prayground")
+add_library(${pg_target} ${sources})
+if (WIN32)
+  target_compile_definitions(${pg_target} PUBLIC GLAD_GLAPI_EXPORT)
+endif()
 
-set(prayground_sources ${prayground_sources} ${CMAKE_CURRENT_BINARY_DIR}/../prayground_config.h)
+target_link_libraries(${pg_target} LINK_PRIVATE
+  ${GLFW_LIB_NAME}
+  glad 
+  imgui 
+  ${CUDA_LIBRARIES}
+)
 
-set(prayground_sources ${prayground_sources} PARENT_SCOPE)
+if(USING_GNU_C OR USING_GNU_CXX)
+  if(GCC_LIBSTDCPP_HACK)
+    set_target_properties(${pg_target} PROPERTIES LINKER_LANGUAGE "C")
+    target_link_libraries(${pg_target} LINK_PRIVATE ${STATIC_LIBSTDCPP})
+  endif()
+endif()
+
+if(CUDA_NVRTC_ENABLED)
+  target_link_libraries(${pg_target} LINK_PRIVATE ${CUDA_nvrtc_LIBRARY})
+endif()
+if(WIN32)
+  target_link_libraries(${pg_target} LINK_PRIVATE winmm.lib)
+endif()
+
+target_compile_definitions(${pg_target} PRIVATE PRAYGROUND_DIR="${PRAYGROUND_DIR}")
+
+# set(prayground_sources ${prayground_sources} ${CMAKE_CURRENT_BINARY_DIR}/../prayground_config.h)
+
+set(prayground_sources ${sources} PARENT_SCOPE)

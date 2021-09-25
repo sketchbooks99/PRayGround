@@ -300,7 +300,7 @@ function(PRAYGROUND_add_executalbe target_name_base target_name_var)
 
   # These calls will group PTX and CUDA files into their own directories in the Visual
   # Studio projects.
-  source_group(TREE ${PRAYGROUND_DIR} FILES ${prayground_sources})
+  # source_group(TREE ${PRAYGROUND_DIR} FILES ${prayground_sources})
   if (NOT CUDA_NVRTC_ENABLED)
     source_group("PTX Files" REGULAR_EXPRESSION ".+\\.ptx$")
   endif()
@@ -312,7 +312,7 @@ function(PRAYGROUND_add_executalbe target_name_base target_name_var)
   # code here, so that we can use our own name for the target.  target_name is used in the
   # creation of the output file names, and we want this to be unique for each target in
   # the SDK.
-  CUDA_GET_SOURCES_AND_OPTIONS(source_files cmake_options options ${prayground_sources} ${ARGN})
+  CUDA_GET_SOURCES_AND_OPTIONS(source_files cmake_options options ${ARGN})
   if (CUDA_NVRTC_ENABLED)
 
     # Isolate OBJ target files. NVCC should only process these files and leave PTX targets for NVRTC
@@ -348,6 +348,7 @@ function(PRAYGROUND_add_executalbe target_name_base target_name_var)
   target_link_libraries( ${target_name}
     ${GLFW_LIB_NAME}
     imgui
+    prayground
     )
 
   if (CUDA_NVRTC_ENABLED)
@@ -356,8 +357,6 @@ function(PRAYGROUND_add_executalbe target_name_base target_name_var)
   if(WIN32)
     target_link_libraries(${target_name} winmm.lib)
   endif()
-
-  target_include_directories(${target_name} PRIVATE "{$PRAYGROUND_DIR}")
 
   set_target_properties( ${target_name} PROPERTIES
     COMPILE_DEFINITIONS
@@ -375,15 +374,13 @@ function(PRAYGROUND_add_executalbe target_name_base target_name_var)
   if(USING_GNU_CXX)
     target_link_libraries( ${target_name} m ) # Explicitly link against math library (C samples don't do that by default)
   endif()
-
-  target_compile_definitions(${target_name} PRIVATE PRAYGROUND_ROOT_DIR="${PRAYGROUND_DIR}")
 endfunction()
-
-# Load PRAYGROUND library sources.
-add_subdirectory(prayground)
 
 # External libraries
 add_subdirectory(prayground/ext)
+
+# Load PRAYGROUND library sources.
+add_subdirectory(prayground)
 
 # Example apps
 add_subdirectory(examples/single_gas)

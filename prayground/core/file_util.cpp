@@ -7,21 +7,21 @@ namespace prayground {
 
 namespace fs = std::filesystem;
 
+namespace {
+
+    fs::path app_dir = fs::path("");
+
+} // ::nonamed-namespace
+
 // -------------------------------------------------------------------------------s
 std::optional<fs::path> findDataPath( const fs::path& relative_path )
 {
-#ifdef PRAYGROUND_APP_DIR
-    std::array<std::string, 5> parent_dirs = 
+    std::array<std::string, 4> parent_dirs = 
     {
         pgAppDir().string(), 
         pathJoin(pgAppDir(), "data").string(), 
-#else 
-    std::array<std::string, 3> parent_dirs = 
-    {
-#endif
         "", // @note これで絶対パスにも対応できる？
         pgRootDir().string(),
-        pathJoin(PRAYGROUND_ROOT_DIR, "data").string()
     };
 
     for (auto &parent : parent_dirs)
@@ -35,15 +35,18 @@ std::optional<fs::path> findDataPath( const fs::path& relative_path )
 
 // -------------------------------------------------------------------------------
 fs::path pgRootDir() {
-    return fs::path(PRAYGROUND_ROOT_DIR);
+    return fs::path(PRAYGROUND_DIR);
 }
 
-#ifdef PRAYGROUND_APP_DIR
+void pgSetAppDir(const fs::path& dir)
+{
+    app_dir = dir;
+}
+
 fs::path pgAppDir()
 {
-    return fs::path(PRAYGROUND_APP_DIR);
+    return app_dir;
 }
-#endif
 
 // -------------------------------------------------------------------------------
 std::string getExtension( const fs::path& filepath )

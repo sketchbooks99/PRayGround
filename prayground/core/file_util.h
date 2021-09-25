@@ -27,9 +27,8 @@ std::optional<std::filesystem::path> findDataPath( const std::filesystem::path& 
 
 std::filesystem::path pgRootDir();
 
-#ifdef PRAYGROUND_APP_DIR
+void pgSetAppDir(const std::filesystem::path& dir);
 std::filesystem::path pgAppDir();
-#endif
 
 // Get the extension of file. 
 std::string getExtension( const std::filesystem::path& filepath );

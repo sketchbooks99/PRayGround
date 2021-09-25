@@ -91,7 +91,7 @@ private:
 template <typename T, unsigned int N>
 inline std::ostream& operator<<(std::ostream& out, Matrix<T, N> m)
 {
-    for (int i = 0; i < N*N; i++)
+    for (unsigned int i = 0; i < N*N; i++)
         out << m[i] << ' ';
     return out;
 }

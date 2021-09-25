@@ -84,7 +84,7 @@ Not supported.
 You can create your custom application by just adding new directory in `apps/` and modifying `App.h/.cpp`, `main.cpp` and `CMakeLists.txt`. 
 
 The procedure is as follows:
-1. Copy and paste `apps/empty-app` directory to `apps/` and rename the directory. 
+1. Copy and paste `apps/empty_app` directory to `apps/` and rename the directory. 
 2. Modifying the app-name in `CMakeLists.txt` inside the app directory. 
 ```
 PRAYGROUND_add_executalbe(empty_app target_name # empty_app -> <your-app-name>

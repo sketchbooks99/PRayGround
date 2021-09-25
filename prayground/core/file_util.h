@@ -21,8 +21,6 @@ inline std::filesystem::path pathJoin(
     return path;
 }
 
-// OptiX-Raytracer の ホームディレクトリと アプリケーションもしくはOptiX-Raytracer 以下の 
-// data/ ディレクトリ以下を探索し、ファイルが見つかった場合は絶対パスを返し、見つからなかった場合は、無効値を返します。
 std::optional<std::filesystem::path> findDataPath( const std::filesystem::path& relative_path );
 
 std::filesystem::path pgRootDir();

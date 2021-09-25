@@ -13,14 +13,14 @@ namespace {
 
 } // ::nonamed-namespace
 
-// -------------------------------------------------------------------------------s
+// -------------------------------------------------------------------------------
 std::optional<fs::path> findDataPath( const fs::path& relative_path )
 {
     std::array<std::string, 4> parent_dirs = 
     {
         pgAppDir().string(), 
         pathJoin(pgAppDir(), "data").string(), 
-        "", // @note これで絶対パスにも対応できる？
+        "",
         pgRootDir().string(),
     };
 

@@ -300,7 +300,6 @@ function(PRAYGROUND_add_executalbe target_name_base target_name_var)
 
   # These calls will group PTX and CUDA files into their own directories in the Visual
   # Studio projects.
-  # source_group(TREE ${PRAYGROUND_DIR} FILES ${prayground_sources})
   if (NOT CUDA_NVRTC_ENABLED)
     source_group("PTX Files" REGULAR_EXPRESSION ".+\\.ptx$")
   endif()
@@ -351,16 +350,11 @@ function(PRAYGROUND_add_executalbe target_name_base target_name_var)
     prayground
     )
 
-  if (CUDA_NVRTC_ENABLED)
-    target_link_libraries(${target_name} ${CUDA_nvrtc_LIBRARY})
-  endif()
-  if(WIN32)
-    target_link_libraries(${target_name} winmm.lib)
-  endif()
-
   set_target_properties( ${target_name} PROPERTIES
     COMPILE_DEFINITIONS
     "OPTIX_SAMPLE_NAME_DEFINE=${target_name};OPTIX_SAMPLE_DIR_DEFINE=${target_name}" )
+
+  target_include_directories(${target_name} PRIVATE "${PRAYGROUND_DIR}")
 
   if (WIN32)
     target_compile_options(${target_name} PUBLIC "/source-charset:utf-8")
@@ -379,7 +373,7 @@ endfunction()
 # External libraries
 add_subdirectory(prayground/ext)
 
-# Load PRAYGROUND library sources.
+# PRAYGROUND library
 add_subdirectory(prayground)
 
 # Example apps

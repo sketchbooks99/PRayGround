@@ -118,7 +118,9 @@ set(sources
 )
 
 set(pg_target "prayground")
-add_library(${pg_target} ${sources})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${sources})
+
+add_library(${pg_target} STATIC ${sources})
 if (WIN32)
   target_compile_definitions(${pg_target} PUBLIC GLAD_GLAPI_EXPORT)
 endif()
@@ -144,8 +146,10 @@ if(WIN32)
   target_link_libraries(${pg_target} LINK_PRIVATE winmm.lib)
 endif()
 
-target_compile_definitions(${pg_target} PRIVATE PRAYGROUND_DIR="${PRAYGROUND_DIR}")
+if (WIN32)
+  target_compile_options(${pg_target} PUBLIC "/source-charset:utf-8")
+endif()
 
-# set(prayground_sources ${prayground_sources} ${CMAKE_CURRENT_BINARY_DIR}/../prayground_config.h)
+target_compile_definitions(${pg_target} PRIVATE PRAYGROUND_DIR="${PRAYGROUND_DIR}")
 
 set(prayground_sources ${sources} PARENT_SCOPE)

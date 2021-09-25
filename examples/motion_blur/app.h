@@ -41,6 +41,7 @@ private:
     float3 sphere_pos, sphere_prev_pos;
 
     Transform matrix_transform;
+    ShapeInstance sphere2;
 
     bool is_move = true;
 };

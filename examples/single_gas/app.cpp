@@ -128,7 +128,7 @@ void App::setup()
 // ----------------------------------------------------------------
 void App::update()
 {
-    float time = pgGetElapsedTime<float>();
+    float time = pgGetElapsedTimef();
     checker_texture->setColor1(make_float3(abs(sin(time))));
     checker_texture->copyToDevice();
 

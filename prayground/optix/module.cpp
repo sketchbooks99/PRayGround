@@ -72,9 +72,9 @@ namespace {
 
         std::vector<const char*> options;
 
+        std::string app_dir;
         if (pgAppDir().string() != "") {
-            std::string app_dir = std::string("-I") + pgAppDir().string();
-            std::cout << app_dir << ' ' << app_dir.c_str() << std::endl;
+            app_dir = std::string("-I") + pgAppDir().string();
             options.push_back(app_dir.c_str());
         }
 
@@ -100,9 +100,6 @@ namespace {
         // Collect NVRTC options
         const char* compiler_options[] = { CUDA_NVRTC_OPTIONS };
         std::copy(std::begin(compiler_options), std::end(compiler_options), std::back_inserter(options));
-
-        for (const char* option : options)
-            std::cout << option << std::endl;
 
         // JIT compile CU to PTX
         const nvrtcResult compileRes = nvrtcCompileProgram(prog, (int)options.size(), options.data());

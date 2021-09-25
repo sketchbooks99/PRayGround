@@ -15,7 +15,6 @@ void Camera::disableTracking()
     TODO_MESSAGE();
 }
 
-/// @todo FoxAxisへの対応
 void Camera::UVWFrame(float3& U, float3& V, float3& W) const
 {
     W = m_lookat - m_origin;

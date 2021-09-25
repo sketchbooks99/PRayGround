@@ -6,7 +6,9 @@ namespace prayground {
 namespace { // nonamed-namespace
     std::unique_ptr<AppRunner> current_runner;
     int32_t current_frame{ 0 };
-    std::chrono::high_resolution_clock::time_point start_time;
+    float start_time;
+    float frame_rate = 60.0f;
+    bool is_fix_fps = false;
 } // ::nonamed-namespace
 
 float pgGetMouseX()
@@ -61,17 +63,19 @@ int32_t pgGetFrame()
 
 float pgGetFrameRate()
 {
-    return static_cast<float>(pgGetFrame()) / pgGetElapsedTime<float>();
+    return static_cast<float>(pgGetFrame()) / pgGetElapsedTimef();
 }
 
-template <typename T>
-T pgGetElapsedTime()
+void pgSetFrameRate(const float fps)
 {
-    std::chrono::duration<T> elapsed = std::chrono::high_resolution_clock::now() - start_time;
-    return elapsed.count();
+    is_fix_fps = true;
+    frame_rate = fps;
 }
-template float pgGetElapsedTime<float>();
-template double pgGetElapsedTime<double>();
+
+float pgGetElapsedTimef()
+{
+    return glfwGetTime() - start_time;
+}
 
 void pgSetWindowName(const std::string& name)
 {
@@ -118,12 +122,13 @@ void AppRunner::run() const
 
     m_window->setVisible(true);
 
-    start_time = std::chrono::high_resolution_clock::now();
+    start_time = glfwGetTime();
     loop();
 }
 
 void AppRunner::loop() const 
 {
+    float lasttime = glfwGetTime();
     while (!m_window->shouldClose())
     {
         m_window->update();
@@ -132,6 +137,11 @@ void AppRunner::loop() const
         m_window->swap();
 
         current_frame++;
+        while (glfwGetTime() < lasttime + 1.0f / frame_rate && is_fix_fps)
+        {
+
+        }
+        lasttime += 1.0f / frame_rate;
     }
     close();
 }

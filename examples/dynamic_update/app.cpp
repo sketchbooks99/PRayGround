@@ -267,7 +267,7 @@ void App::update()
 {
     handleCameraUpdate();
 
-    float time = pgGetElapsedTime<float>();
+    float time = pgGetElapsedTimef();
 
     sphere_pos = 5.0f * make_float3(sinf(time) * sinf(time / 3.0f), cosf(time), sinf(time) * cosf(time / 3.0f));
     bunny_pos = 5.0f * make_float3(sinf(-time) * sinf(time / 3.0f), cosf(-time), sinf(-time) * cosf(time / 3.0f));

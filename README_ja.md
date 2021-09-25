@@ -87,7 +87,11 @@ CMakeの実行では、[cmake-gui](https://cmake.org/download/)を使用して�
 1. `apps/empty_app `ディレクトリを `apps/` にコピー＆ペーストして、ディレクトリ名を変更します。
 2. 作成したディレクトリ内の`CMakeLists.txt`の `empty_app` を作成するアプリケーション名に変更します。
 ```
+<<<<<<< HEAD
 PRAYGROUND_add_executalbe(empty_app target_name # empty_app -> <your-app-name>
+=======
+PRAYGROUND_add_executalbe(empty_app target_name # empty-app -> <your-app-name>
+>>>>>>> master
     main.cpp 
     app.cpp 
     app.h
@@ -97,7 +101,6 @@ target_compile_definitions(
     ${target_name}
     PRIVATE
     PRAYGROUND_APP_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
-    PRAYGROUND_ROOT_DIR="${PRAYGROUND_DIR}"
 )
 
 target_link_libraries(${target_name} ${CUDA_LIBRARIES})
@@ -106,7 +109,11 @@ target_link_libraries(${target_name} ${CUDA_LIBRARIES})
 ```
 # Executable apps
 add_subdirectory(apps/empty_app)
+<<<<<<< HEAD
 add_subdirectory(apps/<your-app-name>)
+=======
+add_subdirectory(apps/<your-app-name>) # Add this line
+>>>>>>> master
 ```
 4. レイトレーシングコードを記述し、CMakeを使ってビルドしてください。
 

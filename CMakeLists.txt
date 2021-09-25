@@ -393,7 +393,7 @@ add_subdirectory(examples/pathtracing)
 add_subdirectory(examples/rayTracingRestOfYourLife)
 
 # Executable apps
-add_subdirectory(apps/empty-app)
+add_subdirectory(apps/empty_app)
 
 # Unit test
 add_subdirectory(unit_test/math)

@@ -84,10 +84,10 @@ CMakeの実行では、[cmake-gui](https://cmake.org/download/)を使用して�
 `apps/` に新しいディレクトリを追加して、`App.h/.cpp`、`main.cpp`、`CMakeLists.txt`を修正するだけで、アプリケーションの作成が可能です。
 
 アプリケーション作成は次の手順に沿ってください
-1. `apps/empty-app `ディレクトリを `apps/` にコピー＆ペーストして、ディレクトリ名を変更します。
-2. 作成したディレクトリ内の`CMakeLists.txt`の `empty-app` を作成するアプリケーション名に変更します。
+1. `apps/empty_app `ディレクトリを `apps/` にコピー＆ペーストして、ディレクトリ名を変更します。
+2. 作成したディレクトリ内の`CMakeLists.txt`の `empty_app` を作成するアプリケーション名に変更します。
 ```
-PRAYGROUND_add_executalbe(empty-app target_name # empty-app -> <your-app-name>
+PRAYGROUND_add_executalbe(empty_app target_name # empty_app -> <your-app-name>
     main.cpp 
     app.cpp 
     app.h
@@ -105,7 +105,7 @@ target_link_libraries(${target_name} ${CUDA_LIBRARIES})
 3. `PRayGround/CMakeLists.txt` に、`add_subdirectory(<your-app-name>)`の行を追加します。
 ```
 # Executable apps
-add_subdirectory(apps/empty-app)
+add_subdirectory(apps/empty_app)
 add_subdirectory(apps/<your-app-name>)
 ```
 4. レイトレーシングコードを記述し、CMakeを使ってビルドしてください。

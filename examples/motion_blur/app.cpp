@@ -273,6 +273,16 @@ void App::setup()
     CUDA_CHECK(cudaStreamCreate(&stream));
     // GPU上にLaunchParamsデータ用の領域を確保
     d_params.allocate(sizeof(LaunchParams));
+
+    // GUI setting
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+    const char* glsl_version = "#version 150";
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(pgGetCurrentWindow()->windowPtr(), true);
+    ImGui_ImplOpenGL3_Init(glsl_version);
 }
 
 // ----------------------------------------------------------------
@@ -318,6 +328,15 @@ void App::update()
 // ----------------------------------------------------------------
 void App::draw()
 {
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    ImGui::Begin("Motion blur");
+    ImGui::Text("Frame rate: %.3f ms/frame (%.2f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+
+    ImGui::End();
+    ImGui::Render();
     result_bitmap.draw(0, 0);
 }
 

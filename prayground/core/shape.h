@@ -17,8 +17,6 @@ enum class ShapeType
 
 class Shape {
 public:
-    
-
     virtual ~Shape() {}
 
     virtual ShapeType type() const = 0;

@@ -46,4 +46,6 @@ private:
     bool camera_update;
 
     EnvironmentEmitter env;
+
+    float render_time = 0.0f;
 };

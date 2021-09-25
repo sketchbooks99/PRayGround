@@ -469,6 +469,8 @@ void App::update()
     params.subframe_index++;
     d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);
 
+    float start_time = pgGetElapsedTimef();
+
     // OptiX レイトレーシングカーネルの起動
     optixLaunch(
         static_cast<OptixPipeline>(pipeline),
@@ -480,6 +482,8 @@ void App::update()
         params.height,
         1
     );
+
+    render_time = pgGetElapsedTimef() - start_time;
 
     CUDA_CHECK(cudaStreamSynchronize(stream));
     CUDA_SYNC_CHECK();
@@ -514,6 +518,7 @@ void App::draw()
     }
 
     ImGui::Text("Frame rate: %.3f ms/frame (%.2f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+    ImGui::Text("Render time: %.3f ms/frame", render_time * 1000.0f);
     ImGui::Text("Subframe index: %d", params.subframe_index);
 
     ImGui::End();

@@ -73,6 +73,7 @@ set(sources
   shape/cylinder.cpp 
   shape/plane.h 
   shape/plane.cpp 
+  shape/shapegroup.h
   shape/sphere.h 
   shape/sphere.cpp
   shape/trianglemesh.h

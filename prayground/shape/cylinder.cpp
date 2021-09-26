@@ -18,7 +18,7 @@ Cylinder::Cylinder(float radius, float height)
 }
 
 // ------------------------------------------------------------------
-ShapeType Cylinder::type() const 
+constexpr ShapeType Cylinder::type()
 {
     return ShapeType::Custom;
 }
@@ -89,6 +89,18 @@ AABB Cylinder::bound() const
         -make_float3(m_radius, m_height / 2.0f, m_radius),
          make_float3(m_radius, m_height / 2.0f, m_radius)
     );
+}
+
+// ------------------------------------------------------------------
+Cylinder::DataType Cylinder::deviceData() const 
+{
+    CylinderData data = 
+    {
+        .radius = m_radius,
+        .height = m_height
+    };
+
+    return data;
 }
 
 } // ::prayground

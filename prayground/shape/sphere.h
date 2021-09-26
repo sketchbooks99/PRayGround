@@ -14,15 +14,19 @@ struct SphereData {
 #ifndef __CUDACC__
 class Sphere final : public Shape {
 public:
+    using DataType = SphereData;
+
     Sphere();
     Sphere(const float3& c, float r);
 
-    ShapeType type() const override;
-
-    void copyToDevice() override;
+    constexpr ShapeType type() override;
     OptixBuildInput createBuildInput() override;
 
+    void copyToDevice() override;
+
     AABB bound() const override;
+
+    DataType deviceData() const;
 private:
     float3 m_center;
     float m_radius;

@@ -17,7 +17,7 @@ Plane::Plane(const float2& min, const float2& max)
 }
 
 // ------------------------------------------------------------------
-ShapeType Plane::type() const
+constexpr ShapeType Plane::type()
 {
     return ShapeType::Custom;
 }
@@ -25,10 +25,7 @@ ShapeType Plane::type() const
 // ------------------------------------------------------------------
 void Plane::copyToDevice() 
 {
-    PlaneData data = {
-        .min = m_min, 
-        .max = m_max
-    };
+    PlaneData data = this->deviceData();
 
     if (!d_data)
         CUDA_CHECK( cudaMalloc( &d_data, sizeof(PlaneData) ) );
@@ -84,6 +81,17 @@ AABB Plane::bound() const
 {
     AABB box{make_float3(m_min.x, -0.01f, m_min.y), make_float3(m_max.x, 0.01f, m_max.y)};
     return box;
+}
+
+// ------------------------------------------------------------------
+Plane::DataType Plane::deviceData() const 
+{
+    PlaneData data = 
+    {
+        .min = m_min, 
+        .max = m_max
+    };
+    return data;
 }
 
 } // ::prayground

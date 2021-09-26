@@ -19,17 +19,17 @@ class Shape {
 public:
     virtual ~Shape() {}
 
-    virtual ShapeType type() const = 0;
+    virtual constexpr ShapeType type() = 0;
 
     virtual void copyToDevice() = 0;
+    virtual AABB bound() const = 0;
+
     virtual OptixBuildInput createBuildInput() = 0;
+
+    virtual void free();
 
     void setSbtIndex(const uint32_t sbt_index);
     uint32_t sbtIndex() const;
-
-    virtual AABB bound() const = 0;
-
-    virtual void free();
 
     void* devicePtr() const;
 

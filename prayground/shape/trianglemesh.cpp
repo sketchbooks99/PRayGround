@@ -29,7 +29,7 @@ TriangleMesh::TriangleMesh(
 }
 
 // ------------------------------------------------------------------
-ShapeType TriangleMesh::type() const
+constexpr ShapeType TriangleMesh::type()
 {
     return ShapeType::Mesh;
 }
@@ -37,22 +37,7 @@ ShapeType TriangleMesh::type() const
 // ------------------------------------------------------------------
 void TriangleMesh::copyToDevice() 
 {
-    CUDABuffer<float3> d_vertices_buf;
-    CUDABuffer<Face> d_faces_buf;
-    CUDABuffer<float3> d_normals_buf;
-    CUDABuffer<float2> d_texcoords_buf;
-    d_vertices_buf.copyToDevice(m_vertices);
-    d_faces_buf.copyToDevice(m_faces);
-    d_normals_buf.copyToDevice(m_normals);
-    d_texcoords_buf.copyToDevice(m_texcoords);
-
-    // device side pointer of mesh data
-    MeshData data = {
-        .vertices = d_vertices_buf.deviceData(),
-        .faces = d_faces_buf.deviceData(), 
-        .normals = d_normals_buf.deviceData(),
-        .texcoords = d_texcoords_buf.deviceData()
-    };
+    MeshData data = this->deviceData();
 
     if (!d_data) 
         CUDA_CHECK(cudaMalloc(&d_data, sizeof(MeshData)));
@@ -61,20 +46,16 @@ void TriangleMesh::copyToDevice()
         &data, sizeof(MeshData),
         cudaMemcpyHostToDevice
     ));
-
-    d_vertices = d_vertices_buf.devicePtr();
-    d_faces = d_faces_buf.devicePtr();
-    d_normals = d_normals_buf.devicePtr();
-    d_texcoords = d_texcoords_buf.devicePtr();
 }
 
 // ------------------------------------------------------------------
 OptixBuildInput TriangleMesh::createBuildInput() 
 {
     OptixBuildInput bi = {};
-    CUDABuffer<uint32_t> d_sbt_faces;
-    std::vector<uint32_t> sbt_faces(m_faces.size(), m_sbt_index);
-    d_sbt_faces.copyToDevice(sbt_faces);
+    CUDABuffer<uint32_t> d_sbt_indices;
+    uint32_t* sbt_indices = new uint32_t[1];
+    sbt_indices[0] = m_sbt_index;
+    d_sbt_indices.copyToDevice(sbt_indices, sizeof(uint32_t));
 
     unsigned int* triangle_input_flags = new unsigned int[1];
     triangle_input_flags[0] = OPTIX_GEOMETRY_FLAG_NONE;
@@ -90,7 +71,7 @@ OptixBuildInput TriangleMesh::createBuildInput()
     bi.triangleArray.numIndexTriplets = static_cast<uint32_t>(m_faces.size());
     bi.triangleArray.indexBuffer = d_faces;
     bi.triangleArray.numSbtRecords = 1;
-    bi.triangleArray.sbtIndexOffsetBuffer = d_sbt_faces.devicePtr();
+    bi.triangleArray.sbtIndexOffsetBuffer = d_sbt_indices.devicePtr();
     bi.triangleArray.sbtIndexOffsetSizeInBytes = sizeof(uint32_t);
     bi.triangleArray.sbtIndexOffsetStrideInBytes = sizeof(uint32_t);
     return bi;
@@ -106,6 +87,34 @@ void TriangleMesh::free()
 AABB TriangleMesh::bound() const 
 {
     return AABB{};
+}
+
+// ------------------------------------------------------------------
+TriangleMesh::DataType TriangleMesh::deviceData()
+{
+    CUDABuffer<float3> d_vertices_buf;
+    CUDABuffer<Face> d_faces_buf;
+    CUDABuffer<float3> d_normals_buf;
+    CUDABuffer<float2> d_texcoords_buf;
+    d_vertices_buf.copyToDevice(m_vertices);
+    d_faces_buf.copyToDevice(m_faces);
+    d_normals_buf.copyToDevice(m_normals);
+    d_texcoords_buf.copyToDevice(m_texcoords);
+
+    d_vertices = d_vertices_buf.devicePtr();
+    d_faces = d_faces_buf.devicePtr();
+    d_normals = d_normals_buf.devicePtr();
+    d_texcoords = d_texcoords_buf.devicePtr();
+
+    // device side pointer of mesh data
+    MeshData data = {
+        .vertices = d_vertices_buf.deviceData(),
+        .faces = d_faces_buf.deviceData(),
+        .normals = d_normals_buf.deviceData(),
+        .texcoords = d_texcoords_buf.deviceData()
+    };
+
+    return data;
 }
 
 // ------------------------------------------------------------------

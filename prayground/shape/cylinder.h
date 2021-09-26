@@ -20,13 +20,16 @@ public:
     Cylinder();
     Cylinder(float radius, float height);
 
-    ShapeType type() const override;
+    ShapeType constexpr type() override;
 
     void copyToDevice() override;
-    OptixBuildInput createBuildInput() override;
     void free() override;  
 
+    OptixBuildInput createBuildInput() override;
+
     AABB bound() const override;
+
+    DataType deviceData() const;
 
 private:
     float m_radius;

@@ -21,8 +21,6 @@ void App::initResultBufferOnDevice()
 // ----------------------------------------------------------------
 void App::setup()
 {
-    pgSetFrameRate(60);
-
     // OptixDeviceContextの生成
     stream = 0;
     CUDA_CHECK(cudaFree(0));
@@ -63,7 +61,7 @@ void App::setup()
     params.width = result_bitmap.width();
     params.height = result_bitmap.height();
     params.subframe_index = 0;
-    params.samples_per_launch = 16;
+    params.samples_per_launch = 4;
     params.light.pos = make_float3(0.0f, 9.9f, 0.0f);
     params.result_buffer = reinterpret_cast<uchar4*>(result_bitmap.devicePtr());
     params.accum_buffer = reinterpret_cast<float4*>(accum_bitmap.devicePtr());
@@ -123,7 +121,7 @@ void App::setup()
     uint32_t instance_id = 0;
 
     // ShapeInstanceは1つのShapeのみ保持する前提でShapeInstanceをセットアップするLambda関数
-    auto setupShapeInstance = [&](ProgramGroup hitgroup_prg, ShapeInstance& instance, shared_ptr<Texture> texture, bool is_update=false)
+    auto setupShapeInstance = [&](ProgramGroup hitgroup_prg, ShapeInstance& instance, shared_ptr<Texture> texture)
     {
         auto shape = instance.shapes()[0];
 
@@ -147,8 +145,6 @@ void App::setup()
         sbt.addHitgroupRecord(record);
 
         instance.allowCompaction();
-        if (is_update)
-            instance.allowUpdate();
         instance.setSBTOffset(sbt_offset);
         instance.setId(instance_id);
         instance.buildAccel(context, stream);
@@ -164,13 +160,14 @@ void App::setup()
     auto sphere_prg = pipeline.createHitgroupProgram(context, hitgroups_module, "__closesthit__sphere", "__intersection__sphere");
     auto mesh_prg = pipeline.createHitgroupProgram(context, hitgroups_module, "__closesthit__mesh");
 
-    // Cornel box用のテクスチャを用意
-    auto floor_checker = make_shared<CheckerTexture>(make_float3(0.9f), make_float3(0.3f), 10, checker_prg_id);
-    auto red = make_shared<ConstantTexture>(make_float3(0.8f, 0.05f, 0.05f), constant_prg_id);
-    auto green = make_shared<ConstantTexture>(make_float3(0.05f, 0.8f, 0.05f), constant_prg_id);
-    auto white = make_shared<ConstantTexture>(make_float3(0.8f), constant_prg_id);
     // Cornel box
     {
+        // Cornel box用のテクスチャを用意
+        auto floor_checker = make_shared<CheckerTexture>(make_float3(0.9f), make_float3(0.3f), 10, checker_prg_id);
+        auto red = make_shared<ConstantTexture>(make_float3(0.8f, 0.05f, 0.05f), constant_prg_id);
+        auto green = make_shared<ConstantTexture>(make_float3(0.05f, 0.8f, 0.05f), constant_prg_id);
+        auto white = make_shared<ConstantTexture>(make_float3(0.8f), constant_prg_id);
+
         ShapeInstance floor {
             ShapeType::Custom, 
             make_shared<Plane>(make_float2(-10.0f, -10.0f), make_float2(10.0f, 10.0f)),
@@ -211,9 +208,12 @@ void App::setup()
         setupShapeInstance(plane_prg, back, white);
     }
 
-    // Sphere (with motion blur)
+    // Sphere
     {
-        sphere_pos = sphere_prev_pos = make_float3(0.0f, 2.5f, 0.0f);
+        sphere_pos = sphere_prev_pos = make_float3(0.0f);
+
+        auto sphere_texture = make_shared<ConstantTexture>(make_float3(0.8f), constant_prg_id);
+        sphere_texture->copyToDevice();
 
         auto sphere = make_shared<Sphere>();
         sphere->setSbtIndex(sbt_idx);
@@ -226,8 +226,8 @@ void App::setup()
             .shape_data = sphere->devicePtr(),
             .tex_data = 
             {
-                .data = white->devicePtr(), 
-                .prg_id = white->programId()
+                .data = sphere_texture->devicePtr(), 
+                .prg_id = sphere_texture->programId()
             }
         };
 
@@ -261,16 +261,6 @@ void App::setup()
 
         instance_accel.addInstance(instance);
     }
-
-    // Sphere (without motion blur)
-    {
-        sphere2 = ShapeInstance{
-            ShapeType::Custom,
-            make_shared<Sphere>(),
-            Matrix4f::translate(sphere_pos - make_float3(0.0f, 8.5f, 0.0f)) * Matrix4f::scale(3.0f)
-        };
-        setupShapeInstance(sphere_prg, sphere2, white, true);
-    }
     
     // Shader Binding Table のデータをGPU上に生成
     sbt.createOnDevice();
@@ -283,16 +273,6 @@ void App::setup()
     CUDA_CHECK(cudaStreamCreate(&stream));
     // GPU上にLaunchParamsデータ用の領域を確保
     d_params.allocate(sizeof(LaunchParams));
-
-    // GUI setting
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-
-    const char* glsl_version = "#version 150";
-    ImGui::StyleColorsDark();
-    ImGui_ImplGlfw_InitForOpenGL(pgGetCurrentWindow()->windowPtr(), true);
-    ImGui_ImplOpenGL3_Init(glsl_version);
 }
 
 // ----------------------------------------------------------------
@@ -300,7 +280,7 @@ void App::update()
 {
     initResultBufferOnDevice();
 
-    float time = pgGetElapsedTimef();
+    float time = pgGetElapsedTime<float>();
     if (is_move) {
         float x = fmodf(time, 1.0f);
         sphere_prev_pos = sphere_pos;
@@ -311,8 +291,6 @@ void App::update()
 
         matrix_transform.setMatrixMotionTransform(begin_matrix, end_matrix);
         matrix_transform.copyToDevice();
-
-        sphere2.setTransform(Matrix4f::translate(sphere_pos - make_float3(0.0f, 8.5f, 0.0f)) * Matrix4f::scale(3.0f));
     }
 
     instance_accel.update(context, stream);
@@ -340,18 +318,7 @@ void App::update()
 // ----------------------------------------------------------------
 void App::draw()
 {
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
-
-    ImGui::Begin("Motion blur");
-    ImGui::Text("Frame rate: %.3f ms/frame (%.2f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-
-    ImGui::End();
-    ImGui::Render();
     result_bitmap.draw(0, 0);
-
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
 // ----------------------------------------------------------------

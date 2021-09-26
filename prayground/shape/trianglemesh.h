@@ -28,6 +28,8 @@ struct MeshData {
 
 class TriangleMesh : public Shape {
 public:
+    using DataType = MeshData;
+
     TriangleMesh() {}
     TriangleMesh(const std::filesystem::path& filename);
     TriangleMesh(
@@ -38,14 +40,16 @@ public:
     TriangleMesh(const TriangleMesh& mesh) = default;
     TriangleMesh(TriangleMesh&& mesh) = default;
 
-    ShapeType type() const override;
+    constexpr ShapeType type() override;
 
-    void copyToDevice() override;
     OptixBuildInput createBuildInput() override;
 
+    void copyToDevice() override;
     void free() override;
 
     AABB bound() const override;
+
+    DataType deviceData();
 
     /**
      * @note

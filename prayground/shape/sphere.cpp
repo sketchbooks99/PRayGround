@@ -18,7 +18,7 @@ Sphere::Sphere(const float3& c, float r)
 }
 
 // ------------------------------------------------------------------
-ShapeType Sphere::type() const
+constexpr ShapeType Sphere::type()
 {
     return ShapeType::Custom;
 }
@@ -26,10 +26,7 @@ ShapeType Sphere::type() const
 // ------------------------------------------------------------------
 void Sphere::copyToDevice()
 {
-    SphereData data = {
-        .center = m_center, 
-        .radius = m_radius
-    };
+    SphereData data = this->deviceData();
 
     if (!d_data)
         CUDA_CHECK(cudaMalloc(&d_data, sizeof(SphereData)));
@@ -78,6 +75,17 @@ AABB Sphere::bound() const
 { 
     return AABB( m_center - make_float3(m_radius),
                  m_center + make_float3(m_radius) );
+}
+
+// ------------------------------------------------------------------
+Sphere::DataType Sphere::deviceData() const 
+{
+    SphereData data = 
+    {
+        .center = m_center, 
+        .radius = m_radius
+    };
+    return data;
 }
 
 } // ::prayground

@@ -15,6 +15,8 @@ struct CurvesData
 #ifndef __CUDACC__
 class Curves final : public Shape {
 public:
+    using DataType = CurvesData;
+
     Curves();
 
     OptixBuildInputType buildInputType() const override;

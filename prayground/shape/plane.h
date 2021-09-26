@@ -21,14 +21,16 @@ public:
     Plane();
     Plane(const float2& min, const float2& max);
 
-    ShapeType type() const override;
+    constexpr ShapeType type() override;
 
-    void copyToDevice() override;
     OptixBuildInput createBuildInput() override;
 
+    void copyToDevice() override;
     void free() override;
 
     AABB bound() const override;
+
+    DataType deviceData() const;
 private:
     float2 m_min, m_max;
     CUdeviceptr d_aabb_buffer{ 0 };

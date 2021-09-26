@@ -20,7 +20,9 @@ concept DerivedShape = requires(T x)
     typename T::DataType;           // DataTypeがalias宣言されていること
 };
 
-template <DerivedShape ShapeT>
+// 力技感が否めない...
+// ShapeTの型が決まった時点でShapeTypeも確定させる(ある種コンパイル時にShapeTからShapeTypeを抽出する？)ことはできる？
+template <DerivedShape ShapeT, ShapeType Type>
 class ShapeGroup final : public Shape {
 public:
     ShapeGroup() {}
@@ -28,7 +30,7 @@ public:
 
     constexpr ShapeType type() override
     {
-        return ShapeT().type();
+        return Type;
     }
 
     OptixBuildInput createBuildInput() override
@@ -37,7 +39,7 @@ public:
         std::vector<uint32_t> sbt_indices;
         std::vector<uint32_t> sbt_counter;
 
-        if constexpr (this->type() == ShapeType::Mesh)
+        if constexpr (Type == ShapeType::Mesh)
         {
             for (auto& mesh : m_shapes)
             {
@@ -70,7 +72,7 @@ public:
             bi.triangleArray.sbtIndexOffsetStrideInBytes = sizeof(uint32_t);
             break;
         }
-        else if constexpr (this->type() == ShapeType::Custom)
+        else if constexpr (Type == ShapeType::Custom)
         {
             for (auto& custom : m_shapes)
             {
@@ -106,7 +108,7 @@ public:
             bi.customPrimitiveArray.sbtIndexOffsetStrideInBytes = sizeof(uint32_t);
             break;
         }
-        else if constexpr (this->type() == ShapeType::Curves)
+        else if constexpr (Type == ShapeType::Curves)
         {
             TODO_MESSAGE();
         }
@@ -116,7 +118,7 @@ public:
 
     void copyToDevice() override
     {
-        if constexpr (this->type() == ShapeT::Mesh)
+        if constexpr (Type == ShapeT::Mesh)
         {
             std::vector<float3> vertices;
             std::vector<float3> normals;
@@ -143,8 +145,7 @@ public:
             }
             
             // GPU側にMeshのデータをコピー
-            // tmp_mesh.copyToDevice()としても、tmp_meshの保持するd_dataの寿命が切れる
-            // 可能性があるため、それは避ける
+            // tmp_mesh.copyToDevice()としても、tmp_meshの保持するd_dataの寿命が切れる可能性があるため、それは避ける
             TriangleMesh tmp_mesh{vertices, faces, normals, texcoords};
             MeshData data = tmp_mesh.deviceData();
             if (!d_data) 
@@ -163,7 +164,7 @@ public:
                 .num_faces = static_cast<uint32_t>(tmp_mesh.faces.size())
             };
         }
-        else if constexpr (this->type() == ShapeType::Custom)
+        else if constexpr (Type == ShapeType::Custom)
         {
             std::vector<ShapeT::DataType> device_data;
             for (auto& custom : m_shapes)
@@ -177,7 +178,7 @@ public:
                 cudaMemcpyHostToDevice
             ));
         }
-        else if constexpr (this->type() == ShapeType::Curves)
+        else if constexpr (Type == ShapeType::Curves)
         {
             TODO_MESSAGE();
         }
@@ -193,7 +194,7 @@ public:
     AABB bound() const override
     {
         AABB aabb{};
-        if constexpr (ShapeT().type() == ShapeType::Custom)
+        if constexpr (Type == ShapeType::Custom)
         {
             for (auto& shape : m_shapes)
                 aabb = AABB::merge(aabb, shape.bound());

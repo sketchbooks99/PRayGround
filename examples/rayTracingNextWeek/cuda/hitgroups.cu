@@ -137,7 +137,7 @@ static __forceinline__ __device__ bool hitSphere(
     const float3 center = sphere_data->center;
     const float radius = sphere_data->radius;
 
-    const float3 oc = o - center;
+    /*const float3 oc = o - center;
     const float a = dot(v, v);
     const float half_b = dot(oc, v);
     const float c = dot(oc, oc) - radius * radius;
@@ -153,16 +153,42 @@ static __forceinline__ __device__ bool hitSphere(
         t = (-half_b + sqrtd) / a;
         if (t < tmin || tmax < t)
             return false;
-    }
+    }*/
 
-    si.t = t;
-    si.p = o + t * v;
-    si.n = si.p / radius;
-    si.uv = getSphereUV(si.n);
-    return true;
+    const float3 oc = o - center;
+    const float a = dot(v, v);
+    const float half_b = dot(oc, v);
+    const float c = dot(oc, oc) - radius * radius;
+    const float discriminant = half_b * half_b - a * c;
+
+    if (discriminant > 0.0f) {
+        float sqrtd = sqrtf(discriminant);
+        float t1 = (-half_b - sqrtd) / a;
+        bool check_second = true;
+        if (t1 > tmin && t1 < tmax) {
+            check_second = false;
+            si.t = t1;
+            si.p = o + t1 * v;
+            si.n = (si.p - center) / radius;
+            si.uv = getSphereUV(si.n);
+            return true;
+        }
+
+        if (check_second) {
+            float t2 = (-half_b + sqrtd) / a;
+            if (t2 > tmin && t2 < tmax) {
+                si.t = t1;
+                si.p = o + t1 * v;
+                si.n = (si.p - center) / radius;
+                si.uv = getSphereUV(si.n);
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
-extern "C" __device__ void __interesction__sphere()
+extern "C" __device__ void __intersection__sphere()
 {
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
     const int prim_id = optixGetPrimitiveIndex();
@@ -375,23 +401,23 @@ static INLINE DEVICE bool hitBox(
 
     for (int i = 0; i < 3; i++)
     {
-        float t0 = fmin(getByIndex(min, i) - getByIndex(o, i) / getByIndex(v, i),
+        float t0 = fminf(getByIndex(min, i) - getByIndex(o, i) / getByIndex(v, i),
                         getByIndex(max, i) - getByIndex(o, i) / getByIndex(v, i));
-        float t1 = fmax(getByIndex(min, i) - getByIndex(o, i) / getByIndex(v, i),
+        float t1 = fmaxf(getByIndex(min, i) - getByIndex(o, i) / getByIndex(v, i),
                         getByIndex(max, i) - getByIndex(o, i) / getByIndex(v, i));
-
-        _tmin = fmax(t0, _tmin);
-        _tmax = fmin(t1, _tmax);
 
         min_axis += (int)(t0 > _tmin);
         max_axis += (int)(t1 < _tmax);
+
+        _tmin = fmaxf(t0, _tmin);
+        _tmax = fminf(t1, _tmax);
 
         if (_tmax < _tmin)
             return false;
     }
 
     float3 center = (min + max) / 2.0f;
-    if (tmin < _tmin && _tmin < tmax)
+    if (tmin < _tmin && _tmin < tmax && min_axis > -1)
     {
         float3 p = o + _tmin * v;
         float3 center_axis = p;
@@ -405,7 +431,7 @@ static INLINE DEVICE bool hitBox(
         return true;
     }
 
-    if (tmin < _tmax && _tmax < tmax)
+    if (tmin < _tmax && _tmax < tmax && max_axis > -1)
     {
         float3 p = o + _tmax * v;
         float3 center_axis = p;
@@ -423,7 +449,7 @@ static INLINE DEVICE bool hitBox(
 
 extern "C" __device__ void __intersection__box()
 {
-    const HitGroupData* data = reinterpret_cast<HitGroupData*>(optixGetSbtDataPointer());
+    const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
     const int prim_id = optixGetPrimitiveIndex();
     BoxData box_data = reinterpret_cast<BoxData*>(data->shape_data)[prim_id];
 

@@ -49,6 +49,7 @@ INLINE DEVICE void trace(
     float3                 ray_direction,
     float                  tmin,
     float                  tmax,
+    float                  ray_time,
     unsigned int           ray_type,
     SurfaceInteraction*    si
 ) 
@@ -61,7 +62,7 @@ INLINE DEVICE void trace(
         ray_direction,
         tmin,
         tmax,
-        0.0f,                // rayTime
+        ray_time,                // rayTime
         OptixVisibilityMask( 1 ),
         OPTIX_RAY_FLAG_NONE,
         ray_type,        

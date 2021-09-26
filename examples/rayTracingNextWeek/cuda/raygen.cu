@@ -71,6 +71,7 @@ extern "C" __device__ void __raygen__pinhole()
                 rd,
                 0.01f, 
                 tmax, 
+                rnd(seed),
                 0,      // ray type
                 &si
             );

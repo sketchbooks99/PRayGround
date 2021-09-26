@@ -77,7 +77,7 @@ HOSTDEVICE INLINE unsigned int lcg2(unsigned int& prev)
 #ifdef __CUDACC__
 static HOSTDEVICE INLINE float rnd(unsigned int &prev)
 #else
-HOSTDEVICE INLINE unsigned int rnd(unsigned int &prev)
+HOSTDEVICE INLINE float rnd(unsigned int &prev)
 #endif
 {
     return ((float) lcg(prev) / (float) 0x01000000);

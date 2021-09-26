@@ -55,12 +55,20 @@ void App::setup()
     // Instance acceleration structureの初期化
     scene_ias = InstanceAccel{InstanceAccel::Type::Instances};
 
+    OptixMotionOptions motion_options;
+    motion_options.numKeys = 2;
+    motion_options.timeBegin = 0.0f;
+    motion_options.timeEnd = 1.0f;
+    motion_options.flags = OPTIX_MOTION_FLAG_NONE;
+    scene_ias.setMotionOptions(motion_options);
+
     // パイプラインの設定
     pipeline.setLaunchVariableName("params");
     pipeline.setDirectCallableDepth(5);
     pipeline.setContinuationCallableDepth(5);
     pipeline.setNumPayloads(5);
     pipeline.setNumAttributes(5);
+    pipeline.enableMotionBlur();
 
     // OptixModuleをCUDAファイルから生成
     Module raygen_module, miss_module, hitgroups_module, textures_module, surfaces_module;
@@ -225,7 +233,6 @@ void App::setup()
         Assert(dynamic_pointer_cast<Plane>(shape) || dynamic_pointer_cast<Sphere>(shape), "The shape of area emitter must be a plane or sphere.");
         
         shape->copyToDevice();
-        shape->setSbtIndex(sbt_idx);
         area.copyToDevice();
 
         HitgroupRecord record;
@@ -242,8 +249,6 @@ void App::setup()
                 .type = SurfaceType::AreaEmitter
             }
         };
-
-        sbt_idx++;
 
         sbt.addHitgroupRecord(record);
 
@@ -273,10 +278,11 @@ void App::setup()
 
     // Scene ==========================================================================
     unsigned int seed = tea<4>(0, 0);
+
     // Ground boxes
     {
         auto ground_green = make_shared<ConstantTexture>(make_float3(0.48f, 0.83f, 0.53f), constant_prg_id);
-        shared_ptr<ShapeGroup<Box>> ground_boxes = make_shared<ShapeGroup<Box>>();
+        shared_ptr<ShapeGroup<Box, ShapeType::Custom>> ground_boxes = make_shared<ShapeGroup<Box, ShapeType::Custom>>();
 
         const int boxes_per_side = 20;
         for (int i = 0; i < boxes_per_side; i++)
@@ -300,11 +306,14 @@ void App::setup()
         auto transform = Matrix4f::identity();
         Primitive ground{ ground_boxes, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
         setupPrimitive(box_prg, ground, transform);
+        sbt_idx++;
     }
 
     // Light
     {
         auto plane = make_shared<Plane>(make_float2(123.0f, 147.0f), make_float2(423.0f, 412.0f));
+        plane->setSbtIndex(sbt_idx);
+        sbt_idx++;
         auto white = make_shared<ConstantTexture>(make_float3(1.0f), constant_prg_id);
         AreaEmitter light{ white, 7.0f };
         auto transform = Matrix4f::translate({0.0f, 554.0f, 0.0f});
@@ -312,68 +321,69 @@ void App::setup()
     }
 
     // Sphere with motion blur
-    {
-        auto sphere = make_shared<Sphere>(make_float3(0.0f), 50.0f);
-        sphere->setSbtIndex(sbt_idx);
-        sbt_idx++;
-        auto orange = make_shared<ConstantTexture>(make_float3(0.7f, 0.3f, 0.1f), constant_prg_id);
-        auto diffuse = make_shared<Diffuse>(orange);
-        auto matrix_transform = Transform{ TransformType::MatrixMotion };
+    //{
+    //    auto sphere = make_shared<Sphere>(make_float3(0.0f), 50.0f);
+    //    sphere->setSbtIndex(sbt_idx);
+    //    sphere->copyToDevice();
+    //    sbt_idx++;
+    //    auto orange = make_shared<ConstantTexture>(make_float3(0.7f, 0.3f, 0.1f), constant_prg_id);
+    //    auto diffuse = make_shared<Diffuse>(orange);
+    //    diffuse->copyToDevice();
+    //    auto matrix_transform = Transform{ TransformType::MatrixMotion };
 
-        HitgroupRecord record;
-        sphere_prg.recordPackHeader(&record);
-        record.data =
-        {
-            .shape_data = sphere->devicePtr(),
-            .surface_info =
-            {
-                .data = diffuse->devicePtr(),
-                .sample_id = diffuse_sample_bsdf_prg_id,
-                .bsdf_id = diffuse_sample_bsdf_prg_id,
-                .pdf_id = diffuse_pdf_prg_id,
-                .type = diffuse->surfaceType()
-            }
-        };
+    //    HitgroupRecord record;
+    //    sphere_prg.recordPackHeader(&record);
+    //    record.data =
+    //    {
+    //        .shape_data = sphere->devicePtr(),
+    //        .surface_info =
+    //        {
+    //            .data = diffuse->devicePtr(),
+    //            .sample_id = diffuse_sample_bsdf_prg_id,
+    //            .bsdf_id = diffuse_sample_bsdf_prg_id,
+    //            .pdf_id = diffuse_pdf_prg_id,
+    //            .type = diffuse->surfaceType()
+    //        }
+    //    };
 
-        sbt.addHitgroupRecord(record);
+    //    sbt.addHitgroupRecord(record);
 
-        // 球体用のGASを用意
-        GeometryAccel sphere_gas{ ShapeType::Custom };
-        sphere_gas.addShape(sphere);
-        sphere_gas.allowCompaction();
-        sphere_gas.allowUpdate();
-        sphere_gas.build(context, stream);
+    //    // 球体用のGASを用意
+    //    GeometryAccel sphere_gas{ ShapeType::Custom };
+    //    sphere_gas.addShape(sphere);
+    //    sphere_gas.allowCompaction();
+    //    sphere_gas.build(context, stream);
 
-        // Motion blur用の開始と終了点における変換行列を用意
-        float3 center1 = make_float3(400.0f, 400.0f, 200.0f);
-        float3 center2 = center1 + make_float3(30.0f, 0.0f, 0.0f);
-        Matrix4f begin_matrix = Matrix4f::translate(center1);
-        Matrix4f end_matrix = Matrix4f::translate(center2);
+    //    // Motion blur用の開始と終了点における変換行列を用意
+    //    float3 center1 = make_float3(400.0f, 400.0f, 200.0f);
+    //    float3 center2 = center1 + make_float3(30.0f, 0.0f, 0.0f);
+    //    Matrix4f begin_matrix = Matrix4f::translate(center1);
+    //    Matrix4f end_matrix = Matrix4f::translate(center2);
 
-        // Matrix motion 用のTransformを用意
-        matrix_transform = Transform{ TransformType::MatrixMotion };
-        matrix_transform.setChildHandle(sphere_gas.handle());
-        matrix_transform.setMotionOptions(scene_ias.motionOptions());
-        matrix_transform.setMatrixMotionTransform(begin_matrix, end_matrix);
-        matrix_transform.copyToDevice();
-        // childHandleからTransformのTraversableHandleを生成
-        matrix_transform.buildHandle(context);
+    //    // Matrix motion 用のTransformを用意
+    //    matrix_transform = Transform{ TransformType::MatrixMotion };
+    //    matrix_transform.setChildHandle(sphere_gas.handle());
+    //    matrix_transform.setMotionOptions(scene_ias.motionOptions());
+    //    matrix_transform.setMatrixMotionTransform(begin_matrix, end_matrix);
+    //    matrix_transform.copyToDevice();
+    //    // childHandleからTransformのTraversableHandleを生成
+    //    matrix_transform.buildHandle(context);
 
-        // Instanceの生成
-        Instance instance;
-        instance.setSBTOffset(sbt_offset);
-        instance.setId(instance_id);
-        instance.setTraversableHandle(matrix_transform.handle());
+    //    // Instanceの生成
+    //    Instance instance;
+    //    instance.setSBTOffset(sbt_offset);
+    //    instance.setId(instance_id);
+    //    instance.setTraversableHandle(matrix_transform.handle());
 
-        scene_ias.addInstance(instance);
-    }
+    //    scene_ias.addInstance(instance);
+    //}
 
     // Glass sphere
     {
         auto sphere = make_shared<Sphere>(make_float3(360.0f, 150.0f, 145.0f), 70.0f);
         sphere->setSbtIndex(sbt_idx);
         sbt_idx++;
-        auto white = make_shared<ConstantTexture>(make_float3(1.0f));
+        auto white = make_shared<ConstantTexture>(make_float3(1.0f), constant_prg_id);
         auto glass = make_shared<Dielectric>(white, 1.5f);
         auto transform = Matrix4f::identity();
         Primitive glass_sphere{sphere, glass, dielectric_sample_bsdf_prg_id, dielectric_pdf_prg_id};
@@ -407,7 +417,7 @@ void App::setup()
 
     // Crowded sphere
     {
-        auto spheres = make_shared<ShapeGroup<Sphere>>();
+        auto spheres = make_shared<ShapeGroup<Sphere, ShapeType::Custom>>();
         int ns = 1000;
         for (int j = 0; j < ns; j++)
         {

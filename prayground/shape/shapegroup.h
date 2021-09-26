@@ -57,7 +57,7 @@ public:
             CUDABuffer<uint32_t> d_sbt_indices;
             d_sbt_indices.copyToDevice(sbt_indices);
 
-            bi.type = static_cast<OptixBuildInputType>(ShapeT::type());
+            bi.type = static_cast<OptixBuildInputType>(Type);
             bi.triangleArray.vertexFormat = OPTIX_VERTEX_FORMAT_FLOAT3;
             bi.triangleArray.vertexStrideInBytes = sizeof(float3);
             bi.triangleArray.numVertices = m_mesh_input.num_vertices;
@@ -70,11 +70,11 @@ public:
             bi.triangleArray.sbtIndexOffsetBuffer = d_sbt_indices.devicePtr();
             bi.triangleArray.sbtIndexOffsetSizeInBytes = sizeof(uint32_t);
             bi.triangleArray.sbtIndexOffsetStrideInBytes = sizeof(uint32_t);
-            break;
         }
         else if constexpr (Type == ShapeType::Custom)
         {
-            for (auto& custom : m_shapes)
+            uint32_t* input_flags = new uint32_t[m_shapes.size()];
+            for (int i = 0; auto& custom : m_shapes)
             {
                 // 重複しないindexの数を数える
                 uint32_t sbt_idx = custom.sbtIndex();
@@ -83,8 +83,8 @@ public:
                     sbt_counter.push_back(sbt_idx);
 
                 sbt_indices.push_back(sbt_idx);
+                input_flags[i++] = OPTIX_GEOMETRY_FLAG_NONE;
             }
-            std::vector<uint32_t> input_flags(m_shapes.size(), OPTIX_GEOMETRY_FLAG_NONE);
 
             CUDABuffer<uint32_t> d_sbt_indices;
             d_sbt_indices.copyToDevice(sbt_indices);
@@ -98,15 +98,14 @@ public:
                 sizeof(OptixAabb),
                 cudaMemcpyHostToDevice));
 
-            bi.type = static_cast<OptixBuildInputType>(ShapeT::type());
+            bi.type = static_cast<OptixBuildInputType>(Type);
             bi.customPrimitiveArray.aabbBuffers = &d_aabb_buffer;
             bi.customPrimitiveArray.numPrimitives = static_cast<uint32_t>(m_shapes.size());
-            bi.customPrimitiveArray.flags = input_flags.data();
+            bi.customPrimitiveArray.flags = input_flags;
             bi.customPrimitiveArray.numSbtRecords = static_cast<uint32_t>(sbt_counter.size());
             bi.customPrimitiveArray.sbtIndexOffsetBuffer = d_sbt_indices.devicePtr();
             bi.customPrimitiveArray.sbtIndexOffsetSizeInBytes = sizeof(uint32_t);
             bi.customPrimitiveArray.sbtIndexOffsetStrideInBytes = sizeof(uint32_t);
-            break;
         }
         else if constexpr (Type == ShapeType::Curves)
         {
@@ -118,7 +117,7 @@ public:
 
     void copyToDevice() override
     {
-        if constexpr (Type == ShapeT::Mesh)
+        if constexpr (Type == ShapeType::Mesh)
         {
             std::vector<float3> vertices;
             std::vector<float3> normals;
@@ -171,7 +170,7 @@ public:
                 device_data.push_back(custom.deviceData());
 
             if (!d_data)
-                CUDA_CHECK(cudaMalloc(&d_data, sizeof(ShapeT::DataType)));
+                CUDA_CHECK(cudaMalloc(&d_data, sizeof(ShapeT::DataType) * device_data.size()));
             CUDA_CHECK(cudaMemcpy(
                 d_data, 
                 device_data.data(), sizeof(ShapeT::DataType) * device_data.size(),

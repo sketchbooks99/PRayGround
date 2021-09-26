@@ -90,13 +90,12 @@ public:
             d_sbt_indices.copyToDevice(sbt_indices);
 
             OptixAabb aabb = static_cast<OptixAabb>(this->bound());
-
-            CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_aabb_buffer), sizeof(OptixAabb)));
-            CUDA_CHECK(cudaMemcpy(
-                reinterpret_cast<void*>(d_aabb_buffer),
-                &aabb,
-                sizeof(OptixAabb),
-                cudaMemcpyHostToDevice));
+            std::vector<OptixAabb> aabbs;
+            std::transform(m_shapes.begin(), m_shapes.end(), std::back_inserter(aabbs),
+                [](const ShapeT& custom) { return static_cast<OptixAabb>(custom.bound()); });
+            CUDABuffer<OptixAabb> d_aabb;
+            d_aabb.copyToDevice(aabbs);
+            d_aabb_buffer = d_aabb.devicePtr();
 
             bi.type = static_cast<OptixBuildInputType>(Type);
             bi.customPrimitiveArray.aabbBuffers = &d_aabb_buffer;

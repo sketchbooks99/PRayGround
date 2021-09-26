@@ -1,6 +1,7 @@
 #include "box.h"
 #include <prayground/core/cudabuffer.h>
 #include <prayground/core/util.h>
+#include <prayground/math/util.h>
 
 namespace prayground {
 
@@ -90,8 +91,8 @@ Box::DataType Box::deviceData() const
 {
     BoxData data = 
     {
-        .min = m_min,
-        .max = m_max
+        .min = m_min - math::eps,
+        .max = m_max + math::eps
     };
 
     return data;

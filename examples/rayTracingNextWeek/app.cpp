@@ -145,7 +145,7 @@ void App::setup()
     uint32_t plane_sample_pdf_prg_id = setupCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_plane"), CC_FUNC_STR("pdf_plane"));
 
     // 環境マッピング (Sphere mapping) 用のテクスチャとデータ準備
-    auto env_texture = make_shared<ConstantTexture>(make_float3(0.0f), constant_prg_id);
+    auto env_texture = make_shared<ConstantTexture>(make_float3(0.1f), constant_prg_id);
     env_texture->copyToDevice();
     env = EnvironmentEmitter{env_texture};
     env.copyToDevice();

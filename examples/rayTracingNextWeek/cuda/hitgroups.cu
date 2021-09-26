@@ -137,7 +137,7 @@ static __forceinline__ __device__ bool hitSphere(
     const float3 center = sphere_data->center;
     const float radius = sphere_data->radius;
 
-    /*const float3 oc = o - center;
+    const float3 oc = o - center;
     const float a = dot(v, v);
     const float half_b = dot(oc, v);
     const float c = dot(oc, oc) - radius * radius;
@@ -153,39 +153,12 @@ static __forceinline__ __device__ bool hitSphere(
         t = (-half_b + sqrtd) / a;
         if (t < tmin || tmax < t)
             return false;
-    }*/
-
-    const float3 oc = o - center;
-    const float a = dot(v, v);
-    const float half_b = dot(oc, v);
-    const float c = dot(oc, oc) - radius * radius;
-    const float discriminant = half_b * half_b - a * c;
-
-    if (discriminant > 0.0f) {
-        float sqrtd = sqrtf(discriminant);
-        float t1 = (-half_b - sqrtd) / a;
-        bool check_second = true;
-        if (t1 > tmin && t1 < tmax) {
-            check_second = false;
-            si.t = t1;
-            si.p = o + t1 * v;
-            si.n = (si.p - center) / radius;
-            si.uv = getSphereUV(si.n);
-            return true;
-        }
-
-        if (check_second) {
-            float t2 = (-half_b + sqrtd) / a;
-            if (t2 > tmin && t2 < tmax) {
-                si.t = t1;
-                si.p = o + t1 * v;
-                si.n = (si.p - center) / radius;
-                si.uv = getSphereUV(si.n);
-                return true;
-            }
-        }
     }
-    return false;
+    
+    si.p = o + t * v;
+    si.n = (si.p - center) / radius;
+    si.t = t;
+    return true;
 }
 
 extern "C" __device__ void __intersection__sphere()

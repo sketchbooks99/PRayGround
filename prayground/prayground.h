@@ -72,12 +72,16 @@
 #include "math/util.h"
 #include "math/vec_math.h"
 #include "math/matrix.h"
+#include "math/random.h"
+#include "math/noise.h"
 
 // shape include
 #include "shape/sphere.h"
 #include "shape/trianglemesh.h"
 #include "shape/plane.h"
 #include "shape/cylinder.h"
+#include "shape/box.h"
+#include "shape/shapegroup.h"
 
 // material include 
 #include "material/conductor.h"

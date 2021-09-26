@@ -28,8 +28,13 @@
 
 #pragma once
 
+#ifdef __CUDACC__
 template <unsigned int N>
 static HOSTDEVICE INLINE unsigned int tea( unsigned int val0, unsigned int val1 )
+#else 
+template <unsigned int N>
+HOSTDEVICE INLINE unsigned int tea(unsigned int val0, unsigned int val1)
+#endif
 {
     unsigned int v0 = val0;
     unsigned int v1 = val1;
@@ -46,7 +51,11 @@ static HOSTDEVICE INLINE unsigned int tea( unsigned int val0, unsigned int val1 
 }
 
 // Generate random unsigned int in [0, 2^24)
+#ifdef __CUDACC__
 static HOSTDEVICE INLINE unsigned int lcg(unsigned int &prev)
+#else
+HOSTDEVICE INLINE unsigned int lcg(unsigned int &prev)
+#endif
 {
     const unsigned int LCG_A = 1664525u;
     const unsigned int LCG_C = 1013904223u;
@@ -54,29 +63,49 @@ static HOSTDEVICE INLINE unsigned int lcg(unsigned int &prev)
     return prev & 0x00FFFFFF;
 }
 
+#ifdef __CUDACC__
 static HOSTDEVICE INLINE unsigned int lcg2(unsigned int &prev)
+#else
+HOSTDEVICE INLINE unsigned int lcg2(unsigned int& prev)
+#endif
 {
     prev = (prev*8121 + 28411)  % 134456;
     return prev;
 }
 
 // Generate random float in [0, 1)
+#ifdef __CUDACC__
 static HOSTDEVICE INLINE float rnd(unsigned int &prev)
+#else
+HOSTDEVICE INLINE unsigned int rnd(unsigned int &prev)
+#endif
 {
     return ((float) lcg(prev) / (float) 0x01000000);
 }
 
+#ifdef __CUDACC__
 static HOSTDEVICE INLINE float rnd(unsigned int &prev, const float min, const float max)
+#else 
+HOSTDEVICE INLINE float rnd(unsigned int& prev, const float min, const float max)
+#endif
 {
     return min + (max - min) * rnd(prev);
 }
 
+#ifdef __CUDACC__
 static HOSTDEVICE INLINE unsigned int rot_seed( unsigned int seed, unsigned int frame )
+#else
+HOSTDEVICE INLINE unsigned int rot_seed(unsigned int seed, unsigned int frame)
+#endif
 {
     return seed ^ frame;
 }
 
+#ifdef __CUDACC__
 static HOSTDEVICE INLINE int rnd_int(unsigned int &prev, int min, int max)
+#else
+HOSTDEVICE INLINE int rnd_int(unsigned int& prev, int min, int max)
+#endif
 {
     return static_cast<int>(rnd(prev, min, max + 1));
 }

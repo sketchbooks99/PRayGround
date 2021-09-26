@@ -84,7 +84,7 @@ void App::setup()
     initResultBufferOnDevice();
 
     // カメラの設定
-    camera.setOrigin(make_float3(278.0f, 278.0f, -800.0f));
+    camera.setOrigin(make_float3(478.0f, 278.0f, -600.0f));
     camera.setLookat(make_float3(278.0f, 278.0f, 0.0f));
     camera.setUp(make_float3(0.0f, 1.0f, 0.0f));
     camera.setFarClip(5000);
@@ -121,6 +121,7 @@ void App::setup()
 
     // テクスチャ用のCallableプログラム
     uint32_t constant_prg_id = setupCallable(textures_module, DC_FUNC_STR("constant"), "");
+    uint32_t bitmap_prg_id = setupCallable(textures_module, DC_FUNC_STR("bitmap"), "");
 
     // Surface用のCallableプログラム 
     // Diffuse
@@ -154,6 +155,8 @@ void App::setup()
     auto plane_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("plane"), IS_FUNC_STR("plane"));
     // Sphere
     auto sphere_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("sphere"), IS_FUNC_STR("sphere"));
+    // Box
+    auto box_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("box"), IS_FUNC_STR("box"));
     // Triangle mesh
     auto mesh_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("mesh"));
 
@@ -173,7 +176,6 @@ void App::setup()
     {
         // データをGPU側に用意
         primitive.shape->copyToDevice();
-        primitive.shape->setSbtIndex(sbt_idx);
         primitive.material->copyToDevice();
 
         // Shader Binding Table へのデータの登録
@@ -193,7 +195,6 @@ void App::setup()
         };
 
         sbt.addHitgroupRecord(record);
-        sbt_idx++;
 
         // GASをビルドし、IASに追加
         ShapeInstance instance{primitive.shape->type(), primitive.shape, transform};
@@ -205,7 +206,7 @@ void App::setup()
         scene_ias.addInstance(instance);
 
         instance_id++;
-        sbt_offset += RtRestLifeSBT::NRay;
+        sbt_offset += RtNextWeekSBT::NRay;
     };
 
     std::vector<AreaEmitterInfo> area_emitter_infos;
@@ -256,7 +257,7 @@ void App::setup()
         scene_ias.addInstance(instance);
 
         instance_id++;
-        sbt_offset += RtRestLifeSBT::NRay;
+        sbt_offset += RtNextWeekSBT::NRay;
 
         AreaEmitterInfo area_emitter_info = 
         {
@@ -270,84 +271,157 @@ void App::setup()
         area_emitter_infos.push_back(area_emitter_info);
     };
 
-    auto green = make_shared<ConstantTexture>(make_float3(0.05f, 0.8f, 0.05f), constant_prg_id);
-    auto red = make_shared<ConstantTexture>(make_float3(0.8f, 0.05f, 0.05f), constant_prg_id);
-    auto white = make_shared<ConstantTexture>(make_float3(0.8f, 0.8f, 0.8f), constant_prg_id);
-
-    // Ceiling
+    // Scene ==========================================================================
+    unsigned int seed = tea<4>(0, 0);
+    // Ground boxes
     {
-        auto plane = make_shared<Plane>(make_float2(0.0f,0.0f), make_float2(555.0f,555.0f));
-        auto diffuse = make_shared<Diffuse>(white);
-        auto transform = Matrix4f::translate({0.0f, 555.0f, 0.0f});
-        Primitive ceiling{plane, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id};
-        setupPrimitive(plane_prg, ceiling, transform);
+        auto ground_green = make_shared<ConstantTexture>(make_float3(0.48f, 0.83f, 0.53f), constant_prg_id);
+        shared_ptr<ShapeGroup<Box>> ground_boxes = make_shared<ShapeGroup<Box>>();
+
+        const int boxes_per_side = 20;
+        for (int i = 0; i < boxes_per_side; i++)
+        {
+            for (int j = 0; j < boxes_per_side; j++)
+            {
+                float w = 100.0f;
+                float x0 = -1000.0f * i * w;
+                float z0 = -1000.0f * j * w;
+                float y0 = 0.0f;
+                float x1 = x0 + w;
+                float y1 = rnd(seed, 1.0f, 101.0f);
+                float z1 = z0 + w;
+
+                Box box{ make_float3(x0, y0, z0), make_float3(x1, y1, z1) };
+                box.setSbtIndex(sbt_idx);
+                ground_boxes->addShape(box);
+            }
+        }
+        auto diffuse = make_shared<Diffuse>(ground_green, constant_prg_id);
+        auto transform = Matrix4f::identity();
+        Primitive ground{ ground_boxes, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
+        setupPrimitive(box_prg, ground, transform);
     }
 
-    // Red wall
+    // Light
     {
-        auto plane = make_shared<Plane>(make_float2(0.0f,0.0f), make_float2(555.0f,555.0f));
-        auto diffuse = make_shared<Diffuse>(red);
-        auto transform = Matrix4f::rotate(math::pi / 2.0f, {0.0f, 0.0f, 1.0f});
-        Primitive left_wall{plane, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id};
-        setupPrimitive(plane_prg, left_wall, transform);
+        auto plane = make_shared<Plane>(make_float2(123.0f, 147.0f), make_float2(423.0f, 412.0f));
+        auto white = make_shared<ConstantTexture>(make_float3(1.0f), constant_prg_id);
+        AreaEmitter light{ white, 7.0f };
+        auto transform = Matrix4f::translate({0.0f, 554.0f, 0.0f});
+        setupAreaEmitter(plane_prg, plane, light, transform, plane_sample_pdf_prg_id);
     }
 
-    // Green wall
+    // Sphere with motion blur
     {
-        auto plane = make_shared<Plane>(make_float2(0.0f,0.0f), make_float2(555.0f,555.0f));
-        auto diffuse = make_shared<Diffuse>(green);
-        auto transform = Matrix4f::translate({555.0f, 0.0f, 0.0f}) * Matrix4f::rotate(math::pi / 2.0f, {0.0f, 0.0f, 1.0f});
-        Primitive right_wall{plane, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id};
-        setupPrimitive(plane_prg, right_wall, transform);
-    }
+        auto sphere = make_shared<Sphere>(make_float3(0.0f), 50.0f);
+        sphere->setSbtIndex(sbt_idx);
+        sbt_idx++;
+        auto orange = make_shared<ConstantTexture>(make_float3(0.7f, 0.3f, 0.1f), constant_prg_id);
+        auto diffuse = make_shared<Diffuse>(orange);
+        auto matrix_transform = Transform{ TransformType::MatrixMotion };
 
-    // Back
-    {
-        auto plane = make_shared<Plane>(make_float2(0.0f,0.0f), make_float2(555.0f,555.0f));
-        auto diffuse = make_shared<Diffuse>(white);
-        auto transform = Matrix4f::translate({0.0f, 555.0f, 555.0f}) * Matrix4f::rotate(math::pi / 2.0f, {1.0f, 0.0f, 0.0f});
-        Primitive back{plane, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id};
-        setupPrimitive(plane_prg, back, transform);
-    }
+        HitgroupRecord record;
+        sphere_prg.recordPackHeader(&record);
+        record.data =
+        {
+            .shape_data = sphere->devicePtr(),
+            .surface_info =
+            {
+                .data = diffuse->devicePtr(),
+                .sample_id = diffuse_sample_bsdf_prg_id,
+                .bsdf_id = diffuse_sample_bsdf_prg_id,
+                .pdf_id = diffuse_pdf_prg_id,
+                .type = diffuse->surfaceType()
+            }
+        };
 
-    // Floor
-    {
-        auto plane = make_shared<Plane>(make_float2(0.0f,0.0f), make_float2(555.0f,555.0f));
-        auto diffuse = make_shared<Diffuse>(white);
-        auto transform = Matrix4f::translate({0.0f, 0.0f, 0.0f});
-        Primitive floor{plane, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id};
-        setupPrimitive(plane_prg, floor, transform);
-    }
+        sbt.addHitgroupRecord(record);
 
-    // Cube
-    {
-        auto mesh = make_shared<TriangleMesh>("resources/model/cube.obj");
-        auto diffuse = make_shared<Diffuse>(white);
-        auto transform = Matrix4f::translate({347.5f, 165, 377.5f}) * Matrix4f::rotate(math::radians(15.0f), {0.0f, 1.0f, 0.0f}) * Matrix4f::scale({82.5f, 165.0f, 82.5f});
-        Primitive cube{mesh, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id};
-        setupPrimitive(mesh_prg, cube, transform);
+        // 球体用のGASを用意
+        GeometryAccel sphere_gas{ ShapeType::Custom };
+        sphere_gas.addShape(sphere);
+        sphere_gas.allowCompaction();
+        sphere_gas.allowUpdate();
+        sphere_gas.build(context, stream);
+
+        // Motion blur用の開始と終了点における変換行列を用意
+        float3 center1 = make_float3(400.0f, 400.0f, 200.0f);
+        float3 center2 = center1 + make_float3(30.0f, 0.0f, 0.0f);
+        Matrix4f begin_matrix = Matrix4f::translate(center1);
+        Matrix4f end_matrix = Matrix4f::translate(center2);
+
+        // Matrix motion 用のTransformを用意
+        matrix_transform = Transform{ TransformType::MatrixMotion };
+        matrix_transform.setChildHandle(sphere_gas.handle());
+        matrix_transform.setMotionOptions(scene_ias.motionOptions());
+        matrix_transform.setMatrixMotionTransform(begin_matrix, end_matrix);
+        matrix_transform.copyToDevice();
+        // childHandleからTransformのTraversableHandleを生成
+        matrix_transform.buildHandle(context);
+
+        // Instanceの生成
+        Instance instance;
+        instance.setSBTOffset(sbt_offset);
+        instance.setId(instance_id);
+        instance.setTraversableHandle(matrix_transform.handle());
+
+        scene_ias.addInstance(instance);
     }
 
     // Glass sphere
     {
-        auto sphere = make_shared<Sphere>(make_float3(190.0f, 90.0f, 190.0f), 90.0f);
+        auto sphere = make_shared<Sphere>(make_float3(360.0f, 150.0f, 145.0f), 70.0f);
+        sphere->setSbtIndex(sbt_idx);
+        sbt_idx++;
+        auto white = make_shared<ConstantTexture>(make_float3(1.0f));
         auto glass = make_shared<Dielectric>(white, 1.5f);
         auto transform = Matrix4f::identity();
         Primitive glass_sphere{sphere, glass, dielectric_sample_bsdf_prg_id, dielectric_pdf_prg_id};
         setupPrimitive(sphere_prg, glass_sphere, transform);
     }
 
-    // Ceiling light
+    // Earth sphere
     {
-        // Shape
-        auto plane_light = make_shared<Plane>(make_float2(213.0f, 227.0f), make_float2(343.0f, 332.0f));
-        // Texture
-        auto light_white = make_shared<ConstantTexture>(make_float3(1.0f), constant_prg_id);
-        light_white->copyToDevice();
-        // Area emitter
-        auto plane_area_emitter = AreaEmitter(light_white, 15.0f);
-        Matrix4f transform = Matrix4f::translate({0.0f, 554.0f, 0.0f});
-        setupAreaEmitter(plane_prg, plane_light, plane_area_emitter, transform, plane_sample_pdf_prg_id);
+        auto sphere = make_shared<Sphere>(make_float3(400.0f, 200.0f, 400.0f), 100.0f);
+        sphere->setSbtIndex(sbt_idx);
+        sbt_idx++;
+        auto earth_texture = make_shared<BitmapTexture>("resources/image/earth.jpg", bitmap_prg_id);
+        auto diffuse = make_shared<Diffuse>(earth_texture);
+        auto transform = Matrix4f::identity();
+        Primitive earth_sphere{sphere, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id};
+        setupPrimitive(sphere_prg, earth_sphere, transform);
+    }
+
+    // Noise sphere
+    {
+        auto sphere = make_shared<Sphere>(make_float3(220.0f, 280.0f, 300.0f), 80.0f);
+        sphere->setSbtIndex(sbt_idx);
+        sbt_idx++;
+        // @todo ConstantTexture -> NoiseTexture
+        auto noise = make_shared<ConstantTexture>(make_float3(0.73f), constant_prg_id);
+        auto diffuse = make_shared<Diffuse>(noise);
+        auto transform = Matrix4f::identity();
+        Primitive earth_sphere{ sphere, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
+        setupPrimitive(sphere_prg, earth_sphere, transform);
+    }
+
+    // Crowded sphere
+    {
+        auto spheres = make_shared<ShapeGroup<Sphere>>();
+        int ns = 1000;
+        for (int j = 0; j < ns; j++)
+        {
+            float3 rnd_pos = make_float3(rnd(seed), rnd(seed), rnd(seed)) * 165.0f;
+            Sphere sphere = Sphere(rnd_pos, 10.0f);
+            sphere.setSbtIndex(sbt_idx);
+            spheres->addShape(Sphere(rnd_pos, 10.0f));
+        }
+        sbt_idx++;
+        auto white = make_shared<ConstantTexture>(make_float3(0.73f), constant_prg_id);
+        auto diffuse = make_shared<Diffuse>(white);
+        auto transform = Matrix4f::translate({ -100.0f, 270.0f, 395.0f });
+        Primitive crowded_sphere{ spheres, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
+        setupPrimitive(sphere_prg, crowded_sphere, transform);
     }
 
     // 光源データをGPU側にコピー

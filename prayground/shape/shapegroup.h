@@ -1,5 +1,7 @@
 #pragma once 
 
+#ifndef __CUDACC__
+
 #include <prayground/core/util.h>
 #include <prayground/core/cudabuffer.h>
 #include <prayground/core/shape.h>
@@ -26,7 +28,7 @@ public:
 
     constexpr ShapeType type() override
     {
-        return ShapeT::type();
+        return ShapeT().type();
     }
 
     OptixBuildInput createBuildInput() override
@@ -35,9 +37,7 @@ public:
         std::vector<uint32_t> sbt_indices;
         std::vector<uint32_t> sbt_counter;
 
-        switch(this->type())
-        {
-        case ShapeType::Mesh:
+        if constexpr (this->type() == ShapeType::Mesh)
         {
             for (auto& mesh : m_shapes)
             {
@@ -70,7 +70,7 @@ public:
             bi.triangleArray.sbtIndexOffsetStrideInBytes = sizeof(uint32_t);
             break;
         }
-        case ShapeType::Custom:
+        else if constexpr (this->type() == ShapeType::Custom)
         {
             for (auto& custom : m_shapes)
             {
@@ -106,11 +106,9 @@ public:
             bi.customPrimitiveArray.sbtIndexOffsetStrideInBytes = sizeof(uint32_t);
             break;
         }
-        case ShapeType::Curves:
+        else if constexpr (this->type() == ShapeType::Curves)
         {
             TODO_MESSAGE();
-            break;
-        }
         }
 
         return bi;
@@ -118,9 +116,7 @@ public:
 
     void copyToDevice() override
     {
-        switch(this->type())
-        {
-        case ShapeType::Mesh:
+        if constexpr (this->type() == ShapeT::Mesh)
         {
             std::vector<float3> vertices;
             std::vector<float3> normals;
@@ -135,18 +131,15 @@ public:
                 std::copy(mesh.normals().begin(), mesh.normals().end(), std::back_inserter(normals));
                 std::copy(mesh.texcoords().begin(), mesh.texcoords().end(), std::back_inserter(texcoords));
                 std::transform(mesh.faces().begin(), mesh.faces().end(), std::back_inserter(faces),
-                    [&](Face face){ return Face{
+                    [&](Face face) { return Face{
                         .vertex_id = face.vertex_id + make_int3(num_verts),
                         .normal_id = face.normal_id + make_int3(num_normals),
                         .texcoord_id = face.texcoord_id + make_int3(num_texcoords),
-                    }});
+                    };  });
                 
                 num_verts += (uint32_t)mesh.vertices().size();
                 num_normals += (uint32_t)mesh.normals().size();
                 num_texcoords += (uint32_t)mesh.texcoords().size();
-
-                std::vector<uint32_t> mesh_sbts(mesh.faces().size(), mesh.sbtIndex());
-                std::copy(mesh_sbts.begin(), mesh_sbts.end(), std::back_inserter(sbt_indices));
             }
             
             // GPU側にMeshのデータをコピー
@@ -169,9 +162,8 @@ public:
                 .num_vertices = static_cast<uint32_t>(tmp_mesh.vertices.size()),
                 .num_faces = static_cast<uint32_t>(tmp_mesh.faces.size())
             };
-            break;
         }
-        case ShapeType::Custom:
+        else if constexpr (this->type() == ShapeType::Custom)
         {
             std::vector<ShapeT::DataType> device_data;
             for (auto& custom : m_shapes)
@@ -184,15 +176,10 @@ public:
                 device_data.data(), sizeof(ShapeT::DataType) * device_data.size(),
                 cudaMemcpyHostToDevice
             ));
-            break;
         }
-        case ShapeType::Curves:
+        else if constexpr (this->type() == ShapeType::Curves)
         {
             TODO_MESSAGE();
-            break;
-        }
-        default:
-            return;
         }
     }
 
@@ -206,16 +193,10 @@ public:
     AABB bound() const override
     {
         AABB aabb{};
-        switch(ShapeT::type())
+        if constexpr (ShapeT().type() == ShapeType::Custom)
         {
-        case ShapeType::Mesh:
-            break;
-        case ShapeType::Custom:
             for (auto& shape : m_shapes)
                 aabb = AABB::merge(aabb, shape.bound());
-            break;
-        case ShapeType::Curves:
-            break;
         }
         return aabb;
     }
@@ -244,4 +225,6 @@ private:
     std::vector<ShapeT> m_shapes;
 };
 
-}
+} // ::prayground
+
+#endif // __CUDACC__

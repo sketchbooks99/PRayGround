@@ -20,7 +20,7 @@ public:
     Cylinder();
     Cylinder(float radius, float height);
 
-    ShapeType constexpr type() override;
+    constexpr ShapeType type() override;
 
     void copyToDevice() override;
     void free() override;  
@@ -38,4 +38,4 @@ private:
 };
 #endif // __CUDACC__
 
-}
+} // ::prayground

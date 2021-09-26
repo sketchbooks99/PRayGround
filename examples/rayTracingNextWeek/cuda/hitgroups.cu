@@ -3,6 +3,7 @@
 #include <prayground/shape/trianglemesh.h>
 #include <prayground/shape/sphere.h>
 #include <prayground/shape/cylinder.h>
+#include <prayground/shape/box.h>
 #include <prayground/core/ray.h>
 #include <prayground/core/onb.h>
 #include <prayground/core/bsdf.h>
@@ -127,7 +128,11 @@ static __forceinline__ __device__ float2 getSphereUV(const float3& p) {
     return make_float2(u, v);
 }
 
-static __forceinline__ __device__ bool hitSphere(const SphereData* sphere_data, const float3& o, const float3& v, const float tmin, const float tmax, SurfaceInteraction& si)
+static __forceinline__ __device__ bool hitSphere(
+    const SphereData* sphere_data, 
+    const float3& o, const float3& v, 
+    const float tmin, const float tmax, 
+    SurfaceInteraction& si)
 {
     const float3 center = sphere_data->center;
     const float radius = sphere_data->radius;
@@ -157,44 +162,21 @@ static __forceinline__ __device__ bool hitSphere(const SphereData* sphere_data, 
     return true;
 }
 
-extern "C" __device__ void __intersection__sphere() {
+extern "C" __device__ void __interesction__sphere()
+{
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
-    const SphereData* sphere_data = reinterpret_cast<SphereData*>(data->shape_data);
-
-    const float3 center = sphere_data->center;
-    const float radius = sphere_data->radius;
+    const int prim_id = optixGetPrimitiveIndex();
+    SphereData sphere_data = reinterpret_cast<SphereData*>(data->shape_data)[prim_id];
 
     Ray ray = getLocalRay();
 
-    const float3 oc = ray.o - center;
-    const float a = dot(ray.d, ray.d);
-    const float half_b = dot(oc, ray.d);
-    const float c = dot(oc, oc) - radius * radius;
-    const float discriminant = half_b * half_b - a * c;
-
-    if (discriminant > 0.0f) {
-        float sqrtd = sqrtf(discriminant);
-        float t1 = (-half_b - sqrtd) / a;
-        bool check_second = true;
-        if (t1 > ray.tmin && t1 < ray.tmax) {
-            float3 normal = normalize((ray.at(t1) - center) / radius);
-            check_second = false;
-            optixReportIntersection(t1, 0, float3_as_ints(normal));
-        }
-
-        if (check_second) {
-            float t2 = (-half_b + sqrtd) / a;
-            if (t2 > ray.tmin && t2 < ray.tmax) {
-                float3 normal = normalize((ray.at(t2) - center) / radius);
-                optixReportIntersection(t2, 0, float3_as_ints(normal));
-            }
-        }
-    }
+    SurfaceInteraction si;
+    if (hitSphere(&sphere_data, ray.o, ray.d, ray.tmin, ray.tmax, si))
+        optixReportIntersection(si.t, 0, float3_as_ints(si.n));
 }
 
 extern "C" __device__ void __closesthit__sphere() {
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
-    const SphereData* sphere_data = reinterpret_cast<SphereData*>(data->shape_data);
 
     Ray ray = getWorldRay();
 
@@ -357,6 +339,123 @@ extern "C" __device__ void __closesthit__cylinder()
     SurfaceInteraction* si = getSurfaceInteraction();
     si->p = ray.at(ray.tmax);
     si->n = normalize(world_n);
+    si->t = ray.tmax;
+    si->wi = ray.d;
+    si->uv = uv;
+    si->surface_info = data->surface_info;
+}
+
+// Box -------------------------------------------------------------------------------
+static INLINE DEVICE float2 getBoxUV(const float3& p, const float3& min, const float3& max, const int axis)
+{
+    float2 uv;
+    int u_axis = (axis + 1) % 3;
+    int v_axis = (axis + 2) % 3;
+
+    // axisがYの時は (u: Z, v: X) -> (u: X, v: Z)へ順番を変える
+    if (axis == 1) swap(u_axis, v_axis);
+
+    uv.x = getByIndex(p, u_axis) - getByIndex(min, u_axis) / (getByIndex(max, u_axis) - getByIndex(min, u_axis));
+    uv.y = getByIndex(p, v_axis) - getByIndex(min, v_axis) / (getByIndex(max, v_axis) - getByIndex(min, v_axis));
+
+    return clamp(uv, 0.0f, 1.0f);
+}
+
+static INLINE DEVICE bool hitBox(
+    const BoxData* box_data, 
+    const float3& o, const float3& v, 
+    const float tmin, const float tmax, 
+    SurfaceInteraction& si)
+{
+    float3 min = box_data->min;
+    float3 max = box_data->max;
+
+    float _tmin = tmin, _tmax = tmax;
+    int min_axis = -1, max_axis = -1;
+
+    for (int i = 0; i < 3; i++)
+    {
+        float t0 = fmin(getByIndex(min, i) - getByIndex(o, i) / getByIndex(v, i),
+                        getByIndex(max, i) - getByIndex(o, i) / getByIndex(v, i));
+        float t1 = fmax(getByIndex(min, i) - getByIndex(o, i) / getByIndex(v, i),
+                        getByIndex(max, i) - getByIndex(o, i) / getByIndex(v, i));
+
+        _tmin = fmax(t0, _tmin);
+        _tmax = fmin(t1, _tmax);
+
+        min_axis += (int)(t0 > _tmin);
+        max_axis += (int)(t1 < _tmax);
+
+        if (_tmax < _tmin)
+            return false;
+    }
+
+    float3 center = (min + max) / 2.0f;
+    if (tmin < _tmin && _tmin < tmax)
+    {
+        float3 p = o + _tmin * v;
+        float3 center_axis = p;
+        setByIndex(center_axis, min_axis, getByIndex(center, min_axis));
+        float3 normal = normalize(p - center_axis);
+        float2 uv = getBoxUV(p, min, max, min_axis);
+        si.p = p;
+        si.n = normal;
+        si.uv = uv;
+        si.t = _tmin;
+        return true;
+    }
+
+    if (tmin < _tmax && _tmax < tmax)
+    {
+        float3 p = o + _tmax * v;
+        float3 center_axis = p;
+        setByIndex(center_axis, max_axis, getByIndex(center, max_axis));
+        float3 normal = normalize(p - center_axis);
+        float2 uv = getBoxUV(p, min, max, max_axis);
+        si.p = p;
+        si.n = normal;
+        si.uv = uv;
+        si.t = _tmax;
+        return true;
+    }
+    return false;
+}
+
+extern "C" __device__ void __intersection__box()
+{
+    const HitGroupData* data = reinterpret_cast<HitGroupData*>(optixGetSbtDataPointer());
+    const int prim_id = optixGetPrimitiveIndex();
+    BoxData box_data = reinterpret_cast<BoxData*>(data->shape_data)[prim_id];
+
+    Ray ray = getLocalRay();
+
+    SurfaceInteraction si;
+    if (hitBox(&box_data, ray.o, ray.d, ray.tmin, ray.tmax, si))
+        optixReportIntersection(si.t, 0, float3_as_ints(si.n), float2_as_ints(si.uv));
+}
+
+extern "C" __device__ void __closesthit__box()
+{
+    HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
+
+    Ray ray = getWorldRay();
+
+    float3 local_n = make_float3(
+        int_as_float( optixGetAttribute_0() ),
+        int_as_float( optixGetAttribute_1() ), 
+        int_as_float( optixGetAttribute_2() )
+    );
+    float2 uv = make_float2(
+        int_as_float( optixGetAttribute_3() ),
+        int_as_float( optixGetAttribute_4() )
+    );
+    float3 world_n = optixTransformNormalFromObjectToWorldSpace(local_n);
+    world_n = normalize(world_n);
+
+    SurfaceInteraction* si = getSurfaceInteraction();
+
+    si->p = ray.at(ray.tmax);
+    si->n = world_n;
     si->t = ray.tmax;
     si->wi = ray.d;
     si->uv = uv;

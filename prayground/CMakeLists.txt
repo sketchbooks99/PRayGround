@@ -28,6 +28,7 @@ set(sources
 
   # Math libraries ==========
   math/matrix.h
+  math/noise.h
   math/vec_math.h
   math/util.h
   math/random.h
@@ -69,6 +70,8 @@ set(sources
   optix/cuda/texture.cuh
 
   # Shapes ==========
+  shape/box.h
+  shape/box.cpp
   shape/cylinder.h 
   shape/cylinder.cpp 
   shape/plane.h 

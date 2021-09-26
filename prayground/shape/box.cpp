@@ -1,44 +1,44 @@
-#include "cylinder.h"
+#include "box.h"
 #include <prayground/core/cudabuffer.h>
 #include <prayground/core/util.h>
 
 namespace prayground {
 
 // ------------------------------------------------------------------
-Cylinder::Cylinder()
-: m_radius(0.5f), m_height(1.0f)
+Box::Box()
+: m_min(make_float3(-1.0f)), m_max(make_float3(1.0f))
 {
 
 }
 
-Cylinder::Cylinder(float radius, float height)
-: m_radius(radius), m_height(height)
+Box::Box(const float3& min, const float3& max)
+: m_min(min), m_max(max)
 {
 
 }
 
 // ------------------------------------------------------------------
-constexpr ShapeType Cylinder::type()
+constexpr ShapeType Box::type()
 {
     return ShapeType::Custom;
 }
 
 // ------------------------------------------------------------------
-void Cylinder::copyToDevice()
+void Box::copyToDevice()
 {
-    CylinderData data = this->deviceData();
+    BoxData data = this->deviceData();
 
-    if (!d_data) 
-        CUDA_CHECK( cudaMalloc( &d_data, sizeof(CylinderData) ) );
-    CUDA_CHECK( cudaMemcpy(
+    if (!d_data)
+        CUDA_CHECK(cudaMalloc(&d_data, sizeof(BoxData)));
+    CUDA_CHECK(cudaMemcpy(
         d_data, 
-        &data, sizeof(CylinderData), 
+        &data, sizeof(BoxData), 
         cudaMemcpyHostToDevice
     ));
 }
 
 // ------------------------------------------------------------------
-OptixBuildInput Cylinder::createBuildInput()
+OptixBuildInput Box::createBuildInput()
 {
     OptixBuildInput bi = {};
     CUDABuffer<uint32_t> d_sbt_indices;
@@ -73,28 +73,25 @@ OptixBuildInput Cylinder::createBuildInput()
 }
 
 // ------------------------------------------------------------------
-void Cylinder::free()
+void Box::free()
 {
     Shape::free();
     cuda_free(d_aabb_buffer);
 }
 
 // ------------------------------------------------------------------
-AABB Cylinder::bound() const 
+AABB Box::bound() const 
 {
-    return AABB( 
-        -make_float3(m_radius, m_height / 2.0f, m_radius),
-         make_float3(m_radius, m_height / 2.0f, m_radius)
-    );
+    return AABB(m_min, m_max);
 }
 
 // ------------------------------------------------------------------
-Cylinder::DataType Cylinder::deviceData() const 
+Box::DataType Box::deviceData() const 
 {
-    CylinderData data = 
+    BoxData data = 
     {
-        .radius = m_radius,
-        .height = m_height
+        .min = m_min,
+        .max = m_max
     };
 
     return data;

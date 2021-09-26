@@ -34,8 +34,8 @@ public:
     void* devicePtr() const;
 
 protected:
-    void* d_data { 0 };
-    uint32_t m_sbt_index;
+    void* d_data { nullptr };
+    uint32_t m_sbt_index { 0 };
 };
 
 #endif // __CUDACC__

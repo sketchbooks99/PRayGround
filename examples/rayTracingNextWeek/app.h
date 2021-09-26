@@ -34,7 +34,7 @@ private:
     Pipeline pipeline;
     Context context;
     CUstream stream;
-    RtRestLifeSBT sbt;
+    RtNextWeekSBT sbt;
     InstanceAccel scene_ias;
 
     Bitmap result_bitmap;

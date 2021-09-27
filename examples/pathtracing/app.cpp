@@ -150,14 +150,10 @@ void App::setup()
     // AreaEmitter
     uint32_t area_emitter_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("area_emitter"), "");
 
-    // Shape用のCallableプログラム(主に面光源サンプリング用)
-    uint32_t sphere_sample_pdf_prg_id = setupCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_sphere"), CC_FUNC_STR("pdf_sphere"));
-    uint32_t plane_sample_pdf_prg_id = setupCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_plane"), CC_FUNC_STR("pdf_plane"));
-
     // 環境マッピング (Sphere mapping) 用のテクスチャとデータ準備
     // 画像ファイルはリポジトリには含まれていないので、任意の画像データを設定してください
-    // auto env_texture = make_shared<FloatBitmapTexture>("resources/image/dikhololo_night_4k.exr", bitmap_prg_id); 
-    auto env_texture = make_shared<ConstantTexture>(make_float3(0.0f), constant_prg_id);
+     auto env_texture = make_shared<FloatBitmapTexture>("resources/image/dikhololo_night_4k.exr", bitmap_prg_id); 
+    //auto env_texture = make_shared<ConstantTexture>(make_float3(0.0f), constant_prg_id);
     env_texture->copyToDevice();
     env = EnvironmentEmitter{env_texture};
     env.copyToDevice();
@@ -240,21 +236,13 @@ void App::setup()
         sbt_offset += PathTracingSBT::NRay;
     };
 
-    std::vector<AreaEmitterInfo> area_emitter_infos;
-    // 面光源用のSBTデータを用意しグローバル情報としての光源情報を追加するLambda関数
-    // 光源サンプリング時にCallable関数ではOptixInstanceに紐づいた行列情報を取得できないので
-    // 行列情報をAreaEmitterInfoに一緒に設定しておく
-    // ついでにShapeInstanceによって光源用のGASも追加
+    // 面光源用のSBTデータを用意するLambda関数
     auto setupAreaEmitter = [&](
         ProgramGroup& prg, ProgramGroup& shadow_prg, 
         shared_ptr<Shape> shape,
-        AreaEmitter area, Matrix4f transform, 
-        uint32_t sample_pdf_id
+        AreaEmitter area, Matrix4f transform
     )
-    {
-        // Plane or Sphereにキャスト可能かチェック
-        Assert(dynamic_pointer_cast<Plane>(shape) || dynamic_pointer_cast<Sphere>(shape), "The shape of area emitter must be a plane or sphere.");
-        
+    {        
         shape->copyToDevice();
         shape->setSbtIndex(sbt_idx);
         area.copyToDevice();
@@ -267,9 +255,9 @@ void App::setup()
             .surface_info = 
             {
                 .data = area.devicePtr(),
-                .sample_id = sample_pdf_id,
+                .sample_id = area_emitter_prg_id, // 使わない
                 .bsdf_id = area_emitter_prg_id,
-                .pdf_id = sample_pdf_id,
+                .pdf_id = area_emitter_prg_id,    // 使わない
                 .type = SurfaceType::AreaEmitter
             }
         };
@@ -291,17 +279,6 @@ void App::setup()
 
         instance_id++;
         sbt_offset += PathTracingSBT::NRay;
-
-        AreaEmitterInfo area_emitter_info = 
-        {
-            .shape_data = shape->devicePtr(), 
-            .objToWorld = transform,
-            .worldToObj = transform.inverse(), 
-            .sample_id = sample_pdf_id, 
-            .pdf_id = sample_pdf_id, 
-            .gas_handle = instance.handle()
-        };
-        area_emitter_infos.push_back(area_emitter_info);
     };
 
     // Bunny
@@ -421,7 +398,7 @@ void App::setup()
         // Area emitter
         auto plane_area_emitter = AreaEmitter(white, 50.0f);
         Matrix4f transform = Matrix4f::translate({200.0f, 50.0f, 200.0f}) * Matrix4f::rotate(math::pi / 4.0f, {0.5f, 0.5f, 0.2f}) * Matrix4f::scale(50.0f);
-        setupAreaEmitter(plane_prg, plane_shadow_prg, plane_light, plane_area_emitter, transform, plane_sample_pdf_prg_id);
+        setupAreaEmitter(plane_prg, plane_shadow_prg, plane_light, plane_area_emitter, transform);
     }
 
     // 面光源2 : Sphere
@@ -434,14 +411,8 @@ void App::setup()
         // Area emitter
         auto sphere_area_emitter = AreaEmitter(orange, 50.0f);
         Matrix4f transform = Matrix4f::translate({-200.0f, 50.0f, -200.0f}) * Matrix4f::scale(30.0f);
-        setupAreaEmitter(sphere_prg, sphere_shadow_prg, sphere_light, sphere_area_emitter, transform, sphere_sample_pdf_prg_id);
+        setupAreaEmitter(sphere_prg, sphere_shadow_prg, sphere_light, sphere_area_emitter, transform);
     }
-
-    // 光源データをGPU側にコピー
-    CUDABuffer<AreaEmitterInfo> d_area_emitter_infos;
-    d_area_emitter_infos.copyToDevice(area_emitter_infos);
-    params.lights = d_area_emitter_infos.deviceData();
-    params.num_lights = static_cast<int>(area_emitter_infos.size());
 
     CUDA_CHECK(cudaStreamCreate(&stream));
     scene_ias.build(context, stream);

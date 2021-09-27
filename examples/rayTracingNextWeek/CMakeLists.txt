@@ -2,6 +2,10 @@ PRAYGROUND_add_executalbe(rayTracingNextWeek target_name
     main.cpp 
     app.cpp 
     app.h
+    box_medium.h
+    box_medium.cpp
+    sphere_medium.h
+    sphere_medium.cpp
     params.h
     cuda/hitgroups.cu
     cuda/surfaces.cu

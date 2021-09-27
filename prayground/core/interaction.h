@@ -29,9 +29,6 @@ enum class SurfaceType : unsigned int {
 
     // Emitter 
     AreaEmitter     = 1u << 5,
-
-    // Medium --- Future work
-    Medium          = 1u << 6
 };
 
 constexpr SurfaceType  operator|(SurfaceType t1, SurfaceType t2)    { return static_cast<SurfaceType>(  (unsigned int)t1 | (unsigned int)t2 ); }

@@ -3,14 +3,13 @@
 #include <prayground/material/dielectric.h>
 #include <prayground/material/conductor.h>
 #include <prayground/material/disney.h>
+#include <prayground/material/isotropic.h>
 #include <prayground/emitter/area.h>
 #include <prayground/core/bsdf.h>
 #include <prayground/core/onb.h>
 #include <prayground/core/color.h>
 
 using namespace prayground;
-
-/// @todo 確率密度関数、Next event estimationの実装
 
 // Diffuse -----------------------------------------------------------------------------------------------
 extern "C" __device__ void __direct_callable__sample_diffuse(SurfaceInteraction* si, void* mat_data) {
@@ -221,7 +220,7 @@ extern "C" __device__ float3 __continuation_callable__bsdf_disney(SurfaceInterac
     const float3 f_clearcoat = make_float3( 0.25f * disney->clearcoat * (Fcc * Dcc * Gcc) / (4.0f * NdotV * NdotL) ); 
 
     const float3 out = ( 1.0f - disney->metallic ) * ( lerp( f_diffuse, f_subsurface, disney->subsurface ) + f_sheen ) + f_specular + f_clearcoat;
-    return out * clamp(NdotL, 0.0f, 1.0f) / math::pi;
+    return out * clamp(NdotL, 0.0f, 1.0f);
 }
 
 /**
@@ -257,10 +256,31 @@ extern "C" __device__ float __direct_callable__pdf_disney(SurfaceInteraction* si
     return diffuse_ratio * pdf_diffuse + specular_ratio * pdf_specular;
 }
 
-// Area emitter ------------------------------------------------------------------------------------------
-extern "C" __device__ void __direct_callable__area_emitter(SurfaceInteraction* si, void* surface_data)
+// Isotropic ------------------------------------------------------------------------------------------
+extern "C" __device__ void __direct_callable__sample_isotropic(SurfaceInteraction* si, void* mat_data)
 {
-    const AreaEmitterData* area = reinterpret_cast<AreaEmitterData*>(surface_data);
+    const IsotropicData* iso = reinterpret_cast<IsotropicData*>(mat_data);
+    unsigned int seed = si->seed;
+    si->wo = normalize(make_float3(rnd(seed, -1.0f, 1.0f), rnd(seed, -1.0f, 1.0f), rnd(seed, -1.0f, 1.0f)));
+    si->trace_terminate = false;
+    si->seed = seed;
+}
+
+extern "C" __device__ float3 __continuation_callable__bsdf_isotropic(SurfaceInteraction* si, void* mat_data)
+{
+    const IsotropicData* iso = reinterpret_cast<IsotropicData*>(mat_data);
+    return iso->albedo / math::two_pi;
+}
+
+extern "C" __device__ float __direct_callable__pdf_isotropic(SurfaceInteraction* si, void* mat_data)
+{
+    return 1.0f / math::two_pi;
+}
+
+// Area emitter ------------------------------------------------------------------------------------------
+extern "C" __device__ void __direct_callable__area_emitter(SurfaceInteraction* si, void* area_data)
+{
+    const AreaEmitterData* area = reinterpret_cast<AreaEmitterData*>(area_data);
     si->trace_terminate = true;
     float is_emitted = 1.0f;
     if (!area->twosided)

@@ -6,6 +6,9 @@
 #include <prayground/ext/imgui/imgui_impl_glfw.h>
 #include <prayground/ext/imgui/imgui_impl_opengl3.h>
 
+#include "box_medium.h"
+#include "sphere_medium.h"
+
 using namespace std;
 
 using RaygenRecord = Record<RaygenData>;

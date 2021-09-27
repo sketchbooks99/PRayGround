@@ -6,19 +6,20 @@
 
 namespace prayground {
 
-struct BoxData 
+struct BoxMediumData
 {
-    float3 min;
-    float3 max;
+    float3 min; 
+    float3 max; 
+    float density;
 };
 
 #ifndef __CUDACC__
-class Box final : public Shape {
+class BoxMedium final : public Shape {
 public:
-    using DataType = BoxData;
+    using DataType = BoxMediumData;
 
-    Box();
-    Box(const float3& min, const float3& max);
+    BoxMedium();
+    BoxMedium(const float3& min, const float3& max, const float density);
 
     constexpr ShapeType type() override;
 
@@ -34,10 +35,11 @@ public:
 
     DataType deviceData() const;
 private:
-    float3 m_min;
-    float3 m_max;
-    CUdeviceptr d_aabb_buffer;
+    float3 m_min; 
+    float3 m_max; 
+    float m_density;
+    CUdeviceptr d_aabb_buffer{ 0 };
 };
-#endif // __CUDACC__
+#endif
 
-} // ::prayground
+}

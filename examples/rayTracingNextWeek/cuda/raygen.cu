@@ -32,7 +32,7 @@ extern "C" __device__ void __raygen__pinhole()
     const uint3 idx = optixGetLaunchIndex();
     unsigned seed = tea<4>(idx.x * params.width + idx.y, subframe_index);
 
-    float3 result = make_float3(0.0f, 0.0f, 0.0f);
+    float3 result = make_float3(0.0f);
 
     int i = params.samples_per_launch;
 
@@ -119,6 +119,10 @@ extern "C" __device__ void __raygen__pinhole()
                 const int light_id = rnd_int(seed, 0, params.num_lights-1);
                 const AreaEmitterInfo light = params.lights[light_id];
 
+                const float weight = 1.0f / (params.num_lights + 1);
+
+                float pdf_val = 0.0f;
+
                 // BSDFによる重点サンプリング
                 optixDirectCall<void, SurfaceInteraction*, void*>(
                     si.surface_info.sample_id,
@@ -126,7 +130,7 @@ extern "C" __device__ void __raygen__pinhole()
                     si.surface_info.data
                     );
 
-                if (rnd(seed) < 0.5f) {
+                if (rnd(seed) < weight * params.num_lights) {
                     // 光源に向けたサンプリング
                     float3 to_light = optixDirectCall<float3, AreaEmitterInfo, SurfaceInteraction*>(
                         light.sample_id,
@@ -136,13 +140,17 @@ extern "C" __device__ void __raygen__pinhole()
                     si.wo = normalize(to_light);
                 }
 
-                // 面光源のPDFを評価
-                float light_pdf = optixContinuationCall<float, AreaEmitterInfo, const float3&, const float3&>(
-                    light.pdf_id,
-                    light,
-                    si.p,
-                    si.wo
-                );
+                for (int i = 0; i < params.num_lights; i++)
+                {
+                    // 面光源のPDFを評価
+                    float light_pdf = optixContinuationCall<float, AreaEmitterInfo, const float3&, const float3&>(
+                        params.lights[i].pdf_id,
+                        params.lights[i],
+                        si.p,
+                        si.wo
+                    );
+                    pdf_val += weight * light_pdf;
+                }
 
                 // BSDFのPDFを評価
                 float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*>(
@@ -151,6 +159,8 @@ extern "C" __device__ void __raygen__pinhole()
                     si.surface_info.data
                 );
 
+                pdf_val += weight * bsdf_pdf;
+
                 // BSDFの評価
                 float3 bsdf_val = optixContinuationCall<float3, SurfaceInteraction*, void*>(
                     si.surface_info.bsdf_id,
@@ -158,9 +168,9 @@ extern "C" __device__ void __raygen__pinhole()
                     si.surface_info.data
                     );
 
-                const float pdf_val = 0.5f * bsdf_pdf + 0.5f * light_pdf;
+                if (pdf_val == 0.0f) break;
 
-                throughput *= clamp(bsdf_val / pdf_val, 0.0f, 1.0f);
+                throughput *= bsdf_val / pdf_val;
             }
 
             // プライマリーレイ以外ではtmaxは大きくしておく

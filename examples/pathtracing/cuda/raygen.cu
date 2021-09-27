@@ -148,8 +148,7 @@ extern "C" __device__ void __raygen__pinhole()
                         light,
                         &si
                         );
-                    if (dot(to_light, si.n) > 0.0f)
-                        si.wo = normalize(to_light);
+                    si.wo = normalize(to_light);
                 }
                 si.seed = seed;
 
@@ -162,9 +161,7 @@ extern "C" __device__ void __raygen__pinhole()
                         si.p,
                         si.wo
                         );
-                    if (dot(si.n, si.wo) > 0.0f) 
-                        pdf_val += weight * light_pdf;
-
+                    pdf_val += weight * light_pdf;
                 }
                 
                 // BSDFのPDFを評価

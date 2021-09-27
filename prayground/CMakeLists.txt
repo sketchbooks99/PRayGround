@@ -95,6 +95,8 @@ set(sources
   material/diffuse.cpp
   material/disney.h
   material/disney.cpp
+  material/isotropic.h 
+  material/isotropic.cpp
   material/cuda/conductor.cuh
   material/cuda/dielectric.cuh
   material/cuda/diffuse.cuh

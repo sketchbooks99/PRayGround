@@ -35,10 +35,10 @@ extern "C" __device__ void __intersection__box()
 
     for (int i = 0; i < 3; i++)
     {
-        float t0 = fmin(getByIndex(min, i) - getByIndex(ray.o, i) / getByIndex(ray.d, i),
-                        getByIndex(max, i) - getByIndex(ray.o, i) / getByIndex(ray.d, i));
-        float t1 = fmax(getByIndex(min, i) - getByIndex(ray.o, i) / getByIndex(ray.d, i),
-                        getByIndex(max, i) - getByIndex(ray.o, i) / getByIndex(ray.d, i));
+        float t0 = fmin((getByIndex(min, i) - getByIndex(ray.o, i)) / getByIndex(ray.d, i),
+                        (getByIndex(max, i) - getByIndex(ray.o, i)) / getByIndex(ray.d, i));
+        float t1 = fmax((getByIndex(min, i) - getByIndex(ray.o, i)) / getByIndex(ray.d, i),
+                        (getByIndex(max, i) - getByIndex(ray.o, i)) / getByIndex(ray.d, i));
 
         tmin = fmax(t0, tmin);
         tmax = fmin(t1, tmax);

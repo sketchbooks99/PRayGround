@@ -1,5 +1,7 @@
 #include "app.h"
 
+#define GROUP_RENDER 0
+
 void App::initResultBufferOnDevice()
 {
     params.subframe_index = 0;
@@ -79,8 +81,9 @@ void App::setup()
     surfaces_module = pipeline.createModuleFromCudaFile(context, "cuda/surfaces.cu");
 
     // レンダリング結果を保存する用のBitmapを用意
-    result_bitmap.allocate(Bitmap::Format::RGBA, pgGetWidth(), pgGetHeight());
-    accum_bitmap.allocate(FloatBitmap::Format::RGBA, pgGetWidth(), pgGetHeight());
+    const float width = pgGetWidth(), height = pgGetHeight();
+    result_bitmap.allocate(Bitmap::Format::RGBA, width, height);
+    accum_bitmap.allocate(FloatBitmap::Format::RGBA, width, height);
 
     // LaunchParamsの設定
     params.width = result_bitmap.width();
@@ -138,6 +141,12 @@ void App::setup()
     // Dielectric
     uint32_t dielectric_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_dielectric"), CC_FUNC_STR("bsdf_dielectric"));
     uint32_t dielectric_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_dielectric"), "");
+    // Disney
+    uint32_t disney_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_disney"), CC_FUNC_STR("bsdf_disney"));
+    uint32_t disney_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_disney"), "");
+    // Isotropic
+    uint32_t isotropic_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_isotropic"), CC_FUNC_STR("bsdf_isotropic"));
+    uint32_t isotropic_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_isotropic"), "");
     // AreaEmitter
     uint32_t area_emitter_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("area_emitter"), "");
 
@@ -145,7 +154,7 @@ void App::setup()
     uint32_t plane_sample_pdf_prg_id = setupCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_plane"), CC_FUNC_STR("pdf_plane"));
 
     // 環境マッピング (Sphere mapping) 用のテクスチャとデータ準備
-    auto env_texture = make_shared<ConstantTexture>(make_float3(0.1f), constant_prg_id);
+    auto env_texture = make_shared<ConstantTexture>(make_float3(0.0f), constant_prg_id);
     env_texture->copyToDevice();
     env = EnvironmentEmitter{env_texture};
     env.copyToDevice();
@@ -165,6 +174,10 @@ void App::setup()
     auto sphere_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("sphere"), IS_FUNC_STR("sphere"));
     // Box
     auto box_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("box"), IS_FUNC_STR("box"));
+    // Sphere medium
+    auto sphere_medium_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("sphere"), IS_FUNC_STR("sphere_medium"));
+    // Box medium
+    auto box_medium_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("box"), IS_FUNC_STR("box_medium"));
     // Triangle mesh
     auto mesh_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("mesh"));
 
@@ -189,10 +202,10 @@ void App::setup()
         // Shader Binding Table へのデータの登録
         HitgroupRecord record;
         prg.recordPackHeader(&record);
-        record.data = 
+        record.data =
         {
-            .shape_data = primitive.shape->devicePtr(), 
-            .surface_info = 
+            .shape_data = primitive.shape->devicePtr(),
+            .surface_info =
             {
                 .data = primitive.material->devicePtr(),
                 .sample_id = primitive.sample_bsdf_id,
@@ -205,7 +218,7 @@ void App::setup()
         sbt.addHitgroupRecord(record);
 
         // GASをビルドし、IASに追加
-        ShapeInstance instance{primitive.shape->type(), primitive.shape, transform};
+        ShapeInstance instance{ primitive.shape->type(), primitive.shape, transform };
         instance.allowCompaction();
         instance.buildAccel(context, stream);
         instance.setSBTOffset(sbt_offset);
@@ -290,8 +303,8 @@ void App::setup()
             for (int j = 0; j < boxes_per_side; j++)
             {
                 float w = 100.0f;
-                float x0 = -1000.0f * i * w;
-                float z0 = -1000.0f * j * w;
+                float x0 = -1000.0f + i * w;
+                float z0 = -1000.0f + j * w;
                 float y0 = 0.0f;
                 float x1 = x0 + w;
                 float y1 = rnd(seed, 1.0f, 101.0f);
@@ -302,117 +315,11 @@ void App::setup()
                 ground_boxes->addShape(box);
             }
         }
-        auto diffuse = make_shared<Diffuse>(ground_green, constant_prg_id);
+        auto diffuse = make_shared<Diffuse>(ground_green);
         auto transform = Matrix4f::identity();
         Primitive ground{ ground_boxes, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
         setupPrimitive(box_prg, ground, transform);
         sbt_idx++;
-    }
-
-    // Light
-    {
-        auto plane = make_shared<Plane>(make_float2(123.0f, 147.0f), make_float2(423.0f, 412.0f));
-        plane->setSbtIndex(sbt_idx);
-        sbt_idx++;
-        auto white = make_shared<ConstantTexture>(make_float3(1.0f), constant_prg_id);
-        AreaEmitter light{ white, 7.0f };
-        auto transform = Matrix4f::translate({0.0f, 554.0f, 0.0f});
-        setupAreaEmitter(plane_prg, plane, light, transform, plane_sample_pdf_prg_id);
-    }
-
-    // Sphere with motion blur
-    //{
-    //    auto sphere = make_shared<Sphere>(make_float3(0.0f), 50.0f);
-    //    sphere->setSbtIndex(sbt_idx);
-    //    sphere->copyToDevice();
-    //    sbt_idx++;
-    //    auto orange = make_shared<ConstantTexture>(make_float3(0.7f, 0.3f, 0.1f), constant_prg_id);
-    //    auto diffuse = make_shared<Diffuse>(orange);
-    //    diffuse->copyToDevice();
-    //    auto matrix_transform = Transform{ TransformType::MatrixMotion };
-
-    //    HitgroupRecord record;
-    //    sphere_prg.recordPackHeader(&record);
-    //    record.data =
-    //    {
-    //        .shape_data = sphere->devicePtr(),
-    //        .surface_info =
-    //        {
-    //            .data = diffuse->devicePtr(),
-    //            .sample_id = diffuse_sample_bsdf_prg_id,
-    //            .bsdf_id = diffuse_sample_bsdf_prg_id,
-    //            .pdf_id = diffuse_pdf_prg_id,
-    //            .type = diffuse->surfaceType()
-    //        }
-    //    };
-
-    //    sbt.addHitgroupRecord(record);
-
-    //    // 球体用のGASを用意
-    //    GeometryAccel sphere_gas{ ShapeType::Custom };
-    //    sphere_gas.addShape(sphere);
-    //    sphere_gas.allowCompaction();
-    //    sphere_gas.build(context, stream);
-
-    //    // Motion blur用の開始と終了点における変換行列を用意
-    //    float3 center1 = make_float3(400.0f, 400.0f, 200.0f);
-    //    float3 center2 = center1 + make_float3(30.0f, 0.0f, 0.0f);
-    //    Matrix4f begin_matrix = Matrix4f::translate(center1);
-    //    Matrix4f end_matrix = Matrix4f::translate(center2);
-
-    //    // Matrix motion 用のTransformを用意
-    //    matrix_transform = Transform{ TransformType::MatrixMotion };
-    //    matrix_transform.setChildHandle(sphere_gas.handle());
-    //    matrix_transform.setMotionOptions(scene_ias.motionOptions());
-    //    matrix_transform.setMatrixMotionTransform(begin_matrix, end_matrix);
-    //    matrix_transform.copyToDevice();
-    //    // childHandleからTransformのTraversableHandleを生成
-    //    matrix_transform.buildHandle(context);
-
-    //    // Instanceの生成
-    //    Instance instance;
-    //    instance.setSBTOffset(sbt_offset);
-    //    instance.setId(instance_id);
-    //    instance.setTraversableHandle(matrix_transform.handle());
-
-    //    scene_ias.addInstance(instance);
-    //}
-
-    // Glass sphere
-    {
-        auto sphere = make_shared<Sphere>(make_float3(360.0f, 150.0f, 145.0f), 70.0f);
-        sphere->setSbtIndex(sbt_idx);
-        sbt_idx++;
-        auto white = make_shared<ConstantTexture>(make_float3(1.0f), constant_prg_id);
-        auto glass = make_shared<Dielectric>(white, 1.5f);
-        auto transform = Matrix4f::identity();
-        Primitive glass_sphere{sphere, glass, dielectric_sample_bsdf_prg_id, dielectric_pdf_prg_id};
-        setupPrimitive(sphere_prg, glass_sphere, transform);
-    }
-
-    // Earth sphere
-    {
-        auto sphere = make_shared<Sphere>(make_float3(400.0f, 200.0f, 400.0f), 100.0f);
-        sphere->setSbtIndex(sbt_idx);
-        sbt_idx++;
-        auto earth_texture = make_shared<BitmapTexture>("resources/image/earth.jpg", bitmap_prg_id);
-        auto diffuse = make_shared<Diffuse>(earth_texture);
-        auto transform = Matrix4f::identity();
-        Primitive earth_sphere{sphere, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id};
-        setupPrimitive(sphere_prg, earth_sphere, transform);
-    }
-
-    // Noise sphere
-    {
-        auto sphere = make_shared<Sphere>(make_float3(220.0f, 280.0f, 300.0f), 80.0f);
-        sphere->setSbtIndex(sbt_idx);
-        sbt_idx++;
-        // @todo ConstantTexture -> NoiseTexture
-        auto noise = make_shared<ConstantTexture>(make_float3(0.73f), constant_prg_id);
-        auto diffuse = make_shared<Diffuse>(noise);
-        auto transform = Matrix4f::identity();
-        Primitive earth_sphere{ sphere, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
-        setupPrimitive(sphere_prg, earth_sphere, transform);
     }
 
     // Crowded sphere
@@ -432,6 +339,160 @@ void App::setup()
         auto transform = Matrix4f::translate({ -100.0f, 270.0f, 395.0f });
         Primitive crowded_sphere{ spheres, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
         setupPrimitive(sphere_prg, crowded_sphere, transform);
+    }
+
+    // Light
+    {
+        auto plane = make_shared<Plane>(make_float2(123.0f, 147.0f), make_float2(423.0f, 412.0f));
+        plane->setSbtIndex(sbt_idx);
+        sbt_idx++;
+        auto white = make_shared<ConstantTexture>(make_float3(1.0f), constant_prg_id);
+        AreaEmitter light{ white, 7.0f };
+        auto transform = Matrix4f::translate({0.0f, 554.0f, 0.0f});
+        setupAreaEmitter(plane_prg, plane, light, transform, plane_sample_pdf_prg_id);
+    }
+
+    // Glass sphere
+    {
+        auto sphere = make_shared<Sphere>(make_float3(260.0f, 150.0f, 45.0f), 50.0f);
+        sphere->setSbtIndex(sbt_idx);
+        sbt_idx++;
+        auto white = make_shared<ConstantTexture>(make_float3(1.0f), constant_prg_id);
+        auto glass = make_shared<Dielectric>(white, 1.5f);
+        auto transform = Matrix4f::identity();
+        Primitive glass_sphere{sphere, glass, dielectric_sample_bsdf_prg_id, dielectric_pdf_prg_id};
+        setupPrimitive(sphere_prg, glass_sphere, transform);
+    }
+
+    // Metal sphere
+    {
+        auto sphere = make_shared<Sphere>(make_float3(0.0f, 150.0f, 145.0f), 50.0f);
+        sphere->setSbtIndex(sbt_idx);
+        sbt_idx++;
+        auto silver = make_shared<ConstantTexture>(make_float3(0.8f, 0.8f, 0.9f), constant_prg_id);
+        auto metal = make_shared<Disney>(silver);
+        metal->setRoughness(0.5f);
+        metal->setMetallic(1.0f);
+        metal->setSubsurface(0.0f);
+        auto transform = Matrix4f::identity();
+        Primitive glass_sphere{ sphere, metal, disney_sample_bsdf_prg_id, disney_pdf_prg_id };
+        setupPrimitive(sphere_prg, glass_sphere, transform);
+    }
+
+    // Sphere with motion blur
+    {
+        auto sphere = make_shared<Sphere>(make_float3(0.0f), 50.0f);
+        sphere->setSbtIndex(sbt_idx);
+        sphere->copyToDevice();
+        sbt_idx++;
+        auto orange = make_shared<ConstantTexture>(make_float3(0.7f, 0.3f, 0.1f), constant_prg_id);
+        auto diffuse = make_shared<Diffuse>(orange);
+        diffuse->copyToDevice();
+        auto matrix_transform = Transform{ TransformType::MatrixMotion };
+
+        HitgroupRecord record;
+        sphere_prg.recordPackHeader(&record);
+        record.data =
+        {
+            .shape_data = sphere->devicePtr(),
+            .surface_info =
+            {
+                .data = diffuse->devicePtr(),
+                .sample_id = diffuse_sample_bsdf_prg_id,
+                .bsdf_id = diffuse_sample_bsdf_prg_id,
+                .pdf_id = diffuse_pdf_prg_id,
+                .type = diffuse->surfaceType()
+            }
+        };
+
+        sbt.addHitgroupRecord(record);
+
+        // 球体用のGASを用意
+        GeometryAccel sphere_gas{ ShapeType::Custom };
+        sphere_gas.addShape(sphere);
+        sphere_gas.allowCompaction();
+        sphere_gas.build(context, stream);
+
+        // Motion blur用の開始と終了点における変換行列を用意
+        float3 center1 = make_float3(400.0f, 400.0f, 200.0f);
+        float3 center2 = center1 + make_float3(30.0f, 0.0f, 0.0f);
+        Matrix4f begin_matrix = Matrix4f::translate(center1);
+        Matrix4f end_matrix = Matrix4f::translate(center2);
+
+        // Matrix motion 用のTransformを用意
+        matrix_transform = Transform{ TransformType::MatrixMotion };
+        matrix_transform.setChildHandle(sphere_gas.handle());
+        matrix_transform.setMotionOptions(scene_ias.motionOptions());
+        matrix_transform.setMatrixMotionTransform(begin_matrix, end_matrix);
+        matrix_transform.copyToDevice();
+        // childHandleからTransformのTraversableHandleを生成
+        matrix_transform.buildHandle(context);
+
+        // Instanceの生成
+        Instance instance;
+        instance.setSBTOffset(sbt_offset);
+        instance.setId(instance_id);
+        instance.setTraversableHandle(matrix_transform.handle());
+
+        instance_id++;
+        sbt_offset += RtNextWeekSBT::NRay;
+
+        scene_ias.addInstance(instance);
+    }
+
+    // Earth sphere
+    {
+        auto sphere = make_shared<Sphere>(make_float3(400.0f, 200.0f, 400.0f), 100.0f);
+        sphere->setSbtIndex(sbt_idx);
+        sbt_idx++;
+        auto earth_texture = make_shared<BitmapTexture>("resources/image/earth.jpg", bitmap_prg_id);
+        auto diffuse = make_shared<Diffuse>(earth_texture);
+        auto transform = Matrix4f::identity();
+        Primitive earth_sphere{sphere, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id};
+        setupPrimitive(sphere_prg, earth_sphere, transform);
+    }
+
+    // Sphere with dense medium
+    {
+        // Boundary sphere
+        auto sphere = make_shared<Sphere>(make_float3(360.0f, 150.0f, 145.0f), 70.0f);
+        sphere->setSbtIndex(sbt_idx);
+        sbt_idx++;
+        auto white = make_shared<ConstantTexture>(make_float3(1.0f), constant_prg_id);
+        auto glass = make_shared<Dielectric>(white, 1.5f);
+        Primitive boundary{ sphere, glass, dielectric_sample_bsdf_prg_id, dielectric_pdf_prg_id };
+        setupPrimitive(sphere_prg, boundary, Matrix4f::identity());
+
+        // Constant medium that fills inside boundary sphere
+        auto medium = make_shared<SphereMedium>(make_float3(360.0f, 150.0f, 145.0f), 70.0f, 0.2f);
+        medium->setSbtIndex(sbt_idx);
+        sbt_idx++;
+        auto isotropic = make_shared<Isotropic>(make_float3(0.2f, 0.4f, 0.9f));
+        Primitive sphere_medium{ medium, isotropic, isotropic_sample_bsdf_prg_id, isotropic_pdf_prg_id };
+        setupPrimitive(sphere_medium_prg, sphere_medium, Matrix4f::identity());
+    }
+
+    // Noise sphere
+    {
+        auto sphere = make_shared<Sphere>(make_float3(220.0f, 280.0f, 300.0f), 80.0f);
+        sphere->setSbtIndex(sbt_idx);
+        sbt_idx++;
+        // @todo ConstantTexture -> NoiseTexture
+        auto noise = make_shared<ConstantTexture>(make_float3(0.73f), constant_prg_id);
+        auto diffuse = make_shared<Diffuse>(noise);
+        auto transform = Matrix4f::identity();
+        Primitive earth_sphere{ sphere, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
+        setupPrimitive(sphere_prg, earth_sphere, transform);
+    }
+
+    // Sparse medium surrounds whole scene
+    {
+        auto medium = make_shared<BoxMedium>(make_float3(-5000.0f), make_float3(5000.0f), 0.0001f);
+        medium->setSbtIndex(sbt_idx);
+        sbt_idx++;
+        auto isotropic = make_shared<Isotropic>(make_float3(1.0f));
+        Primitive atomosphere{ medium, isotropic, isotropic_sample_bsdf_prg_id, isotropic_pdf_prg_id };
+        setupPrimitive(box_medium_prg, atomosphere, Matrix4f::identity());
     }
 
     // 光源データをGPU側にコピー
@@ -492,7 +553,7 @@ void App::draw()
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    ImGui::Begin("Ray Tracing Rest of Your Life");
+    ImGui::Begin("Ray Tracing Next Week");
 
     ImGui::SliderFloat("White", &params.white, 1.0f, 1000.0f);
     ImGui::Text("Camera info:");
@@ -519,7 +580,7 @@ void App::draw()
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
     if (params.subframe_index == 4096)
-        result_bitmap.write(pathJoin(pgAppDir(), "rtRestOfYourLife.jpg"));
+        result_bitmap.write(pathJoin(pgAppDir(), "rtNextWeek.jpg"));
 }
 
 // ----------------------------------------------------------------

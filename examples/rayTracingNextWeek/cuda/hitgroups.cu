@@ -8,6 +8,9 @@
 #include <prayground/core/onb.h>
 #include <prayground/core/bsdf.h>
 
+#include "../sphere_medium.h"
+#include "../box_medium.h"
+
 using namespace prayground;
 
 extern "C" __device__ void __closesthit__shadow()
@@ -158,6 +161,7 @@ static __forceinline__ __device__ bool hitSphere(
     si.p = o + t * v;
     si.n = (si.p - center) / radius;
     si.t = t;
+    si.uv = getSphereUV(si.n);
     return true;
 }
 
@@ -171,7 +175,52 @@ extern "C" __device__ void __intersection__sphere()
 
     SurfaceInteraction si;
     if (hitSphere(&sphere_data, ray.o, ray.d, ray.tmin, ray.tmax, si))
-        optixReportIntersection(si.t, 0, float3_as_ints(si.n));
+        optixReportIntersection(si.t, 0, float3_as_ints(si.n), float2_as_ints(si.uv));
+}
+
+/// From "Ray Tracing: The Next Week" by Peter Shirley
+/// @ref: https://raytracing.github.io/books/RayTracingTheNextWeek.html
+extern "C" __device__ void __intersection__sphere_medium()
+{
+    const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
+    const int prim_id = optixGetPrimitiveIndex();
+    SphereMediumData sphere_medium_data = reinterpret_cast<SphereMediumData*>(data->shape_data)[prim_id];
+    SphereData sphere_data;
+    sphere_data.center = sphere_medium_data.center;
+    sphere_data.radius = sphere_medium_data.radius;
+    const float density = sphere_medium_data.density;
+
+    Ray ray = getLocalRay();
+
+    SurfaceInteraction* global_si = getSurfaceInteraction();
+    unsigned int seed = global_si->seed;
+
+    SurfaceInteraction si1, si2;
+    if (!hitSphere(&sphere_data, ray.o, ray.d, -1e16f, 1e16f, si1))
+        return;
+    if (!hitSphere(&sphere_data, ray.o, ray.d, si1.t + math::eps, 1e16f, si2))
+        return;
+
+    if (si1.t < ray.tmin) si1.t = ray.tmin;
+    if (si2.t > ray.tmax) si2.t = ray.tmax;
+
+    if (si1.t >= si2.t)
+        return;
+    
+    if (si1.t < 0.0f)
+        si1.t = 0.0f;
+
+    const float neg_inv_density = -1.0f / sphere_medium_data.density;
+    const float ray_length = length(ray.d);
+    const float distance_inside_boundary = (si2.t - si1.t) * ray_length;
+    const float hit_distance = neg_inv_density * logf(rnd(seed));
+    global_si->seed = seed;
+
+    if (hit_distance > distance_inside_boundary)
+        return;
+    
+    const float t = si1.t + hit_distance / ray_length;
+    optixReportIntersection(t, 0, float3_as_ints(si1.n), float2_as_ints(si1.uv));
 }
 
 extern "C" __device__ void __closesthit__sphere() {
@@ -183,6 +232,10 @@ extern "C" __device__ void __closesthit__sphere() {
         int_as_float(optixGetAttribute_0()),
         int_as_float(optixGetAttribute_1()),
         int_as_float(optixGetAttribute_2())
+    );
+    float2 uv = make_float2(
+        int_as_float( optixGetAttribute_3() ),
+        int_as_float( optixGetAttribute_4() )
     );
     float3 world_n = optixTransformNormalFromObjectToWorldSpace(local_n);
     world_n = normalize(world_n);
@@ -318,7 +371,6 @@ extern "C" __device__ void __intersection__cylinder()
 extern "C" __device__ void __closesthit__cylinder()
 {
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
-    const CylinderData* cylinder = reinterpret_cast<CylinderData*>(data->shape_data);
 
     Ray ray = getWorldRay();
 
@@ -354,8 +406,8 @@ static INLINE DEVICE float2 getBoxUV(const float3& p, const float3& min, const f
     // axisがYの時は (u: Z, v: X) -> (u: X, v: Z)へ順番を変える
     if (axis == 1) swap(u_axis, v_axis);
 
-    uv.x = getByIndex(p, u_axis) - getByIndex(min, u_axis) / (getByIndex(max, u_axis) - getByIndex(min, u_axis));
-    uv.y = getByIndex(p, v_axis) - getByIndex(min, v_axis) / (getByIndex(max, v_axis) - getByIndex(min, v_axis));
+    uv.x = (getByIndex(p, u_axis) - getByIndex(min, u_axis)) / (getByIndex(max, u_axis) - getByIndex(min, u_axis));
+    uv.y = (getByIndex(p, v_axis) - getByIndex(min, v_axis)) / (getByIndex(max, v_axis) - getByIndex(min, v_axis));
 
     return clamp(uv, 0.0f, 1.0f);
 }
@@ -374,13 +426,21 @@ static INLINE DEVICE bool hitBox(
 
     for (int i = 0; i < 3; i++)
     {
-        float t0 = fminf(getByIndex(min, i) - getByIndex(o, i) / getByIndex(v, i),
-                        getByIndex(max, i) - getByIndex(o, i) / getByIndex(v, i));
-        float t1 = fmaxf(getByIndex(min, i) - getByIndex(o, i) / getByIndex(v, i),
-                        getByIndex(max, i) - getByIndex(o, i) / getByIndex(v, i));
-
-        min_axis += (int)(t0 > _tmin);
-        max_axis += (int)(t1 < _tmax);
+        float t0, t1;
+        if (getByIndex(v, i) == 0.0f)
+        {
+            t0 = fminf(getByIndex(min, i) - getByIndex(o, i), getByIndex(max, i) - getByIndex(o, i));
+            t1 = fmaxf(getByIndex(min, i) - getByIndex(o, i), getByIndex(max, i) - getByIndex(o, i));
+        }
+        else
+        {
+            t0 = fminf((getByIndex(min, i) - getByIndex(o, i)) / getByIndex(v, i),
+                       (getByIndex(max, i) - getByIndex(o, i)) / getByIndex(v, i));
+            t1 = fmaxf((getByIndex(min, i) - getByIndex(o, i)) / getByIndex(v, i),
+                       (getByIndex(max, i) - getByIndex(o, i)) / getByIndex(v, i));
+        }
+        min_axis = t0 > _tmin ? i : min_axis;
+        max_axis = t1 < _tmax ? i : max_axis;
 
         _tmin = fmaxf(t0, _tmin);
         _tmax = fminf(t1, _tmax);
@@ -390,7 +450,7 @@ static INLINE DEVICE bool hitBox(
     }
 
     float3 center = (min + max) / 2.0f;
-    if (tmin < _tmin && _tmin < tmax && min_axis > -1)
+    if ((tmin < _tmin && _tmin < tmax) && (-1 < min_axis && min_axis < 3))
     {
         float3 p = o + _tmin * v;
         float3 center_axis = p;
@@ -404,7 +464,7 @@ static INLINE DEVICE bool hitBox(
         return true;
     }
 
-    if (tmin < _tmax && _tmax < tmax && max_axis > -1)
+    if ((tmin < _tmax && _tmax < tmax) && (-1 < max_axis && max_axis < 3))
     {
         float3 p = o + _tmax * v;
         float3 center_axis = p;
@@ -429,8 +489,53 @@ extern "C" __device__ void __intersection__box()
     Ray ray = getLocalRay();
 
     SurfaceInteraction si;
-    if (hitBox(&box_data, ray.o, ray.d, ray.tmin, ray.tmax, si))
+    if (hitBox(&box_data, ray.o, ray.d, ray.tmin, ray.tmax, si)) {
         optixReportIntersection(si.t, 0, float3_as_ints(si.n), float2_as_ints(si.uv));
+    }
+}
+
+/// From "Ray Tracing: The Next Week" by Peter Shirley
+/// @ref: https://raytracing.github.io/books/RayTracingTheNextWeek.html
+extern "C" __device__ void __intersection__box_medium()
+{
+    const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
+    const int prim_id = optixGetPrimitiveIndex();
+    BoxMediumData box_medium_data = reinterpret_cast<BoxMediumData*>(data->shape_data)[prim_id];
+    BoxData box_data;
+    box_data.min = box_medium_data.min;
+    box_data.max = box_medium_data.max;
+
+    Ray ray = getLocalRay();
+
+    SurfaceInteraction* global_si = getSurfaceInteraction();
+    unsigned int seed = global_si->seed;
+
+    SurfaceInteraction si1, si2;
+    if (!hitBox(&box_data, ray.o, ray.d, -1e16f, 1e16f, si1)) 
+        return;
+    if (!hitBox(&box_data, ray.o, ray.d, si1.t + math::eps, 1e16f, si2))
+        return;
+
+    if (si1.t < ray.tmin) si1.t = ray.tmin;
+    if (si2.t > ray.tmax) si2.t = ray.tmax;
+
+    if (si1.t >= si2.t) 
+        return;
+    
+    if (si1.t < 0.0f)
+        si1.t = 0.0f;
+
+    const float neg_inv_density = -1.0f / box_medium_data.density;
+    const float ray_length = length(ray.d);
+    const float distance_inside_boundary = (si2.t - si1.t) * ray_length;
+    const float hit_distance = neg_inv_density * logf(rnd(seed));
+    global_si->seed = seed;
+
+    if (hit_distance > distance_inside_boundary)
+        return;
+    
+    const float t = si1.t + hit_distance / ray_length;
+    optixReportIntersection(t, 0, float3_as_ints(si1.n), float2_as_ints(si1.uv));
 }
 
 extern "C" __device__ void __closesthit__box()
@@ -448,6 +553,7 @@ extern "C" __device__ void __closesthit__box()
         int_as_float( optixGetAttribute_3() ),
         int_as_float( optixGetAttribute_4() )
     );
+
     float3 world_n = optixTransformNormalFromObjectToWorldSpace(local_n);
     world_n = normalize(world_n);
 

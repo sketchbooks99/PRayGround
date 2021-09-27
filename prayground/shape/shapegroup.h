@@ -66,7 +66,7 @@ public:
             bi.triangleArray.indexFormat = OPTIX_INDICES_FORMAT_UNSIGNED_INT3;
             bi.triangleArray.indexStrideInBytes = sizeof(Face);
             bi.triangleArray.numIndexTriplets = m_mesh_input.num_faces;
-            bi.triangleArray.numSbtRecords = static_csat<uint32_t>(sbt_counter.size());
+            bi.triangleArray.numSbtRecords = static_cast<uint32_t>(sbt_counter.size());
             bi.triangleArray.sbtIndexOffsetBuffer = d_sbt_indices.devicePtr();
             bi.triangleArray.sbtIndexOffsetSizeInBytes = sizeof(uint32_t);
             bi.triangleArray.sbtIndexOffsetStrideInBytes = sizeof(uint32_t);
@@ -158,21 +158,21 @@ public:
             {
                 .d_vertices = tmp_mesh.deviceVertices(),
                 .d_faces = tmp_mesh.deviceFaces(),
-                .num_vertices = static_cast<uint32_t>(tmp_mesh.vertices.size()),
-                .num_faces = static_cast<uint32_t>(tmp_mesh.faces.size())
+                .num_vertices = static_cast<uint32_t>(tmp_mesh.vertices().size()),
+                .num_faces = static_cast<uint32_t>(tmp_mesh.faces().size())
             };
         }
         else if constexpr (Type == ShapeType::Custom)
         {
-            std::vector<ShapeT::DataType> device_data;
+            std::vector<typename ShapeT::DataType> device_data;
             for (auto& custom : m_shapes)
                 device_data.push_back(custom.deviceData());
 
             if (!d_data)
-                CUDA_CHECK(cudaMalloc(&d_data, sizeof(ShapeT::DataType) * device_data.size()));
+                CUDA_CHECK(cudaMalloc(&d_data, sizeof(typename ShapeT::DataType) * device_data.size()));
             CUDA_CHECK(cudaMemcpy(
                 d_data, 
-                device_data.data(), sizeof(ShapeT::DataType) * device_data.size(),
+                device_data.data(), sizeof(typename ShapeT::DataType) * device_data.size(),
                 cudaMemcpyHostToDevice
             ));
         }

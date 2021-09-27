@@ -178,8 +178,6 @@ void App::setup()
     auto sphere_medium_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("sphere"), IS_FUNC_STR("sphere_medium"));
     // Box medium
     auto box_medium_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("box"), IS_FUNC_STR("box_medium"));
-    // Triangle mesh
-    auto mesh_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("mesh"));
 
     struct Primitive
     {

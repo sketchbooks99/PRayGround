@@ -21,6 +21,8 @@ void App::initResultBufferOnDevice()
 // ----------------------------------------------------------------
 void App::setup()
 {
+    pgSetFrameRate(60);
+
     // OptixDeviceContextの生成
     stream = 0;
     CUDA_CHECK(cudaFree(0));
@@ -121,7 +123,7 @@ void App::setup()
     uint32_t instance_id = 0;
 
     // ShapeInstanceは1つのShapeのみ保持する前提でShapeInstanceをセットアップするLambda関数
-    auto setupShapeInstance = [&](ProgramGroup hitgroup_prg, ShapeInstance& instance, shared_ptr<Texture> texture)
+    auto setupShapeInstance = [&](ProgramGroup hitgroup_prg, ShapeInstance& instance, shared_ptr<Texture> texture, bool is_update=false)
     {
         auto shape = instance.shapes()[0];
 
@@ -145,6 +147,8 @@ void App::setup()
         sbt.addHitgroupRecord(record);
 
         instance.allowCompaction();
+        if (is_update)
+            instance.allowUpdate();
         instance.setSBTOffset(sbt_offset);
         instance.setId(instance_id);
         instance.buildAccel(context, stream);
@@ -158,15 +162,15 @@ void App::setup()
 
     auto plane_prg = pipeline.createHitgroupProgram(context, hitgroups_module, "__closesthit__plane", "__intersection__plane");
     auto sphere_prg = pipeline.createHitgroupProgram(context, hitgroups_module, "__closesthit__sphere", "__intersection__sphere");
-    auto mesh_prg = pipeline.createHitgroupProgram(context, hitgroups_module, "__closesthit__mesh");
+
+    // Cornel box用のテクスチャを用意
+    auto floor_checker = make_shared<CheckerTexture>(make_float3(0.9f), make_float3(0.3f), 10, checker_prg_id);
+    auto red = make_shared<ConstantTexture>(make_float3(0.8f, 0.05f, 0.05f), constant_prg_id);
+    auto green = make_shared<ConstantTexture>(make_float3(0.05f, 0.8f, 0.05f), constant_prg_id);
+    auto white = make_shared<ConstantTexture>(make_float3(0.8f), constant_prg_id);
 
     // Cornel box
     {
-        // Cornel box用のテクスチャを用意
-        auto floor_checker = make_shared<CheckerTexture>(make_float3(0.9f), make_float3(0.3f), 10, checker_prg_id);
-        auto red = make_shared<ConstantTexture>(make_float3(0.8f, 0.05f, 0.05f), constant_prg_id);
-        auto green = make_shared<ConstantTexture>(make_float3(0.05f, 0.8f, 0.05f), constant_prg_id);
-        auto white = make_shared<ConstantTexture>(make_float3(0.8f), constant_prg_id);
 
         ShapeInstance floor {
             ShapeType::Custom, 
@@ -208,12 +212,9 @@ void App::setup()
         setupShapeInstance(plane_prg, back, white);
     }
 
-    // Sphere
+    // Sphere (with motion blur)
     {
-        sphere_pos = sphere_prev_pos = make_float3(0.0f);
-
-        auto sphere_texture = make_shared<ConstantTexture>(make_float3(0.8f), constant_prg_id);
-        sphere_texture->copyToDevice();
+        sphere_pos = sphere_prev_pos = make_float3(0.0f, 2.5f, 0.0f);
 
         auto sphere = make_shared<Sphere>();
         sphere->setSbtIndex(sbt_idx);
@@ -226,8 +227,8 @@ void App::setup()
             .shape_data = sphere->devicePtr(),
             .tex_data = 
             {
-                .data = sphere_texture->devicePtr(), 
-                .prg_id = sphere_texture->programId()
+                .data = white->devicePtr(), 
+                .prg_id = white->programId()
             }
         };
 
@@ -261,6 +262,16 @@ void App::setup()
 
         instance_accel.addInstance(instance);
     }
+
+    // Sphere (without motion blur)
+    {
+        sphere2 = ShapeInstance{
+            ShapeType::Custom,
+            make_shared<Sphere>(),
+            Matrix4f::translate(sphere_pos - make_float3(0.0f, 8.5f, 0.0f)) * Matrix4f::scale(3.0f)
+        };
+        setupShapeInstance(sphere_prg, sphere2, white, true);
+    }
     
     // Shader Binding Table のデータをGPU上に生成
     sbt.createOnDevice();
@@ -280,7 +291,7 @@ void App::update()
 {
     initResultBufferOnDevice();
 
-    float time = pgGetElapsedTime<float>();
+    float time = pgGetElapsedTimef();
     if (is_move) {
         float x = fmodf(time, 1.0f);
         sphere_prev_pos = sphere_pos;
@@ -291,6 +302,8 @@ void App::update()
 
         matrix_transform.setMatrixMotionTransform(begin_matrix, end_matrix);
         matrix_transform.copyToDevice();
+
+        sphere2.setTransform(Matrix4f::translate(sphere_pos - make_float3(0.0f, 8.5f, 0.0f)) * Matrix4f::scale(3.0f));
     }
 
     instance_accel.update(context, stream);

@@ -118,7 +118,7 @@ add_subdirectory(apps/<your-app-name>) # Add this line
   - <img src=examples/pathtracing/screenshot.png width=640> 
 - [Ray Tracing: The Next Weekend](examples/rayTracingNextWeek/)
   - <img src=examples/rayTracingNextWeek/rtNextWeek.jpg width=320>
-- [Ray Tracing: The Rest Of Your Life --](examples/rayTracingRestOfYourLife/)
+- [Ray Tracing: The Rest Of Your Life](examples/rayTracingRestOfYourLife/)
   - <img src=examples/rayTracingRestOfYourLife/rtRestOfYourLife.jpg width=320> 
 - [Dynamic update](examples/dynamic_update/)
   - ![](examples/dynamic_update/dynamic_update.gif)

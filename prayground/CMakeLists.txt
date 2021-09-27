@@ -85,6 +85,7 @@ set(sources
   shape/cuda/plane.cuh 
   shape/cuda/sphere.cuh 
   shape/cuda/trianglemesh.cuh
+  shape/cuda/box.cuh
  
   # Materials ==========
   material/conductor.h 

@@ -124,6 +124,25 @@ inline void Message(MessageType type, Head head, Args... args) {
         Message(MSG_WARNING, ss.str());                     \
     } while (0)
 
+#define THROW(message)                                      \
+    do {                                                    \
+        std::stringstream ss;                               \
+        ss << "' (" __FILE__ << ":" << __LINE__ << ")"      \
+           << message;                                      \
+        std::runtime_error(ss.str());                       \
+    } while (0)
+
+#define ASSERT(cond, message)                               \
+    do {                                                    \
+        if (!cond) {                                        \
+            std::stringstream ss;                           \
+            ss << "Assertion failed at "                    \
+               << "' (" __FILE__ << ":" << __LINE__ << ")"  \
+               << message;                                  \
+            THROW(ss.str());                                \
+        }                                                   \
+    } while (0)
+
 #endif // __CUDACC__
 
 }

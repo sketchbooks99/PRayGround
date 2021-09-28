@@ -388,7 +388,8 @@ add_subdirectory(examples/rayTracingRestOfYourLife)
 add_subdirectory(apps/empty_app)
 
 # Unit test
-add_subdirectory(tests/math)
+# add_subdirectory(tests/math)
+add_subdirectory(tests/core)
 
 #################################################################
 

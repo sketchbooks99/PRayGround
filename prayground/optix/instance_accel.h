@@ -51,7 +51,7 @@ private:
     OptixAccelBuildOptions m_options{};
     uint32_t m_count{ 0 };
 
-    std::vector<std::variant<Instance, ShapeInstance>> m_instances;
+    std::vector<OptixInstance*> m_instances;
     CUdeviceptr d_instances;
     OptixBuildInput m_instance_input;
 

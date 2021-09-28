@@ -18,12 +18,12 @@ InstanceAccel::~InstanceAccel()
 // ---------------------------------------------------------------------------
 void InstanceAccel::addInstance(const Instance& instance)
 {
-    m_instances.emplace_back(instance);
+    m_instances.emplace_back(instance.rawInstancePtr());
 }
 
 void InstanceAccel::addInstance(const ShapeInstance& shape_instance)
 {
-    m_instances.emplace_back(shape_instance);
+    m_instances.emplace_back(shape_instance.rawInstancePtr());
 }
 
 // ---------------------------------------------------------------------------
@@ -31,14 +31,7 @@ void InstanceAccel::build(const Context& ctx, CUstream stream)
 {
     std::vector<OptixInstance> optix_instances;
     std::transform(m_instances.begin(), m_instances.end(), std::back_inserter(optix_instances),
-        [](const std::variant<Instance, ShapeInstance>& instance)
-        {
-            return std::visit([](const auto& x)
-            {
-                ASSERT(x.handle() != 0, "prayground::InstanceAccel::build(): Traversable handle of instance must be set before building InstanceAccel");
-                return static_cast<OptixInstance>(x);
-            }, instance);
-        });
+        [](OptixInstance* instance) { return *instance; });
 
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_instances), sizeof(OptixInstance) * optix_instances.size()));
     CUDA_CHECK(cudaMemcpy(
@@ -97,14 +90,14 @@ void InstanceAccel::update(const Context& ctx, CUstream stream)
     ASSERT((m_options.buildFlags & OPTIX_BUILD_FLAG_ALLOW_UPDATE) != 0, "prayground::InstanceAccel::update(): allowUpdate() must be called when using update operation.");
 
     OptixInstance* instance_device_ptr = reinterpret_cast<OptixInstance*>(d_instances);
-    for (size_t i = 0; auto& instance : m_instances)
+    for (OptixInstance* instance : m_instances)
     {
         CUDA_CHECK(cudaMemcpy(
             &instance_device_ptr[i],
-            std::visit([](const auto& x) { return x.rawInstancePtr(); }, instance), sizeof(OptixInstance),
+            instance, 
+            sizeof(OptixInstance),
             cudaMemcpyHostToDevice
         ));
-        i++;
     }
 
     m_options.operation = OPTIX_BUILD_OPERATION_UPDATE;

@@ -83,7 +83,7 @@ void Bitmap_<PixelType>::allocate(Format format, int width, int height)
             break;
         case Format::UNKNOWN:
         default:
-            Throw("prayground::Bitmap::allocate(): Invalid type of allocation");
+            THROW("prayground::Bitmap::allocate(): Invalid type of allocation");
     }
 
     // Zero-initialization of pixel data
@@ -98,7 +98,7 @@ void Bitmap_<PixelType>::allocate(Format format, int width, int height)
 template <typename PixelType>
 void Bitmap_<PixelType>::setData(PixelType* data, int width, int height, int offset_x, int offset_y)
 {
-    Assert(m_data.get(), "Please allocate the bitmap before filling data with specified range.");
+    ASSERT(m_data.get(), "Please allocate the bitmap before filling data with specified range.");
 
     if (m_width < offset_x + width || m_height < offset_y + height)
     {
@@ -141,7 +141,7 @@ template <>
 void Bitmap_<unsigned char>::load(const std::filesystem::path& filename)
 {
     std::optional<std::filesystem::path> filepath = findDataPath(filename);
-    Assert(filepath, "prayground::Bitmap_<unsigned char>::load(): The input file for bitmap '" + filename.string() + "' is not found.");
+    ASSERT(filepath, "prayground::Bitmap_<unsigned char>::load(): The input file for bitmap '" + filename.string() + "' is not found.");
 
     auto ext = getExtension(filepath.value());
 
@@ -175,7 +175,7 @@ template <>
 void Bitmap_<float>::load(const std::filesystem::path& filename)
 {
     std::optional<std::filesystem::path> filepath = findDataPath(filename);
-    Assert(filepath, "prayground::Bitmap_<float>::load(): The input file for bitmap '" + filename.string() + "' is not found.");
+    ASSERT(filepath, "prayground::Bitmap_<float>::load(): The input file for bitmap '" + filename.string() + "' is not found.");
 
     auto ext = getExtension(filepath.value());
 
@@ -397,7 +397,7 @@ template <typename PixelType>
 void Bitmap_<PixelType>::copyToDevice() 
 {
     // CPU側のデータが準備されているかチェック
-    Assert(m_data.get(), "Image data in the host side has been not allocated yet.");
+    ASSERT(m_data.get(), "Image data in the host side has been not allocated yet.");
 
     // GPU上に画像データを準備
     CUDABuffer<PixelType> d_buffer;
@@ -409,7 +409,7 @@ void Bitmap_<PixelType>::copyToDevice()
 template <typename PixelType>
 void Bitmap_<PixelType>::copyFromDevice()
 {
-    Assert(d_data, "No data has been allocated on the device yet.");
+    ASSERT(d_data, "No data has been allocated on the device yet.");
 
     PixelType* raw_data = m_data.get();
     CUDA_CHECK(cudaMemcpy(

@@ -56,7 +56,7 @@ void GeometryAccel::build(const Context& ctx, CUstream stream)
         if (!all_type_equal)
         {
             m_build_inputs.clear();
-            Throw("All build input types of shapes must be same as type of GeometryAccel.");
+            THROW("All build input types of shapes must be same as type of GeometryAccel.");
         }
         m_build_inputs[i] = m_shapes[i]->createBuildInput();
     }
@@ -123,7 +123,7 @@ void GeometryAccel::build(const Context& ctx, CUstream stream)
 
 void GeometryAccel::update(const Context& ctx, CUstream stream)
 {
-    Assert((m_options.buildFlags & OPTIX_BUILD_FLAG_ALLOW_UPDATE) != 0, "prayground::GeometryAccel::update(): allowUpdate() must be called when using update operation.");
+    ASSERT((m_options.buildFlags & OPTIX_BUILD_FLAG_ALLOW_UPDATE) != 0, "prayground::GeometryAccel::update(): allowUpdate() must be called when using update operation.");
 
     m_options.operation = OPTIX_BUILD_OPERATION_UPDATE;
 

@@ -43,7 +43,7 @@ Transform::Transform(const OptixSRTMotionTransform& srt_motion_transform)
 // ---------------------------------------------------------------------------
 void Transform::setStaticTransform(const Matrix4f& m)
 {
-    Assert(m_type == TransformType::Static, 
+    ASSERT(m_type == TransformType::Static, 
         "prayground::Transform::setStaticTransform(): The type of must be a static transform");
     
     Matrix4f inv = m.inverse();
@@ -54,7 +54,7 @@ void Transform::setStaticTransform(const Matrix4f& m)
 
 void Transform::setStaticTransform(const float m[12])
 {
-    Assert(m_type == TransformType::Static, 
+    ASSERT(m_type == TransformType::Static, 
         "prayground::Transform::setStaticTransform(): The type of must be a static transform");
     Matrix4f inv = Matrix4f(m).inverse();
     OptixStaticTransform* static_transform = std::get<OptixStaticTransform*>(m_transform);
@@ -65,9 +65,9 @@ void Transform::setStaticTransform(const float m[12])
 // ---------------------------------------------------------------------------
 void Transform::setMatrixMotionTransform(const Matrix4f& m, uint32_t idx)
 {
-    Assert(m_type == TransformType::MatrixMotion, 
+    ASSERT(m_type == TransformType::MatrixMotion, 
         "prayground::Transform::setMatrixMotionTransform(): The type of must be a matrix motion transform");
-    Assert(idx >= 0 && idx < 2,
+    ASSERT(idx >= 0 && idx < 2,
         "prayground::Transform::setMatrixMotionTransform(): The index of transform must be 0 or 1.");
 
     OptixMatrixMotionTransform* matrix_motion_transform = std::get<OptixMatrixMotionTransform*>(m_transform);
@@ -76,9 +76,9 @@ void Transform::setMatrixMotionTransform(const Matrix4f& m, uint32_t idx)
 
 void Transform::setMatrixMotionTransform(const float m[12], uint32_t idx)
 {
-    Assert(m_type == TransformType::MatrixMotion, 
+    ASSERT(m_type == TransformType::MatrixMotion, 
         "prayground::Transform::setMatrixMotionTransform(): The type of must be a matrix motion transform");
-    Assert(idx >= 0 && idx < 2,
+    ASSERT(idx >= 0 && idx < 2,
         "prayground::Transform::setMatrixMotionTransform(): The index of transform must be 0 or 1.");
     
     OptixMatrixMotionTransform* matrix_motion_transform = std::get<OptixMatrixMotionTransform*>(m_transform);
@@ -100,10 +100,10 @@ void Transform::setMatrixMotionTransform(const float m1[12], const float m2[12])
 // ---------------------------------------------------------------------------
 void Transform::setSRTMotionTransform(const OptixSRTData& srt_data, uint32_t idx)
 {
-    Assert(m_type == TransformType::SRTMotion, 
+    ASSERT(m_type == TransformType::SRTMotion, 
         "prayground::Transform::setSRTMotionTransform(): The type of must be a SRT motion transform");
 
-    Assert(idx >= 0 && idx < 2,
+    ASSERT(idx >= 0 && idx < 2,
         "prayground::Transform::setSRTMotionTransform(): The index of transform must be 0 or 1.");
 
     OptixSRTMotionTransform* srt_motion_transform = std::get<OptixSRTMotionTransform*>(m_transform);
@@ -119,7 +119,7 @@ void Transform::setSRTMotionTransform(const OptixSRTData& srt1, const OptixSRTDa
 // ---------------------------------------------------------------------------
 void Transform::setNumKey(uint16_t num_key)
 {
-    Assert(m_type == TransformType::MatrixMotion || m_type == TransformType::SRTMotion, 
+    ASSERT(m_type == TransformType::MatrixMotion || m_type == TransformType::SRTMotion, 
         "prayground::Transform::setNumKey(): Static transform could not determine a motion option.");
     
     if (m_type == TransformType::MatrixMotion)
@@ -137,7 +137,7 @@ void Transform::setNumKey(uint16_t num_key)
 // ---------------------------------------------------------------------------
 void Transform::enableStartVanish()
 {
-    Assert(m_type == TransformType::MatrixMotion || m_type == TransformType::SRTMotion, 
+    ASSERT(m_type == TransformType::MatrixMotion || m_type == TransformType::SRTMotion, 
         "prayground::Transform::enableStartVanish(): Static transform could not determine a motion option.");
 
     if (m_type == TransformType::MatrixMotion)
@@ -154,7 +154,7 @@ void Transform::enableStartVanish()
 
 void Transform::disableStartVanish()
 {
-    Assert(m_type == TransformType::MatrixMotion || m_type == TransformType::SRTMotion, 
+    ASSERT(m_type == TransformType::MatrixMotion || m_type == TransformType::SRTMotion, 
         "prayground::Transform::disableStartVanish(): Static transform could not determine a motion option.");
 
     if (m_type == TransformType::MatrixMotion)
@@ -171,7 +171,7 @@ void Transform::disableStartVanish()
 
 void Transform::enableEndVanish()
 {
-    Assert(m_type == TransformType::MatrixMotion || m_type == TransformType::SRTMotion, 
+    ASSERT(m_type == TransformType::MatrixMotion || m_type == TransformType::SRTMotion, 
         "prayground::Transform::enableEndVanish(): Static transform could not determine a motion option.");
 
     if (m_type == TransformType::MatrixMotion)
@@ -188,7 +188,7 @@ void Transform::enableEndVanish()
 
 void Transform::disableEndVanish()
 {
-    Assert(m_type == TransformType::MatrixMotion || m_type == TransformType::SRTMotion, 
+    ASSERT(m_type == TransformType::MatrixMotion || m_type == TransformType::SRTMotion, 
         "prayground::Transform::disableEndVanish(): Static transform could not determine a motion option.");
 
     if (m_type == TransformType::MatrixMotion)
@@ -206,7 +206,7 @@ void Transform::disableEndVanish()
 // ---------------------------------------------------------------------------
 void Transform::setBeginTime(float start_time)
 {
-    Assert(m_type == TransformType::MatrixMotion || m_type == TransformType::SRTMotion, 
+    ASSERT(m_type == TransformType::MatrixMotion || m_type == TransformType::SRTMotion, 
         "prayground::Transform::setBeginTime(): The begin time could be set to static transform.");
 
     if (m_type == TransformType::MatrixMotion)
@@ -223,7 +223,7 @@ void Transform::setBeginTime(float start_time)
 
 void Transform::setEndTime(float end_time)
 {
-    Assert(m_type == TransformType::MatrixMotion || m_type == TransformType::SRTMotion, 
+    ASSERT(m_type == TransformType::MatrixMotion || m_type == TransformType::SRTMotion, 
         "prayground::Transform::setEndTime(): The end time could be set to static transform.");
 
     if (m_type == TransformType::MatrixMotion)
@@ -241,7 +241,7 @@ void Transform::setEndTime(float end_time)
 // ---------------------------------------------------------------------------
 void Transform::setMotionOptions(const OptixMotionOptions& options)
 {
-    Assert(m_type == TransformType::MatrixMotion || m_type == TransformType::SRTMotion,
+    ASSERT(m_type == TransformType::MatrixMotion || m_type == TransformType::SRTMotion,
         "prayground::Transform::setEndTime(): Motion option could not be set to static transform.");
     
     if (m_type == TransformType::MatrixMotion)

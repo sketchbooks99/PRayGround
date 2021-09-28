@@ -64,7 +64,7 @@ void createDir( const fs::path& abs_path )
     }
     // Create new directory with path specified.
     bool result = fs::create_directory(abs_path);
-    Assert(result, "Failed to create directory '" + abs_path.string() + "'.");
+    ASSERT(result, "Failed to create directory '" + abs_path.string() + "'.");
 }
 
 // -------------------------------------------------------------------------------
@@ -76,14 +76,14 @@ void createDirs( const fs::path& abs_path )
         return;
     }
     bool result = fs::create_directories( abs_path );
-    Assert(result, "Failed to create directories '" + abs_path.string() + "'.");
+    ASSERT(result, "Failed to create directories '" + abs_path.string() + "'.");
 }
 
 // -------------------------------------------------------------------------------
 std::string getTextFromFile(const fs::path& relative_path)
 {
     std::optional<fs::path> filepath = findDataPath(relative_path);
-    Assert(filepath, "prayground::getTextFromFile(): A text file with the path '" + relative_path.string() + "' is not found.");
+    ASSERT(filepath, "prayground::getTextFromFile(): A text file with the path '" + relative_path.string() + "' is not found.");
 
     std::ifstream file_stream; 
     try

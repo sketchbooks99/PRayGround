@@ -241,7 +241,7 @@ void App::setup()
     )
     {
         // Plane or Sphereにキャスト可能かチェック
-        Assert(dynamic_pointer_cast<Plane>(shape) || dynamic_pointer_cast<Sphere>(shape), "The shape of area emitter must be a plane or sphere.");
+        ASSERT(dynamic_pointer_cast<Plane>(shape) || dynamic_pointer_cast<Sphere>(shape), "The shape of area emitter must be a plane or sphere.");
         
         shape->copyToDevice();
         area.copyToDevice();

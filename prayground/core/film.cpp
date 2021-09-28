@@ -41,7 +41,7 @@ void Film::addBitmap(const std::string& name, Bitmap::Format format)
 std::shared_ptr<Bitmap> Film::bitmapAt(const std::string& name) const
 {
     auto it = m_bitmaps.find(name);
-    Assert(it != m_bitmaps.end(), "A bitmap layer associated with the key name of '" + name + "' is not found.");
+    ASSERT(it != m_bitmaps.end(), "A bitmap layer associated with the key name of '" + name + "' is not found.");
     return it->second;
 }
 
@@ -78,7 +78,7 @@ void Film::addFloatBitmap(const std::string& name, FloatBitmap::Format format)
 std::shared_ptr<FloatBitmap> Film::floatBitmapAt(const std::string& name)
 {
     auto it = m_float_bitmaps.find(name);
-    Assert(it != m_float_bitmaps.end(), "A bitmap layer associated with the key name of '" + name + "' is not found.");
+    ASSERT(it != m_float_bitmaps.end(), "A bitmap layer associated with the key name of '" + name + "' is not found.");
     return it->second;
 }
 

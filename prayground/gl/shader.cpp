@@ -45,7 +45,7 @@ void Shader::load(const fs::path& vert_name, const fs::path& frag_name)
     // Vertex shader
     {
         std::optional<fs::path> vert_path = findDataPath(vert_name);
-        Assert(vert_path, "The shader file '" + vert_name.string() + "' is not found.");
+        ASSERT(vert_path, "The shader file '" + vert_name.string() + "' is not found.");
 
         vert_shader = _createGLShaderFromFile(vert_path.value(), GL_VERTEX_SHADER);
         glAttachShader(m_program, vert_shader);
@@ -54,7 +54,7 @@ void Shader::load(const fs::path& vert_name, const fs::path& frag_name)
     // Fragment shader
     {
         std::optional<fs::path> frag_path = findDataPath(frag_name);
-        Assert(frag_path, "The shader file '" + frag_name.string() + "' is not found.");
+        ASSERT(frag_path, "The shader file '" + frag_name.string() + "' is not found.");
 
         frag_shader = _createGLShaderFromFile(frag_path.value(), GL_FRAGMENT_SHADER);
         glAttachShader(m_program, frag_shader);
@@ -92,7 +92,7 @@ void Shader::load(const fs::path& vert_name, const fs::path& frag_name, const fs
     // Vertex shader
     {
         std::optional<fs::path> vert_path = findDataPath(vert_name);
-        Assert(vert_path, "The shader file '" + vert_name.string() + "' is not found.");
+        ASSERT(vert_path, "The shader file '" + vert_name.string() + "' is not found.");
 
         vert_shader = _createGLShaderFromFile(vert_path.value(), GL_VERTEX_SHADER);
         glAttachShader(m_program, vert_shader);
@@ -101,7 +101,7 @@ void Shader::load(const fs::path& vert_name, const fs::path& frag_name, const fs
     // Fragment shader
     {
         std::optional<fs::path> frag_path = findDataPath(frag_name);
-        Assert(frag_path, "The shader file '" + frag_name.string() + "' is not found.");
+        ASSERT(frag_path, "The shader file '" + frag_name.string() + "' is not found.");
 
         frag_shader = _createGLShaderFromFile(frag_path.value(), GL_FRAGMENT_SHADER);
         glAttachShader(m_program, frag_shader);
@@ -110,7 +110,7 @@ void Shader::load(const fs::path& vert_name, const fs::path& frag_name, const fs
     // Geometry shader
     {
         std::optional<fs::path> geom_path = findDataPath(geom_name);
-        Assert(geom_path, "The shader file '" + geom_name.string() + "' is not found.");
+        ASSERT(geom_path, "The shader file '" + geom_name.string() + "' is not found.");
 
         geom_shader = _createGLShaderFromFile(geom_path.value(), GL_GEOMETRY_SHADER);
         glAttachShader(m_program, geom_shader);
@@ -318,7 +318,7 @@ GLuint Shader::_createGLShaderFromSource(const std::string& source, GLuint type)
 GLuint Shader::_createGLShaderFromFile(const fs::path& relative_path, GLuint type)
 {
     std::optional<fs::path> filepath = findDataPath(relative_path);
-    Assert(filepath, "prayground::gl::Shader::The shader file '" + relative_path.string() + "' is not found.");
+    ASSERT(filepath, "prayground::gl::Shader::The shader file '" + relative_path.string() + "' is not found.");
 
     std::string source;
     std::ifstream file_stream;

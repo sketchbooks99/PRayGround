@@ -143,14 +143,14 @@ void TriangleMesh::load(const fs::path& filename)
 {
     if (filename.string().substr(filename.string().length() - 4) == ".obj") {
         std::optional<fs::path> filepath = findDataPath(filename);
-        Assert(filepath, "The OBJ file '" + filename.string() + "' is not found.");
+        ASSERT(filepath, "The OBJ file '" + filename.string() + "' is not found.");
 
         Message(MSG_NORMAL, "Loading OBJ file '" + filepath.value().string() + "' ...");
         loadObj(filepath.value(), m_vertices, m_normals, m_faces, m_texcoords);
     }
     else if (filename.string().substr(filename.string().length() - 4) == ".ply") {
         std::optional<fs::path> filepath = findDataPath(filename);
-        Assert(filepath, "The OBJ file '" + filename.string() + "' is not found.");
+        ASSERT(filepath, "The OBJ file '" + filename.string() + "' is not found.");
             
         Message(MSG_NORMAL, "Loading PLY file '" + filepath.value().string() + "' ...");
         loadPly(filepath.value(), m_vertices, m_normals, m_faces, m_texcoords);

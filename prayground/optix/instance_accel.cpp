@@ -35,7 +35,7 @@ void InstanceAccel::build(const Context& ctx, CUstream stream)
         {
             return std::visit([](const auto& x)
             {
-                Assert(x.handle() != 0, "prayground::InstanceAccel::build(): Traversable handle of instance must be set before building InstanceAccel");
+                ASSERT(x.handle() != 0, "prayground::InstanceAccel::build(): Traversable handle of instance must be set before building InstanceAccel");
                 return static_cast<OptixInstance>(x);
             }, instance);
         });
@@ -94,7 +94,7 @@ void InstanceAccel::build(const Context& ctx, CUstream stream)
 
 void InstanceAccel::update(const Context& ctx, CUstream stream)
 {
-    Assert((m_options.buildFlags & OPTIX_BUILD_FLAG_ALLOW_UPDATE) != 0, "prayground::InstanceAccel::update(): allowUpdate() must be called when using update operation.");
+    ASSERT((m_options.buildFlags & OPTIX_BUILD_FLAG_ALLOW_UPDATE) != 0, "prayground::InstanceAccel::update(): allowUpdate() must be called when using update operation.");
 
     OptixInstance* instance_device_ptr = reinterpret_cast<OptixInstance*>(d_instances);
     for (size_t i = 0; auto& instance : m_instances)

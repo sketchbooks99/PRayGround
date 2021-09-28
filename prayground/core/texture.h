@@ -34,7 +34,7 @@ public:
     }
     uint32_t programId() const 
     {
-        Assert(m_prg_id > -1, "prayground::Texture::programId(): Please set program id to texture.");
+        ASSERT(m_prg_id > -1, "prayground::Texture::programId(): Please set program id to texture.");
         return static_cast<uint32_t>(m_prg_id);
     }
 protected:

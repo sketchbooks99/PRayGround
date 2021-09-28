@@ -35,21 +35,6 @@ enum MessageType
     MSG_ERROR
 };
 
-template <class T>
-concept BoolConvertable = requires(T x)
-{
-    (bool)x;
-};
-
-inline void Throw(const std::string& msg) {
-    throw std::runtime_error(msg);
-}
-
-template <BoolConvertable T>
-inline void Assert(T condition, const std::string& msg) {
-    if (!(bool)condition) Throw(msg);
-}
-
 template <typename T>
 inline void cuda_free(T& data) {
     CUDA_CHECK(cudaFree(reinterpret_cast<void*>(data)));
@@ -124,22 +109,22 @@ inline void Message(MessageType type, Head head, Args... args) {
         Message(MSG_WARNING, ss.str());                     \
     } while (0)
 
-#define THROW(message)                                      \
+#define THROW(msg)                                          \
     do {                                                    \
         std::stringstream ss;                               \
-        ss << "' (" __FILE__ << ":" << __LINE__ << ")"      \
-           << message;                                      \
-        std::runtime_error(ss.str());                       \
+        ss << "'(" __FILE__ << ":" << __LINE__ << ")"      \
+           << msg;                                          \
+        throw std::runtime_error(ss.str());                 \
     } while (0)
 
-#define ASSERT(cond, message)                               \
+#define ASSERT(cond, msg)                                   \
     do {                                                    \
-        if (!cond) {                                        \
+        if (!(bool)(cond)) {                                \
             std::stringstream ss;                           \
             ss << "Assertion failed at "                    \
                << "' (" __FILE__ << ":" << __LINE__ << ")"  \
-               << message;                                  \
-            THROW(ss.str());                                \
+               << msg;                                      \
+            throw std::runtime_error(ss.str());             \
         }                                                   \
     } while (0)
 

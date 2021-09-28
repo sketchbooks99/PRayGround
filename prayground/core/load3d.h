@@ -18,7 +18,7 @@ void loadObj(
 {
     std::vector<float3> temp_normals;
     std::ifstream ifs(filename, std::ios::in);
-    Assert(ifs.is_open(), "The OBJ file '" + filename.string() + "' is not found.");
+    ASSERT(ifs.is_open(), "The OBJ file '" + filename.string() + "' is not found.");
     while (!ifs.eof())
     {
         std::string line;
@@ -83,9 +83,9 @@ void loadObj(
                     temp_vert_indices.emplace_back(vert_idx - 1);
                 }
                 else
-                    Throw("Invalid format in face information input.");
+                    THROW("Invalid format in face information input.");
             }
-            Assert(temp_vert_indices.size() >= 3, "The number of faces is less than 3.");
+            ASSERT(temp_vert_indices.size() >= 3, "The number of faces is less than 3.");
 
             if (temp_vert_indices.size() == 3) {
                 Face face{ {0, 0, 0}, {0, 0, 0}, {0, 0, 0} };
@@ -146,7 +146,7 @@ void loadPly(
         plyIn.validate();
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
-        Throw("The error occured while loading the PLY file.");
+        THROW("The error occured while loading the PLY file.");
     }
 
     // Clear arrays

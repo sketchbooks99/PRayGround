@@ -281,6 +281,7 @@ void App::setup()
         sbt_offset += PathTracingSBT::NRay;
     };
 
+    // Scene ==========================================================================
     // Bunny
     {
         // Shape
@@ -290,7 +291,7 @@ void App::setup()
         bunny_checker->copyToDevice();
         // Material
         auto bunny_disney = make_shared<Disney>(bunny_checker);
-        bunny_disney->setRoughness(0.2f);
+        bunny_disney->setRoughness(0.8f);
         bunny_disney->setMetallic(1.0f);
         // Transform
         Matrix4f transform = Matrix4f::translate({-50.0f, -272.0f, 300.0f}) * Matrix4f::rotate(math::pi, {0.0f, 1.0f, 0.0f}) * Matrix4f::scale(1200.0f);

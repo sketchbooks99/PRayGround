@@ -175,6 +175,7 @@ void App::setup()
     auto sphere_prg = pipeline.createHitgroupProgram(context, hitgroups_module, "__closesthit__sphere", "__intersection__sphere");
     auto mesh_prg = pipeline.createHitgroupProgram(context, hitgroups_module, "__closesthit__mesh");
 
+    // Scene ==========================================================================
     // Cornel box
     {
         // Cornel box用のテクスチャを用意

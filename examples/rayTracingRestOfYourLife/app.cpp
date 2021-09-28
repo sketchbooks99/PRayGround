@@ -270,6 +270,7 @@ void App::setup()
         area_emitter_infos.push_back(area_emitter_info);
     };
 
+    // Scene ==========================================================================
     auto green = make_shared<ConstantTexture>(make_float3(0.05f, 0.8f, 0.05f), constant_prg_id);
     auto red = make_shared<ConstantTexture>(make_float3(0.8f, 0.05f, 0.05f), constant_prg_id);
     auto white = make_shared<ConstantTexture>(make_float3(0.8f, 0.8f, 0.8f), constant_prg_id);

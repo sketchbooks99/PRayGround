@@ -132,6 +132,7 @@ void AppRunner::loop() const
     while (!m_window->shouldClose())
     {
         m_window->update();
+        /// @todo update()をオフスクリーンにする
         m_app->update();
         m_app->draw();
         m_window->swap();

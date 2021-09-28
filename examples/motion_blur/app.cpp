@@ -163,6 +163,7 @@ void App::setup()
     auto plane_prg = pipeline.createHitgroupProgram(context, hitgroups_module, "__closesthit__plane", "__intersection__plane");
     auto sphere_prg = pipeline.createHitgroupProgram(context, hitgroups_module, "__closesthit__sphere", "__intersection__sphere");
 
+    // Scene ==========================================================================
     // Cornel box用のテクスチャを用意
     auto floor_checker = make_shared<CheckerTexture>(make_float3(0.9f), make_float3(0.3f), 10, checker_prg_id);
     auto red = make_shared<ConstantTexture>(make_float3(0.8f, 0.05f, 0.05f), constant_prg_id);
@@ -290,6 +291,8 @@ void App::setup()
 void App::update()
 {
     initResultBufferOnDevice();
+
+    pgSetWindowName(toString(pgGetFrameRate()));
 
     float time = pgGetElapsedTimef();
     if (is_move) {

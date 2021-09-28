@@ -36,7 +36,7 @@ public:
 private:
     float3 m_min;
     float3 m_max;
-    CUdeviceptr d_aabb_buffer;
+    CUdeviceptr d_aabb_buffer{ 0 };
 };
 #endif // __CUDACC__
 

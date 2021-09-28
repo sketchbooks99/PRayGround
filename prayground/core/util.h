@@ -109,6 +109,7 @@ inline void Message(MessageType type, Head head, Args... args) {
         Message(MSG_WARNING, ss.str());                     \
     } while (0)
 
+/** アサーション用 */
 #define THROW(msg)                                          \
     do {                                                    \
         std::stringstream ss;                               \

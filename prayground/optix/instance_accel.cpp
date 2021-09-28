@@ -90,7 +90,7 @@ void InstanceAccel::update(const Context& ctx, CUstream stream)
     ASSERT((m_options.buildFlags & OPTIX_BUILD_FLAG_ALLOW_UPDATE) != 0, "prayground::InstanceAccel::update(): allowUpdate() must be called when using update operation.");
 
     OptixInstance* instance_device_ptr = reinterpret_cast<OptixInstance*>(d_instances);
-    for (OptixInstance* instance : m_instances)
+    for (int i=0; OptixInstance* instance : m_instances)
     {
         CUDA_CHECK(cudaMemcpy(
             &instance_device_ptr[i],
@@ -98,6 +98,7 @@ void InstanceAccel::update(const Context& ctx, CUstream stream)
             sizeof(OptixInstance),
             cudaMemcpyHostToDevice
         ));
+        i++;
     }
 
     m_options.operation = OPTIX_BUILD_OPERATION_UPDATE;

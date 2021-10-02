@@ -14,23 +14,23 @@ namespace prayground {
 /**
  * デフォルトのレイトレ実装 <prayground/optix/cuda/prayground.cu> などが動くようにビルトインパラメータを宣言しておく
  */
-namespace builtin {
 
-struct LaunchParams 
+struct pgLaunchParams 
 {
     unsigned int width, height;
     unsigned int samples_per_launch;
     int subframe_index;
+    float4* accum_buffer;
     uchar4* result_buffer;
     OptixTraversableHandle handle;
 };
 
-struct RaygenData
+struct pgRaygenData
 {
     CameraData camera;
 };
 
-struct HitgroupData
+struct pgHitgroupData
 {
     void* shape_data;
     void* surface_data;
@@ -39,17 +39,15 @@ struct HitgroupData
     unsigned int surface_pdf_id;
 };
 
-struct MissData
+struct pgMissData
 {
     void* env_data;
 };
 
-struct EmptyData
+struct pgEmptyData
 {
 
 };
-
-} // ::builtin
 
 #ifndef __CUDACC__
 

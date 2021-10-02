@@ -5,8 +5,6 @@
 
 namespace prayground {
 
-template <typename ReturnType, typename... Args> class Event;
-
 template <typename ReturnType, typename... Args>
 class Event
 {

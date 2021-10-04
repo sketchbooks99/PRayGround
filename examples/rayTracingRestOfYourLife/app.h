@@ -23,6 +23,7 @@ public:
     void draw();
     void close();
 
+    void keyPressed(int key);
     void mouseDragged(float x, float y, int button);
     void mouseScrolled(float xoffset, float yoffset);
 private:

@@ -449,6 +449,15 @@ void App::close()
 }
 
 // ----------------------------------------------------------------
+void App::keyPressed(int key)
+{
+    if (key == Key::Q)
+    {
+        pgExit();
+    }
+}
+
+// ----------------------------------------------------------------
 void App::mouseDragged(float x, float y, int button)
 {
     camera_update = true;

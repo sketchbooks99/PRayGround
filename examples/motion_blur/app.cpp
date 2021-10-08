@@ -73,7 +73,7 @@ void App::setup()
     camera.setLookat(make_float3(0.0f, 0.0f, 0.0f));
     camera.setUp(make_float3(0.0f, 1.0f, 0.0f));
     camera.setFov(40.0f);
-    camera.setAspect(params.width / params.height);
+    camera.setAspect((float)params.width / params.height);
     float3 U, V, W;
     camera.UVWFrame(U, V, W);
 

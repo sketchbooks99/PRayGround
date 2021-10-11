@@ -180,8 +180,7 @@ INLINE HOSTDEVICE Matrix<T, N> operator*(const Matrix<T, N>& m, const float t)
 template <typename T, unsigned int N>
 INLINE HOSTDEVICE Matrix<T, N>& operator*=(Matrix<T, N>& m1, const Matrix<T, N>& m2)
 {
-    for (unsigned int i = 0; i < N*N; i++)
-        m1[i] *= m2[i];
+    m1 = m1 * m2;
     return m1;
 }
 

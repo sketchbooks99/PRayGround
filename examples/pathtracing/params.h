@@ -8,6 +8,18 @@
 
 using namespace prayground;
 
+struct AreaEmitterInfo
+{
+    void* shape_data;
+    Matrix4f objToWorld;
+    Matrix4f worldToObj;
+
+    unsigned int sample_id;
+    unsigned int pdf_id;
+
+    OptixTraversableHandle gas_handle;
+};
+
 struct LaunchParams 
 {
     unsigned int width, height;
@@ -20,6 +32,9 @@ struct LaunchParams
     float3* albedo_buffer;
     float* depth_buffer;
     OptixTraversableHandle handle;
+
+    AreaEmitterInfo* lights;
+    int num_lights;
 
     float white;
 };

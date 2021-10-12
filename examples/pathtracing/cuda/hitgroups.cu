@@ -80,6 +80,44 @@ extern "C" __device__ void __closesthit__plane()
     si->surface_info = data->surface_info;
 }
 
+extern "C" __device__ float __continuation_callable__pdf_plane(AreaEmitterInfo area_info, const float3 & origin, const float3 & direction)
+{
+    const PlaneData* plane_data = reinterpret_cast<PlaneData*>(area_info.shape_data);
+
+    SurfaceInteraction si;
+    const float3 local_o = area_info.worldToObj.pointMul(origin);
+    const float3 local_d = area_info.worldToObj.vectorMul(direction);
+
+    if (!hitPlane(plane_data, local_o, local_d, 0.01f, 1e16f, si))
+        return 0.0f;
+
+    const float3 corner0 = area_info.objToWorld.pointMul(make_float3(plane_data->min.x, 0.0f, plane_data->min.y));
+    const float3 corner1 = area_info.objToWorld.pointMul(make_float3(plane_data->max.x, 0.0f, plane_data->min.y));
+    const float3 corner2 = area_info.objToWorld.pointMul(make_float3(plane_data->min.x, 0.0f, plane_data->max.y));
+    si.n = normalize(area_info.objToWorld.vectorMul(si.n));
+    const float area = length(cross(corner1 - corner0, corner2 - corner0));
+    const float distance_squared = si.t * si.t;
+    const float cosine = fabs(dot(si.n, direction));
+    if (cosine < math::eps)
+        return 0.0f;
+    return distance_squared / (cosine * area);
+}
+
+// グローバル空間における si.p -> 光源上の点 のベクトルを返す
+extern "C" __device__ float3 __direct_callable__rnd_sample_plane(AreaEmitterInfo area_info, SurfaceInteraction * si)
+{
+    const PlaneData* plane_data = reinterpret_cast<PlaneData*>(area_info.shape_data);
+    // サーフェスの原点をローカル空間に移す
+    const float3 local_p = area_info.worldToObj.pointMul(si->p);
+    unsigned int seed = si->seed;
+    // 平面光源上のランダムな点を取得
+    const float3 rnd_p = make_float3(rnd(seed, plane_data->min.x, plane_data->max.x), 0.0f, rnd(seed, plane_data->min.y, plane_data->max.y));
+    float3 to_light = rnd_p - local_p;
+    to_light = area_info.objToWorld.vectorMul(to_light);
+    si->seed = seed;
+    return to_light;
+}
+
 // Sphere -------------------------------------------------------------------------------
 static __forceinline__ __device__ float2 getSphereUV(const float3& p) {
     float phi = atan2(p.z, p.x);
@@ -175,6 +213,38 @@ extern "C" __device__ void __closesthit__sphere() {
     si->wi = ray.d;
     si->uv = getSphereUV(local_n);
     si->surface_info = data->surface_info;
+}
+
+extern "C" __device__ float __continuation_callable__pdf_sphere(AreaEmitterInfo area_info, const float3 & origin, const float3 & direction)
+{
+    const SphereData* sphere_data = reinterpret_cast<SphereData*>(area_info.shape_data);
+    SurfaceInteraction si;
+    const float3 local_o = area_info.worldToObj.pointMul(origin);
+    const float3 local_d = area_info.worldToObj.vectorMul(direction);
+    
+    if (!hitSphere(sphere_data, local_o, local_d, 0.01f, 1e16f, si))
+        return 0.0f;
+
+    const float3 center = sphere_data->center;
+    const float radius = sphere_data->radius;
+    const float cos_theta_max = sqrtf(1.0f - radius * radius / math::sqr(length(center - local_o)));
+    const float solid_angle = 2.0f * math::pi * (1.0f - cos_theta_max);
+    return 1.0f / solid_angle;
+}
+
+extern "C" __device__ float3 __direct_callable__rnd_sample_sphere(AreaEmitterInfo area_info, SurfaceInteraction* si)
+{
+    const SphereData* sphere_data = reinterpret_cast<SphereData*>(area_info.shape_data);
+    const float3 center = sphere_data->center;
+    const float3 local_o = area_info.worldToObj.pointMul(si->p);
+    const float3 oc = center - local_o;
+    float distance_squared = dot(oc, oc);
+    Onb onb(normalize(oc));
+    unsigned int seed = si->seed;
+    float3 to_light = randomSampleToSphere(seed, sphere_data->radius, distance_squared);
+    onb.inverseTransform(to_light);
+    si->seed = seed;
+    return normalize(area_info.objToWorld.vectorMul(to_light));
 }
 
 // Cylinder -------------------------------------------------------------------------------

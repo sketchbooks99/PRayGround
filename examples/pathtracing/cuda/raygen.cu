@@ -32,7 +32,7 @@ extern "C" __device__ void __raygen__pinhole()
     const uint3 idx = optixGetLaunchIndex();
     unsigned seed = tea<4>(idx.x * params.width + idx.y, subframe_index);
 
-    float3 result = make_float3(0.0f, 0.0f, 0.0f);
+    float3 result = make_float3(0.0f);
     float3 normal = make_float3(0.0f);
     float p_depth = 0.0f;
     float3 albedo = make_float3(0.0f);
@@ -79,7 +79,10 @@ extern "C" __device__ void __raygen__pinhole()
             );
 
             if (si.trace_terminate) {
-                result += si.emission * throughput;
+                float coef = 1.0f;
+                if (depth > 0)
+                    coef = dot(si.n, si.wo);
+                result += si.emission * throughput * coef;
                 break;
             }
 
@@ -127,6 +130,14 @@ extern "C" __device__ void __raygen__pinhole()
             // Rough surface sampling with applying MIS
             else if ( +(si.surface_info.type & (SurfaceType::Rough | SurfaceType::Diffuse)) )
             {
+                unsigned int seed = si.seed;
+                const int light_id = rnd_int(seed, 0, params.num_lights-1);
+                const AreaEmitterInfo light = params.lights[light_id];
+
+                const float weight = 1.0f / (params.num_lights + 1);
+
+                float pdf_val = 0.0f;
+
                 // BSDFによる重点サンプリング
                 optixDirectCall<void, SurfaceInteraction*, void*>(
                     si.surface_info.sample_id,
@@ -134,12 +145,36 @@ extern "C" __device__ void __raygen__pinhole()
                     si.surface_info.data
                     );
 
+                if (rnd(seed) < weight * params.num_lights) {
+                    // 光源に向けたサンプリング
+                    float3 to_light = optixDirectCall<float3, AreaEmitterInfo, SurfaceInteraction*>(
+                        light.sample_id,
+                        light,
+                        &si
+                        );
+                    si.wo = normalize(to_light);
+                }
+
+                for (int i = 0; i < params.num_lights; i++)
+                {
+                    // 面光源のPDFを評価
+                    float light_pdf = optixContinuationCall<float, AreaEmitterInfo, const float3&, const float3&>(
+                        params.lights[i].pdf_id,
+                        params.lights[i],
+                        si.p,
+                        si.wo
+                    );
+                    pdf_val += weight * light_pdf;
+                }
+
                 // BSDFのPDFを評価
                 float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*>(
                     si.surface_info.pdf_id,
                     &si,
                     si.surface_info.data
-                    );
+                );
+
+                pdf_val += weight * bsdf_pdf;
 
                 // BSDFの評価
                 float3 bsdf_val = optixContinuationCall<float3, SurfaceInteraction*, void*>(
@@ -148,7 +183,9 @@ extern "C" __device__ void __raygen__pinhole()
                     si.surface_info.data
                     );
 
-                throughput *= bsdf_val / bsdf_pdf;
+                if (pdf_val == 0.0f) break;
+
+                throughput *= bsdf_val / pdf_val;
             }
 
             if (depth == 0) {
@@ -178,23 +215,11 @@ extern "C" __device__ void __raygen__pinhole()
 
     float3 accum_color = result / static_cast<float>(params.samples_per_launch);
 
-    normal = normal / static_cast<float>(params.samples_per_launch);
-    p_depth = p_depth / static_cast<float>(params.samples_per_launch);
-    albedo = albedo / static_cast<float>(params.samples_per_launch);
-
-    const float3 prev_n = params.normal_buffer[image_index];
-    const float prev_d = params.depth_buffer[image_index];
-    const float3 prev_a = params.albedo_buffer[image_index];
-
     if (subframe_index > 0)
     {
         const float a = 1.0f / static_cast<float>(subframe_index + 1);
         const float3 accum_color_prev = make_float3(params.accum_buffer[image_index]);
         accum_color = lerp(accum_color_prev, accum_color, a);
-        normal = lerp(prev_n, normal, a);
-        albedo = lerp(prev_a, albedo, a);
-        if (p_depth != 0.0f && prev_d != 0.0f)
-            p_depth = prev_d + a * (p_depth - prev_d);
     }
     params.accum_buffer[image_index] = make_float4(accum_color, 1.0f);
     uchar3 color = make_color(reinhardToneMap(accum_color, params.white));

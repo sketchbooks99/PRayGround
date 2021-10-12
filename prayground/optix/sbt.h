@@ -27,7 +27,7 @@ struct pgLaunchParams
 
 struct pgRaygenData
 {
-    CameraData camera;
+    builtin::CameraData camera;
 };
 
 struct pgHitgroupData

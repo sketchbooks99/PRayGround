@@ -192,7 +192,7 @@ void loadPly(
         }
     }
 
-    // Get face faces
+    // Get faces
     std::vector<std::vector<size_t>> ply_faces = plyIn.getFaceIndices();
     std::transform(ply_faces.begin(), ply_faces.end(), std::back_inserter(faces), 
         [&](const std::vector<size_t>& f) { 

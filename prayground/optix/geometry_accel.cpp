@@ -129,14 +129,8 @@ void GeometryAccel::update(const Context& ctx, CUstream stream)
 
     /**
      * @note
-     * - 自分自身がGASをアップデートするための一時的なバッファを保持していなかった場合，
-     *   optixAccelBuild() を呼ぶためのメモリ領域を再計算してGASの更新を行うのに
-     *   必要なだけのバッファを確保する
-     * 
-     * - is_hold_temp_buffer のフラグで更新時に必要なメモリ量を計算するか判断すると
-     *   d_temp_buffer よりも真に必要なメモリ量が多かった場合にクラッシュする。
-     *   そこまでコストが高くないなら、optixAccelComputeMemoryUsage()で
-     *   毎度メモリ量を計算するのが安全？
+     * GASの更新に必要なだけの一時バッファを保存していないので、GASの更新のたびに
+     * optixAccelComputeMemoryUsage()を呼ぶ
      */
     OptixAccelBufferSizes gas_buffer_sizes;
     OPTIX_CHECK(optixAccelComputeMemoryUsage(

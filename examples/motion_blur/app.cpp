@@ -21,7 +21,7 @@ void App::initResultBufferOnDevice()
 // ----------------------------------------------------------------
 void App::setup()
 {
-    pgSetFrameRate(60);
+    pgSetFrameRate(15);
 
     // OptixDeviceContextの生成
     stream = 0;

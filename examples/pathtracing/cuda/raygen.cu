@@ -79,10 +79,7 @@ extern "C" __device__ void __raygen__pinhole()
             );
 
             if (si.trace_terminate) {
-                float coef = 1.0f;
-                if (depth > 0)
-                    coef = dot(si.n, si.wo);
-                result += si.emission * throughput * coef;
+                result += si.emission * throughput;
                 break;
             }
 
@@ -131,8 +128,11 @@ extern "C" __device__ void __raygen__pinhole()
             else if ( +(si.surface_info.type & (SurfaceType::Rough | SurfaceType::Diffuse)) )
             {
                 unsigned int seed = si.seed;
-                const int light_id = rnd_int(seed, 0, params.num_lights-1);
-                const AreaEmitterInfo light = params.lights[light_id];
+                AreaEmitterInfo light;
+                if (params.num_lights > 0) {
+                    const int light_id = rnd_int(seed, 0, params.num_lights-1);
+                    light = params.lights[light_id];
+                }
 
                 const float weight = 1.0f / (params.num_lights + 1);
 

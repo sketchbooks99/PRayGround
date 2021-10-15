@@ -46,7 +46,7 @@ public:
     OptixProgramGroupKind kind() const;
     OptixProgramGroupOptions options() const;
 private:
-    OptixProgramGroup m_program;
+    OptixProgramGroup m_program { nullptr };
     OptixProgramGroupKind m_kind;
     OptixProgramGroupOptions m_options;
 }; 

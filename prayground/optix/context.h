@@ -18,6 +18,7 @@ public:
     explicit operator OptixDeviceContext&() { return m_ctx; }
 
     void create();
+    void destroy();
 
     // Setter for context options
     void setOptions(const OptixDeviceContextOptions& options);
@@ -31,7 +32,7 @@ public:
     unsigned int deviceId() const;
 private:
     unsigned int m_device_id { 0 };
-    OptixDeviceContext m_ctx;
+    OptixDeviceContext m_ctx { nullptr };
     OptixDeviceContextOptions m_options;
 };
 

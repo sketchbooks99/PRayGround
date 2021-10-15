@@ -235,9 +235,25 @@ void Pipeline::create(const Context& ctx)
 
 void Pipeline::destroy()
 {
-    OPTIX_CHECK(optixPipelineDestroy(m_pipeline));
+    if (m_pipeline) OPTIX_CHECK(optixPipelineDestroy(m_pipeline));
+    m_pipeline = nullptr;
 
-    /** @todo Destroy modules and programs */
+    for (auto& module : m_modules)
+        module.destroy();
+    m_modules.clear();
+
+    m_raygen_program.destroy();
+    m_exception_program.destroy();
+
+    auto destroyPrograms = [&](std::vector<ProgramGroup>& prgs)
+    {
+        for (auto& prg : prgs)
+            prg.destroy();
+        prgs.clear();
+    };
+    destroyPrograms(m_hitgroup_programs);
+    destroyPrograms(m_miss_programs);
+    destroyPrograms(m_callables_programs);
 }
 
 // --------------------------------------------------------------------

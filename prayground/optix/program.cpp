@@ -185,7 +185,8 @@ void ProgramGroup::createCallables(const Context& ctx, const ProgramEntry& dc_en
 // ---------------------------------------------------------------------------
 void ProgramGroup::destroy()
 {
-    OPTIX_CHECK(optixProgramGroupDestroy(m_program));
+    if (m_program) OPTIX_CHECK(optixProgramGroupDestroy(m_program));
+    m_program = nullptr;
 }
 
 OptixProgramGroupKind ProgramGroup::kind() const

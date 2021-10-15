@@ -540,6 +540,9 @@ void App::close()
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
+
+    pipeline.destroy();
+    context.destroy();
 }
 
 // ----------------------------------------------------------------

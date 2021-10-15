@@ -69,6 +69,12 @@ void Context::create()
     OPTIX_CHECK( optixDeviceContextCreate( cu_ctx, &m_options, &m_ctx ) );
 }
 
+void Context::destroy()
+{
+    if (m_ctx) OPTIX_CHECK(optixDeviceContextDestroy(m_ctx));
+    m_ctx = nullptr;
+}
+
 // --------------------------------------------------------------------
 void Context::setOptions(const OptixDeviceContextOptions& options)
 {

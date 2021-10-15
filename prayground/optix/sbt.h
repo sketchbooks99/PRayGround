@@ -53,9 +53,6 @@ struct pgEmptyData
 
 namespace {
     template <class T>
-    concept TrivialCopyable = std::is_trivially_copyable_v<T>;
-
-    template <class T>
     concept HasData = requires(T t)
     {
         t.data;
@@ -70,33 +67,21 @@ namespace {
     }
 } // ::nonamed namespace
 
-template <TrivialCopyable T>
+template <class T>
 struct Record 
 {
     __align__ (OPTIX_SBT_RECORD_ALIGNMENT) char header[OPTIX_SBT_RECORD_HEADER_SIZE];
     T data;
 };
 
-/**
- * @note 
- * 各種データが仮想関数を保持したしている場合、デバイス上におけるインスタンス周りで 
- * Invalid accessが生じる可能性があるので <concepts> 等で制約をかけたい
- * 
- * SPECIALTHANKS:
- * @yaito3014 gave me an advise that to use is_trivially_copyable_v 
- * for prohibiting declaration of virtual functions in SBT Data.
- */
-
 template <HasData RaygenRecord, HasData MissRecord, HasData HitgroupRecord, 
           HasData CallablesRecord, HasData ExceptionRecord, uint32_t N>
+requires (N > 0)
 class ShaderBindingTable {
 public:
     static constexpr uint32_t NRay = N;
 
-    ShaderBindingTable()
-    {
-        static_assert(N > 0, "The number of ray types must be at least 1.");
-    }
+    ShaderBindingTable() {}
 
     explicit operator OptixShaderBindingTable() const { return m_sbt; }
 
@@ -119,8 +104,6 @@ public:
 
         push_to_vector(m_miss_records, args...);
     }
-
-
 
     /// @note 置き換えを行ったらデバイス上のデータも更新する？
     void replaceMissRecord(const MissRecord& record, const int idx)
@@ -220,6 +203,27 @@ public:
         on_device = true;
     }
 
+    void destroy()
+    {
+        if (m_sbt.raygenRecord) 
+            CUDA_CHECK(cudaFree(reinterpret_cast<void*>(m_sbt.raygenRecord)));
+        if (m_sbt.missRecordBase) 
+            CUDA_CHECK(cudaFree(reinterpret_cast<void*>(m_sbt.missRecordBase)));
+        if (m_sbt.hitgroupRecordBase) 
+            CUDA_CHECK(cudaFree(reinterpret_cast<void*>(m_sbt.hitgroupRecordBase)));
+        if (m_sbt.callablesRecordBase)
+            CUDA_CHECK(cudaFree(reinterpret_cast<void*>(m_sbt.callablesRecordBase)));
+        if (m_sbt.exceptionRecord)
+            CUDA_CHECK(cudaFree(reinterpret_cast<void*>(m_sbt.exceptionRecord)));
+        m_sbt = {};
+        m_raygen_record = {};
+        m_miss_records.clear();
+        m_hitgroup_records.clear();
+        m_callables_records.clear();
+        m_exception_record = {};
+        on_device = false;
+    }
+
     OptixShaderBindingTable& sbt()
     {
         return m_sbt;
@@ -231,11 +235,11 @@ public:
     }
 private:
     OptixShaderBindingTable m_sbt {};
-    RaygenRecord m_raygen_record;
+    RaygenRecord m_raygen_record {};
     std::vector<MissRecord> m_miss_records;
     std::vector<HitgroupRecord> m_hitgroup_records;
     std::vector<CallablesRecord> m_callables_records;
-    ExceptionRecord m_exception_record;
+    ExceptionRecord m_exception_record {};
     bool on_device;
 };
 

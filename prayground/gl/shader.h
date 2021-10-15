@@ -10,7 +10,6 @@ namespace prayground {
 
 namespace gl {
 
-
 /**
  * @brief 
  * Wrapper class for OpenGL shader

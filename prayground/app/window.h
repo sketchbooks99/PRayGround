@@ -95,9 +95,9 @@ private:
 
     GLFWwindow* m_window_ptr = nullptr;
 
+    std::string m_name;
     int32_t m_width;
     int32_t m_height;
-    std::string m_name;
 
     /** @brief OpenGL version of the window. The version 330 is used at default. */
     int32_t m_gl_version_major = 3;

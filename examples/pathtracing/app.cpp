@@ -322,6 +322,7 @@ void App::setup()
     {
         // Shape
         auto armadillo = make_shared<TriangleMesh>("resources/model/Armadillo.ply");
+        armadillo->smooth();
         // Texture
         auto armadillo_constant = make_shared<ConstantTexture>(make_float3(1.0f), constant_prg_id);
         armadillo_constant->copyToDevice();
@@ -501,7 +502,7 @@ void App::draw()
 
     ImGui::Begin("Path tracing GUI");
 
-    ImGui::SliderFloat("White", &params.white, 1.0f, 1000.0f);
+    ImGui::SliderFloat("White", &params.white, 0.01f, 1.0f);
     ImGui::Text("Camera info:");
     ImGui::Text("Origin: %f %f %f", camera.origin().x, camera.origin().y, camera.origin().z);
     ImGui::Text("Lookat: %f %f %f", camera.lookat().x, camera.lookat().y, camera.lookat().z);

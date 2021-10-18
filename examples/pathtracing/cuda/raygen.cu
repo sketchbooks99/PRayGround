@@ -30,7 +30,7 @@ extern "C" __device__ void __raygen__pinhole()
 
     const int subframe_index = params.subframe_index;
     const uint3 idx = optixGetLaunchIndex();
-    unsigned seed = tea<4>(idx.x * params.width + idx.y, subframe_index);
+    unsigned int seed = tea<4>(idx.x * params.width + idx.y, subframe_index);
 
     float3 result = make_float3(0.0f);
     float3 normal = make_float3(0.0f);
@@ -227,4 +227,9 @@ extern "C" __device__ void __raygen__pinhole()
     params.normal_buffer[image_index] = normal;
     params.albedo_buffer[image_index] = albedo;
     params.depth_buffer[image_index] = p_depth == 0.0f ? 1.0f : p_depth;
+}
+
+extern "C" __device__ void __raygen__thinlens()
+{
+    const RaygenData* raygen = reinterpret_cast<RaygenData*>(optixGetSbtDataPointer());
 }

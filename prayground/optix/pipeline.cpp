@@ -35,9 +35,6 @@ Pipeline::Pipeline(const OptixPipelineCompileOptions& c_op, const OptixPipelineL
 // --------------------------------------------------------------------
 [[nodiscard]] Module Pipeline::createModuleFromCudaFile(const Context& ctx, const std::filesystem::path& filename)
 {
-#if !(CUDA_NVRTC_ENABLED)
-    static_assert(false);
-#endif
     m_modules.emplace_back(Module{});
     m_modules.back().createFromCudaFile(ctx, filename, m_compile_options);
     return m_modules.back();
@@ -45,9 +42,6 @@ Pipeline::Pipeline(const OptixPipelineCompileOptions& c_op, const OptixPipelineL
 
 [[nodiscard]] Module Pipeline::createModuleFromCudaSource(const Context& ctx, const std::string& source)
 {
-#if !(CUDA_NVRTC_ENABLED)
-    static_assert(false);
-#endif
     m_modules.emplace_back(Module{});
     m_modules.back().createFromCudaSource(ctx, source, m_compile_options);
     return m_modules.back();

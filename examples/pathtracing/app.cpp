@@ -88,7 +88,7 @@ void App::setup()
     params.height = result_bitmap.height();
     params.samples_per_launch = 1;
     params.max_depth = 10;
-    params.white = 5.0f;
+    params.white = 1.0f;
 
     initResultBufferOnDevice();
 

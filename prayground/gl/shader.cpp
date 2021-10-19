@@ -40,7 +40,7 @@ void Shader::load(const fs::path& vert_name, const fs::path& frag_name)
 {
     m_program = glCreateProgram();
 
-    GLuint vert_shader = 0, frag_shader = 0, geom_shader = 0;
+    GLuint vert_shader = 0, frag_shader = 0;
 
     // Vertex shader
     {
@@ -330,7 +330,7 @@ GLuint Shader::_createGLShaderFromFile(const fs::path& relative_path, GLuint typ
         file_stream.close();
         source = source_stream.str();
     }
-    catch (const std::istream::failure e)
+    catch (const std::istream::failure& e)
     {
         Message(MSG_ERROR, "prayground::gl::Shader::_createGLShaderFromFile(): Failed to load shader source from file due to '" + std::string(e.what()) + "'.");
     }

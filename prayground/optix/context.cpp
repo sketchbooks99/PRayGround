@@ -57,7 +57,7 @@ void Context::create()
     /// Verify if the \c device_id exceeds the detected number of GPU devices.
     int32_t num_device;
     CUDA_CHECK( cudaGetDeviceCount( &num_device ) );
-    ASSERT( m_device_id < num_device, "prayground::Context::create(): device_id of prayground::Context exceeds the detected number of GPU devices.");
+    ASSERT( (int32_t)m_device_id < num_device, "prayground::Context::create(): device_id of prayground::Context exceeds the detected number of GPU devices.");
 
     // Set device with specified id.
     cudaDeviceProp prop;

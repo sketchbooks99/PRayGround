@@ -1,7 +1,9 @@
 #pragma once
 
 #include <prayground/math/vec_math.h>
+#include <prayground/shape/trianglemesh.h>
 #include <filesystem>
+#include <vector>
 
 namespace prayground {
 

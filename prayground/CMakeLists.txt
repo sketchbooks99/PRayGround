@@ -15,6 +15,7 @@ set(sources
   core/film.cpp
   core/interaction.h
   core/load3d.h 
+  core/load3d.cpp
   core/material.h 
   core/onb.h 
   core/ray.h 

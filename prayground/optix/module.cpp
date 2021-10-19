@@ -179,10 +179,10 @@ void Module::createFromCudaSource(const Context& ctx, const std::string& source,
 #if !(CUDA_NVRTC_ENABLED)
     static_assert(false);
 #endif
-    const char** log;
-    std::string ptx;
-    getPtxFromCuString(ptx, source.c_str(), "", log);
-    createFromPtxSource(ctx, ptx, pipeline_options);
+    const char** log = nullptr;
+    std::string* ptx = new std::string;
+    getPtxFromCuString(*ptx, source.c_str(), "", log);
+    createFromPtxSource(ctx, *ptx, pipeline_options);
 }
 
 void Module::createFromPtxFile(const Context& ctx, const fs::path& filename, OptixPipelineCompileOptions pipeline_options)
@@ -192,7 +192,7 @@ void Module::createFromPtxFile(const Context& ctx, const fs::path& filename, Opt
 
     std::string key = filepath.value().string();
     std::map<std::string, std::string*>::iterator elem = g_ptxSourceCache.map.find(key);
-    std::string* ptx;
+    std::string* ptx = new std::string;
 
     if (elem == g_ptxSourceCache.map.end())
     {

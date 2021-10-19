@@ -1,6 +1,5 @@
 #include "load3d.h"
 #include <prayground/ext/happly/happly.h>
-#include <prayground/shape/trianglemesh.h>
 #include <algorithm>
 
 namespace prayground {

@@ -138,7 +138,7 @@ extern "C" __device__ void __raygen__pinhole()
 
                 float pdf_val = 0.0f;
 
-                // BSDFによる重点サンプリング
+                // Importance sampling according to the BSDF
                 optixDirectCall<void, SurfaceInteraction*, void*>(
                     si.surface_info.sample_id,
                     &si,
@@ -146,7 +146,7 @@ extern "C" __device__ void __raygen__pinhole()
                     );
 
                 if (rnd(seed) < weight * params.num_lights) {
-                    // 光源に向けたサンプリング
+                    // Light sampling
                     float3 to_light = optixDirectCall<float3, AreaEmitterInfo, SurfaceInteraction*>(
                         light.sample_id,
                         light,
@@ -157,7 +157,7 @@ extern "C" __device__ void __raygen__pinhole()
 
                 for (int i = 0; i < params.num_lights; i++)
                 {
-                    // 面光源のPDFを評価
+                    // Evaluate PDF of area emitter
                     float light_pdf = optixContinuationCall<float, AreaEmitterInfo, const float3&, const float3&>(
                         params.lights[i].pdf_id,
                         params.lights[i],
@@ -167,7 +167,7 @@ extern "C" __device__ void __raygen__pinhole()
                     pdf_val += weight * light_pdf;
                 }
 
-                // BSDFのPDFを評価
+                // Evaluate PDF depends on BSDF
                 float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*>(
                     si.surface_info.pdf_id,
                     &si,
@@ -176,7 +176,7 @@ extern "C" __device__ void __raygen__pinhole()
 
                 pdf_val += weight * bsdf_pdf;
 
-                // BSDFの評価
+                // Evaluate BSDF
                 float3 bsdf_val = optixContinuationCall<float3, SurfaceInteraction*, void*>(
                     si.surface_info.bsdf_id,
                     &si,
@@ -196,7 +196,7 @@ extern "C" __device__ void __raygen__pinhole()
                 normal += si.n;
             }
 
-            // プライマリーレイ以外ではtmaxは大きくしておく
+            // Make tmax large except for when the primary ray
             tmax = 1e16f;
             
             ro = si.p;

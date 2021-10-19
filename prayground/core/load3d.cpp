@@ -1,145 +1,94 @@
 #include "load3d.h"
+#include <prayground/core/file_util.h>
 #include <prayground/ext/happly/happly.h>
+
+#ifndef TINEOBJLOADER_IMPLEMENTATION
+#define TINYOBJLOADER_IMPLEMENTATION
+#endif
+#include <prayground/ext/tinyobjloader/tiny_obj_loader.h>
 #include <algorithm>
 
 namespace prayground {
 
 // -------------------------------------------------------------------------------
 void loadObj(
-    const std::filesystem::path& filename, 
+    const std::filesystem::path& filepath, 
     std::vector<float3>& vertices, 
     std::vector<float3>& normals, 
     std::vector<Face>& faces, 
     std::vector<float2>& texcoords
 )
 {
-    std::vector<float3> temp_normals;
-    std::ifstream ifs(filename, std::ios::in);
-    ASSERT(ifs.is_open(), "The OBJ file '" + filename.string() + "' is not found.");
-    while (!ifs.eof())
+    tinyobj::ObjReaderConfig reader_config;
+    reader_config.triangulate = true; // triangulate mesh
+    tinyobj::ObjReader reader;
+
+    if (!reader.ParseFromFile(filepath.string(), reader_config))
     {
-        std::string line;
-        if (!std::getline(ifs, line))
-            break;
-
-        // creae string stream
-        std::istringstream iss(line);
-        std::string header;
-        iss >> header;
-
-        // vertex --------------------------------------
-        if (header == "v")
-        {
-            float x, y, z;
-            iss >> x >> y >> z;
-            vertices.emplace_back(make_float3(x, y, z));
-        }
-        else if(header == "vn") {
-            float x, y, z;
-            iss >> x >> y >> z;
-            normals.emplace_back(make_float3(x, y, z));
-        }
-        else if (header == "vt")
-        {
-            float x, y;
-            iss >> x >> y;
-            texcoords.emplace_back(make_float2(x, y));
-        }
-        else if (header == "f")
-        {
-            // temporalily vector to store face information
-            std::vector<int> temp_vert_indices;
-            std::vector<int> temp_norm_indices;
-            std::vector<int> temp_tex_indices;
-
-            for (std::string buffer; iss >> buffer;)
-            {
-                int vert_idx, tex_idx, norm_idx;
-                if (sscanf(buffer.c_str(), "%d/%d/%d", &vert_idx, &tex_idx, &norm_idx) == 3)
-                {
-                    // Input - index(vertex)/index(texture)/index(normal)
-                    temp_vert_indices.emplace_back(vert_idx - 1);
-                    temp_norm_indices.emplace_back(norm_idx - 1);
-                    temp_tex_indices.emplace_back(tex_idx - 1);
-                }
-                else if (sscanf(buffer.c_str(), "%d//%d", &vert_idx, &norm_idx) == 2)
-                {
-                    // Input - index(vertex)//index(normal)
-                    temp_vert_indices.emplace_back(vert_idx - 1);
-                    temp_norm_indices.emplace_back(norm_idx - 1);
-                }
-                else if (sscanf(buffer.c_str(), "%d/%d", &vert_idx, &tex_idx) == 2)
-                {
-                    // Input - index(vertex)/index(texture)
-                    temp_vert_indices.emplace_back(vert_idx - 1);
-                    temp_tex_indices.emplace_back(tex_idx - 1);
-                }
-                else if (sscanf(buffer.c_str(), "%d", &vert_idx) == 1)
-                {
-                    // Input - index(vertex)
-                    temp_vert_indices.emplace_back(vert_idx - 1);
-                }
-                else
-                    THROW("Invalid format in face information input.");
-            }
-            ASSERT(temp_vert_indices.size() >= 3, "The number of faces is less than 3.");
-
-            if (temp_vert_indices.size() == 3) {
-                Face face{ {0, 0, 0}, {0, 0, 0}, {0, 0, 0} };
-                face.vertex_id = make_int3(temp_vert_indices[0], temp_vert_indices[1], temp_vert_indices[2]);
-                
-                if (!temp_norm_indices.empty())
-                    face.normal_id = make_int3(temp_norm_indices[0], temp_norm_indices[1], temp_norm_indices[2]);
-                
-                if (!temp_tex_indices.empty())
-                    face.texcoord_id = make_int3(temp_tex_indices[0], temp_tex_indices[1], temp_tex_indices[2]);
-
-                faces.push_back(face);
-            }
-            /** 
-             * Get more then 4 inputs.
-             * @note 
-             * This case is implemented under the assumption that if face input are more than 4, 
-             * mesh are configured by quad and inputs are partitioned with 4 stride. 
-             */
-            else if (temp_vert_indices.size() == 4)
-            {
-                Face face1{ {0, 0, 0}, {0, 0, 0}, {0, 0, 0} };
-                Face face2{ {0, 0, 0}, {0, 0, 0}, {0, 0, 0} };
-
-                face1.vertex_id = make_int3(temp_vert_indices[0], temp_vert_indices[1], temp_vert_indices[2]);
-                face2.vertex_id = make_int3(temp_vert_indices[2], temp_vert_indices[3], temp_vert_indices[0]);
-
-                if (!temp_norm_indices.empty())
-                {
-                    face1.normal_id = make_int3(temp_norm_indices[0], temp_norm_indices[1], temp_norm_indices[2]);
-                    face2.normal_id = make_int3(temp_norm_indices[2], temp_norm_indices[3], temp_norm_indices[0]);
-                }
-
-                if (!temp_tex_indices.empty())
-                {
-                    face1.texcoord_id = make_int3(temp_tex_indices[0], temp_tex_indices[1], temp_tex_indices[2]);
-                    face2.texcoord_id = make_int3(temp_tex_indices[2], temp_tex_indices[3], temp_tex_indices[0]);
-                }
-                faces.push_back(face1);
-                faces.push_back(face2);
-            }
-        }
+        ASSERT(reader.Error().empty(), "TinyObjReader: " + reader.Error());
     }
 
-    ifs.close();
+    if (!reader.Warning().empty())
+        Message(MSG_WARNING, "TinyObjReader:", reader.Warning());
+
+    auto& attrib = reader.GetAttrib();
+    auto& shapes = reader.GetShapes();
+
+    vertices.resize(attrib.vertices.size() / 3);
+    normals.resize(attrib.normals.size() / 3);
+    texcoords.resize(attrib.texcoords.size() / 2);
+
+    for (size_t s = 0; s < shapes.size(); s++)
+    {
+        size_t index_offset = 0;
+        for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++)
+        {
+            Face face{{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
+            for (size_t v = 0; v < 3; v++)
+            {
+                // access to vertex
+                tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
+                setByIndex(face.vertex_id, (int)v, idx.vertex_index);
+                tinyobj::real_t vx = attrib.vertices[3 * size_t(idx.vertex_index) + 0];
+                tinyobj::real_t vy = attrib.vertices[3 * size_t(idx.vertex_index) + 1];
+                tinyobj::real_t vz = attrib.vertices[3 * size_t(idx.vertex_index) + 2];
+                vertices[idx.vertex_index] = make_float3(vx, vy, vz);
+
+                // Normals if exists
+                if (idx.normal_index >= 0)
+                {
+                    setByIndex(face.normal_id, (int)v, idx.normal_index);
+                    tinyobj::real_t nx = attrib.normals[3 * size_t(idx.normal_index) + 0];
+                    tinyobj::real_t ny = attrib.normals[3 * size_t(idx.normal_index) + 1];
+                    tinyobj::real_t nz = attrib.normals[3 * size_t(idx.normal_index) + 2];
+                    normals[idx.normal_index] = make_float3(nx, ny, nz);
+                }
+
+                // Texcoords if exists
+                if (idx.texcoord_index >= 0)
+                {
+                    setByIndex(face.texcoord_id, (int)v, idx.texcoord_index);
+                    tinyobj::real_t tx = attrib.texcoords[2 * size_t(idx.texcoord_index) + 0];
+                    tinyobj::real_t ty = attrib.texcoords[2 * size_t(idx.texcoord_index) + 1];
+                    texcoords[idx.texcoord_index] = make_float2(tx, ty);
+                }
+            }
+            faces.push_back(face);
+            index_offset += 3;
+        }
+    }
 }
 
 // -------------------------------------------------------------------------------
 void loadPly(
-    const std::filesystem::path& filename, 
+    const std::filesystem::path& filepath, 
     std::vector<float3>& vertices, 
     std::vector<float3>& normals, 
     std::vector<Face>& faces, 
     std::vector<float2>& texcoords
 )
 {
-    happly::PLYData plyIn(filename.string());
+    happly::PLYData plyIn(filepath.string());
     try {
         plyIn.validate();
     } catch (const std::exception& e) {

@@ -7,6 +7,11 @@
 
 namespace prayground {
 
+/**
+ * @warning 
+ * This class is deprecated because it doesn't have much usage, and will be deleted soon.
+ */
+
 class Film {
 public:
     Film();

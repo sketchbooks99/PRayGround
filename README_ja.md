@@ -123,3 +123,11 @@ add_subdirectory(apps/<your-app-name>) # Add this line
   - ![](examples/dynamic_update/dynamic_update.gif)
 - [Motion blur](examples/motion_blur/)
   - <img src=examples/motion_blur/motion_blur.png width=320>
+
+# External libraries
+- [glad](https://github.com/Dav1dde/glad) ... For OpenGL features
+- [hapPLY](https://github.com/nmwsharp/happly) ... For loading PLY mesh
+- [Dear ImGui](https://github.com/ocornut/imgui) ... For easy GUI usage
+- [stb](https://github.com/nothings/stb) ... To read/write image of PNG, JPG format
+- [tinyexr](https://github.com/syoyo/tinyexr/) ... To read/write(future work) image of OpenEXR format
+- [tinyobjloader](https://github.com/tinyobjloader/tinyobjloader) ... For loading OBJ mesh

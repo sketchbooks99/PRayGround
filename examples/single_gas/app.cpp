@@ -69,7 +69,6 @@ void App::setup()
     
     // Creating texture programs
     uint32_t checker_prg_id = setupCallable(textures_module, "__direct_callable__checker", "");
-    uint32_t bitmap_prg_id = setupCallable(textures_module, "__direct_callable__bitmap", "");
 
     // Prepare environment 
     env_texture = make_shared<CheckerTexture>(make_float3(0.9f), make_float3(0.3f), 10.0f, checker_prg_id);

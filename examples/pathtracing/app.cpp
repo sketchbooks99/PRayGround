@@ -399,10 +399,11 @@ void App::setup()
         // Shape
         auto ground = make_shared<Plane>(make_float2(-500.0f, -500.0f), make_float2(500.0f, 500.0f));
         // Texture
-        auto ground_constant = make_shared<ConstantTexture>(make_float3(0.25f), constant_prg_id);
-        ground_constant->copyToDevice();
+        // auto ground_constant = make_shared<ConstantTexture>(make_float3(0.25f), constant_prg_id);
+        auto ground_texture = make_shared<BitmapTexture>("resources/image/parrots_gray.bmp", bitmap_prg_id);
+        ground_texture->copyToDevice();
         // Material
-        auto ground_diffuse = make_shared<Diffuse>(ground_constant);
+        auto ground_diffuse = make_shared<Diffuse>(ground_texture);
         // Transform
         Matrix4f transform = Matrix4f::translate({0.0f, -275.0f, 0.0f});
         Primitive primitive { ground, ground_diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };

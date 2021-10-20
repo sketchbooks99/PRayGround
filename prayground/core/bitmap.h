@@ -13,11 +13,11 @@ public:
 
     enum class Format : int
     {
+        AUTO        = 0,
         GRAY        = 1,       // 1 channels
         GRAY_ALPHA  = 2,       // 2 channels
         RGB         = 3,       // 3 channels
-        RGBA        = 4,       // 4 channels
-        UNKNOWN     = 0
+        RGBA        = 4        // 4 channels
     };
 
     Bitmap_();
@@ -51,7 +51,7 @@ private:
     std::unique_ptr<PixelType[]> m_data;  // CPU側のデータ -> unique_ptrにする
     PixelType* d_data { nullptr };  // GPU側のデータ
 
-    Format m_format { Format::UNKNOWN };
+    Format m_format { Format::AUTO };
     int m_width { 0 };
     int m_height { 0 };
     int m_channels { 0 };

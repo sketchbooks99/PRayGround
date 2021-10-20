@@ -5,14 +5,14 @@ namespace prayground {
 // ------------------------------------------------------------------
 Film::Film()
 {
-
+    Message(MSG_WARNING, "This class is deprecated because it doesn't have much usage, and will be deleted soon.");
 }
 
 // ------------------------------------------------------------------
 Film::Film(int width, int height)
 : m_width(width), m_height(height)
 {
-
+    Message(MSG_WARNING, "This class is deprecated because it doesn't have much usage, and will be deleted soon.");
 }
 
 Film::~Film()
@@ -23,7 +23,7 @@ Film::~Film()
 // ------------------------------------------------------------------
 void Film::addBitmap(const std::string& name, Bitmap::Format format)
 {
-    if (format == Bitmap::Format::UNKNOWN)
+    if (format == Bitmap::Format::AUTO)
     {
         Message(MSG_ERROR, "prayground::Film::addBitmap(): The unknown format.");
         return;
@@ -60,7 +60,7 @@ size_t Film::numBitmaps() const
 // ------------------------------------------------------------------
 void Film::addFloatBitmap(const std::string& name, FloatBitmap::Format format)
 {
-    if (format == FloatBitmap::Format::UNKNOWN)
+    if (format == FloatBitmap::Format::AUTO)
     {
         Message(MSG_ERROR, "prayground::Film::addFloatBitmap(): The unknown format.");
         return;

@@ -5,11 +5,19 @@
 #include <prayground/core/util.h>
 #include <prayground/app/app_runner.h>
 
+#ifndef STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
+#endif
 #include <prayground/ext/stb/stb_image.h>
+
+#ifndef STB_IMAGE_WRITE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
+#endif
 #include <prayground/ext/stb/stb_image_write.h>
+
+#ifndef TINYEXR_IMPLEMENTATION
 #define TINYEXR_IMPLEMENTATION
+#endif
 #include <prayground/ext/tinyexr/tinyexr.h>
 
 namespace prayground {
@@ -81,7 +89,7 @@ void Bitmap_<PixelType>::allocate(Format format, int width, int height)
         case Format::RGBA:
             m_channels = 4;
             break;
-        case Format::UNKNOWN:
+        case Format::AUTO:
         default:
             THROW("prayground::Bitmap::allocate(): Invalid type of allocation");
     }
@@ -146,17 +154,11 @@ void Bitmap_<unsigned char>::load(const std::filesystem::path& filename)
     auto ext = getExtension(filepath.value());
 
     if (ext == ".png" || ext == ".PNG")
-    {
         Message(MSG_NORMAL, "Loading PNG file '" + filepath.value().string() + "' ...");
-        if (m_format == Format::UNKNOWN)
-            m_format = Format::RGBA;
-    }
     else if (ext == ".jpg" || ext == ".JPG")
-    {
         Message(MSG_NORMAL, "Loading JPG file '" + filepath.value().string() + "' ...");
-        if (m_format == Format::UNKNOWN)
-            m_format = Format::RGB;
-    }
+    else if (ext == ".bmp" || ext == ".BMP")
+        Message(MSG_NORMAL, "Loading BMP file '" + filepath.value().string() + "' ...");
     else if (ext == ".exr" || ext == ".EXR")
     {
         Message(MSG_ERROR, "prayground::Bitmap_<unsigned char>::load(): EXR format can be loaded only in BitmapFloat.");
@@ -164,6 +166,8 @@ void Bitmap_<unsigned char>::load(const std::filesystem::path& filename)
     }
     uint8_t* raw_data;
     raw_data = stbi_load(filepath.value().string().c_str(), &m_width, &m_height, &m_channels, static_cast<int>(m_format));
+    if (m_format == Format::AUTO) 
+        m_format = static_cast<Format>(m_channels);
     m_channels = static_cast<int>(m_format);
     m_data.reset(raw_data);
 
@@ -183,7 +187,7 @@ void Bitmap_<float>::load(const std::filesystem::path& filename)
     if (ext == ".exr" || ext == ".EXR")
     {
         Message(MSG_NORMAL, "Loading EXR file '" + filepath.value().string() + "' ...");
-        m_format = m_format == Format::UNKNOWN ? Format::RGBA : m_format;
+        m_format = m_format == Format::AUTO ? Format::RGBA : m_format;
 
         const char* err = nullptr;
         float* raw_data;
@@ -200,19 +204,19 @@ void Bitmap_<float>::load(const std::filesystem::path& filename)
             }
         }
     }
-    // PNG/JPG 形式の場合は uint8_t* [0, 255] -> float* [0, 1] に変換 
+    // PNG/JPG/BMP 形式の場合は uint8_t* [0, 255] -> float* [0, 1] に変換 
     else
     {
-        if (ext == ".png" || ext == ".PNG") {
-            m_format = m_format == Format::UNKNOWN ? Format::RGBA : m_format;
+        if (ext == ".png" || ext == ".PNG")
             Message(MSG_NORMAL, "Loading EXR file '" + filepath.value().string() + "' ...");
-        }
-        else if (ext == ".jpg" || ext == ".JPG") {
-            m_format = m_format == Format::UNKNOWN ? Format::RGB : m_format;
+        else if (ext == ".jpg" || ext == ".JPG")
             Message(MSG_NORMAL, "Loading JPG file '" + filepath.value().string() + "' ...");
-        }
+        else if (ext == ".bmp" || ext == ".BMP")
+            Message(MSG_NORMAL, "Loading BMP file '" + filepath.value().string() + "' ...");
 
         uint8_t* raw_data = stbi_load(filepath.value().string().c_str(), &m_width, &m_height, &m_channels, static_cast<int>(m_format));
+        if (m_format == Format::AUTO)
+            m_format = static_cast<Format>(m_channels);
         m_channels = static_cast<int>(m_format);
         m_data = std::make_unique<float[]>(m_width * m_height * m_channels);
         for (int i = 0; i < m_width * m_height * m_channels; i += m_channels)
@@ -275,6 +279,11 @@ void Bitmap_<PixelType>::write(const std::filesystem::path& filepath, int qualit
     else if (ext == ".jpg" || ext == ".JPG")
     {
         stbi_write_jpg(filepath.string().c_str(), m_width, m_height, m_channels, data, quality);
+        delete[] data;
+    }
+    else if (ext == ".bmp" || ext == ".BMP")
+    {
+        stbi_write_bmp(filepath.string().c_str(), m_width, m_height, m_channels, data);
         delete[] data;
     }
     else if (ext == ".exr" || ext == ".EXR")
@@ -365,7 +374,7 @@ void Bitmap_<PixelType>::draw(int32_t x, int32_t y, int32_t width, int32_t heigh
     case Format::RGBA:
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_RGBA, texture_data_type, raw_data);
         break;
-    case Format::UNKNOWN:
+    case Format::AUTO:
     default:
         return;
     }

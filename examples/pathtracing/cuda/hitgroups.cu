@@ -26,7 +26,7 @@ static __forceinline__ __device__ bool hitPlane(const PlaneData* plane_data, con
 
     if (min.x < x && x < max.x && min.y < z && z < max.y && tmin < t && t < tmax)
     {
-        si.uv = make_float2(x / (max.x - min.x), z / max.y - min.y);
+        si.uv = make_float2((x - min.x) / (max.x - min.x), (z - min.y) / max.y - min.y);
         si.n = make_float3(0, 1, 0);
         si.t = t;
         si.p = o + t*v;
@@ -50,7 +50,7 @@ extern "C" __device__ void __intersection__plane()
     const float x = ray.o.x + t * ray.d.x;
     const float z = ray.o.z + t * ray.d.z;
 
-    float2 uv = make_float2(x / (max.x - min.x), z / (max.y - min.y));
+    float2 uv = make_float2((x - min.x) / (max.x - min.x), (z - min.y) / (max.y - min.y));
 
     if (min.x < x && x < max.x && min.y < z && z < max.y && ray.tmin < t && t < ray.tmax)
         optixReportIntersection(t, 0, float2_as_ints(uv));

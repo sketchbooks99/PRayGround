@@ -104,7 +104,7 @@ void Bitmap_<PixelType>::allocate(Format format, int width, int height)
 
 // --------------------------------------------------------------------
 template <typename PixelType>
-void Bitmap_<PixelType>::setData(PixelType* data, int width, int height, int offset_x, int offset_y)
+void Bitmap_<PixelType>::setData(PixelType* data, int offset_x, int offset_y, int width, int height)
 {
     ASSERT(m_data.get(), "Please allocate the bitmap before filling data with specified range.");
 
@@ -124,9 +124,9 @@ void Bitmap_<PixelType>::setData(PixelType* data, int width, int height, int off
 }
 
 template <typename PixelType>
-void Bitmap_<PixelType>::setData(PixelType* data, const int2& res, const int2& offset)
+void Bitmap_<PixelType>::setData(PixelType* data, const int2& offset, const int2& res)
 {
-    setData(data, res.x, res.y, offset.x, offset.y); 
+    setData(data, offset.x, offset.y, res.x, res.y); 
 }
 
 // --------------------------------------------------------------------

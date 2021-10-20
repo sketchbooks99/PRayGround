@@ -26,8 +26,8 @@ public:
     explicit Bitmap_(const std::filesystem::path& filename, Format format);
 
     void allocate(Format format, int width, int height);
-    void setData(PixelType* data, int width, int height, int offset_x, int offset_y);
-    void setData(PixelType* data, const int2& res, const int2& offset);
+    void setData(PixelType* data, int offset_x, int offset_y, int width, int height);
+    void setData(PixelType* data, const int2& offset, const int2& res);
 
     void load(const std::filesystem::path& filename);
     void load(const std::filesystem::path& filename, Format format);

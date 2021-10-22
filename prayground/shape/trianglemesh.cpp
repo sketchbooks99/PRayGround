@@ -8,18 +8,22 @@ namespace prayground {
 
 namespace fs = std::filesystem;
 
-/** @note At present, only .obj file format is supported. */
 // ------------------------------------------------------------------
+TriangleMesh::TriangleMesh()
+{
+
+}
+
 TriangleMesh::TriangleMesh(const fs::path& filename)
 {
     load(filename);
 }
 
 TriangleMesh::TriangleMesh(
-    std::vector<float3> vertices, 
-    std::vector<Face> faces, 
-    std::vector<float3> normals, 
-    std::vector<float2> texcoords) 
+    const std::vector<float3>& vertices, 
+    const std::vector<Face>& faces, 
+    const std::vector<float3>& normals, 
+    const std::vector<float2>& texcoords) 
     : m_vertices(vertices), 
       m_faces(faces), 
       m_normals(normals),
@@ -146,14 +150,14 @@ void TriangleMesh::load(const fs::path& filename)
         ASSERT(filepath, "The OBJ file '" + filename.string() + "' is not found.");
 
         Message(MSG_NORMAL, "Loading OBJ file '" + filepath.value().string() + "' ...");
-        loadObj(filepath.value(), m_vertices, m_normals, m_faces, m_texcoords);
+        loadObj(filepath.value(), m_vertices, m_faces, m_normals, m_texcoords);
     }
     else if (filename.string().substr(filename.string().length() - 4) == ".ply") {
         std::optional<fs::path> filepath = findDataPath(filename);
         ASSERT(filepath, "The OBJ file '" + filename.string() + "' is not found.");
             
         Message(MSG_NORMAL, "Loading PLY file '" + filepath.value().string() + "' ...");
-        loadPly(filepath.value(), m_vertices, m_normals, m_faces, m_texcoords);
+        loadPly(filepath.value(), m_vertices, m_faces, m_normals, m_texcoords);
     }
 
     // Calculate normals if they are empty.

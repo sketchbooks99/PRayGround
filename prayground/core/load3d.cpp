@@ -13,9 +13,9 @@ namespace prayground {
 // -------------------------------------------------------------------------------
 void loadObj(
     const std::filesystem::path& filepath, 
-    std::vector<float3>& vertices, 
-    std::vector<float3>& normals, 
+    std::vector<float3>& vertices,
     std::vector<Face>& faces, 
+    std::vector<float3>& normals,  
     std::vector<float2>& texcoords
 )
 {

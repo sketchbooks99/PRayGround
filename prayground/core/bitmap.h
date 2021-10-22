@@ -48,8 +48,8 @@ public:
     int height() const { return m_height; }
     int channels() const { return m_channels; }
 private:
-    std::unique_ptr<PixelType[]> m_data;  // CPU側のデータ -> unique_ptrにする
-    PixelType* d_data { nullptr };  // GPU側のデータ
+    std::unique_ptr<PixelType[]> m_data;  // CPU側のデータ
+    PixelType* d_data { nullptr };        // GPU側のデータ
 
     Format m_format { Format::AUTO };
     int m_width { 0 };

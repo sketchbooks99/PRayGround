@@ -30,13 +30,13 @@ class TriangleMesh : public Shape {
 public:
     using DataType = MeshData;
 
-    TriangleMesh() {}
+    TriangleMesh();
     TriangleMesh(const std::filesystem::path& filename);
     TriangleMesh(
-        std::vector<float3> vertices, 
-        std::vector<Face> faces, 
-        std::vector<float3> normals, 
-        std::vector<float2> texcoords);
+        const std::vector<float3>& vertices, 
+        const std::vector<Face>& faces, 
+        const std::vector<float3>& normals, 
+        const std::vector<float2>& texcoords);
     TriangleMesh(const TriangleMesh& mesh) = default;
     TriangleMesh(TriangleMesh&& mesh) = default;
 

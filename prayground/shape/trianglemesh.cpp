@@ -145,14 +145,15 @@ void TriangleMesh::addTexcoord(const float2& texcoord)
 // ------------------------------------------------------------------
 void TriangleMesh::load(const fs::path& filename)
 {
-    if (filename.string().substr(filename.string().length() - 4) == ".obj") {
+    std::string ext = getExtension(filename);
+    if (ext == ".obj") {
         std::optional<fs::path> filepath = findDataPath(filename);
         ASSERT(filepath, "The OBJ file '" + filename.string() + "' is not found.");
 
         Message(MSG_NORMAL, "Loading OBJ file '" + filepath.value().string() + "' ...");
         loadObj(filepath.value(), m_vertices, m_faces, m_normals, m_texcoords);
     }
-    else if (filename.string().substr(filename.string().length() - 4) == ".ply") {
+    else if (ext == ".ply") {
         std::optional<fs::path> filepath = findDataPath(filename);
         ASSERT(filepath, "The OBJ file '" + filename.string() + "' is not found.");
             

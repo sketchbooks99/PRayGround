@@ -125,7 +125,8 @@ add_subdirectory(apps/<your-app-name>) # Add this line
   - <img src=examples/motion_blur/motion_blur.png width=320>
 
 # External libraries
-- [glad](https://github.com/Dav1dde/glad) ... For OpenGL features
+- [glad](https://github.com/Dav1dde/glad) ... For OpenGL 
+- [GLFW](https://github.com/glfw/glfw) ... For OpenGL
 - [hapPLY](https://github.com/nmwsharp/happly) ... For loading PLY mesh
 - [Dear ImGui](https://github.com/ocornut/imgui) ... For easy GUI usage
 - [stb](https://github.com/nothings/stb) ... To read/write image of PNG, JPG format

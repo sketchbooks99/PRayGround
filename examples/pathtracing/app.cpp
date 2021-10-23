@@ -464,7 +464,6 @@ void App::update()
 {
     handleCameraUpdate();
 
-    params.subframe_index++;
     d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);
 
     float start_time = pgGetElapsedTimef();
@@ -480,6 +479,7 @@ void App::update()
         params.height,
         1
     );
+    params.subframe_index++;
 
     render_time = pgGetElapsedTimef() - start_time;
 

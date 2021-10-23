@@ -272,7 +272,6 @@ void Bitmap_<PixelType>::write(const std::filesystem::path& filepath, int qualit
     
     if (ext == ".png" || ext == ".PNG")
     {
-        stbi_flip_vertically_on_write(true);
         stbi_write_png(filepath.string().c_str(), m_width, m_height, m_channels, data, m_width * m_channels);
         delete[] data;
     }

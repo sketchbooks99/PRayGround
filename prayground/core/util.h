@@ -113,8 +113,8 @@ inline void Message(MessageType type, Head head, Args... args) {
 #define THROW(msg)                                          \
     do {                                                    \
         std::stringstream ss;                               \
-        ss << "'(" __FILE__ << ":" << __LINE__ << ")"      \
-           << msg;                                          \
+        ss << "'(" __FILE__ << ":" << __LINE__ << ")"       \
+           << ", " << msg;                                  \
         throw std::runtime_error(ss.str());                 \
     } while (0)
 
@@ -124,7 +124,7 @@ inline void Message(MessageType type, Head head, Args... args) {
             std::stringstream ss;                           \
             ss << "Assertion failed at "                    \
                << "' (" __FILE__ << ":" << __LINE__ << ")"  \
-               << msg;                                      \
+               << ", " << msg;                              \
             throw std::runtime_error(ss.str());             \
         }                                                   \
     } while (0)

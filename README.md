@@ -127,6 +127,7 @@ add_subdirectory(apps/<your-app-name>) # Add this line
 
 # External libraries
 - [glad](https://github.com/Dav1dde/glad) ... For OpenGL features
+- [GLFW](https://github.com/glfw/glfw) ... For OpenGL
 - [hapPLY](https://github.com/nmwsharp/happly) ... For loading PLY mesh
 - [Dear ImGui](https://github.com/ocornut/imgui) ... For easy GUI usage
 - [stb](https://github.com/nothings/stb) ... To read/write image of PNG, JPG format

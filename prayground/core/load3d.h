@@ -1,5 +1,6 @@
 #pragma once
 
+#include <prayground/core/attribute.h>
 #include <prayground/math/vec_math.h>
 #include <prayground/shape/trianglemesh.h>
 #include <filesystem>
@@ -7,16 +8,12 @@
 
 namespace prayground {
 
-// Based on tinyobj::material_t
-struct ObjMaterialParams
-{
-    std::string name;
-};
-
 void loadObjWithMtl(
     const std::filesystem::objpath, 
     const std::filesystem::mtlpath, 
-    TriangleMesh& mesh, )
+    TriangleMesh& mesh, 
+    std::vector<Attributes>& material_attribs
+);
 
 void loadObj(
     const std::filesystem::path& filepath, 

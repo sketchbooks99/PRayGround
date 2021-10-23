@@ -7,7 +7,6 @@
 
 namespace prayground {
 
-template <class MaterialT>
 class ObjMesh final : public TriangleMesh {
 public:
     using DataType = MeshData;
@@ -16,7 +15,7 @@ public:
 
     constexpr ShapeType type() override;
 private:
-    std::vector<std::shared_ptr<MaterialT>> m_materials;
+    std::vector<int32_t> m_sbt_indices;
 };
 
 } // ::prayground

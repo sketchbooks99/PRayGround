@@ -7,26 +7,16 @@
 
 namespace prayground {
 
-void loadObjWithMtl(
-    const std::filesystem::path& filepath,
-    std::vector<float3>& vertices, 
-    std::vector<float3>& normals, 
-    std::vector<Face>& faces, 
-    std::vector<float2>& texcoords);
+// Based on tinyobj::material_t
+struct ObjMaterialParams
+{
+    std::string name;
+};
 
 void loadObjWithMtl(
-    const std::filesystem::path& objpath, 
-    const std::filesystem::path& mtlpath, 
-    std::vector<float3>& vertices, 
-    std::vector<float3>& normals, 
-    std::vector<Face>& faces, 
-    std::vector<float2>& texcoords
-);
-
-void loadObj(
-    const std::filesystem::path& filepath,
-    TriangleMesh& mesh
-);
+    const std::filesystem::objpath, 
+    const std::filesystem::mtlpath, 
+    TriangleMesh& mesh, )
 
 void loadObj(
     const std::filesystem::path& filepath, 
@@ -35,6 +25,8 @@ void loadObj(
     std::vector<float3>& normals,
     std::vector<float2>& texcoords
 );
+
+void loadObj(const std::filesystem::path& filepath, TriangleMesh& mesh);
 
 void loadPly(
     const std::filesystem::path& filepath, 

@@ -39,9 +39,6 @@ private:
 
     Bitmap result_bitmap;
     FloatBitmap accum_bitmap;
-    FloatBitmap normal_bitmap;
-    FloatBitmap albedo_bitmap;
-    FloatBitmap depth_bitmap;
     Camera camera;
     bool camera_update;
 

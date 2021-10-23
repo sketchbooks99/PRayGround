@@ -6,15 +6,9 @@ void App::initResultBufferOnDevice()
 
     result_bitmap.allocateDevicePtr();
     accum_bitmap.allocateDevicePtr();
-    normal_bitmap.allocateDevicePtr();
-    albedo_bitmap.allocateDevicePtr();
-    depth_bitmap.allocateDevicePtr();
 
     params.result_buffer = reinterpret_cast<uchar4*>(result_bitmap.devicePtr());
     params.accum_buffer = reinterpret_cast<float4*>(accum_bitmap.devicePtr());
-    params.normal_buffer = reinterpret_cast<float3*>(normal_bitmap.devicePtr());
-    params.albedo_buffer = reinterpret_cast<float3*>(albedo_bitmap.devicePtr());
-    params.depth_buffer = reinterpret_cast<float*>(depth_bitmap.devicePtr());
 
     CUDA_SYNC_CHECK();
 }
@@ -79,9 +73,6 @@ void App::setup()
     // レンダリング結果を保存する用のBitmapを用意
     result_bitmap.allocate(Bitmap::Format::RGBA, pgGetWidth(), pgGetHeight());
     accum_bitmap.allocate(FloatBitmap::Format::RGBA, pgGetWidth(), pgGetHeight());
-    normal_bitmap.allocate(FloatBitmap::Format::RGB, pgGetWidth(), pgGetHeight());
-    albedo_bitmap.allocate(FloatBitmap::Format::RGB, pgGetWidth(), pgGetHeight());
-    depth_bitmap.allocate(FloatBitmap::Format::GRAY, pgGetWidth(), pgGetHeight());
 
     // LaunchParamsの設定
     params.width = result_bitmap.width();
@@ -157,7 +148,6 @@ void App::setup()
     // 環境マッピング (Sphere mapping) 用のテクスチャとデータ準備
     // 画像ファイルはリポジトリには含まれていないので、任意の画像データを設定してください
      auto env_texture = make_shared<FloatBitmapTexture>("resources/image/dikhololo_night_4k.exr", bitmap_prg_id); 
-    //auto env_texture = make_shared<ConstantTexture>(make_float3(0.0f), constant_prg_id);
     env_texture->copyToDevice();
     env = EnvironmentEmitter{env_texture};
     env.copyToDevice();
@@ -294,8 +284,7 @@ void App::setup()
             .objToWorld = transform,
             .worldToObj = transform.inverse(), 
             .sample_id = sample_pdf_id,
-            .pdf_id = sample_pdf_id, 
-            .gas_handle = instance.handle()
+            .pdf_id = sample_pdf_id
         };
         area_emitter_infos.push_back(area_emitter_info);
     };
@@ -356,9 +345,6 @@ void App::update()
 
     // レンダリング結果をデバイスから取ってくる
     result_bitmap.copyFromDevice();
-    normal_bitmap.copyFromDevice();
-    albedo_bitmap.copyFromDevice();
-    depth_bitmap.copyFromDevice();
 }
 
 // ----------------------------------------------------------------
@@ -391,15 +377,12 @@ void App::draw()
 
     ImGui::Render();
 
-    result_bitmap.draw(0, 0, pgGetWidth() / 2, pgGetHeight() / 2);
-    normal_bitmap.draw(pgGetWidth() / 2, 0, pgGetWidth() / 2, pgGetHeight() / 2);
-    albedo_bitmap.draw(0, pgGetHeight() / 2, pgGetWidth() / 2, pgGetHeight() / 2);
-    depth_bitmap.draw(pgGetWidth() / 2, pgGetHeight() / 2, pgGetWidth() / 2, pgGetHeight() / 2);
+    result_bitmap.draw(0, 0, pgGetWidth(), pgGetHeight());
 
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
     if (params.subframe_index == 4096)
-        result_bitmap.write(pathJoin(pgAppDir(), "pathtracing.jpg"));
+        result_bitmap.write(pathJoin(pgAppDir(), "objscene.jpg"));
 }
 
 // ----------------------------------------------------------------

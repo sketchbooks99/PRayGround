@@ -1,12 +1,12 @@
 #include "load3d.h"
 #include <prayground/core/file_util.h>
 #include <prayground/ext/happly/happly.h>
+#include <algorithm>
 
 #ifndef TINEOBJLOADER_IMPLEMENTATION
 #define TINYOBJLOADER_IMPLEMENTATION
 #endif
 #include <prayground/ext/tinyobjloader/tiny_obj_loader.h>
-#include <algorithm>
 
 namespace prayground {
 
@@ -77,6 +77,11 @@ void loadObj(
             index_offset += 3;
         }
     }
+}
+
+void loadObj(const std::filesystem::path& filepath, TriangleMesh& mesh)
+{
+    mesh.load(filepath);
 }
 
 // -------------------------------------------------------------------------------

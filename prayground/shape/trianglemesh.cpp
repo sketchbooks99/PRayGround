@@ -23,13 +23,20 @@ TriangleMesh::TriangleMesh(
     const std::vector<float3>& vertices, 
     const std::vector<Face>& faces, 
     const std::vector<float3>& normals, 
-    const std::vector<float2>& texcoords) 
+    const std::vector<float2>& texcoords, 
+    const std::vector<uint32_t>& sbt_indices) 
     : m_vertices(vertices), 
       m_faces(faces), 
       m_normals(normals),
-      m_texcoords(texcoords)
+      m_texcoords(texcoords), 
+      m_sbt_indices(sbt_indices)
 {
-    
+    if (sbt_indices.size() > 1)
+    {
+        ASSERT(faces.size() == sbt_indices.size(), 
+            "The number of faces and sbt_indices must be same, when 2 or more sbt_indices are set. (must be a per-face mode).");
+        is_per_face_material = true;
+    }
 }
 
 // ------------------------------------------------------------------
@@ -56,10 +63,22 @@ void TriangleMesh::copyToDevice()
 OptixBuildInput TriangleMesh::createBuildInput() 
 {
     OptixBuildInput bi = {};
-    CUDABuffer<uint32_t> d_sbt_indices;
-    uint32_t* sbt_indices = new uint32_t[1];
-    sbt_indices[0] = m_sbt_index;
-    d_sbt_indices.copyToDevice(sbt_indices, sizeof(uint32_t));
+    CUDABuffer<uint32_t> d_sbt_indices_buf;
+
+    if (is_per_face_material)
+    {
+        ASSERT(m_faces.size() == m_sbt_indices.size(), 
+            "The number of faces and sbt_indices must be same when per-face mode is enabled.");
+        d_sbt_indices_buf.copyToDevice(m_sbt_indices);
+    }
+    else
+    {
+        uint32_t* sbt_indices = new uint32_t[1];
+        sbt_indices[0] = m_sbt_index;
+        d_sbt_indices_buf.copyToDevice(sbt_indices, sizeof(uint32_t));
+        delete[] sbt_indices;
+    }
+    d_sbt_indices = d_sbt_indices_buf.devicePtr();
 
     unsigned int* triangle_input_flags = new unsigned int[1];
     triangle_input_flags[0] = OPTIX_GEOMETRY_FLAG_NONE;
@@ -75,7 +94,7 @@ OptixBuildInput TriangleMesh::createBuildInput()
     bi.triangleArray.numIndexTriplets = static_cast<uint32_t>(m_faces.size());
     bi.triangleArray.indexBuffer = d_faces;
     bi.triangleArray.numSbtRecords = 1;
-    bi.triangleArray.sbtIndexOffsetBuffer = d_sbt_indices.devicePtr();
+    bi.triangleArray.sbtIndexOffsetBuffer = d_sbt_indices;
     bi.triangleArray.sbtIndexOffsetSizeInBytes = sizeof(uint32_t);
     bi.triangleArray.sbtIndexOffsetStrideInBytes = sizeof(uint32_t);
     return bi;
@@ -124,22 +143,29 @@ TriangleMesh::DataType TriangleMesh::deviceData()
 // ------------------------------------------------------------------
 void TriangleMesh::addVertex(const float3& v)
 {
-    TODO_MESSAGE();
+    m_vertices.emplace_back(v);
 }
 
 void TriangleMesh::addFace(const Face& face)
 {
-    TODO_MESSAGE();
+    m_faces.emplace_back(face);
+}
+
+void TriangleMesh::addFace(const Face& face, uint32_t sbt_index)
+{
+    ASSERT(is_per_face_material, "Please turn on per-face material mode by mesh.setPerFaceMaterial(true)");
+    m_faces.emplace_back(face);
+    m_sbt_indices.emplace_back(sbt_index);
 }
 
 void TriangleMesh::addNormal(const float3& n)
 {
-    TODO_MESSAGE();
+    m_normals.emplace_back(n);
 }
 
 void TriangleMesh::addTexcoord(const float2& texcoord)
 {
-    TODO_MESSAGE();
+    m_texcoords.emplace_back(texcoord);
 }
 
 // ------------------------------------------------------------------
@@ -214,6 +240,16 @@ void TriangleMesh::smooth()
         m_normals[i] /= counts[i];
         m_normals[i] = normalize(m_normals[i]);
     }
+}
+
+void TriangleMesh::setPerFaceMaterial(bool is_per_face)
+{
+    is_per_face_material = is_per_face;
+}
+
+void TriangleMesh::setNumMaterials(uint32_t num_materials)
+{
+    m_num_materials = num_materials;
 }
 
 } // ::prayground

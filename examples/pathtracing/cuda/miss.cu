@@ -34,7 +34,7 @@ extern "C" __device__ void __miss__envmap()
     );
 }
 
-extern "C" __device__ void __miss__shadow()
-{
-    optixSetPayload_0(1);
-}
+// extern "C" __device__ void __miss__shadow()
+// {
+//     optixSetPayload_0(1);
+// }

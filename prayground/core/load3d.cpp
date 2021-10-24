@@ -94,6 +94,7 @@ void loadObjWithMtl(
     std::vector<Face>& faces, 
     std::vector<float3>& normals,  
     std::vector<float2>& texcoords, 
+    std::vector<uint32_t>& face_indices,
     std::vector<Attributes>& material_attribs, 
     const std::filesystem::path& mtlpath = ""
 )
@@ -160,7 +161,57 @@ void loadObjWithMtl(
             }
             faces.push_back(face);
             index_offset += 3;
+
+            face_indices.emplace_back(shapes[s].mesh.material_ids[f]);
         }
+    }
+    
+    for (const auto& m : materials)
+    {
+        Attributes attrib;
+        attrib.name = m.name;
+        float3* ambient = new float3;
+        float3* diffuse = new float3;
+        float3* specular = new float3;
+        float3* transmittance = new float3;
+        float3* emission = new float3;
+        *ambient = make_float3(m.ambient[0], m.ambient[1], m.ambient[2]);
+        *diffuse = make_float3(m.diffuse[0], m.diffuse[1], m.diffuse[2]);
+        *specular = make_float3(m.specular[0], m.specular[1], m.specular[2]);
+        *transmittance = make_float3(m.transmittance[0], m.transmittance[1], m.transmittance[2]);
+        *emission = make_float3(m.emission[0], m.emission[1], m.emission[2]);
+
+        attrib.addFloat3("ambient", std::unique_ptr<float3[]>(ambient), 1);
+        attrib.addFloat3("diffuse", std::unique_ptr<float3[]>(diffuse), 1);
+        attrib.addFloat3("specular", std::unique_ptr<float3[]>(specular), 1);
+        attrib.addFloat3("transmittance", std::unique_ptr<float3[]>(transmittance), 1);
+        attrib.addFloat3("emission", std::unique_ptr<float3[]>(emission), 1);
+
+        float* shininess = new float(m.shininess);
+        float* ior = new float(m.ior);
+        float* dissolve = new float(m.dissolve);
+        attrib.addFloat("shininess", std::unique_ptr<float[]>(shininess), 1);
+        attrib.addFloat("ior", std::unique_ptr<float[]>(ior), 1);
+        attrib.addFloat("dissolve", std::unique_ptr<float[]>(dissolve), 1);
+
+        if (!m.ambient_texname.empty())
+            attrib.addString("diffuse_texture", std::unique_ptr<std::string[]>(new std::string(m.diffuse_texname)), 1);
+        if (!m.diffuse_texname.empty())
+            attrib.addString("diffuse_texture", std::unique_ptr<std::string[]>(new std::string(m.diffuse_texname)), 1);
+        if (!m.specular_texname.empty())
+            attrib.addString("specular_texture", std::unique_ptr<std::string[]>(new std::string(m.specular_texname)), 1);
+        if (!m.specular_highlight_texname.empty())
+            attrib.addString("specular_highlight_texture", std::unique_ptr<std::string[]>(new std::string(m.specular_highlight_texname)), 1);
+        if (!m.bump_texname.empty())
+            attrib.addString("bump_texture", std::unique_ptr<std::string[]>(new std::string(m.bump_texname)), 1);
+        if (!m.displacement_texname.empty())
+            attrib.addString("displacement_texture", std::unique_ptr<std::string[]>(new std::string(m.displacement_texname)), 1);
+        if (!m.alpha_texname.empty())
+            attrib.addString("alpha_texture", std::unique_ptr<std::string[]>(new std::string(m.alpha_texname)), 1);
+        if (!m.reflection_texname.empty())
+            attrib.addString("reflection_texture", std::unique_ptr<std::string[]>(new std::string(m.reflection_texname)), 1);
+
+        material_attribs.emplace_back(attrib);
     }
 }
 
@@ -171,9 +222,17 @@ void loadObjWithMtl(
     std::vector<Attributes>& material_attribs
 )
 {
-    mesh.load(objpath);
-    auto mtl_dir = getDir(mtlpath);
+    std::vector<float3> vertices;
+    std::vector<Face> faces;
+    std::vector<float3> normals;
+    std::vector<float2> texcoords;
+    std::vector<uint32_t> face_indices;
 
+    loadObjWithMtl(objpath, vertices, faces, normals, texcoords, face_indices, material_attribs, mtlpath);
+    mesh.addVertices(vertices);
+    mesh.addFaces(faces, face_indices);
+    mesh.addNormals(normals);
+    mesh.addTexcoords(texcoords);
 }
 
 void loadObjWithMtl(
@@ -182,7 +241,17 @@ void loadObjWithMtl(
     std::vector<Attributes>& material_attribs
 )
 {
-    mesh.load(filepath);
+    std::vector<float3> vertices;
+    std::vector<Face> faces;
+    std::vector<float3> normals;
+    std::vector<float2> texcoords;
+    std::vector<uint32_t> face_indices;
+
+    loadObjWithMtl(filepath, vertices, faces, normals, texcoords, face_indices, material_attribs);
+    mesh.addVertices(vertices);
+    mesh.addFaces(faces, face_indices);
+    mesh.addNormals(normals);
+    mesh.addTexcoords(texcoords);
 }
 
 // -------------------------------------------------------------------------------

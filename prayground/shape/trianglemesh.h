@@ -58,6 +58,12 @@ public:
      * Be careful when updating GAS/IAS after modifying the number of vertices, indices
      * because you must `rebuild` AS, not `update` 
      */
+    void addVertices(const std::vector<float3>& verts);
+    void addFaces(const std::vector<Face>& faces);
+    void addFaces(const std::vector<Face>& faces, const std::vector<uint32_t>& sbt_indices);
+    void addNormals(const std::vector<float3>& normals);
+    void addTexcoords(const std::vector<float2>& texcoords);
+
     void addVertex(const float3& v);
     void addFace(const Face& face);
     void addFace(const Face& face, uint32_t sbt_index); // For per face materials
@@ -75,6 +81,7 @@ public:
     // For binding multiple materials to single mesh object
     void setPerFaceMaterial(bool is_per_face);
     void setNumMaterials(uint32_t num_materials);
+    void offsetSbtIndex(uint32_t sbt_base);
 
     std::vector<float3> vertices() const { return m_vertices; } 
     std::vector<Face> faces() const { return m_faces; } 

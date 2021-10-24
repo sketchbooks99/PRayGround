@@ -44,6 +44,9 @@ public:
     const float4* findFloat4(const std::string& name, int* n);
     float4 findOneFloat4(const std::string& name, const float4& d);
     std::string findString(const std::string& name, const std::string& d);
+
+public:
+    std::string name;
 private:
     std::vector<std::shared_ptr<AttribItem<bool>>> m_bools;
     std::vector<std::shared_ptr<AttribItem<int>>> m_ints;

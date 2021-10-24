@@ -73,6 +73,7 @@ OptixBuildInput TriangleMesh::createBuildInput()
     }
     else
     {
+        m_num_materials = 1;
         uint32_t* sbt_indices = new uint32_t[1];
         sbt_indices[0] = m_sbt_index;
         d_sbt_indices_buf.copyToDevice(sbt_indices, sizeof(uint32_t));
@@ -80,20 +81,21 @@ OptixBuildInput TriangleMesh::createBuildInput()
     }
     d_sbt_indices = d_sbt_indices_buf.devicePtr();
 
-    unsigned int* triangle_input_flags = new unsigned int[1];
-    triangle_input_flags[0] = OPTIX_GEOMETRY_FLAG_NONE;
+    std::vector<uint32_t> triangle_input_flags(m_num_materials);
+    for (uint32_t& input : triangle_input_flags)
+        input = OPTIX_GEOMETRY_FLAG_NONE;
     
     bi.type = static_cast<OptixBuildInputType>(this->type());
     bi.triangleArray.vertexFormat = OPTIX_VERTEX_FORMAT_FLOAT3;
     bi.triangleArray.vertexStrideInBytes = sizeof(float3);
     bi.triangleArray.numVertices = static_cast<uint32_t>(m_vertices.size());
     bi.triangleArray.vertexBuffers = &d_vertices;
-    bi.triangleArray.flags = triangle_input_flags;
+    bi.triangleArray.flags = triangle_input_flags.data();
     bi.triangleArray.indexFormat = OPTIX_INDICES_FORMAT_UNSIGNED_INT3;
     bi.triangleArray.indexStrideInBytes = sizeof(Face);
     bi.triangleArray.numIndexTriplets = static_cast<uint32_t>(m_faces.size());
     bi.triangleArray.indexBuffer = d_faces;
-    bi.triangleArray.numSbtRecords = 1;
+    bi.triangleArray.numSbtRecords = m_num_materials;
     bi.triangleArray.sbtIndexOffsetBuffer = d_sbt_indices;
     bi.triangleArray.sbtIndexOffsetSizeInBytes = sizeof(uint32_t);
     bi.triangleArray.sbtIndexOffsetStrideInBytes = sizeof(uint32_t);
@@ -138,6 +140,35 @@ TriangleMesh::DataType TriangleMesh::deviceData()
     };
 
     return data;
+}
+
+// ------------------------------------------------------------------
+void TriangleMesh::addVertices(const std::vector<float3>& verts)
+{
+    std::copy(verts.begin(), verts.end(), std::back_inserter(m_vertices));
+}
+
+void TriangleMesh::addFaces(const std::vector<Face>& faces)
+{
+    std::copy(faces.begin(), faces.end(), std::back_inserter(m_normals));
+}
+
+void TriangleMesh::addFaces(const std::vector<Face>& faces, const std::vector<uint32_t>& sbt_indices)
+{
+    ASSERT(faces.size() == sbt_indices.size(), 
+        "The number of faces and sbt_indices must be same, when 2 or more sbt_indices are set. (must be a per-face mode).");
+    std::copy(faces.begin(), faces.end(), std::back_inserter(m_faces));
+    std::copy(sbt_indices.begin(), sbt_indices.end(), std::back_inserter(m_sbt_indices));
+}
+
+void TriangleMesh::addNormals(const std::vector<float3>& normals)
+{
+    std::copy(normals.begin(), normals.end(), std::back_inserter(m_normals));
+}
+
+void TriangleMesh::addTexcoords(const std::vector<float2>& texcoords)
+{
+    std::copy(texcoords.begin(), texcoords.end(), std::back_inserter(m_texcoords));
 }
 
 // ------------------------------------------------------------------
@@ -250,6 +281,17 @@ void TriangleMesh::setPerFaceMaterial(bool is_per_face)
 void TriangleMesh::setNumMaterials(uint32_t num_materials)
 {
     m_num_materials = num_materials;
+}
+
+void TriangleMesh::offsetSbtIndex(uint32_t sbt_base)
+{
+    if (m_sbt_indices.empty())
+        m_sbt_index += sbt_base;
+    else
+    {
+        for (auto& idx : m_sbt_indices)
+            idx += sbt_base;
+    }
 }
 
 } // ::prayground

@@ -5,12 +5,12 @@ namespace prayground {
 // ---------------------------------------------------------------------------
 ProgramGroup::ProgramGroup()
 {
-
+    
 }
 
 ProgramGroup::ProgramGroup(const OptixProgramGroupOptions& options) : m_options(options)
 {
-    
+
 }
 
 // ---------------------------------------------------------------------------

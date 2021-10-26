@@ -48,7 +48,7 @@ public:
 private:
     OptixProgramGroup m_program { nullptr };
     OptixProgramGroupKind m_kind;
-    OptixProgramGroupOptions m_options;
+    OptixProgramGroupOptions m_options{};
 }; 
 
 }

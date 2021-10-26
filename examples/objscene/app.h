@@ -13,7 +13,7 @@ using HitgroupRecord = Record<HitgroupData>;
 using MissRecord = Record<MissData>;
 using EmptyRecord = Record<EmptyData>;
 
-using ObjSceneSBT = ShaderBindingTable<RaygenRecord, MissRecord, HitgroupRecord, EmptyRecord, EmptyRecord, 2>;
+using ObjSceneSBT = ShaderBindingTable<RaygenRecord, MissRecord, HitgroupRecord, EmptyRecord, EmptyRecord, 1>;
 
 class App : public BaseApp
 {
@@ -43,6 +43,8 @@ private:
     bool camera_update;
 
     EnvironmentEmitter env;
+
+    vector<Attributes> material_attributes;
 
     float render_time = 0.0f;
 };

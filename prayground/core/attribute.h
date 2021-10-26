@@ -21,6 +21,14 @@ public:
     void addFloat4(const std::string& name, std::unique_ptr<float4[]> values, int n);
     void addString(const std::string& name, std::unique_ptr<std::string[]> values, int n);
 
+    void replaceBool(const std::string& name, std::unique_ptr<bool[]> values, int n);
+    void replaceInt(const std::string& name, std::unique_ptr<int[]> values, int n);
+    void replaceFloat(const std::string& name, std::unique_ptr<float[]> values, int n);
+    void replaceFloat2(const std::string& name, std::unique_ptr<float[]> values, int n);
+    void replaceFloat3(const std::string& name, std::unique_ptr<float[]> values, int n);
+    void replaceFloat4(const std::string& name, std::unique_ptr<float[]> values, int n);
+    void replaceString(const std::string& name, std::unique_ptr<std::string[]> values, int n);
+
     /**
      * find~~(): 
      * - Return attributes with ptr.
@@ -31,19 +39,23 @@ public:
      * - Get arg of default value \c d, and if the attribute is not found, 
      *   default value will be returned.
      */ 
-    const bool* findBool(const std::string& name, int* n);
-    bool findOneBool(const std::string& name, const bool& d);
-    const int* findInt(const std::string& name, int* n);
-    int findOneInt(const std::string& name, const int& d);
-    const float* findFloat(const std::string& name, int* n);
-    float findOneFloat(const std::string& name, const float& d);
-    const float2* findFloat2(const std::string& name, int* n);
-    float2 findOneFloat2(const std::string& name, const float2& d);
-    const float3* findFloat3(const std::string& name, int* n);
-    float3 findOneFloat3(const std::string& name, const float3& d);
-    const float4* findFloat4(const std::string& name, int* n);
-    float4 findOneFloat4(const std::string& name, const float4& d);
-    std::string findString(const std::string& name, const std::string& d);
+    const bool* findBool(const std::string& name, int* n) const;
+    bool findOneBool(const std::string& name, const bool& d) const;
+    const int* findInt(const std::string& name, int* n) const;
+    int findOneInt(const std::string& name, const int& d) const;
+    const float* findFloat(const std::string& name, int* n) const;
+    float findOneFloat(const std::string& name, const float& d) const;
+    const float2* findFloat2(const std::string& name, int* n) const;
+    float2 findOneFloat2(const std::string& name, const float2& d) const;
+    const float3* findFloat3(const std::string& name, int* n) const;
+    float3 findOneFloat3(const std::string& name, const float3& d) const;
+    const float4* findFloat4(const std::string& name, int* n) const;
+    float4 findOneFloat4(const std::string& name, const float4& d) const;
+    const std::string* findString(const std::string&, int* n) const;
+    std::string findOneString(const std::string& name, const std::string& d) const;
+
+public:
+    std::string name;
 private:
     std::vector<std::shared_ptr<AttribItem<bool>>> m_bools;
     std::vector<std::shared_ptr<AttribItem<int>>> m_ints;

@@ -27,6 +27,7 @@ void loadObjWithMtl(
     std::vector<Face>& faces,
     std::vector<float3>& normals,
     std::vector<float2>& texcoords, 
+    std::vector<uint32_t>& face_indices,
     std::vector<Attributes>& material_attribs,
     const std::filesystem::path& mtlpath
 );

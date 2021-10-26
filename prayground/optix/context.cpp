@@ -92,11 +92,16 @@ void Context::setLogCallbackLevel(int callback_level)
 {
     m_options.logCallbackLevel = callback_level;
 }
-void Context::validationEnabled(bool is_valid)
+void Context::enableValidation()
 {
-    m_options.validationMode = is_valid ? OPTIX_DEVICE_CONTEXT_VALIDATION_MODE_ALL
-                                        : OPTIX_DEVICE_CONTEXT_VALIDATION_MODE_OFF;
+    m_options.validationMode = OPTIX_DEVICE_CONTEXT_VALIDATION_MODE_ALL;
 }
+
+void Context::disableValidation()
+{
+    m_options.validationMode = OPTIX_DEVICE_CONTEXT_VALIDATION_MODE_OFF;
+}
+
 OptixDeviceContextOptions Context::options() const
 {
     return m_options;

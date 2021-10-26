@@ -381,6 +381,7 @@ add_subdirectory(examples/single_gas)
 add_subdirectory(examples/dynamic_update)
 add_subdirectory(examples/motion_blur)
 add_subdirectory(examples/pathtracing)
+add_subdirectory(examples/objscene)
 add_subdirectory(examples/rayTracingNextWeek)
 add_subdirectory(examples/rayTracingRestOfYourLife)
 

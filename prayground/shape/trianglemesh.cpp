@@ -257,7 +257,7 @@ void TriangleMesh::loadWithMtl(
 
     for (const auto& m : material_attribs)
     {
-        std::string diffuse_name = m.findString("diffuse_texture", "");
+        std::string diffuse_name = m.findOneString("diffuse_texture", "");
         if (!diffuse_name.empty())
         {
             

@@ -50,7 +50,6 @@ void App::setup()
     stream = 0;
     CUDA_CHECK(cudaFree(0));
     OPTIX_CHECK(optixInit());
-    context.validationEnabled(false);
     context.create();
 
     // Instance acceleration structureの初期化

@@ -25,7 +25,8 @@ public:
     void setLogCallbackFunction(OptixLogCallback callback_func);
     void setLogCallbackData(void* callback_data);
     void setLogCallbackLevel(int callback_level);
-    void validationEnabled(bool is_valid);
+    void enableValidation();
+    void disableValidation();
     OptixDeviceContextOptions options() const;
     
     void setDeviceId(const unsigned int device_id);

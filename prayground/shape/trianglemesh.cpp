@@ -240,6 +240,7 @@ void TriangleMesh::load(const fs::path& filename)
     }
 }
 
+// ------------------------------------------------------------------
 void TriangleMesh::loadWithMtl(
     const std::filesystem::path& objpath,
     std::vector<Attributes>& material_attribs,
@@ -253,16 +254,11 @@ void TriangleMesh::loadWithMtl(
     ASSERT(filepath, "The OBJ file '" + objpath.string() + "' is not found.");
 
     Message(MSG_NORMAL, "Loading OBJ file '" + filepath.value().string() + "' ...");
-    loadObjWithMtl(filepath.value(), m_vertices, m_faces, m_normals, m_texcoords, m_sbt_indices, material_attribs, mtlpath);
 
-    for (const auto& m : material_attribs)
-    {
-        std::string diffuse_name = m.findOneString("diffuse_texture", "");
-        if (!diffuse_name.empty())
-        {
-            
-        }
-    }
+    const size_t current_num_attribs = material_attribs.size();
+    loadObjWithMtl(filepath.value(), m_vertices, m_faces, m_normals, m_texcoords, m_sbt_indices, material_attribs, mtlpath);
+    is_per_face_material = true;
+    m_num_materials = material_attribs.size() - current_num_attribs;
 
     // Calculate normals if they are empty.
     if (m_normals.empty())

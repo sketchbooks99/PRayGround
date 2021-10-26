@@ -26,8 +26,8 @@ private:
     using Vec_t = std::conditional_t<std::is_same_v<PixelType, float>, float4, uchar4>;
 
     void _initTextureDesc() {
-        m_tex_desc.addressMode[0] = cudaAddressModeClamp;
-        m_tex_desc.addressMode[1] = cudaAddressModeClamp;
+        m_tex_desc.addressMode[0] = cudaAddressModeWrap;
+        m_tex_desc.addressMode[1] = cudaAddressModeWrap;
         m_tex_desc.filterMode = cudaFilterModeLinear;
         m_tex_desc.readMode = cudaReadModeNormalizedFloat;
         m_tex_desc.normalizedCoords = 1;

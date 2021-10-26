@@ -31,8 +31,8 @@ BitmapTexture_<PixelType>::BitmapTexture_(const std::filesystem::path& filename,
     }
 
     // Initialize texture description
-    m_tex_desc.addressMode[0] = cudaAddressModeClamp;
-    m_tex_desc.addressMode[1] = cudaAddressModeClamp;
+    m_tex_desc.addressMode[0] = cudaAddressModeWrap;
+    m_tex_desc.addressMode[1] = cudaAddressModeWrap;
     m_tex_desc.filterMode = cudaFilterModeLinear;
     m_tex_desc.normalizedCoords = 1;
     m_tex_desc.sRGB = 1;

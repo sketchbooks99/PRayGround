@@ -33,9 +33,6 @@ extern "C" __device__ void __raygen__pinhole()
     unsigned int seed = tea<4>(idx.x * params.width + idx.y, subframe_index);
 
     float3 result = make_float3(0.0f);
-    float3 normal = make_float3(0.0f);
-    float p_depth = 0.0f;
-    float3 albedo = make_float3(0.0f);
 
     int i = params.samples_per_launch;
 
@@ -94,15 +91,6 @@ extern "C" __device__ void __raygen__pinhole()
                 );
                 result += si.emission * throughput;
 
-                if (depth == 0) {
-                    albedo = si.albedo;
-                    float3 op = si.p - ro;
-                    float op_length = length(si.p - ro);
-                    p_depth = dot(normalize(op), normalize(raygen->camera.lookat - ro)) * op_length;
-                    p_depth = p_depth / raygen->camera.farclip;
-                    normal = si.n;
-                }
-
                 if (si.trace_terminate)
                     break;
             }
@@ -127,45 +115,12 @@ extern "C" __device__ void __raygen__pinhole()
             // Rough surface sampling with applying MIS
             else if ( +(si.surface_info.type & (SurfaceType::Rough | SurfaceType::Diffuse)) )
             {
-                unsigned int seed = si.seed;
-                AreaEmitterInfo light;
-                if (params.num_lights > 0) {
-                    const int light_id = rnd_int(seed, 0, params.num_lights-1);
-                    light = params.lights[light_id];
-                }
-
-                const float weight = 1.0f / (params.num_lights + 1);
-
-                float pdf_val = 0.0f;
-
                 // Importance sampling according to the BSDF
                 optixDirectCall<void, SurfaceInteraction*, void*>(
                     si.surface_info.sample_id,
                     &si,
                     si.surface_info.data
                     );
-
-                if (rnd(seed) < weight * params.num_lights) {
-                    // Light sampling
-                    float3 to_light = optixDirectCall<float3, AreaEmitterInfo, SurfaceInteraction*>(
-                        light.sample_id,
-                        light,
-                        &si
-                        );
-                    si.wo = normalize(to_light);
-                }
-
-                for (int i = 0; i < params.num_lights; i++)
-                {
-                    // Evaluate PDF of area emitter
-                    float light_pdf = optixContinuationCall<float, AreaEmitterInfo, const float3&, const float3&>(
-                        params.lights[i].pdf_id,
-                        params.lights[i],
-                        si.p,
-                        si.wo
-                    );
-                    pdf_val += weight * light_pdf;
-                }
 
                 // Evaluate PDF depends on BSDF
                 float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*>(
@@ -174,8 +129,6 @@ extern "C" __device__ void __raygen__pinhole()
                     si.surface_info.data
                 );
 
-                pdf_val += weight * bsdf_pdf;
-
                 // Evaluate BSDF
                 float3 bsdf_val = optixContinuationCall<float3, SurfaceInteraction*, void*>(
                     si.surface_info.bsdf_id,
@@ -183,17 +136,7 @@ extern "C" __device__ void __raygen__pinhole()
                     si.surface_info.data
                     );
 
-                if (pdf_val == 0.0f) break;
-
-                throughput *= bsdf_val / pdf_val;
-            }
-
-            if (depth == 0) {
-                albedo += si.albedo;
-                float3 op = si.p - ro;
-                float op_length = length(si.p - ro);
-                p_depth += (dot(normalize(op), normalize(raygen->camera.lookat - ro)) * op_length) / raygen->camera.farclip;
-                normal += si.n;
+                throughput *= bsdf_val / bsdf_pdf;
             }
 
             // Make tmax large except for when the primary ray
@@ -224,9 +167,6 @@ extern "C" __device__ void __raygen__pinhole()
     params.accum_buffer[image_index] = make_float4(accum_color, 1.0f);
     uchar3 color = make_color(reinhardToneMap(accum_color, params.white));
     params.result_buffer[image_index] = make_uchar4(color.x, color.y, color.z, 255);
-    params.normal_buffer[image_index] = normal;
-    params.albedo_buffer[image_index] = albedo;
-    params.depth_buffer[image_index] = p_depth == 0.0f ? 1.0f : p_depth;
 }
 
 extern "C" __device__ void __raygen__thinlens()

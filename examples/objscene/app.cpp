@@ -84,9 +84,9 @@ void App::setup()
     initResultBufferOnDevice();
 
     // カメラの設定
-    camera.setOrigin(make_float3(-333.0f, 80.0f, -800.0f));
-    camera.setLookat(make_float3(0.0f, -225.0f, 0.0f));
-    camera.setUp(make_float3(0.0f, 1.0f, 0.0f));
+    camera.setOrigin(10.0f, 5.0f, 0.0f);
+    camera.setLookat(0.0f, 2.0f, 0.0f);
+    camera.setUp(0.0f, 1.0f, 0.0f);
     camera.setFarClip(5000);
     camera.setFov(40.0f);
     camera.setAspect(static_cast<float>(params.width) / params.height);
@@ -142,8 +142,7 @@ void App::setup()
     uint32_t area_emitter_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("area_emitter"), "");
 
     // 環境マッピング (Sphere mapping) 用のテクスチャとデータ準備
-    // 画像ファイルはリポジトリには含まれていないので、任意の画像データを設定してください
-     auto env_texture = make_shared<FloatBitmapTexture>("resources/image/dikhololo_night_4k.exr", bitmap_prg_id); 
+    auto env_texture = make_shared<ConstantTexture>(make_float3(3.0f), constant_prg_id);
     env_texture->copyToDevice();
     env = EnvironmentEmitter{env_texture};
     env.copyToDevice();
@@ -170,8 +169,11 @@ void App::setup()
     for (const auto& ma : material_attributes)
     {
         shared_ptr<Texture> texture;
-        if (!ma.findOneString("diffuse_texture", "").empty())
-            texture = make_shared<BitmapTexture>(ma.findOneString("diffuse_texture", ""), bitmap_prg_id);
+        std::string diffuse_texname = ma.findOneString("diffuse_texture", "");
+        if (!diffuse_texname.empty()) {
+            Message(MSG_NORMAL, diffuse_texname);
+            texture = make_shared<BitmapTexture>(diffuse_texname, bitmap_prg_id);
+        }
         else
             texture = make_shared<ConstantTexture>(ma.findOneFloat3("diffuse", make_float3(0.0f)), constant_prg_id);
         texture->copyToDevice();

@@ -161,7 +161,7 @@ void Bitmap_<unsigned char>::load(const std::filesystem::path& filename)
         Message(MSG_NORMAL, "Loading BMP file '" + filepath.value().string() + "' ...");
     else if (ext == ".exr" || ext == ".EXR")
     {
-        Message(MSG_ERROR, "prayground::Bitmap_<unsigned char>::load(): EXR format can be loaded only in BitmapFloat.");
+        Message(MSG_FATAL, "prayground::Bitmap_<unsigned char>::load(): EXR format can be loaded only in BitmapFloat.");
         return;
     }
     uint8_t* raw_data;
@@ -198,7 +198,7 @@ void Bitmap_<float>::load(const std::filesystem::path& filename)
         {
             if (err)
             {
-                Message(MSG_ERROR, "prayground::Bitmap_<float>::load():", err);
+                Message(MSG_FATAL, "prayground::Bitmap_<float>::load():", err);
                 FreeEXRErrorMessage(err);
                 return;
             }

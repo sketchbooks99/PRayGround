@@ -21,14 +21,6 @@ public:
     void addFloat4(const std::string& name, std::unique_ptr<float4[]> values, int n);
     void addString(const std::string& name, std::unique_ptr<std::string[]> values, int n);
 
-    void replaceBool(const std::string& name, std::unique_ptr<bool[]> values, int n);
-    void replaceInt(const std::string& name, std::unique_ptr<int[]> values, int n);
-    void replaceFloat(const std::string& name, std::unique_ptr<float[]> values, int n);
-    void replaceFloat2(const std::string& name, std::unique_ptr<float[]> values, int n);
-    void replaceFloat3(const std::string& name, std::unique_ptr<float[]> values, int n);
-    void replaceFloat4(const std::string& name, std::unique_ptr<float[]> values, int n);
-    void replaceString(const std::string& name, std::unique_ptr<std::string[]> values, int n);
-
     /**
      * find~~(): 
      * - Return attributes with ptr.

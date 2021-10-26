@@ -34,7 +34,7 @@ void GeometryAccel::build(const Context& ctx, CUstream stream)
 {
     if (m_shapes.size() == 0)
     {
-        Message(MSG_ERROR, "prayground::GeoetryAccel::build(): The number of shapes is 0.");
+        Message(MSG_FATAL, "prayground::GeoetryAccel::build(): The number of shapes is 0.");
         return;
     }
 

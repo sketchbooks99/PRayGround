@@ -108,7 +108,7 @@ std::string getTextFromFile(const fs::path& relative_path)
     }
     catch(const std::istream::failure& e)
     {
-        Message(MSG_ERROR, "prayground::getTextureFromFile(): Failed to load text file due to '" + std::string(e.what()) + "'.");
+        Message(MSG_FATAL, "prayground::getTextureFromFile(): Failed to load text file due to '" + std::string(e.what()) + "'.");
         return "";
     }
 }

@@ -25,13 +25,13 @@ void Film::addBitmap(const std::string& name, Bitmap::Format format)
 {
     if (format == Bitmap::Format::AUTO)
     {
-        Message(MSG_ERROR, "prayground::Film::addBitmap(): The unknown format.");
+        Message(MSG_FATAL, "prayground::Film::addBitmap(): The unknown format.");
         return;
     }
 
     if (m_width == 0 || m_height == 0)
     {
-        Message(MSG_ERROR, "prayground::Film::addBitmap(): The resolution of Film is invalid value.");
+        Message(MSG_FATAL, "prayground::Film::addBitmap(): The resolution of Film is invalid value.");
         return;
     }
 
@@ -62,13 +62,13 @@ void Film::addFloatBitmap(const std::string& name, FloatBitmap::Format format)
 {
     if (format == FloatBitmap::Format::AUTO)
     {
-        Message(MSG_ERROR, "prayground::Film::addFloatBitmap(): The unknown format.");
+        Message(MSG_FATAL, "prayground::Film::addFloatBitmap(): The unknown format.");
         return;
     }
 
     if (m_width == 0 || m_height == 0)
     {
-        Message(MSG_ERROR, "prayground::Film::addFloatBitmap(): The resolution of Film is invalid value.");
+        Message(MSG_FATAL, "prayground::Film::addFloatBitmap(): The resolution of Film is invalid value.");
         return;
     }
 

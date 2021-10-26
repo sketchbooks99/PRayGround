@@ -1,5 +1,6 @@
 #include "app.h"
 
+// ----------------------------------------------------------------
 void App::initResultBufferOnDevice()
 {
     params.subframe_index = 0;
@@ -13,6 +14,7 @@ void App::initResultBufferOnDevice()
     CUDA_SYNC_CHECK();
 }
 
+// ----------------------------------------------------------------
 void App::handleCameraUpdate()
 {
     if (!camera_update)
@@ -122,24 +124,12 @@ void App::setup()
 
     // テクスチャ用のCallableプログラム
     uint32_t constant_prg_id = setupCallable(textures_module, DC_FUNC_STR("constant"), "");
-    uint32_t checker_prg_id = setupCallable(textures_module, DC_FUNC_STR("checker"), "");
     uint32_t bitmap_prg_id = setupCallable(textures_module, DC_FUNC_STR("bitmap"), "");
 
     // Surface用のCallableプログラム 
     // Diffuse
     uint32_t diffuse_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_diffuse"), CC_FUNC_STR("bsdf_diffuse"));
     uint32_t diffuse_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_diffuse"), "");
-    // Conductor
-    uint32_t conductor_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_conductor"), CC_FUNC_STR("bsdf_conductor"));
-    uint32_t conductor_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_conductor"), "");
-    // Dielectric
-    uint32_t dielectric_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_dielectric"), CC_FUNC_STR("bsdf_dielectric"));
-    uint32_t dielectric_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_dielectric"), "");
-    // Disney
-    uint32_t disney_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_disney"), CC_FUNC_STR("bsdf_disney"));
-    uint32_t disney_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_disney"), "");
-    // AreaEmitter
-    uint32_t area_emitter_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("area_emitter"), "");
 
     // 環境マッピング (Sphere mapping) 用のテクスチャとデータ準備
     auto env_texture = make_shared<ConstantTexture>(make_float3(3.0f), constant_prg_id);
@@ -168,8 +158,8 @@ void App::setup()
     mesh->offsetSbtIndex(sbt_idx);
 
     cudaTextureDesc tex_desc = {};
-    tex_desc.addressMode[0] = cudaReadModeWrap;
-    tex_desc.addressMode[1] = cudaReadModeWrap;
+    tex_desc.addressMode[0] = cudaAddressModeWrap;
+    tex_desc.addressMode[1] = cudaAddressModeWrap;
     tex_desc.filterMode = cudaFilterModeLinear;
     tex_desc.normalizedCoords = 1;
     tex_desc.sRGB = 1;

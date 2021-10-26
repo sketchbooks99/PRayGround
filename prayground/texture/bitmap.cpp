@@ -1,6 +1,5 @@
 #include "bitmap.h"
 
-#include <prayground/ext/stb/stb_image.h>
 #include <prayground/core/file_util.h>
 
 namespace prayground {

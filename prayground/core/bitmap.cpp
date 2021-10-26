@@ -379,8 +379,8 @@ void Bitmap_<PixelType>::draw(int32_t x, int32_t y, int32_t width, int32_t heigh
     }
 
     m_shader.begin();
-    glUniform1i(glGetUniformLocation(m_shader.program(), "tex"), 0);
-    glUniform1i(glGetUniformLocation(m_shader.program(), "is_gray"), is_gray);
+    m_shader.setUniform1i("tex", 0);
+    m_shader.setUniform1i("is_gray", is_gray);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_gltex);

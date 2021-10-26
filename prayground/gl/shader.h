@@ -87,19 +87,23 @@ public:
     void setUniform3i(const std::string& name, int32_t v1, int32_t v2, int32_t v3) const;
     void setUniform4i(const std::string& name, int32_t v1, int32_t v2, int32_t v3, int32_t v4) const;
 
-    void setUniform1fv(const std::string& name, const float* v) const;
-    void setUniform2fv(const std::string& name, const float* v) const;
-    void setUniform3fv(const std::string& name, const float* v) const;
-    void setUniform4fv(const std::string& name, const float* v) const;
+    void setUniform1fv(const std::string& name, int32_t n, const float* v) const;
+    void setUniform2fv(const std::string& name, int32_t n, const float2* v) const;
+    void setUniform3fv(const std::string& name, int32_t n, const float3* v) const;
+    void setUniform4fv(const std::string& name, int32_t n, const float4* v) const;
 
-    void setUniform1iv(const std::string& name, const int32_t* v) const;
-    void setUniform2iv(const std::string& name, const int32_t* v) const;
-    void setUniform3iv(const std::string& name, const int32_t* v) const;
-    void setUniform4iv(const std::string& name, const int32_t* v) const;
+    void setUniform1iv(const std::string& name, int32_t n, const int32_t* v) const;
+    void setUniform2iv(const std::string& name, int32_t n, const int2* v) const;
+    void setUniform3iv(const std::string& name, int32_t n, const int3* v) const;
+    void setUniform4iv(const std::string& name, int32_t n, const int4* v) const;
 
-    void setUniformMatrix2fv(const std::string& name, const Matrix2f& m) const;
-    void setUniformMatrix3fv(const std::string& name, const Matrix3f& m) const;
-    void setUniformMatrix4fv(const std::string& name, const Matrix4f& m) const;
+    void setUniformMatrix2f(const std::string& name, const Matrix2f& m) const;
+    void setUniformMatrix3f(const std::string& name, const Matrix3f& m) const;
+    void setUniformMatrix4f(const std::string& name, const Matrix4f& m) const;
+
+    void setUniformMatrix2fv(const std::string& name, int32_t n, const Matrix2f* m) const;
+    void setUniformMatrix3fv(const std::string& name, int32_t n, const Matrix3f* m) const;
+    void setUniformMatrix4fv(const std::string& name, int32_t n, const Matrix4f* m) const;
 
 protected:
     static uint32_t _createGLShaderFromSource( const std::string& source, uint32_t type );

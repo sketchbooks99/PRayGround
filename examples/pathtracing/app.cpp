@@ -480,12 +480,11 @@ void App::update()
         params.height,
         1
     );
-    params.subframe_index++;
-
-    render_time = pgGetElapsedTimef() - start_time;
 
     CUDA_CHECK(cudaStreamSynchronize(stream));
     CUDA_SYNC_CHECK();
+    render_time = pgGetElapsedTimef() - start_time;
+    params.subframe_index++;
 
     // レンダリング結果をデバイスから取ってくる
     result_bitmap.copyFromDevice();

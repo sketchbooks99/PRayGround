@@ -173,7 +173,7 @@ void App::setup()
         if (!diffuse_texname.empty()) {
             texture = make_shared<BitmapTexture>(diffuse_texname, tex_desc, bitmap_prg_id);
         }
-        // テクスチャがない場合は単色を読み込み
+        // テクスチャがない場合は単色テクスチャを生成
         else
             texture = make_shared<ConstantTexture>(ma.findOneFloat3("diffuse", make_float3(0.0f)), constant_prg_id);
         texture->copyToDevice();

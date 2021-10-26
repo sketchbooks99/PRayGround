@@ -161,19 +161,23 @@ void App::setup()
 
     uint32_t sbt_idx = 0;
 
+    // Objファイルからメッシュ読み込み
     shared_ptr<TriangleMesh> mesh(new TriangleMesh());
     mesh->loadWithMtl("resources/model/sponza/sponza.obj", material_attributes);
 
     mesh->copyToDevice();
     mesh->offsetSbtIndex(sbt_idx);
+    // 読み込んだマテリアル情報からDiffuseマテリアルを生成し、Shader binding tableを構築
     for (const auto& ma : material_attributes)
     {
         shared_ptr<Texture> texture;
+        // Diffuseテクスチャが読み込めている場合はBitmapTextureでテクスチャを初期化
         std::string diffuse_texname = ma.findOneString("diffuse_texture", "");
         if (!diffuse_texname.empty()) {
             Message(MSG_NORMAL, diffuse_texname);
             texture = make_shared<BitmapTexture>(diffuse_texname, bitmap_prg_id);
         }
+        // テクスチャがない場合は単色を読み込み
         else
             texture = make_shared<ConstantTexture>(ma.findOneFloat3("diffuse", make_float3(0.0f)), constant_prg_id);
         texture->copyToDevice();
@@ -197,6 +201,7 @@ void App::setup()
         sbt.addHitgroupRecord(record);
     }
 
+    // Geometry acceleration structureの構築　
     GeometryAccel gas{ ShapeType::Mesh };
     gas.addShape(mesh);
     gas.allowCompaction();

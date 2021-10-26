@@ -81,16 +81,16 @@ OptixBuildInput TriangleMesh::createBuildInput()
     }
     d_sbt_indices = d_sbt_indices_buf.devicePtr();
 
-    std::vector<uint32_t> triangle_input_flags(m_num_materials);
-    for (uint32_t& input : triangle_input_flags)
-        input = OPTIX_GEOMETRY_FLAG_NONE;
+    uint32_t* triangle_input_flags = new uint32_t[m_num_materials];
+    for (uint32_t i = 0; i < m_num_materials; i++)
+        triangle_input_flags[i] = OPTIX_GEOMETRY_FLAG_NONE;
     
     bi.type = static_cast<OptixBuildInputType>(this->type());
     bi.triangleArray.vertexFormat = OPTIX_VERTEX_FORMAT_FLOAT3;
     bi.triangleArray.vertexStrideInBytes = sizeof(float3);
     bi.triangleArray.numVertices = static_cast<uint32_t>(m_vertices.size());
     bi.triangleArray.vertexBuffers = &d_vertices;
-    bi.triangleArray.flags = triangle_input_flags.data();
+    bi.triangleArray.flags = triangle_input_flags;
     bi.triangleArray.indexFormat = OPTIX_INDICES_FORMAT_UNSIGNED_INT3;
     bi.triangleArray.indexStrideInBytes = sizeof(Face);
     bi.triangleArray.numIndexTriplets = static_cast<uint32_t>(m_faces.size());
@@ -150,7 +150,7 @@ void TriangleMesh::addVertices(const std::vector<float3>& verts)
 
 void TriangleMesh::addFaces(const std::vector<Face>& faces)
 {
-    std::copy(faces.begin(), faces.end(), std::back_inserter(m_normals));
+    std::copy(faces.begin(), faces.end(), std::back_inserter(m_faces));
 }
 
 void TriangleMesh::addFaces(const std::vector<Face>& faces, const std::vector<uint32_t>& sbt_indices)
@@ -213,7 +213,7 @@ void TriangleMesh::load(const fs::path& filename)
     else if (ext == ".ply") {
         std::optional<fs::path> filepath = findDataPath(filename);
         ASSERT(filepath, "The OBJ file '" + filename.string() + "' is not found.");
-            
+
         Message(MSG_NORMAL, "Loading PLY file '" + filepath.value().string() + "' ...");
         loadPly(filepath.value(), m_vertices, m_faces, m_normals, m_texcoords);
     }
@@ -222,7 +222,7 @@ void TriangleMesh::load(const fs::path& filename)
     if (m_normals.empty())
     {
         m_normals.resize(m_faces.size());
-        for(size_t i=0; i<m_faces.size(); i++)
+        for (size_t i = 0; i < m_faces.size(); i++)
         {
             m_faces[i].normal_id = make_int3(i);
 
@@ -239,6 +239,53 @@ void TriangleMesh::load(const fs::path& filename)
         m_texcoords.resize(m_vertices.size());
     }
 }
+
+void TriangleMesh::loadWithMtl(
+    const std::filesystem::path& objpath,
+    std::vector<Attributes>& material_attribs,
+    const std::filesystem::path& mtlpath
+)
+{
+    std::string ext = getExtension(objpath);
+    ASSERT(ext == ".obj", "loadObjWithMtl() only supports .obj file format with .mtl file.");
+
+    std::optional<fs::path> filepath = findDataPath(objpath);
+    ASSERT(filepath, "The OBJ file '" + objpath.string() + "' is not found.");
+
+    Message(MSG_NORMAL, "Loading OBJ file '" + filepath.value().string() + "' ...");
+    loadObjWithMtl(filepath.value(), m_vertices, m_faces, m_normals, m_texcoords, m_sbt_indices, material_attribs, mtlpath);
+
+    for (const auto& m : material_attribs)
+    {
+        std::string diffuse_name = m.findString("diffuse_texture", "");
+        if (!diffuse_name.empty())
+        {
+            
+        }
+    }
+
+    // Calculate normals if they are empty.
+    if (m_normals.empty())
+    {
+        m_normals.resize(m_faces.size());
+        for (size_t i = 0; i < m_faces.size(); i++)
+        {
+            m_faces[i].normal_id = make_int3(i);
+
+            auto p0 = m_vertices[m_faces[i].vertex_id.x];
+            auto p1 = m_vertices[m_faces[i].vertex_id.y];
+            auto p2 = m_vertices[m_faces[i].vertex_id.z];
+            auto N = normalize(cross(p1 - p0, p2 - p0));
+
+            m_normals[i] = N;
+        }
+    }
+
+    if (m_texcoords.empty()) {
+        m_texcoords.resize(m_vertices.size());
+    }
+}
+
 
 void TriangleMesh::smooth()
 {
@@ -292,6 +339,13 @@ void TriangleMesh::offsetSbtIndex(uint32_t sbt_base)
         for (auto& idx : m_sbt_indices)
             idx += sbt_base;
     }
+}
+
+void TriangleMesh::addSbtIndices(const std::vector<uint32_t>& sbt_indices)
+{
+    ASSERT(sbt_indices.size() + m_sbt_indices.size() == m_faces.size(), 
+        "The total sbt_indices will exceed the number of faces. Sbt_indices and faces must be a same length.");
+    std::copy(sbt_indices.begin(), sbt_indices.end(), std::back_inserter(m_sbt_indices));
 }
 
 } // ::prayground

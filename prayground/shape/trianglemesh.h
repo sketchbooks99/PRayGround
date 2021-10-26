@@ -81,6 +81,7 @@ public:
     // For binding multiple materials to single mesh object
     void setPerFaceMaterial(bool is_per_face);
     void setNumMaterials(uint32_t num_materials);
+    void addSbtIndices(const std::vector<uint32_t>& sbt_indices);
     void offsetSbtIndex(uint32_t sbt_base);
 
     std::vector<float3> vertices() const { return m_vertices; } 
@@ -101,7 +102,7 @@ protected:
 
     // For binding multiple materials to single mesh object
     std::vector<uint32_t> m_sbt_indices;
-    bool is_per_face_material;
+    bool is_per_face_material{ false };
     uint32_t m_num_materials { 0 };
 
     CUdeviceptr d_vertices { 0 };

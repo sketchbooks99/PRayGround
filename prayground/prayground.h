@@ -31,6 +31,7 @@
 #include "core/cudabuffer.h"
 #include "core/bitmap.h"
 #include "core/camera.h"
+#include "core/attribute.h"
 
 // application utilities
 #include "app/baseapp.h"

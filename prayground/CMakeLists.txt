@@ -1,6 +1,8 @@
 set(sources
   # Core libraries ==========
   core/aabb.h 
+  core/attribute.h 
+  core/attribute.cpp
   core/bitmap.cpp 
   core/bitmap.h 
   core/bsdf.h 

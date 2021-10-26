@@ -28,16 +28,19 @@ std::filesystem::path pgRootDir();
 void pgSetAppDir(const std::filesystem::path& dir);
 std::filesystem::path pgAppDir();
 
+/// @todo: Add 'pg' prefix to get~~() functions
 // Get the extension of file. 
 std::string getExtension( const std::filesystem::path& filepath );
+
+std::string getStem(const std::filesystem::path& filepath, bool is_dir = true);
 
 std::filesystem::path getDir(const std::filesystem::path& filepath);
 
 // Create a single directory.
-void createDir( const std::string& abs_path );
+void createDir( const std::filesystem::path& abs_path );
 
 // Create directories recursively.
-void createDirs( const std::string& abs_path );
+void createDirs( const std::filesystem::path& abs_path );
 
 std::string getTextFromFile(const std::filesystem::path& filepath);
 

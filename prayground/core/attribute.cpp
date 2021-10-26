@@ -66,67 +66,72 @@ void Attributes::addString(const std::string& name, std::unique_ptr<std::string[
 }
 
 // --------------------------------------------------------------------------------------
-const bool* Attributes::findBool(const std::string& name, int* n)
+const bool* Attributes::findBool(const std::string& name, int* n) const
 {
     FIND_PTR(m_bools);
 }
 
-bool Attributes::findOneBool(const std::string& name, const bool& d)
+bool Attributes::findOneBool(const std::string& name, const bool& d) const
 {
     FIND_ONE(m_bools);
 }
 
-const int* Attributes::findInt(const std::string& name, int* n)
+const int* Attributes::findInt(const std::string& name, int* n) const
 {
     FIND_PTR(m_ints);
 }
 
-int Attributes::findOneInt(const std::string& name, const int& d)
+int Attributes::findOneInt(const std::string& name, const int& d) const
 {
     FIND_ONE(m_ints);
 }
 
-const float* Attributes::findFloat(const std::string& name, int* n)
+const float* Attributes::findFloat(const std::string& name, int* n) const
 {
     FIND_PTR(m_floats);
 }
 
-float Attributes::findOneFloat(const std::string& name, const float& d)
+float Attributes::findOneFloat(const std::string& name, const float& d) const
 {
     FIND_ONE(m_floats);
 }
 
-const float2* Attributes::findFloat2(const std::string& name, int* n)
+const float2* Attributes::findFloat2(const std::string& name, int* n) const
 {
     FIND_PTR(m_float2s);
 }
 
-float2 Attributes::findOneFloat2(const std::string& name, const float2& d)
+float2 Attributes::findOneFloat2(const std::string& name, const float2& d) const
 {
     FIND_ONE(m_float2s)
 }
 
-const float3* Attributes::findFloat3(const std::string& name, int* n)
+const float3* Attributes::findFloat3(const std::string& name, int* n) const
 {
     FIND_PTR(m_float3s);
 }
 
-float3 Attributes::findOneFloat3(const std::string& name, const float3& d)
+float3 Attributes::findOneFloat3(const std::string& name, const float3& d) const
 {
     FIND_ONE(m_float3s);
 }
 
-const float4* Attributes::findFloat4(const std::string& name, int* n)
+const float4* Attributes::findFloat4(const std::string& name, int* n) const
 {
     FIND_PTR(m_float4s);
 }
 
-float4 Attributes::findOneFloat4(const std::string& name, const float4& d)
+float4 Attributes::findOneFloat4(const std::string& name, const float4& d) const
 {
     FIND_ONE(m_float4s);
 }
 
-std::string Attributes::findString(const std::string& name, const std::string& d)
+const std::string* Attributes::findString(const std::string& name, int* n) const
+{
+    FIND_PTR(m_strings);
+}
+
+std::string Attributes::findOneString(const std::string& name, const std::string& d) const
 {
     FIND_ONE(m_strings);
 }

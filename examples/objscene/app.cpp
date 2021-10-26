@@ -164,9 +164,16 @@ void App::setup()
     // Objファイルからメッシュ読み込み
     shared_ptr<TriangleMesh> mesh(new TriangleMesh());
     mesh->loadWithMtl("resources/model/sponza/sponza.obj", material_attributes);
-
     mesh->copyToDevice();
     mesh->offsetSbtIndex(sbt_idx);
+
+    cudaTextureDesc tex_desc = {};
+    tex_desc.addressMode[0] = cudaReadModeWrap;
+    tex_desc.addressMode[1] = cudaReadModeWrap;
+    tex_desc.filterMode = cudaFilterModeLinear;
+    tex_desc.normalizedCoords = 1;
+    tex_desc.sRGB = 1;
+
     // 読み込んだマテリアル情報からDiffuseマテリアルを生成し、Shader binding tableを構築
     for (const auto& ma : material_attributes)
     {
@@ -174,8 +181,7 @@ void App::setup()
         // Diffuseテクスチャが読み込めている場合はBitmapTextureでテクスチャを初期化
         std::string diffuse_texname = ma.findOneString("diffuse_texture", "");
         if (!diffuse_texname.empty()) {
-            Message(MSG_NORMAL, diffuse_texname);
-            texture = make_shared<BitmapTexture>(diffuse_texname, bitmap_prg_id);
+            texture = make_shared<BitmapTexture>(diffuse_texname, tex_desc, bitmap_prg_id);
         }
         // テクスチャがない場合は単色を読み込み
         else

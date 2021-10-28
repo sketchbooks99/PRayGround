@@ -229,7 +229,8 @@ void TriangleMesh::load(const fs::path& filename)
             auto p0 = m_vertices[m_faces[i].vertex_id.x];
             auto p1 = m_vertices[m_faces[i].vertex_id.y];
             auto p2 = m_vertices[m_faces[i].vertex_id.z];
-            auto N = normalize(cross(p1 - p0, p2 - p0));
+            auto N = cross(p1 - p0, p2 - p0);
+            N = length(N) != 0.0f ? normalize(N) : N;
 
             m_normals[i] = N;
         }
@@ -271,7 +272,8 @@ void TriangleMesh::loadWithMtl(
             auto p0 = m_vertices[m_faces[i].vertex_id.x];
             auto p1 = m_vertices[m_faces[i].vertex_id.y];
             auto p2 = m_vertices[m_faces[i].vertex_id.z];
-            auto N = normalize(cross(p1 - p0, p2 - p0));
+            auto N = cross(p1 - p0, p2 - p0);
+            N = length(N) != 0.0f ? normalize(N) : N;
 
             m_normals[i] = N;
         }
@@ -295,7 +297,8 @@ void TriangleMesh::smooth()
         auto p0 = m_vertices[m_faces[i].vertex_id.x];
         auto p1 = m_vertices[m_faces[i].vertex_id.y];
         auto p2 = m_vertices[m_faces[i].vertex_id.z];
-        auto N = normalize(cross(p0 - p1, p0 - p2));
+        auto N = cross(p1 - p0, p2 - p0);
+        N = length(N) != 0.0f ? normalize(N) : N;
 
         auto idx = m_faces[i].vertex_id.x;
         m_normals[idx] += N;

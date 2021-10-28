@@ -153,7 +153,7 @@ void TriangleMesh::load(const fs::path& filename)
         ASSERT(filepath, "The OBJ file '" + filename.string() + "' is not found.");
             
         Message(MSG_NORMAL, "Loading PLY file '" + filepath.value().string() + "' ...");
-        loadPly(filepath.value(), m_vertices, m_faces, m_normals, m_texcoords);
+        loadPly(filepath.value(), m_vertices, m_normals, m_faces, m_texcoords);
     }
 
     // Calculate normals if they are empty.

@@ -153,7 +153,33 @@ void TriangleMesh::load(const fs::path& filename)
         ASSERT(filepath, "The OBJ file '" + filename.string() + "' is not found.");
             
         Message(MSG_NORMAL, "Loading PLY file '" + filepath.value().string() + "' ...");
+<<<<<<< HEAD
         loadPly(filepath.value(), m_vertices, m_normals, m_faces, m_texcoords);
+=======
+        loadPly(filepath.value(), m_vertices, m_faces, m_normals, m_texcoords);
+    }
+
+    // Calculate normals if they are empty.
+    if (m_normals.empty())
+    {
+        m_normals.resize(m_faces.size());
+        for (size_t i = 0; i < m_faces.size(); i++)
+        {
+            m_faces[i].normal_id = make_int3(i);
+
+            auto p0 = m_vertices[m_faces[i].vertex_id.x];
+            auto p1 = m_vertices[m_faces[i].vertex_id.y];
+            auto p2 = m_vertices[m_faces[i].vertex_id.z];
+            auto N = cross(p1 - p0, p2 - p0);
+            N = length(N) != 0.0f ? normalize(N) : N;
+
+            m_normals[i] = N;
+        }
+    }
+
+    if (m_texcoords.empty()) {
+        m_texcoords.resize(m_vertices.size());
+>>>>>>> a63e5e6... Add zero check in calculation of the normal for avoiding zero-division
     }
 
     // Calculate normals if they are empty.
@@ -167,7 +193,8 @@ void TriangleMesh::load(const fs::path& filename)
             auto p0 = m_vertices[m_faces[i].vertex_id.x];
             auto p1 = m_vertices[m_faces[i].vertex_id.y];
             auto p2 = m_vertices[m_faces[i].vertex_id.z];
-            auto N = normalize(cross(p1 - p0, p2 - p0));
+            auto N = cross(p1 - p0, p2 - p0);
+            N = length(N) != 0.0f ? normalize(N) : N;
 
             m_normals[i] = N;
         }
@@ -190,7 +217,8 @@ void TriangleMesh::smooth()
         auto p0 = m_vertices[m_faces[i].vertex_id.x];
         auto p1 = m_vertices[m_faces[i].vertex_id.y];
         auto p2 = m_vertices[m_faces[i].vertex_id.z];
-        auto N = normalize(cross(p0 - p1, p0 - p2));
+        auto N = cross(p1 - p0, p2 - p0);
+        N = length(N) != 0.0f ? normalize(N) : N;
 
         auto idx = m_faces[i].vertex_id.x;
         m_normals[idx] += N;

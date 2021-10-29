@@ -390,7 +390,7 @@ add_subdirectory(apps/empty_app)
 
 # Unit test
 # add_subdirectory(tests/math)
-# add_subdirectory(tests/core)
+add_subdirectory(tests/core)
 
 #################################################################
 

@@ -286,7 +286,7 @@ void TriangleMesh::loadWithMtl(
 void TriangleMesh::smooth()
 {
     m_normals.clear();
-    m_normals = std::vector<float3>(m_vertices.size(), make_float3(0.0f));
+    m_normals.resize(m_vertices.size());
     auto counts = std::vector<int>(m_vertices.size(), 0);
     for (size_t i = 0; i < m_faces.size(); i++)
     {

@@ -4,7 +4,7 @@ Languages | English | [日本語](README_ja.md)
 
 # PRayGround
 
-PRayGround is a C++/CUDA library with OptiX 7 that provides you with an easy and scalable environment to have fun GPU interactive ray tracing. This includes wrapper libraries of OptiX 7 API, easy management system of device side data pointer in per-instance (shape, material, textures, bitmap...) basis, intuitive setup and looping functions, and easy build system via CMake that enables you to launch tons of rays by just modifying `App.h/cpp, main.cpp` and adding your ray tracing code.
+PRayGround is a C++/CUDA library with OptiX 7 that provides you with an easy and scalable environment to have fun a interactive ray tracing on GPU. This includes wrapper libraries of OptiX 7 API, easy management system of device side data pointer in per-instance (shape, material, textures, bitmap...) basis, intuitive setup and looping functions, and easy build system via CMake that enables you to launch tons of rays by just modifying `App.h/cpp, main.cpp` and adding your ray tracing code.
 
 This project still remain a huge room to improve its readability, performance, and scalability. I'd appreciate it if you advise me any things!
 
@@ -13,7 +13,7 @@ This project still remain a huge room to improve its readability, performance, a
 # :computer: Requirements
 Before building the project, please be sure to check requirements and your environment, especially if the your version of the C++ compiler supports C++20.
 
-- CUDA Toolkit (Tested : 11.1, 11.2)
+- CUDA Toolkit (Tested : 11.1, 11.2, 11.3, 11.4)
 - C++ compiler which supports C++20 
     - Linux (Tested : g++ 10.3.0)
     - Windows (Tested : Visual Studio 2019, version 16.10.2) 
@@ -29,7 +29,7 @@ git submodule update --init --recursive
 
 # :hammer: How to build
 ## Linux
-Before compiling, please be sure to export two environment variables `CC` and `CXX`. We recommend you to add them to your `~/.bashrc` file as follows so that they are automatically exported when a terminal are launched.
+Before a compilation, please be sure to export two environment variables `CC` and `CXX`. We recommend you to add them to your `~/.bashrc` file as follows so that they are automatically exported when a terminal is launched.
 ```
 export CC=gcc-10
 export CXX=g++-10

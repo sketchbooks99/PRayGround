@@ -54,6 +54,18 @@ std::string getExtension( const fs::path& filepath )
     return filepath.has_extension() ? filepath.extension().string() : "";
 }
 
+std::string getStem(const fs::path& filepath, bool is_dir)
+{
+    std::string dirpath = filepath.has_parent_path() ? filepath.parent_path().string() : "";
+    std::string stem = filepath.stem().string();
+    return is_dir ? dirpath + "/" + stem : stem;
+}
+
+std::filesystem::path getDir(const fs::path& filepath)
+{
+    return filepath.has_parent_path() ? filepath.parent_path() : "";
+}
+
 // -------------------------------------------------------------------------------
 void createDir( const fs::path& abs_path )
 {
@@ -96,7 +108,7 @@ std::string getTextFromFile(const fs::path& relative_path)
     }
     catch(const std::istream::failure& e)
     {
-        Message(MSG_ERROR, "prayground::getTextureFromFile(): Failed to load text file due to '" + std::string(e.what()) + "'.");
+        Message(MSG_FATAL, "prayground::getTextureFromFile(): Failed to load text file due to '" + std::string(e.what()) + "'.");
         return "";
     }
 }

@@ -10,3 +10,5 @@ build/
 *.exr
 *.hdr
 
+*.DS_Store
+

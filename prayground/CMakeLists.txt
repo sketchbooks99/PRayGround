@@ -1,6 +1,8 @@
 set(sources
   # Core libraries ==========
   core/aabb.h 
+  core/attribute.h 
+  core/attribute.cpp
   core/bitmap.cpp 
   core/bitmap.h 
   core/bsdf.h 
@@ -11,8 +13,8 @@ set(sources
   core/emitter.h 
   core/file_util.h 
   core/file_util.cpp 
-  core/film.h 
-  core/film.cpp
+  core/film.h       # Deleted in the future
+  core/film.cpp     # Deleted in the future
   core/interaction.h
   core/load3d.h 
   core/load3d.cpp

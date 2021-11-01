@@ -34,7 +34,7 @@ void GeometryAccel::build(const Context& ctx, CUstream stream)
 {
     if (m_shapes.size() == 0)
     {
-        Message(MSG_ERROR, "prayground::GeoetryAccel::build(): The number of shapes is 0.");
+        Message(MSG_FATAL, "prayground::GeoetryAccel::build(): The number of shapes is 0.");
         return;
     }
 
@@ -166,6 +166,19 @@ void GeometryAccel::update(const Context& ctx, CUstream stream)
 void GeometryAccel::free()
 {
     if (d_buffer) cuda_free(d_buffer);
+    d_buffer_size = 0;
+
+    m_shapes.clear();
+    m_build_inputs.clear();
+
+    // Initialize optix state
+    m_handle = 0;
+    m_options = {};
+    m_count = 0;
+
+    if (d_buffer) 
+        CUDA_CHECK(cudaFree(reinterpret_cast<void*>(d_buffer)));
+    d_buffer = 0;
     d_buffer_size = 0;
 }
 

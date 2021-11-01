@@ -32,7 +32,7 @@ enum MessageType
 {
     MSG_NORMAL,
     MSG_WARNING,
-    MSG_ERROR
+    MSG_FATAL
 };
 
 template <typename T>
@@ -60,7 +60,7 @@ inline void Message(MessageType type, Head head, Args... args) {
         case MSG_WARNING:
             std::cout << "\033[33m"; // yellow
             break;
-        case MSG_ERROR:
+        case MSG_FATAL:
             std::cout << "\033[31m"; // red
             break;
     }
@@ -81,7 +81,7 @@ inline void Message(MessageType type, Head head, Args... args) {
         case MSG_WARNING:
             SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN); // yellow
             break;
-        case MSG_ERROR:
+        case MSG_FATAL:
             SetConsoleTextAttribute(hConsole, FOREGROUND_RED);                    // red
             break;
     }
@@ -108,6 +108,21 @@ inline void Message(MessageType type, Head head, Args... args) {
            << " is still under development! ";              \
         Message(MSG_WARNING, ss.str());                     \
     } while (0)
+
+#define LOG(msg)                                                \
+    std::stringstream ss;                                       \
+    ss << "Log at ( " __FILE__ << ":" __LINE__ " ) " << msg;    \
+    Message(MSG_NORMAL, ss.str());
+
+#define LOG_WARN(msg)           \
+    std::stringstream ss;                                       \
+    ss << "Log at ( " __FILE__ << ":" __LINE__ " ) " << msg;    \
+    Message(MSG_WARNING, ss.str());
+
+#define LOG_FATAL(msg)                                          \
+    std::stringstream ss;                                       \
+    ss << "Log at ( " __FILE__ << ":" __LINE__ " ) " << msg;    \
+    Message(MSG_FATAL, ss.str());   
 
 /** アサーション用 */
 #define THROW(msg)                                          \

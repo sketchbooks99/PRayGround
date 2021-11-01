@@ -161,7 +161,7 @@ void Bitmap_<unsigned char>::load(const std::filesystem::path& filename)
         Message(MSG_NORMAL, "Loading BMP file '" + filepath.value().string() + "' ...");
     else if (ext == ".exr" || ext == ".EXR")
     {
-        Message(MSG_ERROR, "prayground::Bitmap_<unsigned char>::load(): EXR format can be loaded only in BitmapFloat.");
+        Message(MSG_FATAL, "prayground::Bitmap_<unsigned char>::load(): EXR format can be loaded only in BitmapFloat.");
         return;
     }
     uint8_t* raw_data;
@@ -198,7 +198,7 @@ void Bitmap_<float>::load(const std::filesystem::path& filename)
         {
             if (err)
             {
-                Message(MSG_ERROR, "prayground::Bitmap_<float>::load():", err);
+                Message(MSG_FATAL, "prayground::Bitmap_<float>::load():", err);
                 FreeEXRErrorMessage(err);
                 return;
             }
@@ -379,8 +379,8 @@ void Bitmap_<PixelType>::draw(int32_t x, int32_t y, int32_t width, int32_t heigh
     }
 
     m_shader.begin();
-    glUniform1i(glGetUniformLocation(m_shader.program(), "tex"), 0);
-    glUniform1i(glGetUniformLocation(m_shader.program(), "is_gray"), is_gray);
+    m_shader.setUniform1i("tex", 0);
+    m_shader.setUniform1i("is_gray", is_gray);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_gltex);

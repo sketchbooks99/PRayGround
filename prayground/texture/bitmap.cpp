@@ -1,6 +1,5 @@
 #include "bitmap.h"
 
-#include <prayground/ext/stb/stb_image.h>
 #include <prayground/core/file_util.h>
 
 namespace prayground {
@@ -13,7 +12,7 @@ BitmapTexture_<PixelType>::BitmapTexture_(const std::filesystem::path& filename,
     std::optional<std::filesystem::path> filepath = findDataPath(filename);
     if (!filepath)
     {
-        Message(MSG_ERROR, "The texture file '" + filename.string() + "' is not found.");
+        Message(MSG_FATAL, "The texture file '" + filename.string() + "' is not found.");
         int width = 512;
         int height = 512;
         Vec_t magenta;
@@ -31,11 +30,22 @@ BitmapTexture_<PixelType>::BitmapTexture_(const std::filesystem::path& filename,
     }
 
     // Initialize texture description
-    m_tex_desc.addressMode[0] = cudaAddressModeClamp;
-    m_tex_desc.addressMode[1] = cudaAddressModeClamp;
+    m_tex_desc.addressMode[0] = cudaAddressModeWrap;
+    m_tex_desc.addressMode[1] = cudaAddressModeWrap;
     m_tex_desc.filterMode = cudaFilterModeLinear;
     m_tex_desc.normalizedCoords = 1;
     m_tex_desc.sRGB = 1;
+    if constexpr (std::is_same_v<PixelType, float>)
+        m_tex_desc.readMode = cudaReadModeElementType;
+    else
+        m_tex_desc.readMode = cudaReadModeNormalizedFloat;
+}
+
+template <typename PixelType>
+BitmapTexture_<PixelType>::BitmapTexture_(const std::filesystem::path& filename, cudaTextureDesc desc, int prg_id)
+: BitmapTexture_<PixelType>(filename, prg_id)
+{
+    m_tex_desc = desc;
     if constexpr (std::is_same_v<PixelType, float>)
         m_tex_desc.readMode = cudaReadModeElementType;
     else

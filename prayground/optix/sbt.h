@@ -110,7 +110,7 @@ public:
     {
         if (idx >= m_miss_records.size())
         {
-            Message(MSG_ERROR, "prayground::ShaderBindingTable::replaceMissRecord(): The index out of range.");
+            Message(MSG_FATAL, "prayground::ShaderBindingTable::replaceMissRecord(): The index out of range.");
             return;
         }
         m_miss_records[idx] = record;
@@ -135,7 +135,7 @@ public:
     {
         if (idx >= m_hitgroup_records.size())
         {
-            Message(MSG_ERROR, "prayground::ShaderBindingTable::replaceHitgroupRecord(): The index out of range.");
+            Message(MSG_FATAL, "prayground::ShaderBindingTable::replaceHitgroupRecord(): The index out of range.");
             return;
         }
         m_hitgroup_records[idx] = record;
@@ -163,7 +163,7 @@ public:
     {
         if (idx >= m_callables_records.size())
         {
-            Message(MSG_ERROR, "prayground::ShaderBindingTable::replaceCallablesRecord(): The index out of range.");
+            Message(MSG_FATAL, "prayground::ShaderBindingTable::replaceCallablesRecord(): The index out of range.");
             return;
         }
         m_callables_records[idx] = record;

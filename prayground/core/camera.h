@@ -67,31 +67,34 @@ public:
     , m_nearclip(nearclip), m_farclip(farclip), m_fovaxis(fovaxis) 
     {}
 
-    float3 direction() const { return normalize(m_lookat - m_origin); }
+    float3 direction() const;
 
-    const float3& origin() const { return m_origin; }
-    void setOrigin(const float3& origin) { m_origin = origin; }
+    const float3& origin() const;
+    void setOrigin(const float3& origin);
+    void setOrigin(float x, float y, float z);
 
-    const float3& lookat() const { return m_lookat; }
-    void setLookat(const float3& lookat) { m_lookat = lookat; }
+    const float3& lookat() const;
+    void setLookat(const float3& lookat);
+    void setLookat(float x, float y, float z);
 
-    const float3& up() const { return m_up; }
-    void setUp(const float3& up) { m_up = up; }
+    const float3& up() const;
+    void setUp(const float3& up);
+    void setUp(float x, float y, float z);
 
-    const float& fov() const { return m_fov; }
-    void setFov(const float& fov) { m_fov = fov; }
+    const float& fov() const;
+    void setFov(float fov);
 
-    const float& aspect() const { return m_aspect; }
-    void setAspect( const float& aspect ) { m_aspect = aspect; }
+    const float& aspect() const;
+    void setAspect( float aspect );
 
-    const float& nearClip() const { return m_nearclip; }
-    void setNearClip( const float& nearclip ) { m_nearclip = nearclip; }
+    const float& nearClip() const;
+    void setNearClip( float nearclip );
 
-    const float& farClip() const { return m_farclip; }
-    void setFarClip( const float& farclip ) { m_farclip = farclip; } 
+    const float& farClip() const;
+    void setFarClip( float farclip );
 
-    const FovAxis& fovAxis() const { return m_fovaxis; }
-    void setFovAxis( FovAxis fovaxis ) { m_fovaxis = fovaxis; }
+    const FovAxis& fovAxis() const;
+    void setFovAxis( FovAxis fovaxis );
 
     void enableTracking(std::shared_ptr<Window> window);
     void disableTracking();

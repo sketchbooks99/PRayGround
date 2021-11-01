@@ -56,7 +56,7 @@ void App::setup()
     stream = 0;
     CUDA_CHECK(cudaFree(0));
     OPTIX_CHECK(optixInit());
-    context.validationEnabled(false);
+    context.disableValidation();
     context.create();
 
     // Instance acceleration structureの初期化
@@ -480,12 +480,11 @@ void App::update()
         params.height,
         1
     );
-    params.subframe_index++;
-
-    render_time = pgGetElapsedTimef() - start_time;
 
     CUDA_CHECK(cudaStreamSynchronize(stream));
     CUDA_SYNC_CHECK();
+    render_time = pgGetElapsedTimef() - start_time;
+    params.subframe_index++;
 
     // レンダリング結果をデバイスから取ってくる
     result_bitmap.copyFromDevice();

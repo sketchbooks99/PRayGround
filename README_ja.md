@@ -115,6 +115,8 @@ add_subdirectory(apps/<your-app-name>) # Add this line
 - [Path tracing](examples/pathtracing/)
   - <img src=examples/pathtracing/pathtracing.jpg width=640> 
   - <img src=examples/pathtracing/screenshot.png width=640> 
+- [Obj scene](examples/objscene/)
+  - <img src=examples/objscene/objscene.jpg width=320>
 - [Ray Tracing: The Next Weekend](examples/rayTracingNextWeek/)
   - <img src=examples/rayTracingNextWeek/rtNextWeek.jpg width=320>
 - [Ray Tracing: The Rest Of Your Life](examples/rayTracingRestOfYourLife/)

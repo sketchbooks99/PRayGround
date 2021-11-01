@@ -165,6 +165,15 @@ void loadObjWithMtl(
             face_indices.emplace_back(shapes[s].mesh.material_ids[f]);
         }
     }
+
+    auto addTexture = [&](Attributes& attrib, const std::string& name, const std::string& tex_name) -> void
+    {
+        if (!tex_name.empty()) {
+            std::unique_ptr<std::string[]> str(new std::string[1]);
+            str[0] = pathJoin(mtl_dir, tex_name).string();
+            attrib.addString(name, std::move(str), 1);
+        }
+    };
     
     for (const auto& m : materials)
     {
@@ -194,22 +203,14 @@ void loadObjWithMtl(
         attrib.addFloat("ior", std::unique_ptr<float[]>(ior), 1);
         attrib.addFloat("dissolve", std::unique_ptr<float[]>(dissolve), 1);
 
-        if (!m.ambient_texname.empty())
-            attrib.addString("diffuse_texture", std::unique_ptr<std::string[]>(new std::string(pathJoin(mtl_dir, m.diffuse_texname))), 1);
-        if (!m.diffuse_texname.empty())
-            attrib.addString("diffuse_texture", std::unique_ptr<std::string[]>(new std::string(pathJoin(mtl_dir, m.diffuse_texname))), 1);
-        if (!m.specular_texname.empty())
-            attrib.addString("specular_texture", std::unique_ptr<std::string[]>(new std::string(pathJoin(mtl_dir, m.specular_texname))), 1);
-        if (!m.specular_highlight_texname.empty())
-            attrib.addString("specular_highlight_texture", std::unique_ptr<std::string[]>(new std::string(pathJoin(mtl_dir, m.specular_highlight_texname))), 1);
-        if (!m.bump_texname.empty())
-            attrib.addString("bump_texture", std::unique_ptr<std::string[]>(new std::string(pathJoin(mtl_dir, m.bump_texname))), 1);
-        if (!m.displacement_texname.empty())
-            attrib.addString("displacement_texture", std::unique_ptr<std::string[]>(new std::string(pathJoin(mtl_dir, m.displacement_texname))), 1);
-        if (!m.alpha_texname.empty())
-            attrib.addString("alpha_texture", std::unique_ptr<std::string[]>(new std::string(pathJoin(mtl_dir, m.alpha_texname))), 1);
-        if (!m.reflection_texname.empty())
-            attrib.addString("reflection_texture", std::unique_ptr<std::string[]>(new std::string(pathJoin(mtl_dir, m.reflection_texname))), 1);
+        addTexture(attrib, "ambient_texture", m.ambient_texname);
+        addTexture(attrib, "diffuse_texture", m.diffuse_texname);
+        addTexture(attrib, "specular_texture", m.specular_texname);
+        addTexture(attrib, "specular_highlight_texture", m.specular_highlight_texname);
+        addTexture(attrib, "bump_texture", m.bump_texname);
+        addTexture(attrib, "displacement_texture", m.displacement_texname);
+        addTexture(attrib, "alpha_texture", m.alpha_texname);
+        addTexture(attrib, "reflection_texture", m.reflection_texname);
 
         material_attribs.emplace_back(attrib);
     }

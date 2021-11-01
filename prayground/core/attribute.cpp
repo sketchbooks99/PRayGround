@@ -18,7 +18,7 @@ namespace prayground {
     for (const auto& item : items)                      \
     {                                                   \
         if (item->name == name && item->numValues == 1) \
-            return *item->values.get();                 \
+            return *(item->values.get());               \
     }                                                   \
     return d;                              
 

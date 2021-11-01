@@ -358,7 +358,6 @@ INLINE HOSTDEVICE void setByIndex(float2& v, int i, float x)
   ((float*)(&v))[i] = x;
 }
 
-
 /* float3 functions */
 /******************************************************************************/
 

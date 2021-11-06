@@ -32,11 +32,7 @@ std::vector<std::shared_ptr<Shape>> GeometryAccel::shapes() const
 // ---------------------------------------------------------------------------
 void GeometryAccel::build(const Context& ctx, CUstream stream)
 {
-    if (m_shapes.size() == 0)
-    {
-        Message(MSG_FATAL, "prayground::GeoetryAccel::build(): The number of shapes is 0.");
-        return;
-    }
+    ASSERT(m_shapes.size() > 0, "GeometryAccel must have at least one shape.");
 
     if (d_buffer)
     {

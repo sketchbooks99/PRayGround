@@ -8,9 +8,7 @@
 
 namespace prayground {
 
-namespace builtin {
-
-struct CameraData
+struct pgCameraData
 {
     float3 origin;
     float3 lookat;
@@ -21,7 +19,7 @@ struct CameraData
     float farclip;
 };
 
-struct LensCameraData
+struct pgLensCameraData
 {
     float3 origin;
     float3 lookat;
@@ -42,7 +40,7 @@ struct LensCameraData
  * @brief 
  * Standard pinhole camera
  */
-class Camera {
+class pgCamera {
 public:
     enum class FovAxis
     {
@@ -51,7 +49,7 @@ public:
         Diagonal
     };
 
-    Camera() : 
+    pgCamera() : 
         m_origin(make_float3(0.0f, 0.0f, -1.0f)), 
         m_lookat(make_float3(0.0f)),
         m_up(make_float3(0.0f, 1.0f, 0.0f)),
@@ -61,7 +59,7 @@ public:
         m_farclip(10000.0f),
         m_fovaxis(FovAxis::Horizontal) {}
 
-    Camera(const float3& origin, const float3& lookat, const float3& up, float fov, float aspect, 
+    pgCamera(const float3& origin, const float3& lookat, const float3& up, float fov, float aspect, 
         float nearclip = 0.01f, float farclip = 10000.0f, FovAxis fovaxis=FovAxis::Horizontal)
     : m_origin(origin), m_lookat(lookat), m_up(up), m_fov(fov), m_aspect(aspect) 
     , m_nearclip(nearclip), m_farclip(farclip), m_fovaxis(fovaxis) 
@@ -120,10 +118,10 @@ private:
  * Lens camera to realize a DoF (Depth of Field) effect.
  * This class implemented based on \c Camera class and extend basic features of it.
  */
-class LensCamera final : public Camera {
+class pgLensCamera final : public pgCamera {
 public:
-    LensCamera() : Camera(), m_aperture(0.01f), m_focal_length(100.0) {}
-    LensCamera(
+    pgLensCamera() : Camera(), m_aperture(0.01f), m_focal_length(100.0) {}
+    pgLensCamera(
         const float3& origin, const float3& lookat, const float3& up, float fov, float aspect, 
         float nearclip = 0.01f, float farclip = 10000.0f, 
         float aperture = 0.01f, float focal_length = 100.0f,

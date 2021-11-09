@@ -151,7 +151,7 @@ void Module::createFromCudaFile(const Context& ctx, const fs::path& filename, Op
     static_assert(false);
 #endif
 
-    auto filepath = findDataPath(filename);
+    auto filepath = pgFindDataPath(filename);
     ASSERT(filepath, "prayground::Module::createFromModule(): The CUDA file to create module of '" + filename.string() + "' is not found.");
 
     const char** log = nullptr;
@@ -159,7 +159,7 @@ void Module::createFromCudaFile(const Context& ctx, const fs::path& filename, Op
     std::map<std::string, std::string*>::iterator elem = g_ptxSourceCache.map.find(key);
     
     // Load cuda source from file
-    std::string cu_source = getTextFromFile(filepath.value());
+    std::string cu_source = pgGetTextFromFile(filepath.value());
     std::string* ptx;
     if (elem == g_ptxSourceCache.map.end())
     {
@@ -187,7 +187,7 @@ void Module::createFromCudaSource(const Context& ctx, const std::string& source,
 
 void Module::createFromPtxFile(const Context& ctx, const fs::path& filename, OptixPipelineCompileOptions pipeline_options)
 {
-    auto filepath = findDataPath(filename);
+    auto filepath = pgFindDataPath(filename);
     ASSERT(filepath, "prayground::Module::createFromModule(): The CUDA file to create module of '" + filename.string() + "' is not found.");
 
     std::string key = filepath.value().string();
@@ -196,7 +196,7 @@ void Module::createFromPtxFile(const Context& ctx, const fs::path& filename, Opt
 
     if (elem == g_ptxSourceCache.map.end())
     {
-        *ptx = getTextFromFile(filepath.value());
+        *ptx = pgGetTextFromFile(filepath.value());
         g_ptxSourceCache.map[key] = ptx;
     }
     else

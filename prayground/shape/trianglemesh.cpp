@@ -202,16 +202,16 @@ void TriangleMesh::addTexcoord(const float2& texcoord)
 // ------------------------------------------------------------------
 void TriangleMesh::load(const fs::path& filename)
 {
-    std::string ext = getExtension(filename);
+    std::string ext = pgGetExtension(filename);
     if (ext == ".obj") {
-        std::optional<fs::path> filepath = findDataPath(filename);
+        std::optional<fs::path> filepath = pgFindDataPath(filename);
         ASSERT(filepath, "The OBJ file '" + filename.string() + "' is not found.");
 
         Message(MSG_NORMAL, "Loading OBJ file '" + filepath.value().string() + "' ...");
         loadObj(filepath.value(), m_vertices, m_faces, m_normals, m_texcoords);
     }
     else if (ext == ".ply") {
-        std::optional<fs::path> filepath = findDataPath(filename);
+        std::optional<fs::path> filepath = pgFindDataPath(filename);
         ASSERT(filepath, "The OBJ file '" + filename.string() + "' is not found.");
 
         Message(MSG_NORMAL, "Loading PLY file '" + filepath.value().string() + "' ...");
@@ -248,10 +248,10 @@ void TriangleMesh::loadWithMtl(
     const std::filesystem::path& mtlpath
 )
 {
-    std::string ext = getExtension(objpath);
+    std::string ext = pgGetExtension(objpath);
     ASSERT(ext == ".obj", "loadObjWithMtl() only supports .obj file format with .mtl file.");
 
-    std::optional<fs::path> filepath = findDataPath(objpath);
+    std::optional<fs::path> filepath = pgFindDataPath(objpath);
     ASSERT(filepath, "The OBJ file '" + objpath.string() + "' is not found.");
 
     Message(MSG_NORMAL, "Loading OBJ file '" + filepath.value().string() + "' ...");

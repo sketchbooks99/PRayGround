@@ -103,9 +103,9 @@ void loadObjWithMtl(
     // trianglulate mesh
     reader_config.triangulate = true; 
     // .mth filepath
-    std::string mtl_dir = getDir(objpath).string();
+    std::string mtl_dir = pgGetDir(objpath).string();
     if (mtlpath.string() != "")
-        reader_config.mtl_search_path = getDir(mtlpath).string();
+        reader_config.mtl_search_path = pgGetDir(mtlpath).string();
 
     tinyobj::ObjReader reader;
     if (!reader.ParseFromFile(objpath.string(), reader_config))
@@ -170,7 +170,7 @@ void loadObjWithMtl(
     {
         if (!tex_name.empty()) {
             std::unique_ptr<std::string[]> str(new std::string[1]);
-            str[0] = pathJoin(mtl_dir, tex_name).string();
+            str[0] = pgPathJoin(mtl_dir, tex_name).string();
             attrib.addString(name, std::move(str), 1);
         }
     };

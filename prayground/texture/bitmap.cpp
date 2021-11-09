@@ -9,7 +9,7 @@ template <typename PixelType>
 BitmapTexture_<PixelType>::BitmapTexture_(const std::filesystem::path& filename, int prg_id)
 : Texture(prg_id)
 {
-    std::optional<std::filesystem::path> filepath = findDataPath(filename);
+    std::optional<std::filesystem::path> filepath = pgFindDataPath(filename);
     if (!filepath)
     {
         Message(MSG_FATAL, "The texture file '" + filename.string() + "' is not found.");

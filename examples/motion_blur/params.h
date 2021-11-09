@@ -24,15 +24,6 @@ struct LaunchParams
     OptixTraversableHandle handle;
 };
 
-struct CameraData
-{
-    float3 origin;
-    float3 lookat;
-    float3 U;
-    float3 V;
-    float3 W;
-};
-
 struct RaygenData
 {
     CameraData camera;

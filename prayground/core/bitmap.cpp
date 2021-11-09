@@ -148,10 +148,10 @@ void Bitmap_<PixelType>::load(const std::filesystem::path& filename)
 template <>
 void Bitmap_<unsigned char>::load(const std::filesystem::path& filename)
 {
-    std::optional<std::filesystem::path> filepath = findDataPath(filename);
+    std::optional<std::filesystem::path> filepath = pgFindDataPath(filename);
     ASSERT(filepath, "prayground::Bitmap_<unsigned char>::load(): The input file for bitmap '" + filename.string() + "' is not found.");
 
-    auto ext = getExtension(filepath.value());
+    auto ext = pgGetExtension(filepath.value());
 
     if (ext == ".png" || ext == ".PNG")
         Message(MSG_NORMAL, "Loading PNG file '" + filepath.value().string() + "' ...");
@@ -178,10 +178,10 @@ void Bitmap_<unsigned char>::load(const std::filesystem::path& filename)
 template <>
 void Bitmap_<float>::load(const std::filesystem::path& filename)
 {
-    std::optional<std::filesystem::path> filepath = findDataPath(filename);
+    std::optional<std::filesystem::path> filepath = pgFindDataPath(filename);
     ASSERT(filepath, "prayground::Bitmap_<float>::load(): The input file for bitmap '" + filename.string() + "' is not found.");
 
-    auto ext = getExtension(filepath.value());
+    auto ext = pgGetExtension(filepath.value());
 
     // EXR 形式の場合はそのまま読み込む
     if (ext == ".exr" || ext == ".EXR")
@@ -236,7 +236,7 @@ void Bitmap_<float>::load(const std::filesystem::path& filename)
 template <typename PixelType>
 void Bitmap_<PixelType>::write(const std::filesystem::path& filepath, int quality) const
 {
-    std::string ext = getExtension(filepath);
+    std::string ext = pgGetExtension(filepath);
 
     unsigned char* data = new unsigned char[m_width * m_height * m_channels];
     if constexpr (std::is_same_v<PixelType, unsigned char>)

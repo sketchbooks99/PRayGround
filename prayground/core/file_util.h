@@ -7,7 +7,7 @@ namespace prayground {
 
 // Join pathes recursively as like os.path.join() in python
 template <class ParentPath, class... SubPathes>
-inline std::filesystem::path pathJoin(
+inline std::filesystem::path pgPathJoin(
     const ParentPath& parent_path,
     const SubPathes&... sub_pathes
 )
@@ -16,12 +16,12 @@ inline std::filesystem::path pathJoin(
     std::filesystem::path path(parent_path);
     if constexpr ( num_sub_pathes > 0 )
     {
-        path.append( pathJoin( sub_pathes... ).string() );
+        path.append( pgPathJoin( sub_pathes... ).string() );
     }
     return path;
 }
 
-std::optional<std::filesystem::path> findDataPath( const std::filesystem::path& relative_path );
+std::optional<std::filesystem::path> pgFindDataPath( const std::filesystem::path& relative_path );
 
 std::filesystem::path pgRootDir();
 
@@ -30,18 +30,18 @@ std::filesystem::path pgAppDir();
 
 /// @todo: Add 'pg' prefix to get~~() functions
 // Get the extension of file. 
-std::string getExtension( const std::filesystem::path& filepath );
+std::string pgGetExtension( const std::filesystem::path& filepath );
 
-std::string getStem(const std::filesystem::path& filepath, bool is_dir = true);
+std::string pgGetStem(const std::filesystem::path& filepath, bool is_dir = true);
 
-std::filesystem::path getDir(const std::filesystem::path& filepath);
+std::filesystem::path pgGetDir(const std::filesystem::path& filepath);
 
 // Create a single directory.
-void createDir( const std::filesystem::path& abs_path );
+void pgCreateDir( const std::filesystem::path& abs_path );
 
 // Create directories recursively.
-void createDirs( const std::filesystem::path& abs_path );
+void pgCreateDirs( const std::filesystem::path& abs_path );
 
-std::string getTextFromFile(const std::filesystem::path& filepath);
+std::string pgGetTextFromFile(const std::filesystem::path& filepath);
 
 }

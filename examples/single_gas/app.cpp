@@ -51,8 +51,8 @@ void App::setup()
     {
         .origin = camera.origin(), 
         .lookat = camera.lookat(), 
-        .U = U, 
-        .V = V, 
+        .U = U,
+        .V = V,
         .W = W
     };
     sbt.setRaygenRecord(raygen_record);

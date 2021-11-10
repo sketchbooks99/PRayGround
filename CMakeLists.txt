@@ -384,6 +384,7 @@ add_subdirectory(examples/pathtracing)
 add_subdirectory(examples/objscene)
 add_subdirectory(examples/rayTracingNextWeek)
 add_subdirectory(examples/rayTracingRestOfYourLife)
+add_subdirectory(examples/denoiser)
 
 # Executable apps
 add_subdirectory(apps/empty_app)

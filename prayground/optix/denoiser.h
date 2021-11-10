@@ -29,7 +29,14 @@ public:
                 bool is_temporal = false);
     void run();
     void update(const Data& data);
+    // Copy results from GPU to host memory
+    void copyFromDevice();
+    // Finialize denoiser
     void destroy();
+
+    // test flow vectors: flow is applied to noisy input image and written back to result
+    // no denoising
+    void copyFlowFromDevice();
 private:
     OptixDenoiser       m_denoiser { nullptr };
     OptixDenoiserParams m_params { };

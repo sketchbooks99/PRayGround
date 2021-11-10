@@ -24,6 +24,7 @@
 #include "optix/instance_accel.h"
 #include "optix/instance.h"
 #include "optix/transform.h"
+#include "optix/denoiser.h"
 
 // core utilities
 #include "core/util.h"

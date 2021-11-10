@@ -6,6 +6,8 @@
 
 namespace prayground {
 
+/// @todo Casting bitmap to OptixImage2D
+
 template <typename PixelType>
 class Bitmap_ {
 public:

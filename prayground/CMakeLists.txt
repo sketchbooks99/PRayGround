@@ -53,6 +53,8 @@ set(sources
   # Optix wrapper libraries ==========
   optix/context.h 
   optix/context.cpp
+  optix/denoiser.h 
+  optix/denoiser.cpp
   optix/geometry_accel.h 
   optix/geometry_accel.cpp
   optix/helpers.h 

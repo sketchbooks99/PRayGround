@@ -110,8 +110,7 @@ void App::setup()
     };
     sbt.setRaygenRecord(raygen_record);
 
-    auto setupCallable = [&](const Module& module, const string& dc, const string& cc) 
-        -> uint32_t
+    auto setupCallable = [&](const Module& module, const string& dc, const string& cc) -> uint32_t
     {
         EmptyRecord callable_record = {};
         auto [prg, id] = pipeline.createCallablesProgram(context, module, dc, cc);
@@ -266,13 +265,13 @@ void App::setup()
     shapes.emplace("ceiling_light", make_shared<Plane>(make_float2(213, 227), make_float2(343, 332)));
 
     // Textures
-    textures.emplace("green", make_shared<ConstantTexture>(make_float3(0.05, 0.8, 0.05), constant_prg_id));
-    textures.emplace("red", make_shared<ConstantTexture>(make_float3(0.8, 0.05, 0.05), constant_prg_id));
-    textures.emplace("wall_white", make_shared<ConstantTexture>(make_float3(0.8), constant_prg_id));
-    textures.emplace("white", make_shared<ConstantTexture>(make_float3(1.0f), constant_prg_id));
-    textures.emplace("checker", make_shared<CheckerTexture>(make_float3(0.9f), make_float3(0.3f), checker_prg_id));
+    textures.emplace("green", new ConstantTexture(make_float3(0.05, 0.8, 0.05), constant_prg_id));
+    textures.emplace("red", new ConstantTexture(make_float3(0.8, 0.05, 0.05), constant_prg_id));
+    textures.emplace("wall_white", new ConstantTexture(make_float3(0.8), constant_prg_id));
+    textures.emplace("white", new ConstantTexture(make_float3(1.0f), constant_prg_id));
+    textures.emplace("checker", new CheckerTexture(make_float3(0.9f), make_float3(0.3f), 10, checker_prg_id));
     textures.emplace("black", black);
-    textures.emplace("gray", make_shared<ConstantTexture>(make_float3(0.25), constant_prg_id));
+    textures.emplace("gray", new ConstantTexture(make_float3(0.25), constant_prg_id));
 
     // Materials
     materials.emplace("green_diffuse", make_shared<Diffuse>(textures.at("green")));
@@ -287,27 +286,27 @@ void App::setup()
     AreaEmitter area{textures.at("white"), 15.0f, true};
 
     // Bunny
-    Primitive bunnyP(shapes.at("bunny"), materials.at("gray_disney"), disney_sample_bsdf_prg_id, disney_pdf_prg_id);
+    Primitive bunnyP{ shapes.at("bunny"), materials.at("gray_disney"), disney_sample_bsdf_prg_id, disney_pdf_prg_id };
     setupPrimitive(mesh_prg, bunnyP, Matrix4f::translate(278, 273, 0) * Matrix4f::scale(500.0f));
 
     // Left wall 
-    Primitive l_wall(shapes.at("wall"), materials.at("green_diffuse"), diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id);
+    Primitive l_wall{ shapes.at("wall"), materials.at("green_diffuse"), diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
     setupPrimitive(plane_prg, l_wall, Matrix4f::translate(0, 273, 0) * Matrix4f::rotate(math::pi / 2, {0.0, 0.0f, 1.0}));
 
     // Right wall 
-    Primitive r_wall(shapes.at("wall"), materials.at("red_diffuse"), diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id);
+    Primitive r_wall{ shapes.at("wall"), materials.at("red_diffuse"), diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
     setupPrimitive(plane_prg, r_wall, Matrix4f::translate(556, 273, 0) * Matrix4f::rotate(math::pi / 2, {0.0, 0.0f, 1.0}));
 
     // Back wall
-    Primitive b_wall(shapes.at("wall"), materials.at("wall_diffuse"), diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id);
+    Primitive b_wall{ shapes.at("wall"), materials.at("wall_diffuse"), diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
     setupPrimitive(plane_prg, b_wall, Matrix4f::translate(0, 273, 559) * Matrix4f::rotate(math::pi / 2, {1.0, 0.0f, 0.0}));
 
     // Ceiling 
-    Primitive ceiling(shapes.at("wall"), materials.at("wall_diffuse"), diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id);
+    Primitive ceiling{ shapes.at("wall"), materials.at("wall_diffuse"), diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
     setupPrimitive(plane_prg, ceiling, Matrix4f::translate(278, 548, 279.5));
 
     // Floor 
-    Primitive floor(shapes.at("wall"), materials.at("checker"), diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id);
+    Primitive floor{ shapes.at("wall"), materials.at("checker"), diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
     setupPrimitive(plane_prg, floor, Matrix4f::translate(278, 0, 279.5));
 
     // Ceiling light

@@ -28,7 +28,7 @@ extern "C" __device__ void __raygen__pinhole()
 
     const int frame = params.frame;
     const uint3 idx = optixGetLaunchIndex();
-    unsigned int seed = tea<4>(idx.x * parmas.width + idx.y, frame);
+    unsigned int seed = tea<4>(idx.x * params.width + idx.y, frame);
 
     float3 result = make_float3(0.0f);
     float3 normal = make_float3(0.0f);
@@ -38,11 +38,11 @@ extern "C" __device__ void __raygen__pinhole()
 
     for (int i = 0; i < spl; i++)
     {
-        const float2 jitter = make_float2(random(seed) - 0.5f, random(seed) - 0.5f);
+        const float2 jitter = make_float2(rnd(seed) - 0.5f, rnd(seed) - 0.5f);
 
         const float2 d = 2.0f * make_float2(
             ((float)idx.x + jitter.x) / (float)params.width, 
-            (float)idx.y + jitter.y) / (float)params.height
+            ((float)idx.y + jitter.y) / (float)params.height
         ) - 1.0f;
 
         float3 ro, rd;
@@ -67,7 +67,7 @@ extern "C" __device__ void __raygen__pinhole()
             if (depth >= params.max_depth)
                 break;
 
-            trace(params.handle, ro, rd, 0.01f, tmax, /* ray_type = */ 0, &si);
+            trace(params.handle, ro, rd, 0.01f, tmax, /* ray_type = */ 0, 1, &si);
 
             if (si.trace_terminate)
             {
@@ -88,8 +88,8 @@ extern "C" __device__ void __raygen__pinhole()
                 
                 if (depth == 0)
                 {
-                    albedo = si.albedo;
-                    normal = si.n;
+                    albedo += si.albedo;
+                    normal += si.n;
                 }
 
                 if (si.trace_terminate)
@@ -106,7 +106,7 @@ extern "C" __device__ void __raygen__pinhole()
                 );
 
                 // Evaluate BSDF
-                const float3 bsdf_val = optixContinuationCall<void, SurfaceInteraction*, void*>(
+                const float3 bsdf_val = optixContinuationCall<float3, SurfaceInteraction*, void*>(
                     si.surface_info.bsdf_id,
                     &si,
                     si.surface_info.data
@@ -124,14 +124,14 @@ extern "C" __device__ void __raygen__pinhole()
                 );
 
                 // Evaluate BSDF
-                const float3 bsdf_val = optixContinuationCall<void, SurfaceInteraction*, void*>(
+                const float3 bsdf_val = optixContinuationCall<float3, SurfaceInteraction*, void*>(
                     si.surface_info.bsdf_id,
                     &si,
                     si.surface_info.data
                 );
 
                 // Evaluate PDF
-                float pdf = optixDirectCall<void, SurfaceInteraction*, void*>(
+                float pdf = optixDirectCall<float, SurfaceInteraction*, void*>(
                     si.surface_info.pdf_id,
                     &si,
                     si.surface_info.data
@@ -139,13 +139,13 @@ extern "C" __device__ void __raygen__pinhole()
 
                 pdf = fmaxf(pdf, math::eps);
 
-                throughput *= bsdf_val * pdf;
+                throughput *= (bsdf_val / pdf);
             }
 
             if (depth == 0)
             {
-                albedo = si.albedo;
-                normal = si.n;
+                albedo += si.albedo;
+                normal += si.n;
             }
 
             tmax = 1e16f;
@@ -157,22 +157,29 @@ extern "C" __device__ void __raygen__pinhole()
         }
     }
 
-    const unsigned int image_idx = launch_index.y * params.width + launch_index.x;
+    const unsigned int image_idx = idx.y * params.width + idx.x;
 
     result.x = isnan(result.x) ? 0.0f : result.x;
     result.y = isnan(result.y) ? 0.0f : result.y;
     result.z = isnan(result.z) ? 0.0f : result.z;
 
     float3 accum = result / (float)spl;
+    albedo = albedo / (float)spl;
+    normal = normal / (float)spl;
 
     if (frame > 0)
     {
         const float a = 1.0f / (float)(frame + 1);
         const float3 accum_prev = make_float3(params.accum_buffer[image_idx]);
         accum = lerp(accum_prev, accum, a);
+        const float3 albedo_prev = make_float3(params.albedo_buffer[image_idx]);
+        const float3 normal_prev = make_float3(params.normal_buffer[image_idx]);
+        albedo = lerp(albedo_prev, albedo / (float)spl, a);
+        normal = lerp(normal_prev, normal / (float)spl, a);
     }
     params.accum_buffer[image_idx] = make_float4(accum, 1.0f);
-    params.result_buffer[image_idx] = make_float4(reinhardToneMap(accum, params.white), 1.0f);
+    uchar3 color = make_color(accum);
+    params.result_buffer[image_idx] = make_float4(color2float(color), 1.0f);
     params.normal_buffer[image_idx] = make_float4(normal, 1.0f);
-    parmas.albedo_buffer[image_idx] = make_float4(albedo, 1.0f);
+    params.albedo_buffer[image_idx] = make_float4(albedo, 1.0f);
 }

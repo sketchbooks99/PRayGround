@@ -8,6 +8,11 @@
 
 using namespace std;
 
+using RaygenRecord = Record<RaygenData>;
+using HitgroupRecord = Record<HitgroupData>;
+using MissRecord = Record<MissData>;
+using EmptyRecord = Record<EmptyData>;
+
 using DenoiserSBT = ShaderBindingTable<RaygenRecord, MissRecord, HitgroupRecord, EmptyRecord, EmptyRecord, 1>;
 
 class App : public BaseApp {

@@ -77,16 +77,35 @@ static void addFlow(
 }
 
 // --------------------------------------------------------------------
+static OptixImage2D createOptixImage2D(const int width, const int height, const float* hmem = nullptr)
+{
+    OptixImage2D oi;
+
+    const uint64_t frame_byte_size = width * height * sizeof(float4);
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&oi.data), frame_byte_size));
+    if (hmem)
+    {
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(oi.data), hmem, frame_byte_size, cudaMemcpyHostToDevice));
+    }
+    oi.width = width; 
+    oi.height = height;
+    oi.rowStrideInBytes = width * sizeof(float4);
+    oi.pixelStrideInBytes = sizeof(float4);
+    oi.format = OPTIX_PIXEL_FORMAT_FLOAT4;
+    return oi;
+}
+
+// --------------------------------------------------------------------
 Denoiser::Denoiser()
 {
 
 }
 
 // --------------------------------------------------------------------
-void Denoiser::create(
+void Denoiser::init(
     const Context& ctx,
-    const Data& data, 
-    uint32_t tile_width, uint32_t tile_height, 
+    const Data& data,
+    uint32_t tile_width, uint32_t tile_height,
     bool kp_mode, bool is_temporal)
 {
     ASSERT(data.color, "data.color must be set.");
@@ -126,7 +145,7 @@ void Denoiser::create(
 
         OPTIX_CHECK(optixDenoiserComputeMemoryResources(
             m_denoiser,
-            m_tile_width, 
+            m_tile_width,
             m_tile_height,
             &denoiser_sizes));
 
@@ -135,7 +154,7 @@ void Denoiser::create(
             m_scratch_size = static_cast<uint32_t>(denoiser_sizes.withoutOverlapScratchSizeInBytes);
             m_overlap = 0;
         }
-        else 
+        else
         {
             m_scratch_size = static_cast<uint32_t>(denoiser_sizes.withOverlapScratchSizeInBytes);
             m_overlap = denoiser_sizes.overlapWindowSizeInPixels;
@@ -148,10 +167,10 @@ void Denoiser::create(
                 sizeof(float)
             ));
         }
-        else 
+        else
         {
             CUDA_CHECK(cudaMalloc(
-                reinterpret_cast<void**>(&m_avg_color), 
+                reinterpret_cast<void**>(&m_avg_color),
                 3 * sizeof(float)
             ));
         }
@@ -162,13 +181,58 @@ void Denoiser::create(
         ));
 
         CUDA_CHECK(cudaMalloc(
-            reinterpret_cast<void**>(&m_scratch), 
+            reinterpret_cast<void**>(&m_state),
             denoiser_sizes.stateSizeInBytes
         ));
 
         m_state_size = static_cast<uint32_t>(denoiser_sizes.stateSizeInBytes);
 
         OptixDenoiserLayer layer = {};
+        layer.input = createOptixImage2D(data.width, data.height, data.color);
+        layer.output = createOptixImage2D(data.width, data.height);
+        if (is_temporal)
+        {
+            void* flowmem;
+            CUDA_CHECK(cudaMalloc(&flowmem, data.width * data.height * sizeof(float4)));
+            CUDA_CHECK(cudaMemset(flowmem, 0, data.width * data.height * sizeof(float4)));
+            m_guide_layer.flow = { (CUdeviceptr)flowmem, data.width, data.height, (uint32_t)(data.width * sizeof(float4)), (uint32_t)sizeof(float4), OPTIX_PIXEL_FORMAT_FLOAT4 };
+
+            layer.previousOutput = layer.input;
+        }
+        m_layers.push_back(layer);
+
+        if (data.albedo)
+            m_guide_layer.albedo = createOptixImage2D(data.width, data.height, data.albedo);
+        if (data.normal)
+            m_guide_layer.normal = createOptixImage2D(data.width, data.height, data.normal);
+
+        for (size_t i = 0; i < data.aovs.size(); i++)
+        {
+            layer.input = createOptixImage2D(data.width, data.height, data.aovs[i]);
+            layer.output = createOptixImage2D(data.width, data.height);
+            if (is_temporal)
+                layer.previousOutput = layer.input;
+            m_layers.push_back(layer);
+        }
+    }
+
+    // Setup denoiser
+    {
+        OPTIX_CHECK(optixDenoiserSetup(
+            m_denoiser,
+            nullptr,
+            m_tile_width + 2 * m_overlap,
+            m_tile_height + 2 * m_overlap,
+            m_state,
+            m_state_size,
+            m_scratch,
+            m_scratch_size
+        ));
+
+        m_params.denoiseAlpha = 0;
+        m_params.hdrIntensity = m_intensity;
+        m_params.hdrAverageColor = m_avg_color;
+        m_params.blendFactor = 0.0f;
     }
 
     m_viewer.allocate(PixelFormat::RGBA, (int)data.width, (int)data.height);

@@ -20,37 +20,39 @@ using uint64_t = unsigned long long;
 
 #define PG_MAX_NUM_ATTRIBUTES 8
 #define PG_MAX_NUM_PAYLOADS 8
+#define PG_MAX_NUM_ATTRIBUTES_STR "8"
+#define PG_MAX_NUM_PAYLOADS_STR "8"
 
 namespace prayground {
 
     template <uint32_t i>
     INLINE DEVICE uint32_t getAttribute()
     {
-        static_assert(Base + 1 < PG_MAX_NUM_ATTRIBUTES, 
-            "Index to get attribute exceeds the maximum number of attributes (" PG_MAX_NUM_ATTRIBUTES ")");
+        static_assert(i < PG_MAX_NUM_ATTRIBUTES, 
+            "Index to get attribute exceeds the maximum number of attributes (" PG_MAX_NUM_ATTRIBUTES_STR ")");
         if constexpr (i == 0)
-            optixGetAttribute_0();
+            return optixGetAttribute_0();
         if constexpr (i == 1)
-            optixGetAttribute_1();
+            return optixGetAttribute_1();
         if constexpr (i == 2)
-            optixGetAttribute_2();
+            return optixGetAttribute_2();
         if constexpr (i == 3)
-            optixGetAttribute_3();
+            return optixGetAttribute_3();
         if constexpr (i == 4)
-            optixGetAttribute_4();
+            return optixGetAttribute_4();
         if constexpr (i == 5)
-            optixGetAttribute_5();
+            return optixGetAttribute_5();
         if constexpr (i == 6)
-            optixGetAttribute_6();
+            return optixGetAttribute_6();
         if constexpr (i == 7)
-            optixGetAttribute_7();
+            return optixGetAttribute_7();
     }
 
     template <uint32_t i>
     INLINE DEVICE void setAttribute(uint32_t value)
     {
-        static_assert(Base + 1 < PG_MAX_NUM_ATTRIBUTES, 
-            "Index to set attribute exceeds the maximum number of attributes (" PG_MAX_NUM_ATTRIBUTES ")");
+        static_assert(i < PG_MAX_NUM_ATTRIBUTES, 
+            "Index to set attribute exceeds the maximum number of attributes (" PG_MAX_NUM_ATTRIBUTES_STR ")");
         if constexpr (i == 0)
             optixSetAttribute_0(value);
         if constexpr (i == 1)
@@ -72,31 +74,31 @@ namespace prayground {
     template <uint32_t i>
     INLINE DEVICE uint32_t getPayload()
     {
-        static_assert(Base + 1 < PG_MAX_NUM_PAYLOADS, 
-            "Index to get payload exceeds the maximum number of payloads (" PG_MAX_NUM_PAYLOADS ")");
+        static_assert(i < PG_MAX_NUM_PAYLOADS, 
+            "Index to set attribute exceeds the maximum number of attributes (" PG_MAX_NUM_PAYLOADS_STR ")");
         if constexpr (i == 0)
-            optixGetPayload_0();
+            return optixGetPayload_0();
         if constexpr (i == 1)
-            optixGetPayload_1();
+            return optixGetPayload_1();
         if constexpr (i == 2)
-            optixGetPayload_2();
+            return optixGetPayload_2();
         if constexpr (i == 3)
-            optixGetPayload_3();
+            return optixGetPayload_3();
         if constexpr (i == 4)
-            optixGetPayload_4();
+            return optixGetPayload_4();
         if constexpr (i == 5)
-            optixGetPayload_5();
+            return optixGetPayload_5();
         if constexpr (i == 6)
-            optixGetPayload_6();
+            return optixGetPayload_6();
         if constexpr (i == 7)
-            optixGetPayload_7();
+            return optixGetPayload_7();
     }
 
     template <uint32_t i>
     INLINE DEVICE void setPayload(uint32_t value)
     {
-        static_assert(Base + 1 < PG_MAX_NUM_PAYLOADS, 
-            "Index to set payload exceeds the maximum number of payloads (" PG_MAX_NUM_PATLOADS ")");
+        static_assert(i < PG_MAX_NUM_PAYLOADS, 
+            "Index to set payload exceeds the maximum number of payloads (" PG_MAX_NUM_PATLOADS_STR ")");
         if constexpr (i == 0)
             optixSetPayload_0(value);
         if constexpr (i == 1)
@@ -165,17 +167,18 @@ namespace prayground {
         i1 = uptr & 0x00000000ffffffff;
     }
 
-    template <uint32_t... Payloads>
-    INLINE DEVICE void trace(
+    template <typename... Payloads>
+    INLINE DEVICE auto trace(
         OptixTraversableHandle handle,
         float3                 ray_origin,
         float3                 ray_direction,
         float                  tmin,
         float                  tmax,
-        unsigned int           ray_type,
-        unsigned int           ray_count, 
+        uint32_t               ray_type,
+        uint32_t               ray_count, 
         Payloads...            payloads
-    )
+    ) 
+        -> decltype(std::initializer_list<uint32_t>{payloads...}, void())
     {
         optixTrace(
             handle,

@@ -22,7 +22,7 @@ public:
 
     Denoiser();
 
-    void create(const Context& ctx,
+    void init(const Context& ctx,
                 const Data& data, 
                 uint32_t tile_width = 0, 
                 uint32_t tile_height = 0, 

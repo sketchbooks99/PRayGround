@@ -30,6 +30,7 @@ struct CameraData
     float3 U; 
     float3 V; 
     float3 W;
+    float farclip;
 };
 
 struct RaygenData
@@ -52,8 +53,3 @@ struct EmptyData
 {
 
 };
-
-using RaygenRecord = Record<RaygenData>;
-using HitgroupRecord = Record<HitgroupData>;
-using MissRecord = Record<MissData>;
-using EmptyRecord = Record<EmptyData>;

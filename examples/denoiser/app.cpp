@@ -36,8 +36,12 @@ void App::handleCameraUpdate()
         .lookat = camera.lookat(),
         .U = U,
         .V = V,
-        .W = W
+        .W = W, 
+        .farclip = camera.farClip()
     };
+    CUDA_CHECK(cudaMemcpy(&rg_record->data, &rg_data, sizeof(RaygenData), cudaMemcpyHostToDevice));
+
+    initResultBufferOnDevice();
 }
 
 // --------------------------------------------------------------------
@@ -70,7 +74,7 @@ void App::setup()
     surfaces_module = pipeline.createModuleFromCudaFile(context, "cuda/surfaces.cu");
 
     // Initialize bitmaps to store rendered results
-    const int32_t width = pgGetWidth();
+    const int32_t width = pgGetWidth() / 2;
     const int32_t height = pgGetHeight();
     result_bitmap.allocate(PixelFormat::RGBA, width, height);
     accum_bitmap.allocate(PixelFormat::RGBA, width, height);
@@ -83,13 +87,15 @@ void App::setup()
     params.height = result_bitmap.height();
     params.samples_per_launch = 1;
     params.max_depth = 5;
+    params.white = 1.0f;
 
     // Camera settings
-    camera.setOrigin(278.0f, 273.0f, -900.0f);
-    camera.setLookat(278.0f, 273.0f, 330.0f);
+    camera.setOrigin(275, 275, -900);
+    camera.setLookat(275, 275, 330);
     camera.setUp(0, 1, 0);
     camera.setFov(35.0f);
     camera.setAspect((float)width / height);
+    camera.setFarClip(5000);
     camera.enableTracking(pgGetCurrentWindow());
 
     float3 U, V, W;
@@ -106,7 +112,8 @@ void App::setup()
         .lookat = camera.lookat(), 
         .U = U, 
         .V = V, 
-        .W = W
+        .W = W, 
+        .farclip = camera.farClip()
     };
     sbt.setRaygenRecord(raygen_record);
 
@@ -140,7 +147,7 @@ void App::setup()
     // AreaEmitter
     uint32_t area_emitter_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("area_emitter"), "");
 
-    auto black = make_shared<ConstantTexture>(make_float3(0.0f), constant_prg_id);
+    auto black = make_shared<ConstantTexture>(make_float3(1.0f), constant_prg_id);
     env = EnvironmentEmitter{black};
     env.copyToDevice();
 
@@ -261,8 +268,8 @@ void App::setup()
     auto bunny = make_shared<TriangleMesh>("resources/model/bunny.obj");
     bunny->smooth();
     shapes.emplace("bunny", bunny);
-    shapes.emplace("wall", make_shared<Plane>(make_float2(0, 0), make_float2(556, 548)));
-    shapes.emplace("ceiling_light", make_shared<Plane>(make_float2(213, 227), make_float2(343, 332)));
+    shapes.emplace("wall", make_shared<Plane>(make_float2(-275, -275), make_float2(275, 275)));
+    shapes.emplace("ceiling_light", make_shared<Plane>(make_float2(-60, -60), make_float2(60, 60)));
 
     // Textures
     textures.emplace("green", new ConstantTexture(make_float3(0.05, 0.8, 0.05), constant_prg_id));
@@ -277,6 +284,7 @@ void App::setup()
     materials.emplace("green_diffuse", make_shared<Diffuse>(textures.at("green")));
     materials.emplace("red_diffuse", make_shared<Diffuse>(textures.at("red")));
     materials.emplace("wall_diffuse", make_shared<Diffuse>(textures.at("wall_white")));
+    materials.emplace("floor_diffuse", make_shared<Diffuse>(textures.at("checker")));
     auto disney = make_shared<Disney>(textures.at("gray"));
     disney->setRoughness(0.5f);
     disney->setMetallic(0.9f);
@@ -287,35 +295,39 @@ void App::setup()
 
     // Bunny
     Primitive bunnyP{ shapes.at("bunny"), materials.at("gray_disney"), disney_sample_bsdf_prg_id, disney_pdf_prg_id };
-    setupPrimitive(mesh_prg, bunnyP, Matrix4f::translate(278, 273, 0) * Matrix4f::scale(500.0f));
+    setupPrimitive(mesh_prg, bunnyP, Matrix4f::translate(275, 200, 275)* Matrix4f::rotate(math::pi, {0.0f, 1.0f, 0.0f}) * Matrix4f::scale(1000.0f));
 
     // Left wall 
     Primitive l_wall{ shapes.at("wall"), materials.at("green_diffuse"), diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
-    setupPrimitive(plane_prg, l_wall, Matrix4f::translate(0, 273, 0) * Matrix4f::rotate(math::pi / 2, {0.0, 0.0f, 1.0}));
+    setupPrimitive(plane_prg, l_wall, Matrix4f::translate(550, 275, 275) * Matrix4f::rotate(math::pi / 2, {0.0, 0.0f, 1.0}));
 
     // Right wall 
     Primitive r_wall{ shapes.at("wall"), materials.at("red_diffuse"), diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
-    setupPrimitive(plane_prg, r_wall, Matrix4f::translate(556, 273, 0) * Matrix4f::rotate(math::pi / 2, {0.0, 0.0f, 1.0}));
+    setupPrimitive(plane_prg, r_wall, Matrix4f::translate(0, 275, 275) * Matrix4f::rotate(math::pi / 2, {0.0, 0.0f, 1.0}));
 
     // Back wall
     Primitive b_wall{ shapes.at("wall"), materials.at("wall_diffuse"), diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
-    setupPrimitive(plane_prg, b_wall, Matrix4f::translate(0, 273, 559) * Matrix4f::rotate(math::pi / 2, {1.0, 0.0f, 0.0}));
+    setupPrimitive(plane_prg, b_wall, Matrix4f::translate(275, 275, 550) * Matrix4f::rotate(math::pi / 2, {1.0, 0.0f, 0.0}));
 
     // Ceiling 
     Primitive ceiling{ shapes.at("wall"), materials.at("wall_diffuse"), diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
-    setupPrimitive(plane_prg, ceiling, Matrix4f::translate(278, 548, 279.5));
+    setupPrimitive(plane_prg, ceiling, Matrix4f::translate(275, 550, 275));
 
     // Floor 
-    Primitive floor{ shapes.at("wall"), materials.at("checker"), diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
-    setupPrimitive(plane_prg, floor, Matrix4f::translate(278, 0, 279.5));
+    Primitive floor{ shapes.at("wall"), materials.at("floor_diffuse"), diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
+    setupPrimitive(plane_prg, floor, Matrix4f::translate(275, 0, 275));
 
     // Ceiling light
-    setupAreaEmitter(plane_prg, shapes.at("ceiling_light"), area, Matrix4f::translate(278, 547.9, 279.5), area_emitter_prg_id);
+    setupAreaEmitter(plane_prg, shapes.at("ceiling_light"), area, Matrix4f::translate(275, 545, 275), area_emitter_prg_id);
 
     // Denoiser settings
     denoise_data.width = result_bitmap.width();
     denoise_data.height = result_bitmap.height();
     denoise_data.outputs.push_back(new float[denoise_data.width * denoise_data.height * 4]);
+    denoise_data.color = reinterpret_cast<float*>(result_bitmap.devicePtr());
+    denoise_data.albedo = reinterpret_cast<float*>(albedo_bitmap.devicePtr());
+    denoise_data.normal = reinterpret_cast<float*>(normal_bitmap.devicePtr());
+    denoiser.init(context, denoise_data, 0, 0, false, false);
 
     // Prepare rendering
     CUDA_CHECK(cudaStreamCreate(&stream));
@@ -359,7 +371,6 @@ void App::update()
     CUDA_CHECK(cudaStreamSynchronize(stream));
     CUDA_SYNC_CHECK();
     render_time = pgGetElapsedTimef() - start_time;
-    params.frame++;
 
     // Fetch rendered result from GPU
     result_bitmap.copyFromDevice();
@@ -370,14 +381,13 @@ void App::update()
     denoise_data.albedo = reinterpret_cast<float*>(albedo_bitmap.devicePtr());
     denoise_data.normal = reinterpret_cast<float*>(normal_bitmap.devicePtr());
 
-    if (params.frame == 0)
-        denoiser.create(context, denoise_data, 0, 0, false, false);
-    else
-        denoiser.update(denoise_data);
+    denoiser.update(denoise_data);
 
     denoiser.run();
 
     denoiser.copyFromDevice();
+
+    params.frame++;
 }
 
 // --------------------------------------------------------------------
@@ -389,16 +399,26 @@ void App::draw()
 
     ImGui::Begin("Denoiser");
 
+    ImGui::Text("Camera info:");
+    ImGui::Text("Origin: %f %f %f", camera.origin().x, camera.origin().y, camera.origin().z);
+    ImGui::Text("Lookat: %f %f %f", camera.lookat().x, camera.lookat().y, camera.lookat().z);
+
+    ImGui::Text("Frame rate: %.3f ms/frame (%.2f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+    ImGui::Text("Frame: %d", params.frame);
+
     ImGui::End();
 
     ImGui::Render();
 
-    denoiser.draw(denoise_data);
+    result_bitmap.draw();
+    denoiser.draw(denoise_data, pgGetWidth() / 2, 0);
+
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
 void App::close()
 {
-    denoiser.destroy();
+    //denoiser.destroy();
 }
 
 // --------------------------------------------------------------------

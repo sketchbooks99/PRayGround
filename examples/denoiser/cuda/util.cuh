@@ -1,6 +1,7 @@
 #pragma once 
 
 #include <prayground/optix/cuda/device_util.cuh>
+#include <prayground/math/random.h>
 #include "../params.h"
 
 using namespace prayground;
@@ -22,10 +23,11 @@ INLINE DEVICE void trace(
 	const float3& ro, const float3& rd,
 	float tmin, float tmax,
 	uint32_t ray_type,
+	uint32_t ray_count,
 	SurfaceInteraction* si
 )
 {
 	uint32_t u0, u1;
 	packPointer(si, u0, u1);
-	trace(handle, ro, rd, tmin, tmax, ray_type, u0, u1);
+	trace(handle, ro, rd, tmin, tmax, ray_type, ray_count, u0, u1);
 }

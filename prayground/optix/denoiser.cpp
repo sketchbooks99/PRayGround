@@ -2,7 +2,6 @@
 #include <prayground/app/app_runner.h>
 #include <prayground/core/util.h>
 #include <prayground/optix/macros.h>
-#include <optix_function_table_definition.h>
 #include <optix_stubs.h>
 #include <optix_denoiser_tiling.h>
 

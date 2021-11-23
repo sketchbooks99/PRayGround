@@ -472,12 +472,6 @@ INLINE HOSTDEVICE Matrix<T, N> Matrix<T, N>::rotate(const float radians, const t
 }
 
 template <>
-INLINE HOSTDEVICE Matrix<float, 4> Matrix<float, 4>::translate(const float x, const float y, const float z)
-{
-    return Matrix4f::translate(make_float3(x, y, z));
-}
-
-template <>
 INLINE HOSTDEVICE Matrix<float, 4> Matrix<float, 4>::translate(const float3 &t)
 {
     Matrix4f i_mat = Matrix4f::identity();
@@ -486,6 +480,12 @@ INLINE HOSTDEVICE Matrix<float, 4> Matrix<float, 4>::translate(const float3 &t)
     data[1 * 4 + 3] = t.y;
     data[2 * 4 + 3] = t.z;
     return Matrix4f(data);
+}
+
+template <>
+INLINE HOSTDEVICE Matrix<float, 4> Matrix<float, 4>::translate(const float x, const float y, const float z)
+{
+    return Matrix4f::translate(make_float3(x, y, z));
 }
 
 template <typename T, unsigned int N>

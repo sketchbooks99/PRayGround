@@ -73,6 +73,7 @@ set(sources
   optix/transform.cpp
   optix/sbt.h 
   optix/cuda/texture.cuh
+  optix/cuda/device_util.cuh
 
   # Shapes ==========
   shape/box.h

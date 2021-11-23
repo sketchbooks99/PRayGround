@@ -21,5 +21,3 @@ extern "C" __device__ float3 __direct_callable__checker(SurfaceInteraction* si, 
     const bool is_odd = sinf(si->uv.x*M_PIf*checker->scale) * sinf(si->uv.y*M_PIf*checker->scale) < 0;
     return is_odd ? checker->color1 : checker->color2;
 }
-
-/** @todo Implement noise texture */

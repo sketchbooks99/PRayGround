@@ -1,7 +1,7 @@
-#include <prayground/optix/cuda/util.cuh>
 #include <prayground/core/color.h>
 #include <prayground/core/bsdf.h>
 #include "../params.h"
+#include "util.cuh"
 
 using namespace prayground;
 

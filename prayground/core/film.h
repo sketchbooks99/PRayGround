@@ -18,12 +18,12 @@ public:
     Film(int32_t width, int32_t height);
     ~Film();
 
-    void addBitmap(const std::string& name, Bitmap::Format format);
+    void addBitmap(const std::string& name, PixelFormat format);
     std::shared_ptr<Bitmap> bitmapAt(const std::string& name) const;
     std::vector<std::shared_ptr<Bitmap>> bitmaps() const;
     size_t numBitmaps() const;
 
-    void addFloatBitmap(const std::string& name, FloatBitmap::Format format);
+    void addFloatBitmap(const std::string& name, PixelFormat format);
     std::shared_ptr<FloatBitmap> floatBitmapAt(const std::string& name);
     std::vector<std::shared_ptr<FloatBitmap>> floatBitmaps() const;
     size_t numFloatBitmaps() const;

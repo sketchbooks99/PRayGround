@@ -78,11 +78,11 @@ void App::setup()
     surfaces_module = pipeline.createModuleFromCudaFile(context, "cuda/surfaces.cu");
 
     // レンダリング結果を保存する用のBitmapを用意
-    result_bitmap.allocate(Bitmap::Format::RGBA, pgGetWidth(), pgGetHeight());
-    accum_bitmap.allocate(FloatBitmap::Format::RGBA, pgGetWidth(), pgGetHeight());
-    normal_bitmap.allocate(FloatBitmap::Format::RGB, pgGetWidth(), pgGetHeight());
-    albedo_bitmap.allocate(FloatBitmap::Format::RGB, pgGetWidth(), pgGetHeight());
-    depth_bitmap.allocate(FloatBitmap::Format::GRAY, pgGetWidth(), pgGetHeight());
+    result_bitmap.allocate(PixelFormat::RGBA, pgGetWidth(), pgGetHeight());
+    accum_bitmap.allocate(PixelFormat::RGBA, pgGetWidth(), pgGetHeight());
+    normal_bitmap.allocate(PixelFormat::RGB, pgGetWidth(), pgGetHeight());
+    albedo_bitmap.allocate(PixelFormat::RGB, pgGetWidth(), pgGetHeight());
+    depth_bitmap.allocate(PixelFormat::GRAY, pgGetWidth(), pgGetHeight());
 
     // LaunchParamsの設定
     params.width = result_bitmap.width();

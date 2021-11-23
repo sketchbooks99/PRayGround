@@ -3,6 +3,7 @@
 #include <optix.h>
 #include <vector>
 #include <prayground/optix/context.h>
+#include <prayground/core/bitmap.h>
 
 namespace prayground {
 
@@ -29,6 +30,9 @@ public:
                 bool is_temporal = false);
     void run();
     void update(const Data& data);
+    void draw(const Data& data);
+    void draw(const Data& data, int x, int y);
+    void draw(const Data& data, int x, int y, int w, int h);
     // Copy results from GPU to host memory
     void copyFromDevice();
     // Finialize denoiser
@@ -57,6 +61,9 @@ private:
     OptixDenoiserGuideLayer           m_guide_layer { };
     std::vector< OptixDenoiserLayer > m_layers;
     std::vector< float* >             m_host_outputs;
+
+    // For drawing result 
+    FloatBitmap m_viewer;
 };
 
 }

@@ -10,7 +10,7 @@ using namespace std;
 
 using DenoiserSBT = ShaderBindingTable<RaygenRecord, MissRecord, HitgroupRecord, EmptyRecord, EmptyRecord, 1>;
 
-class App : public BaseApp{
+class App : public BaseApp {
 public:
     void setup();
     void update();
@@ -18,6 +18,8 @@ public:
     void close();
 
     void keyPressed(int key);
+    void mouseDragged(float x, float y, int button);
+    void mouseScrolled(float x, float y);
 private:
     void initResultBufferOnDevice();
     void handleCameraUpdate();
@@ -31,6 +33,7 @@ private:
     InstanceAccel ias;
 
     Denoiser denoiser;
+    Denoiser::Data denoise_data;
 
     FloatBitmap result_bitmap, accum_bitmap, albedo_bitmap, normal_bitmap;
 
@@ -40,4 +43,8 @@ private:
     EnvironmentEmitter env;
 
     float render_time, denoise_time;
-}
+
+    map<string, shared_ptr<Shape>> shapes;
+    map<string, shared_ptr<Texture>> textures;
+    map<string, shared_ptr<Material>> materials;
+};

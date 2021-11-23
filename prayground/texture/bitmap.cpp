@@ -22,11 +22,11 @@ BitmapTexture_<PixelType>::BitmapTexture_(const std::filesystem::path& filename,
             magenta = make_float4(1.0f, 0.0f, 1.0f, 1.0f);
         std::vector<Vec_t> pixels(width * height, magenta);
         m_bitmap = Bitmap_<PixelType>(
-            Bitmap_<PixelType>::Format::RGBA, width, height, reinterpret_cast<Bitmap_<PixelType>::Type*>(pixels.data()));
+            PixelFormat::RGBA, width, height, reinterpret_cast<Bitmap_<PixelType>::Type*>(pixels.data()));
     }
     else
     {
-        m_bitmap = Bitmap_<PixelType>(filepath.value(), Bitmap_<PixelType>::Format::RGBA);
+        m_bitmap = Bitmap_<PixelType>(filepath.value(), PixelFormat::RGBA);
     }
 
     // Initialize texture description

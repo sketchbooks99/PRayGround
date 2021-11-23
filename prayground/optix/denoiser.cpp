@@ -1,4 +1,5 @@
 #include "denoiser.h"
+#include <prayground/app/app_runner.h>
 #include <prayground/core/util.h>
 #include <prayground/optix/macros.h>
 #include <optix_function_table_definition.h>
@@ -170,6 +171,8 @@ void Denoiser::create(
 
         OptixDenoiserLayer layer = {};
     }
+
+    m_viewer.allocate(PixelFormat::RGBA, (int)data.width, (int)data.height);
 }
 
 // --------------------------------------------------------------------
@@ -248,6 +251,23 @@ void Denoiser::update(const Data& data)
         if (is_temporal)
             m_layers[i].previousOutput = m_layers[i].output;
     }
+}
+
+// --------------------------------------------------------------------
+void Denoiser::draw(const Data& data)
+{
+    draw(data, 0, 0, data.width, data.height);
+}
+
+void Denoiser::draw(const Data& data, int x, int y)
+{
+    draw(data, x, y, data.width, data.height);
+}
+
+void Denoiser::draw(const Data& data, int x, int y, int w, int h)
+{
+    m_viewer.setData(data.outputs[0], 0, 0, data.width, data.height);
+    m_viewer.draw(x, y, w, h);
 }
 
 // --------------------------------------------------------------------

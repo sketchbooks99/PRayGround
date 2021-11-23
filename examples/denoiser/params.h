@@ -13,7 +13,7 @@ struct LaunchParams
     unsigned int samples_per_launch;
     unsigned int max_depth;
     int frame;
-    uchar4* result_buffer;
+    float4* result_buffer;
     float4* accum_buffer;
     // For denoiser
     float4* albedo_buffer;
@@ -21,6 +21,15 @@ struct LaunchParams
     OptixTraversableHandle handle;
     
     float white;
+};
+
+struct CameraData 
+{
+    float3 origin; 
+    float3 lookat; 
+    float3 U; 
+    float3 V; 
+    float3 W;
 };
 
 struct RaygenData

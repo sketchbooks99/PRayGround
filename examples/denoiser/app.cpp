@@ -355,9 +355,9 @@ void App::setup()
     denoise_data.width = result_bitmap.width();
     denoise_data.height = result_bitmap.height();
     denoise_data.outputs.push_back(new float[denoise_data.width * denoise_data.height * 4]);
-    denoise_data.color = reinterpret_cast<float*>(result_bitmap.devicePtr());
-    denoise_data.albedo = reinterpret_cast<float*>(albedo_bitmap.devicePtr());
-    denoise_data.normal = reinterpret_cast<float*>(normal_bitmap.devicePtr());
+    denoise_data.color = result_bitmap.devicePtr();
+    denoise_data.albedo = albedo_bitmap.devicePtr();
+    denoise_data.normal = normal_bitmap.devicePtr();
     denoiser.init(context, denoise_data, 0, 0, false, false);
 
     // Prepare rendering
@@ -408,9 +408,9 @@ void App::update()
     normal_bitmap.copyFromDevice();
     albedo_bitmap.copyFromDevice();
 
-    denoise_data.color = reinterpret_cast<float*>(result_bitmap.devicePtr());
-    denoise_data.albedo = reinterpret_cast<float*>(albedo_bitmap.devicePtr());
-    denoise_data.normal = reinterpret_cast<float*>(normal_bitmap.devicePtr());
+    denoise_data.color = result_bitmap.devicePtr();
+    denoise_data.albedo = albedo_bitmap.devicePtr();
+    denoise_data.normal = normal_bitmap.devicePtr();
 
     denoiser.update(denoise_data);
 

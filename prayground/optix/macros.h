@@ -76,7 +76,7 @@
         if (res != OPTIX_SUCCESS)                                               \
         {                                                                       \
             std::stringstream ss;                                               \
-            ss << "ERROR: " << res;                                             \
+            ss << "ERROR: " << res << ", ";                                     \
             ss << "Optix call '" << #call << "' failed: " __FILE__ ":"          \
                << __LINE__ << ")\n";                                            \
                throw std::runtime_error(ss.str());                              \

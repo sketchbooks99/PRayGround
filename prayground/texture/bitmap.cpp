@@ -95,6 +95,18 @@ void BitmapTexture_<PixelType>::free()
         CUDA_CHECK( cudaFreeArray( d_array ) );
 }
 
+template<typename PixelType>
+int32_t BitmapTexture_<PixelType>::width() const
+{
+    return m_bitmap.width();
+}
+
+template<typename PixelType>
+int32_t BitmapTexture_<PixelType>::height() const
+{
+    return m_bitmap.height();
+}
+
 template class BitmapTexture_<float>;
 template class BitmapTexture_<unsigned char>;
 

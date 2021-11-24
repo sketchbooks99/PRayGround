@@ -147,7 +147,7 @@ void App::setup()
     // AreaEmitter
     uint32_t area_emitter_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("area_emitter"), "");
 
-    auto black = make_shared<ConstantTexture>(make_float3(1.0f), constant_prg_id);
+    auto black = make_shared<ConstantTexture>(make_float3(0.0f), constant_prg_id);
     env = EnvironmentEmitter{black};
     env.copyToDevice();
 
@@ -159,13 +159,15 @@ void App::setup()
     miss_record.data.env_data = env.devicePtr();
     sbt.setMissRecord(miss_record);
 
-    // Hitgroupプログラム
+    // Hitgroup program
     // Plane
     auto plane_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("plane"), IS_FUNC_STR("plane"));
     // Sphere
     auto sphere_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("sphere"), IS_FUNC_STR("sphere"));
     // Triangle mesh
     auto mesh_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("mesh"));
+
+    uint32_t plane_sample_pdf_prg_id = setupCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_plane"), CC_FUNC_STR("pdf_plane"));
 
     struct Primitive
     {
@@ -218,6 +220,7 @@ void App::setup()
         sbt_offset += DenoiserSBT::NRay;
     };
 
+    vector<AreaEmitterInfo> area_emitter_infos;
     auto setupAreaEmitter = [&](
         ProgramGroup& prg, 
         shared_ptr<Shape> shape,
@@ -261,15 +264,26 @@ void App::setup()
 
         instance_id++;
         sbt_offset += DenoiserSBT::NRay;
+
+        AreaEmitterInfo infos =
+        {
+            .shape_data = shape->devicePtr(), 
+            .objToWorld = transform,
+            .worldToObj = transform.inverse(),
+            .sample_id = sample_pdf_id, 
+            .pdf_id = sample_pdf_id
+        };
+        area_emitter_infos.emplace_back(infos);
     };
 
     // Scene ----------------------------------------------------------
     // Shapes
-    auto bunny = make_shared<TriangleMesh>("resources/model/bunny.obj");
+    auto bunny = new TriangleMesh("resources/model/bunny.obj");
     bunny->smooth();
     shapes.emplace("bunny", bunny);
-    shapes.emplace("wall", make_shared<Plane>(make_float2(-275, -275), make_float2(275, 275)));
-    shapes.emplace("ceiling_light", make_shared<Plane>(make_float2(-60, -60), make_float2(60, 60)));
+    shapes.emplace("wall", new Plane(make_float2(-275, -275), make_float2(275, 275)));
+    shapes.emplace("ceiling_light", new Plane(make_float2(-60, -60), make_float2(60, 60)));
+    shapes.emplace("sphere", new Sphere(make_float3(0.0f), 1.0f));
 
     // Textures
     textures.emplace("green", new ConstantTexture(make_float3(0.05, 0.8, 0.05), constant_prg_id));
@@ -279,13 +293,16 @@ void App::setup()
     textures.emplace("checker", new CheckerTexture(make_float3(0.9f), make_float3(0.3f), 10, checker_prg_id));
     textures.emplace("black", black);
     textures.emplace("gray", new ConstantTexture(make_float3(0.25), constant_prg_id));
+    textures.emplace("orange", new ConstantTexture(make_float3(0.8, 0.7, 0.3), constant_prg_id));
 
     // Materials
-    materials.emplace("green_diffuse", make_shared<Diffuse>(textures.at("green")));
-    materials.emplace("red_diffuse", make_shared<Diffuse>(textures.at("red")));
-    materials.emplace("wall_diffuse", make_shared<Diffuse>(textures.at("wall_white")));
-    materials.emplace("floor_diffuse", make_shared<Diffuse>(textures.at("checker")));
-    auto disney = make_shared<Disney>(textures.at("gray"));
+    materials.emplace("green_diffuse", new Diffuse(textures.at("green")));
+    materials.emplace("red_diffuse", new Diffuse(textures.at("red")));
+    materials.emplace("wall_diffuse", new Diffuse(textures.at("wall_white")));
+    materials.emplace("floor_diffuse", new Diffuse(textures.at("checker")));
+    materials.emplace("glass", new Dielectric(textures.at("white"), 1.5f));
+    materials.emplace("metal", new Conductor(textures.at("orange")));
+    auto disney = new Disney(textures.at("gray"));
     disney->setRoughness(0.5f);
     disney->setMetallic(0.9f);
     materials.emplace("gray_disney", disney);
@@ -295,7 +312,7 @@ void App::setup()
 
     // Bunny
     Primitive bunnyP{ shapes.at("bunny"), materials.at("gray_disney"), disney_sample_bsdf_prg_id, disney_pdf_prg_id };
-    setupPrimitive(mesh_prg, bunnyP, Matrix4f::translate(275, 200, 275)* Matrix4f::rotate(math::pi, {0.0f, 1.0f, 0.0f}) * Matrix4f::scale(1000.0f));
+    setupPrimitive(mesh_prg, bunnyP, Matrix4f::translate(275, 150, 275)* Matrix4f::rotate(math::pi, {0.0f, 1.0f, 0.0f}) * Matrix4f::scale(1200.0f));
 
     // Left wall 
     Primitive l_wall{ shapes.at("wall"), materials.at("green_diffuse"), diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
@@ -317,8 +334,22 @@ void App::setup()
     Primitive floor{ shapes.at("wall"), materials.at("floor_diffuse"), diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
     setupPrimitive(plane_prg, floor, Matrix4f::translate(275, 0, 275));
 
+    // Glass sphere
+    Primitive glass_sphere{ shapes.at("sphere"), materials.at("glass"), dielectric_sample_bsdf_prg_id, dielectric_pdf_prg_id };
+    setupPrimitive(sphere_prg, glass_sphere, Matrix4f::translate(150, 100, 150) * Matrix4f::scale(100));
+
+    // Metal sphere
+    Primitive metal_sphere{ shapes.at("sphere"), materials.at("metal"), conductor_sample_bsdf_prg_id, conductor_pdf_prg_id };
+    setupPrimitive(sphere_prg, metal_sphere, Matrix4f::translate(375, 120, 350)* Matrix4f::scale(120));
+
     // Ceiling light
-    setupAreaEmitter(plane_prg, shapes.at("ceiling_light"), area, Matrix4f::translate(275, 545, 275), area_emitter_prg_id);
+    setupAreaEmitter(plane_prg, shapes.at("ceiling_light"), area, Matrix4f::translate(275, 545, 275), plane_sample_pdf_prg_id);
+
+    // Setup area emitter on device
+    CUDABuffer<AreaEmitterInfo> d_area_emitter_infos;
+    d_area_emitter_infos.copyToDevice(area_emitter_infos);
+    params.lights = d_area_emitter_infos.deviceData();
+    params.num_lights = static_cast<uint32_t>(area_emitter_infos.size());
 
     // Denoiser settings
     denoise_data.width = result_bitmap.width();
@@ -383,7 +414,9 @@ void App::update()
 
     denoiser.update(denoise_data);
 
+    start_time = pgGetElapsedTimef();
     denoiser.run();
+    denoise_time = pgGetElapsedTimef() - start_time;
 
     denoiser.copyFromDevice();
 
@@ -397,21 +430,26 @@ void App::draw()
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
+    const float start_time = pgGetElapsedTimef();
+    result_bitmap.draw();
+    denoiser.draw(denoise_data, pgGetWidth() / 2, 0);
+    const float display_time = pgGetElapsedTimef() - start_time;
+
     ImGui::Begin("Denoiser");
 
     ImGui::Text("Camera info:");
     ImGui::Text("Origin: %f %f %f", camera.origin().x, camera.origin().y, camera.origin().z);
     ImGui::Text("Lookat: %f %f %f", camera.lookat().x, camera.lookat().y, camera.lookat().z);
 
-    ImGui::Text("Frame rate: %.3f ms/frame (%.2f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+    ImGui::Text("Frame rate: %.3f s/frame (%.2f FPS)", ImGui::GetIO().DeltaTime, ImGui::GetIO().Framerate);
     ImGui::Text("Frame: %d", params.frame);
+    ImGui::Text("Render time: %.3f s/frame", render_time);
+    ImGui::Text("Denoise time: %.3f s/frame", denoise_time);
+    ImGui::Text("Display time: %.3f s/frame", display_time);
 
     ImGui::End();
 
     ImGui::Render();
-
-    result_bitmap.draw();
-    denoiser.draw(denoise_data, pgGetWidth() / 2, 0);
 
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }

@@ -31,11 +31,11 @@ extern "C" __device__ void __direct_callable__sample_diffuse(SurfaceInteraction*
 extern "C" __device__ float3 __continuation_callable__bsdf_diffuse(SurfaceInteraction* si, void* mat_data)
 {
     const DiffuseData* diffuse = reinterpret_cast<DiffuseData*>(mat_data);
-    const float3 albedo = optixDirectCall<float3, SurfaceInteraction*, void*>(diffuse->tex_program_id, si, diffuse->tex_data);
-    si->albedo = albedo;
+    const float4 albedo = optixDirectCall<float4, SurfaceInteraction*, void*>(diffuse->tex_program_id, si, diffuse->tex_data);
+    si->albedo = make_float3(albedo) * albedo.w;
     si->emission = make_float3(0.0f);
     const float cosine = fmaxf(0.0f, dot(si->n, si->wo));
-    return albedo * (cosine / math::pi);
+    return si->albedo * (cosine / math::pi);
 }
 
 extern "C" __device__ float __direct_callable__pdf_diffuse(SurfaceInteraction* si, void* mat_data)
@@ -76,9 +76,9 @@ extern "C" __device__ float3 __continuation_callable__bsdf_dielectric(SurfaceInt
 {
     const DielectricData* dielectric = reinterpret_cast<DielectricData*>(mat_data);
     si->emission = make_float3(0.0f);
-    float3 albedo = optixDirectCall<float3, SurfaceInteraction*, void*>(dielectric->tex_program_id, si, dielectric->tex_data);
-    si->albedo = albedo;
-    return albedo;
+    float4 albedo = optixDirectCall<float4, SurfaceInteraction*, void*>(dielectric->tex_program_id, si, dielectric->tex_data);
+    si->albedo = make_float3(albedo);
+    return si->albedo;
 }
 
 extern "C" __device__ float __direct_callable__pdf_dielectric(SurfaceInteraction* si, void* mat_data)
@@ -101,9 +101,9 @@ extern "C" __device__ float3 __continuation_callable__bsdf_conductor(SurfaceInte
 {
     const ConductorData* conductor = reinterpret_cast<ConductorData*>(mat_data);
     si->emission = make_float3(0.0f);
-    float3 albedo = optixDirectCall<float3, SurfaceInteraction*, void*>(conductor->tex_program_id, si, conductor->tex_data);
-    si->albedo = albedo;
-    return albedo;
+    float4 albedo = optixDirectCall<float4, SurfaceInteraction*, void*>(conductor->tex_program_id, si, conductor->tex_data);
+    si->albedo = make_float3(albedo);
+    return si->albedo;
 }
 
 extern "C" __device__ float __direct_callable__pdf_conductor(SurfaceInteraction* si, void* mat_data)
@@ -173,26 +173,26 @@ extern "C" __device__ float3 __continuation_callable__bsdf_disney(SurfaceInterac
     const float NdotH = dot(N, H);
     const float LdotH /* = VdotH */ = dot(L, H);
 
-    const float3 base_color = optixDirectCall<float3, SurfaceInteraction*, void*>(
+    const float4 base_color = optixDirectCall<float4, SurfaceInteraction*, void*>(
         disney->base_program_id, si, disney->base_tex_data
     );
-    si->albedo = base_color;
+    si->albedo = make_float3(base_color);
 
     // Diffuse term (diffuse, subsurface, sheen) ======================
     // Diffuse
     const float Fd90 = 0.5f + 2.0f * disney->roughness * LdotH*LdotH;
     const float FVd90 = fresnelSchlickT(NdotV, Fd90);
     const float FLd90 = fresnelSchlickT(NdotL, Fd90);
-    const float3 f_diffuse = (base_color / math::pi) * FVd90 * FLd90;
+    const float3 f_diffuse = (make_float3(base_color) / math::pi) * FVd90 * FLd90;
 
     // Subsurface
     const float Fss90 = disney->roughness * LdotH*LdotH;
     const float FVss90 = fresnelSchlickT(NdotV, Fss90);
     const float FLss90 = fresnelSchlickT(NdotL, Fss90); 
-    const float3 f_subsurface = (base_color / math::pi) * 1.25f * (FVss90 * FLss90 * ((1.0f / (NdotV * NdotL)) - 0.5f) + 0.5f);
+    const float3 f_subsurface = (make_float3(base_color) / math::pi) * 1.25f * (FVss90 * FLss90 * ((1.0f / (NdotV * NdotL)) - 0.5f) + 0.5f);
 
     // Sheen
-    const float3 rho_tint = base_color / luminance(base_color);
+    const float3 rho_tint = make_float3(base_color) / luminance(make_float3(base_color));
     const float3 rho_sheen = lerp(make_float3(1.0f), rho_tint, disney->sheen_tint);
     const float3 f_sheen = disney->sheen * rho_sheen * powf(1.0f - LdotH, 5.0f);
 
@@ -206,7 +206,7 @@ extern "C" __device__ float3 __continuation_callable__bsdf_disney(SurfaceInterac
     const float ax = fmaxf(0.001f, math::sqr(disney->roughness) / aspect);
     const float ay = fmaxf(0.001f, math::sqr(disney->roughness) * aspect);
     const float3 rho_specular = lerp(make_float3(1.0f), rho_tint, disney->specular_tint);
-    const float3 Fs0 = lerp(0.08f * disney->specular * rho_specular, base_color, disney->metallic);
+    const float3 Fs0 = lerp(0.08f * disney->specular * rho_specular, make_float3(base_color), disney->metallic);
     const float3 FHs0 = fresnelSchlickR(LdotH, Fs0);
     const float Ds = GTR2_aniso(NdotH, dot(H, X), dot(H, Y), ax, ay);
     const float alpha_g = powf(0.5f*disney->roughness + 0.5f, 2.0f);
@@ -269,9 +269,9 @@ extern "C" __device__ void __direct_callable__area_emitter(SurfaceInteraction* s
         si->n = faceforward(si->n, -si->wi, si->n);
     }
 
-    const float3 base = optixDirectCall<float3, SurfaceInteraction*, void*>(
+    const float4 base = optixDirectCall<float4, SurfaceInteraction*, void*>(
         area->tex_program_id, si, area->tex_data);
-    si->albedo = base;
+    si->albedo = make_float3(base.w);
     
-    si->emission = base * area->intensity * is_emitted;
+    si->emission = si->albedo * area->intensity * is_emitted;
 }

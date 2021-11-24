@@ -52,4 +52,5 @@ private:
     map<string, shared_ptr<Shape>> shapes;
     map<string, shared_ptr<Texture>> textures;
     map<string, shared_ptr<Material>> materials;
+    map<string, AreaEmitter> lights;
 };

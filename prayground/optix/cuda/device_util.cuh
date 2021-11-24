@@ -23,6 +23,8 @@ using uint64_t = unsigned long long;
 #define PG_MAX_NUM_ATTRIBUTES_STR "8"
 #define PG_MAX_NUM_PAYLOADS_STR "8"
 
+#ifdef __CUDACC__
+
 namespace prayground {
 
     template <uint32_t i>
@@ -196,3 +198,5 @@ namespace prayground {
     }
 
 } // ::prayground
+
+#endif // __CUDACC__

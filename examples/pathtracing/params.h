@@ -16,8 +16,6 @@ struct AreaEmitterInfo
 
     unsigned int sample_id;
     unsigned int pdf_id;
-
-    OptixTraversableHandle gas_handle;
 };
 
 struct LaunchParams 

@@ -5,19 +5,19 @@
 
 using namespace prayground;
 
-extern "C" __device__ float3 __direct_callable__bitmap(SurfaceInteraction* si, void* tex_data) {
+extern "C" __device__ float4 __direct_callable__bitmap(SurfaceInteraction* si, void* tex_data) {
     const BitmapTextureData* image = reinterpret_cast<BitmapTextureData*>(tex_data);
     float4 c = tex2D<float4>(image->texture, si->uv.x, si->uv.y);
-    return make_float3(c.x, c.y, c.z);
+    return c;
 }
 
-extern "C" __device__ float3 __direct_callable__constant(SurfaceInteraction* si, void* tex_data) {
+extern "C" __device__ float4 __direct_callable__constant(SurfaceInteraction* si, void* tex_data) {
     const ConstantTextureData* constant = reinterpret_cast<ConstantTextureData*>(tex_data);
-    return constant->color;
+    return make_float4(constant->color, 1.0f);
 }
 
-extern "C" __device__ float3 __direct_callable__checker(SurfaceInteraction* si, void* tex_data) {
+extern "C" __device__ float4 __direct_callable__checker(SurfaceInteraction* si, void* tex_data) {
     const CheckerTextureData* checker = reinterpret_cast<CheckerTextureData*>(tex_data);
     const bool is_odd = sinf(si->uv.x*M_PIf*checker->scale) * sinf(si->uv.y*M_PIf*checker->scale) < 0;
-    return is_odd ? checker->color1 : checker->color2;
+    return is_odd ? make_float4(checker->color1, 1.0f) : make_float4(checker->color2, 1.0f);
 }

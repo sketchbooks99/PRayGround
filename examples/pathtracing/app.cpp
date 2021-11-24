@@ -295,8 +295,7 @@ void App::setup()
             .objToWorld = transform,
             .worldToObj = transform.inverse(), 
             .sample_id = sample_pdf_id,
-            .pdf_id = sample_pdf_id, 
-            .gas_handle = instance.handle()
+            .pdf_id = sample_pdf_id
         };
         area_emitter_infos.push_back(area_emitter_info);
     };

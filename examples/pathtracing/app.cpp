@@ -157,8 +157,11 @@ void App::setup()
 
     // 環境マッピング (Sphere mapping) 用のテクスチャとデータ準備
     // 画像ファイルはリポジトリには含まれていないので、任意の画像データを設定してください
-     auto env_texture = make_shared<FloatBitmapTexture>("resources/image/dikhololo_night_4k.exr", bitmap_prg_id); 
+    // Preparing texture for environment mapping (sphere mapping)
+    // Since image file is not included in the repository, Please set your HDR image or use any other texture.
+    auto env_texture = make_shared<FloatBitmapTexture>("resources/image/sepulchral_chapel_basement_4k.exr", bitmap_prg_id); 
     //auto env_texture = make_shared<ConstantTexture>(make_float3(0.0f), constant_prg_id);
+
     env_texture->copyToDevice();
     env = EnvironmentEmitter{env_texture};
     env.copyToDevice();

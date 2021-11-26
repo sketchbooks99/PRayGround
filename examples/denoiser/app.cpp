@@ -389,13 +389,13 @@ void App::update()
     float start_time = pgGetElapsedTimef();
 
     optixLaunch(
-        static_cast<OptixPipeline>(pipeline), 
-        stream, 
-        d_params.devicePtr(), 
-        sizeof(LaunchParams), 
-        &sbt.sbt(), 
-        params.width, 
-        params.height, 
+        static_cast<OptixPipeline>(pipeline),
+        stream,
+        d_params.devicePtr(),
+        sizeof(LaunchParams),
+        &sbt.sbt(),
+        params.width,
+        params.height,
         1
     );
 

@@ -115,8 +115,15 @@ extern "C" __device__ void __raygen__pinhole()
             else if ( +(si.surface_info.type & (SurfaceType::Rough | SurfaceType::Diffuse)) )
             {
                 unsigned int seed = si.seed;
-                const int light_id = rnd_int(seed, 0, params.num_lights-1);
-                const AreaEmitterInfo light = params.lights[light_id];
+                AreaEmitterInfo light;
+                if (params.num_lights > 0) {
+                    const int light_id = rnd_int(seed, 0, params.num_lights - 1);
+                    light = params.lights[light_id];
+                }
+
+                const float weight = 1.0f / (params.num_lights + 1);
+
+                float pdf_val = 0.0f;
 
                 // Importance sampling according to the BSDF
                 optixDirectCall<void, SurfaceInteraction*, void*>(
@@ -125,7 +132,7 @@ extern "C" __device__ void __raygen__pinhole()
                     si.surface_info.data
                     );
 
-                if (rnd(seed) < 0.5f) {
+                if (rnd(seed) < weight * params.num_lights) {
                     // Light sampling
                     float3 to_light = optixDirectCall<float3, AreaEmitterInfo, SurfaceInteraction*>(
                         light.sample_id,
@@ -135,20 +142,26 @@ extern "C" __device__ void __raygen__pinhole()
                     si.wo = normalize(to_light);
                 }
 
-                // Evaluate PDF of area emitter
-                float light_pdf = optixContinuationCall<float, AreaEmitterInfo, const float3&, const float3&>(
-                    light.pdf_id,
-                    light,
-                    si.p,
-                    si.wo
-                );
+                for (int i = 0; i < params.num_lights; i++)
+                {
+                    // Evaluate PDF of area emitter
+                    float light_pdf = optixContinuationCall<float, AreaEmitterInfo, const float3&, const float3&>(
+                        params.lights[i].pdf_id,
+                        params.lights[i],
+                        si.p,
+                        si.wo
+                        );
+                    pdf_val += weight * light_pdf;
+                }
 
                 // Evaluate PDF depends on BSDF
                 float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*>(
                     si.surface_info.pdf_id,
                     &si,
                     si.surface_info.data
-                );
+                    );
+
+                pdf_val += weight * bsdf_pdf;
 
                 // Evaluate BSDF
                 float3 bsdf_val = optixContinuationCall<float3, SurfaceInteraction*, void*>(
@@ -157,9 +170,9 @@ extern "C" __device__ void __raygen__pinhole()
                     si.surface_info.data
                     );
 
-                const float pdf_val = 0.5f * bsdf_pdf + 0.5f * light_pdf;
+                pdf_val = fmaxf(pdf_val, math::eps);
 
-                throughput *= clamp(bsdf_val / pdf_val, 0.0f, 1.0f);
+                throughput *= bsdf_val / pdf_val;
             }
 
             // Make tmax large except for when the primary ray

@@ -183,7 +183,7 @@ extern "C" __device__ void __raygen__pinhole()
                     si.surface_info.data
                     );
 
-                if (pdf_val == 0.0f) break;
+                pdf_val = fmaxf(pdf_val, math::eps);
 
                 throughput *= bsdf_val / pdf_val;
             }

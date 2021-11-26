@@ -393,19 +393,17 @@ add_subdirectory(prayground)
 # add_subdirectory(examples/denoiser)
 
 ################################################################
-# Unit test
+# Applications
 # 
-# Please uncomment the target you'd like to build
+# Please add your custom applications to build :-)
 ################################################################
 add_subdirectory(apps/empty_app)
 
 ################################################################
 # Unit test
-# 
-# Please uncomment the target you'd like to build
 ################################################################
 # add_subdirectory(tests/math)
-add_subdirectory(tests/core)
+# add_subdirectory(tests/core)
 
 #################################################################
 

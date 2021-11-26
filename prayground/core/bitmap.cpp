@@ -162,7 +162,7 @@ void Bitmap_<unsigned char>::load(const std::filesystem::path& filename)
         Message(MSG_NORMAL, "Loading BMP file '" + filepath.value().string() + "' ...");
     else if (ext == ".exr" || ext == ".EXR" || ext == ".hdr" || ext == ".HDR")
     {
-        Message(MSG_FATAL, "EXR format can be loaded only in Bitmap<float>.");
+        Message(MSG_FATAL, "EXR format can be loaded only in Bitmap_<float>.");
         return;
     }
     uint8_t* raw_data;
@@ -181,7 +181,7 @@ template <>
 void Bitmap_<float>::load(const std::filesystem::path& filename)
 {
     std::optional<std::filesystem::path> filepath = pgFindDataPath(filename);
-    ASSERT(filepath, "prayground::Bitmap_<float>::load(): The input file for bitmap '" + filename.string() + "' is not found.");
+    ASSERT(filepath, "The input file for bitmap '" + filename.string() + "' is not found.");
 
     auto ext = pgGetExtension(filepath.value());
 
@@ -297,7 +297,7 @@ void Bitmap_<float>::write(const std::filesystem::path& filepath, int quality) c
 
     if (!supported)
     {
-        Message(MSG_FATAL, "This extension '" + ext + "' is not suppoted with Bitmap_<unsigned char>");
+        Message(MSG_FATAL, "This extension '" + ext + "' is not suppoted with Bitmap_<float>");
         return;
     }
 

@@ -82,8 +82,8 @@ void App::setup()
 
     // レンダリング結果を保存する用のBitmapを用意
     const float width = pgGetWidth(), height = pgGetHeight();
-    result_bitmap.allocate(Bitmap::Format::RGBA, width, height);
-    accum_bitmap.allocate(FloatBitmap::Format::RGBA, width, height);
+    result_bitmap.allocate(PixelFormat::RGBA, width, height);
+    accum_bitmap.allocate(PixelFormat::RGBA, width, height);
 
     // LaunchParamsの設定
     params.width = result_bitmap.width();
@@ -578,7 +578,7 @@ void App::draw()
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
     if (params.subframe_index == 4096)
-        result_bitmap.write(pathJoin(pgAppDir(), "rtNextWeek.jpg"));
+        result_bitmap.write(pgPathJoin(pgAppDir(), "rtNextWeek.jpg"));
 }
 
 // ----------------------------------------------------------------

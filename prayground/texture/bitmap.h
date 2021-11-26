@@ -23,6 +23,9 @@ public:
     void copyToDevice() override;
     void free() override;
 
+    int32_t width() const;
+    int32_t height() const;
+
 private:
     using Vec_t = std::conditional_t<std::is_same_v<PixelType, float>, float4, uchar4>;
 

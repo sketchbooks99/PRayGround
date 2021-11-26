@@ -16,19 +16,19 @@
 
 namespace prayground {
 
+using pgRaygenRecord = Record<pgRaygenData>;
+using pgHitgroupRecord = Record<pgHitgroupData>;
+using pgMissRecord = Record<pgMissData>;
+using pgCallableRecord = Record<pgCallableData>;
+using pgExceptionRecord = Record<pgEmptyData>;
+using pgPathTracingSBT = ShaderBindingTable<pgRaygenRecord, pgMissRecord, pgHitgroupRecord, pgCallableRecord, pgExceptionRecord>;
+
 class pgScene {
 public:
     void createHitGroupSBT();
 
-    void addShape()
+    void addShape(const std::shared_ptr<Shape>& shape);
 private:
-    using pgRaygenRecord = Record<pgRaygenData>;
-    using pgHitgroupRecord = Record<pgHitgroupData>;
-    using pgMissRecord = Record<pgMissData>;
-    using pgCallableRecord = Record<pgCallableData>;
-    using pgExceptionRecord = Record<pgEmptyData>;
-    using PathTracingSBT = ShaderBindingTable<pgRaygenRecord, pgMissRecord, pgHitgroupRecord, pgCallableRecord, pgExceptionRecord>;
-
     using ShapePtr = std::shared_ptr<Shape>;
     using MaterialPtr = std::shared_ptr<Material>;
     using TexturePtr = std::shaerd_ptr<Texture>;
@@ -37,8 +37,8 @@ private:
     std::vector<std::variants<MaterialPtr, AreaEmitter>> m_surfaces;
 
     EnvironmentEmitter m_env;
-
-    PathTracingSBT m_sbt;
+    pgPathTracingSBT m_sbt;
+    pgPipeline m_pipeline;
 };
 
 } // ::prayground

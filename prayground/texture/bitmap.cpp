@@ -9,7 +9,7 @@ template <typename PixelType>
 BitmapTexture_<PixelType>::BitmapTexture_(const std::filesystem::path& filename, int prg_id)
 : Texture(prg_id)
 {
-    std::optional<std::filesystem::path> filepath = findDataPath(filename);
+    std::optional<std::filesystem::path> filepath = pgFindDataPath(filename);
     if (!filepath)
     {
         Message(MSG_FATAL, "The texture file '" + filename.string() + "' is not found.");
@@ -22,11 +22,11 @@ BitmapTexture_<PixelType>::BitmapTexture_(const std::filesystem::path& filename,
             magenta = make_float4(1.0f, 0.0f, 1.0f, 1.0f);
         std::vector<Vec_t> pixels(width * height, magenta);
         m_bitmap = Bitmap_<PixelType>(
-            Bitmap_<PixelType>::Format::RGBA, width, height, reinterpret_cast<Bitmap_<PixelType>::Type*>(pixels.data()));
+            PixelFormat::RGBA, width, height, reinterpret_cast<Bitmap_<PixelType>::Type*>(pixels.data()));
     }
     else
     {
-        m_bitmap = Bitmap_<PixelType>(filepath.value(), Bitmap_<PixelType>::Format::RGBA);
+        m_bitmap = Bitmap_<PixelType>(filepath.value(), PixelFormat::RGBA);
     }
 
     // Initialize texture description
@@ -93,6 +93,18 @@ void BitmapTexture_<PixelType>::free()
         CUDA_CHECK( cudaDestroyTextureObject( d_texture ) );
     if (d_array != 0)
         CUDA_CHECK( cudaFreeArray( d_array ) );
+}
+
+template<typename PixelType>
+int32_t BitmapTexture_<PixelType>::width() const
+{
+    return m_bitmap.width();
+}
+
+template<typename PixelType>
+int32_t BitmapTexture_<PixelType>::height() const
+{
+    return m_bitmap.height();
 }
 
 template class BitmapTexture_<float>;

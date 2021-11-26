@@ -16,8 +16,6 @@ struct AreaEmitterInfo
 
     unsigned int sample_id;
     unsigned int pdf_id;
-
-    OptixTraversableHandle gas_handle;
 };
 
 struct LaunchParams 
@@ -39,12 +37,12 @@ struct LaunchParams
     float white;
 };
 
-struct CameraData
+struct CameraData 
 {
-    float3 origin;
+    float3 origin; 
     float3 lookat;
-    float3 U;
-    float3 V; 
+    float3 U; 
+    float3 V;
     float3 W;
     float farclip;
 };

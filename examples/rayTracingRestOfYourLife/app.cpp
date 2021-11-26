@@ -71,8 +71,8 @@ void App::setup()
     surfaces_module = pipeline.createModuleFromCudaFile(context, "cuda/surfaces.cu");
 
     // レンダリング結果を保存する用のBitmapを用意
-    result_bitmap.allocate(Bitmap::Format::RGBA, pgGetWidth(), pgGetHeight());
-    accum_bitmap.allocate(FloatBitmap::Format::RGBA, pgGetWidth(), pgGetHeight());
+    result_bitmap.allocate(PixelFormat::RGBA, pgGetWidth(), pgGetHeight());
+    accum_bitmap.allocate(PixelFormat::RGBA, pgGetWidth(), pgGetHeight());
 
     // LaunchParamsの設定
     params.width = result_bitmap.width();
@@ -436,7 +436,7 @@ void App::draw()
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
     // if (params.subframe_index == 4096)
-    //     result_bitmap.write(pathJoin(pgAppDir(), "rtRestOfYourLife.jpg"));
+    //     result_bitmap.write(pgPathJoin(pgAppDir(), "rtRestOfYourLife.jpg"));
 }
 
 // ----------------------------------------------------------------

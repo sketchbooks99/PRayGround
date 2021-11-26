@@ -108,7 +108,7 @@ public:
         }
         else if constexpr (Type == ShapeType::Curves)
         {
-            TODO_MESSAGE();
+            UNIMPLEMENTED();
         }
 
         return bi;
@@ -178,7 +178,7 @@ public:
         }
         else if constexpr (Type == ShapeType::Curves)
         {
-            TODO_MESSAGE();
+            UNIMPLEMENTED();
         }
     }
 

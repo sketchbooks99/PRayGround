@@ -183,7 +183,7 @@ extern "C" __device__ void __raygen__pinhole()
                     si.surface_info.data
                     );
 
-                if (pdf_val == 0.0f) break;
+                pdf_val = fmaxf(pdf_val, math::eps);
 
                 throughput *= bsdf_val / pdf_val;
             }
@@ -229,7 +229,3 @@ extern "C" __device__ void __raygen__pinhole()
     params.depth_buffer[image_index] = p_depth == 0.0f ? 1.0f : p_depth;
 }
 
-extern "C" __device__ void __raygen__thinlens()
-{
-    const RaygenData* raygen = reinterpret_cast<RaygenData*>(optixGetSbtDataPointer());
-}

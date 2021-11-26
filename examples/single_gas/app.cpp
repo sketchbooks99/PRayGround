@@ -25,7 +25,7 @@ void App::setup()
     textures_module = pipeline.createModuleFromCudaFile(context, "cuda/textures.cu");
 
     // Prepare bitmap to store rendered results.
-    result_bitmap.allocate(Bitmap::Format::RGBA, pgGetWidth(), pgGetHeight());
+    result_bitmap.allocate(PixelFormat::RGBA, pgGetWidth(), pgGetHeight());
     result_bitmap.allocateDevicePtr();
     params.width = result_bitmap.width();
     params.height = result_bitmap.height();
@@ -51,8 +51,8 @@ void App::setup()
     {
         .origin = camera.origin(), 
         .lookat = camera.lookat(), 
-        .U = U, 
-        .V = V, 
+        .U = U,
+        .V = V,
         .W = W
     };
     sbt.setRaygenRecord(raygen_record);

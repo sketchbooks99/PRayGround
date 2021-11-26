@@ -49,13 +49,13 @@ Pipeline::Pipeline(const OptixPipelineCompileOptions& c_op, const OptixPipelineL
 
 [[nodiscard]] Module Pipeline::createModuleFromPtxFile(const Context& ctx, const std::filesystem::path& filename)
 {
-    TODO_MESSAGE();
+    UNIMPLEMENTED();
     return Module{};
 }
 
 [[nodiscard]] Module Pipeline::createModuleFromPtxSource(const Context& ctx, const std::string& source)
 {
-    TODO_MESSAGE();
+    UNIMPLEMENTED();
     return Module{};
 }
 

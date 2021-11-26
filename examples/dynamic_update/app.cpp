@@ -71,9 +71,9 @@ void App::setup()
     textures_module = pipeline.createModuleFromCudaFile(context, "cuda/textures.cu");
 
     // レンダリング結果を保存する用のBitmapを用意
-    result_bitmap.allocate(Bitmap::Format::RGBA, pgGetWidth(), pgGetHeight());
-    normal_bitmap.allocate(FloatBitmap::Format::RGB, pgGetWidth(), pgGetHeight());
-    albedo_bitmap.allocate(FloatBitmap::Format::RGB, pgGetWidth(), pgGetHeight());
+    result_bitmap.allocate(PixelFormat::RGBA, pgGetWidth(), pgGetHeight());
+    normal_bitmap.allocate(PixelFormat::RGB, pgGetWidth(), pgGetHeight());
+    albedo_bitmap.allocate(PixelFormat::RGB, pgGetWidth(), pgGetHeight());
     params.width = result_bitmap.width();
     params.height = result_bitmap.height();
     params.light.pos = make_float3(0.0f, 9.9f, 0.0f);

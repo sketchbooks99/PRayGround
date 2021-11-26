@@ -99,14 +99,13 @@ inline void Message(MessageType type, Head head, Args... args) {
     if constexpr (num_args == 0) std::cout << std::endl;
 }
 
-/** 実装してない関数が多すぎるので、マクロ設定で簡略化する */
-#define TODO_MESSAGE()                                      \
-    do {                                                    \
-        std::stringstream ss;                               \
-        ss << "Sorry! The function you called at "          \
-           << "' (" __FILE__ << ":" << __LINE__ << ")"      \
-           << " is still under development! ";              \
-        Message(MSG_WARNING, ss.str());                     \
+#define UNIMPLEMENTED()                                                     \
+    do {                                                                    \
+        std::stringstream ss;                                               \
+        ss << "Sorry! The function you called at "                          \
+           << "' (" __FILE__ << ":" << __LINE__ << ")"                      \
+           << " will not be implemented or is still under development";     \
+        Message(MSG_WARNING, ss.str());                                     \
     } while (0)
 
 #define LOG(msg)                                                \

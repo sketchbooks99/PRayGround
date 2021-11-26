@@ -21,9 +21,9 @@ Film::~Film()
 }
 
 // ------------------------------------------------------------------
-void Film::addBitmap(const std::string& name, Bitmap::Format format)
+void Film::addBitmap(const std::string& name, PixelFormat format)
 {
-    if (format == Bitmap::Format::AUTO)
+    if (format == PixelFormat::NONE)
     {
         Message(MSG_FATAL, "prayground::Film::addBitmap(): The unknown format.");
         return;
@@ -58,9 +58,9 @@ size_t Film::numBitmaps() const
 }
 
 // ------------------------------------------------------------------
-void Film::addFloatBitmap(const std::string& name, FloatBitmap::Format format)
+void Film::addFloatBitmap(const std::string& name, PixelFormat format)
 {
-    if (format == FloatBitmap::Format::AUTO)
+    if (format == PixelFormat::NONE)
     {
         Message(MSG_FATAL, "prayground::Film::addFloatBitmap(): The unknown format.");
         return;

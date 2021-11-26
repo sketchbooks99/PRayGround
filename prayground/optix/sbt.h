@@ -25,9 +25,20 @@ struct pgLaunchParams
     OptixTraversableHandle handle;
 };
 
+struct pgCameraData
+{
+    float3 origin; 
+    float3 lookat; 
+    float3 U;
+    float3 V; 
+    float3 W;
+    float nearclip;
+    float farclip; 
+};
+
 struct pgRaygenData
 {
-    builtin::CameraData camera;
+    pgCameraData camera;
 };
 
 struct pgHitgroupData
@@ -242,6 +253,15 @@ private:
     ExceptionRecord m_exception_record {};
     bool on_device;
 };
+
+// Default declaration for easy usage
+using pgRaygenRecord = Record<pgRaygenData>;
+using pgMissRecord = Record<pgMissData>;
+using pgHitgroupRecord = Record<pgHitgroupData>;
+using pgCallableRecord = Record<pgEmptyData>;
+using pgExceptionRecord = Record<pgEmptyData>;
+template <uint32_t N>
+using pgSBT = ShaderBindingTable<pgRaygenRecord, pgMissRecord, pgHitgroupRecord, pgCallableRecord, pgExceptionRecord, N>;
 
 #endif // __CUDACC__
 

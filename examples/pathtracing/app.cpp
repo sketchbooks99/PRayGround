@@ -78,11 +78,11 @@ void App::setup()
     surfaces_module = pipeline.createModuleFromCudaFile(context, "cuda/surfaces.cu");
 
     // レンダリング結果を保存する用のBitmapを用意
-    result_bitmap.allocate(Bitmap::Format::RGBA, pgGetWidth(), pgGetHeight());
-    accum_bitmap.allocate(FloatBitmap::Format::RGBA, pgGetWidth(), pgGetHeight());
-    normal_bitmap.allocate(FloatBitmap::Format::RGB, pgGetWidth(), pgGetHeight());
-    albedo_bitmap.allocate(FloatBitmap::Format::RGB, pgGetWidth(), pgGetHeight());
-    depth_bitmap.allocate(FloatBitmap::Format::GRAY, pgGetWidth(), pgGetHeight());
+    result_bitmap.allocate(PixelFormat::RGBA, pgGetWidth(), pgGetHeight());
+    accum_bitmap.allocate(PixelFormat::RGBA, pgGetWidth(), pgGetHeight());
+    normal_bitmap.allocate(PixelFormat::RGB, pgGetWidth(), pgGetHeight());
+    albedo_bitmap.allocate(PixelFormat::RGB, pgGetWidth(), pgGetHeight());
+    depth_bitmap.allocate(PixelFormat::GRAY, pgGetWidth(), pgGetHeight());
 
     // LaunchParamsの設定
     params.width = result_bitmap.width();
@@ -157,8 +157,11 @@ void App::setup()
 
     // 環境マッピング (Sphere mapping) 用のテクスチャとデータ準備
     // 画像ファイルはリポジトリには含まれていないので、任意の画像データを設定してください
-     auto env_texture = make_shared<FloatBitmapTexture>("resources/image/dikhololo_night_4k.exr", bitmap_prg_id); 
+    // Preparing texture for environment mapping (sphere mapping)
+    // Since image file is not included in the repository, Please set your HDR image or use any other texture.
+    auto env_texture = make_shared<FloatBitmapTexture>("resources/image/sepulchral_chapel_basement_4k.exr", bitmap_prg_id); 
     //auto env_texture = make_shared<ConstantTexture>(make_float3(0.0f), constant_prg_id);
+
     env_texture->copyToDevice();
     env = EnvironmentEmitter{env_texture};
     env.copyToDevice();
@@ -295,8 +298,7 @@ void App::setup()
             .objToWorld = transform,
             .worldToObj = transform.inverse(), 
             .sample_id = sample_pdf_id,
-            .pdf_id = sample_pdf_id, 
-            .gas_handle = instance.handle()
+            .pdf_id = sample_pdf_id
         };
         area_emitter_infos.push_back(area_emitter_info);
     };
@@ -531,7 +533,7 @@ void App::draw()
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
     if (params.subframe_index == 4096)
-        result_bitmap.write(pathJoin(pgAppDir(), "pathtracing.jpg"));
+        result_bitmap.write(pgPathJoin(pgAppDir(), "pathtracing.jpg"));
 }
 
 // ----------------------------------------------------------------

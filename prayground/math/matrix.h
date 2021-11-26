@@ -76,6 +76,7 @@ public:
 
     static HOSTDEVICE Matrix           rotate(const float radians, const TfloatN& axis);
     static HOSTDEVICE Matrix<float, 4> translate(const float3& t);
+    static HOSTDEVICE Matrix<float, 4> translate(const float x, const float y, const float z);
     static HOSTDEVICE Matrix           scale(const TfloatN& s);
     static HOSTDEVICE Matrix           scale(const float s);
     static HOSTDEVICE Matrix<float, 4> shear(float a, float b, Axis axis);
@@ -479,6 +480,12 @@ INLINE HOSTDEVICE Matrix<float, 4> Matrix<float, 4>::translate(const float3 &t)
     data[1 * 4 + 3] = t.y;
     data[2 * 4 + 3] = t.z;
     return Matrix4f(data);
+}
+
+template <>
+INLINE HOSTDEVICE Matrix<float, 4> Matrix<float, 4>::translate(const float x, const float y, const float z)
+{
+    return Matrix4f::translate(make_float3(x, y, z));
 }
 
 template <typename T, unsigned int N>

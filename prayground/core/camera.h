@@ -8,34 +8,6 @@
 
 namespace prayground {
 
-namespace builtin {
-
-struct CameraData
-{
-    float3 origin;
-    float3 lookat;
-    float3 up;
-    float fov;
-    float aspect;
-    float nearclip;
-    float farclip;
-};
-
-struct LensCameraData
-{
-    float3 origin;
-    float3 lookat;
-    float3 up;
-    float fov;
-    float aspect;
-    float nearclip;
-    float farclip;
-    float aperture;
-    float focal_length;
-};
-
-}
-
 #ifndef __CUDACC__
 
 /**

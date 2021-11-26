@@ -8,25 +8,25 @@ namespace prayground {
 namespace fs = std::filesystem;
 
 namespace {
-
+    // Application directory
     fs::path app_dir = fs::path("");
 
 } // ::nonamed-namespace
 
 // -------------------------------------------------------------------------------
-std::optional<fs::path> findDataPath( const fs::path& relative_path )
+std::optional<fs::path> pgFindDataPath( const fs::path& relative_path )
 {
     std::array<std::string, 4> parent_dirs = 
     {
         pgAppDir().string(), 
-        pathJoin(pgAppDir(), "data").string(), 
+        pgPathJoin(pgAppDir(), "data").string(), 
         "",
         pgRootDir().string(),
     };
 
     for (auto &parent : parent_dirs)
     {
-        auto filepath = pathJoin(parent, relative_path);
+        auto filepath = pgPathJoin(parent, relative_path);
         if ( fs::exists(filepath) )
             return filepath;
     }
@@ -49,25 +49,25 @@ fs::path pgAppDir()
 }
 
 // -------------------------------------------------------------------------------
-std::string getExtension( const fs::path& filepath )
+std::string pgGetExtension( const fs::path& filepath )
 {
     return filepath.has_extension() ? filepath.extension().string() : "";
 }
 
-std::string getStem(const fs::path& filepath, bool is_dir)
+std::string pgGetStem(const fs::path& filepath, bool is_dir)
 {
     std::string dirpath = filepath.has_parent_path() ? filepath.parent_path().string() : "";
     std::string stem = filepath.stem().string();
     return is_dir ? dirpath + "/" + stem : stem;
 }
 
-std::filesystem::path getDir(const fs::path& filepath)
+std::filesystem::path pgGetDir(const fs::path& filepath)
 {
     return filepath.has_parent_path() ? filepath.parent_path() : "";
 }
 
 // -------------------------------------------------------------------------------
-void createDir( const fs::path& abs_path )
+void pgCreateDir( const fs::path& abs_path )
 {
     // Check if the directory is existed.
     if (fs::exists(abs_path)) {
@@ -80,7 +80,7 @@ void createDir( const fs::path& abs_path )
 }
 
 // -------------------------------------------------------------------------------
-void createDirs( const fs::path& abs_path )
+void pgCreateDirs( const fs::path& abs_path )
 {
     // Check if the directory is existed.
     if (fs::exists(abs_path)) {
@@ -92,10 +92,10 @@ void createDirs( const fs::path& abs_path )
 }
 
 // -------------------------------------------------------------------------------
-std::string getTextFromFile(const fs::path& relative_path)
+std::string pgGetTextFromFile(const fs::path& relative_path)
 {
-    std::optional<fs::path> filepath = findDataPath(relative_path);
-    ASSERT(filepath, "prayground::getTextFromFile(): A text file with the path '" + relative_path.string() + "' is not found.");
+    std::optional<fs::path> filepath = pgFindDataPath(relative_path);
+    ASSERT(filepath, "A text file with the path '" + relative_path.string() + "' is not found.");
 
     std::ifstream file_stream; 
     try

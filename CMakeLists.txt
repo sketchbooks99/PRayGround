@@ -376,20 +376,34 @@ add_subdirectory(prayground/ext)
 # PRAYGROUND library
 add_subdirectory(prayground)
 
-# Example apps
-add_subdirectory(examples/single_gas)
-add_subdirectory(examples/dynamic_update)
-add_subdirectory(examples/motion_blur)
-add_subdirectory(examples/pathtracing)
-add_subdirectory(examples/objscene)
-add_subdirectory(examples/rayTracingNextWeek)
-add_subdirectory(examples/rayTracingRestOfYourLife)
-add_subdirectory(examples/denoiser)
 
-# Executable apps
+
+################################################################
+# Example apps 
+# 
+# Please uncomment the target you'd like to build
+################################################################
+# add_subdirectory(examples/single_gas)
+# add_subdirectory(examples/dynamic_update)
+# add_subdirectory(examples/motion_blur)
+# add_subdirectory(examples/pathtracing)
+# add_subdirectory(examples/objscene)
+# add_subdirectory(examples/rayTracingNextWeek)
+# add_subdirectory(examples/rayTracingRestOfYourLife)
+# add_subdirectory(examples/denoiser)
+
+################################################################
+# Unit test
+# 
+# Please uncomment the target you'd like to build
+################################################################
 add_subdirectory(apps/empty_app)
 
+################################################################
 # Unit test
+# 
+# Please uncomment the target you'd like to build
+################################################################
 # add_subdirectory(tests/math)
 add_subdirectory(tests/core)
 

@@ -103,7 +103,7 @@ void Camera::enableTracking(std::shared_ptr<Window> window)
 
 void Camera::disableTracking()
 {
-    TODO_MESSAGE();
+    UNIMPLEMENTED();
 }
 
 void Camera::UVWFrame(float3& U, float3& V, float3& W) const

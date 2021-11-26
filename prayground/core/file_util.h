@@ -21,11 +21,17 @@ inline std::filesystem::path pgPathJoin(
     return path;
 }
 
+// Check if the file specified by relative path exists. 
+// Parent directories to seek the file are pgRootDir(), pgAppDir(), pgAppDir()/data and <path/to/app.exe>
 std::optional<std::filesystem::path> pgFindDataPath( const std::filesystem::path& relative_path );
 
+// Return absolute path to root directory of PRayGround
 std::filesystem::path pgRootDir();
 
+// Set absolute path to app directory
 void pgSetAppDir(const std::filesystem::path& dir);
+// Get absolute path to the app directory
+// This return the empty path unless to set the path to app using pgSetAppDir(APP_DIR). 
 std::filesystem::path pgAppDir();
 
 /// @todo: Add 'pg' prefix to get~~() functions
@@ -36,12 +42,13 @@ std::string pgGetStem(const std::filesystem::path& filepath, bool is_dir = true)
 
 std::filesystem::path pgGetDir(const std::filesystem::path& filepath);
 
-// Create a single directory.
+// Create a single directory
 void pgCreateDir( const std::filesystem::path& abs_path );
 
-// Create directories recursively.
+// Create directories recursively
 void pgCreateDirs( const std::filesystem::path& abs_path );
 
+// Extract text data from the file
 std::string pgGetTextFromFile(const std::filesystem::path& filepath);
 
 }

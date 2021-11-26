@@ -99,7 +99,8 @@ void Bitmap_<PixelType>::allocate(PixelFormat format, int width, int height)
     m_data = std::make_unique<PixelType[]>(m_channels * m_width * m_height);
     memcpy(m_data.get(), zero_arr.data(), m_channels * m_width * m_height * sizeof(PixelType));
 
-    m_gltex = prepareGL(m_shader);
+    if (pgWindowInitialized())
+        m_gltex = prepareGL(m_shader);
 }
 
 // --------------------------------------------------------------------
@@ -141,7 +142,7 @@ void Bitmap_<PixelType>::load(const std::filesystem::path& filename, PixelFormat
 template <typename PixelType>
 void Bitmap_<PixelType>::load(const std::filesystem::path& filename)
 {
-    Message(MSG_WARNING, "prayground::Bitmap_<PixelType>::load(): This function is only implemented for when PixelType is unsigned char or float.");
+    UNIMPLEMENTED();
 }
 
 // --------------------------------------------------------------------
@@ -149,7 +150,7 @@ template <>
 void Bitmap_<unsigned char>::load(const std::filesystem::path& filename)
 {
     std::optional<std::filesystem::path> filepath = pgFindDataPath(filename);
-    ASSERT(filepath, "prayground::Bitmap_<unsigned char>::load(): The input file for bitmap '" + filename.string() + "' is not found.");
+    ASSERT(filepath, "The input file for bitmap '" + filename.string() + "' is not found.");
 
     auto ext = pgGetExtension(filepath.value());
 
@@ -159,9 +160,9 @@ void Bitmap_<unsigned char>::load(const std::filesystem::path& filename)
         Message(MSG_NORMAL, "Loading JPG file '" + filepath.value().string() + "' ...");
     else if (ext == ".bmp" || ext == ".BMP")
         Message(MSG_NORMAL, "Loading BMP file '" + filepath.value().string() + "' ...");
-    else if (ext == ".exr" || ext == ".EXR")
+    else if (ext == ".exr" || ext == ".EXR" || ext == ".hdr" || ext == ".HDR")
     {
-        Message(MSG_FATAL, "prayground::Bitmap_<unsigned char>::load(): EXR format can be loaded only in BitmapFloat.");
+        Message(MSG_FATAL, "EXR format can be loaded only in Bitmap<float>.");
         return;
     }
     uint8_t* raw_data;
@@ -171,7 +172,8 @@ void Bitmap_<unsigned char>::load(const std::filesystem::path& filename)
     m_channels = static_cast<int>(m_format);
     m_data.reset(raw_data);
 
-    m_gltex = prepareGL(m_shader);
+    if (pgWindowInitialized())
+        m_gltex = prepareGL(m_shader);
 }
 
 // --------------------------------------------------------------------
@@ -183,25 +185,36 @@ void Bitmap_<float>::load(const std::filesystem::path& filename)
 
     auto ext = pgGetExtension(filepath.value());
 
-    // EXR 形式の場合はそのまま読み込む
-    if (ext == ".exr" || ext == ".EXR")
+    // EXR/HDR 形式の場合はそのまま読み込む
+    if (ext == ".exr" || ext == ".EXR" || ext == ".hdr" || ext == ".HDR")
     {
-        Message(MSG_NORMAL, "Loading EXR file '" + filepath.value().string() + "' ...");
+        std::string kind = ext == ".exr" || ext == ".EXR" ? "EXR" : "HDR";
+        Message(MSG_NORMAL, "Loading kind file '" + filepath.value().string() + "' ...");
         m_format = m_format == PixelFormat::NONE ? PixelFormat::RGBA : m_format;
 
         const char* err = nullptr;
         float* raw_data;
-        int result = LoadEXR(&raw_data, &m_width, &m_height, filepath.value().string().c_str(), &err);
-        m_data.reset(raw_data);
-        m_channels = static_cast<int>(m_format);
-        if (result != TINYEXR_SUCCESS)
+
+        if (kind == "EXR")
         {
-            if (err)
+            int result = LoadEXR(&raw_data, &m_width, &m_height, filepath.value().string().c_str(), &err);
+            m_data.reset(raw_data);
+            m_channels = static_cast<int>(m_format);
+            if (result != TINYEXR_SUCCESS)
             {
-                Message(MSG_FATAL, "prayground::Bitmap_<float>::load():", err);
-                FreeEXRErrorMessage(err);
-                return;
+                if (err)
+                {
+                    Message(MSG_FATAL, err);
+                    FreeEXRErrorMessage(err);
+                    return;
+                }
             }
+        }
+        else if (kind == "HDR")
+        {
+            raw_data = stbi_loadf(filepath.value().string().c_str(), &m_width, &m_height, &m_channels, static_cast<int>(m_format));
+            m_channels = static_cast<int>(m_format);
+            m_data.reset(raw_data);
         }
     }
     // PNG/JPG/BMP 形式の場合は uint8_t* [0, 255] -> float* [0, 1] に変換 
@@ -229,47 +242,32 @@ void Bitmap_<float>::load(const std::filesystem::path& filename)
         stbi_image_free(raw_data);
     }
 
-    m_gltex = prepareGL(m_shader);
+    if (pgWindowInitialized())
+        m_gltex = prepareGL(m_shader);
 }
 
 // --------------------------------------------------------------------
 template <typename PixelType>
-void Bitmap_<PixelType>::write(const std::filesystem::path& filepath, int quality) const
+void Bitmap_<PixelType>::write(const std::filesystem::path& filepath, int quality) const 
+{
+    UNIMPLEMENTED();
+}
+
+template <>
+void Bitmap_<unsigned char>::write(const std::filesystem::path& filepath, int quality) const 
 {
     std::string ext = pgGetExtension(filepath);
 
-    unsigned char* data = new unsigned char[m_width * m_height * m_channels];
-    if constexpr (std::is_same_v<PixelType, unsigned char>)
+    bool supported = ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" || ext == ".bmp" || ext == ".BMP";
+    if (!supported)
     {
-        memcpy(data, m_data.get(), m_width * m_height * m_channels);
+        Message(MSG_FATAL, "This extension '" + ext + "' is not suppoted with Bitmap_<unsigned char>");
+        return;
     }
-    // Tの型がfloatの場合は中身を float [0.0f, 1.0f] -> unsigned char [0, 255] に変換する
-    else 
-    {
-        for (int i=0; i<m_width; i++)
-        {
-            for (int j=0; j<m_height; j++)
-            {
-                if constexpr (std::is_same_v<PixelType, float>)
-                {
-                    int idx = (i * m_height + j) * m_channels;
-                    float4 fcolor{0.0f, 0.0f, 0.0f, 1.0f};
-                    memcpy(&fcolor, &m_data[idx], sizeof(float) * m_channels);
-                    uchar4 ucolor = make_color(fcolor, false);
-                    memcpy(&data[idx], &ucolor, m_channels);
-                }
-                else
-                {
-                    for (int c = 0; c < m_channels; c++)
-                    {
-                        int idx = (i * m_height + j) * m_channels + c;
-                        data[idx] = static_cast<unsigned char>(m_data[idx]);
-                    }
-                }
-            }
-        }
-    }
-    
+
+    uint8_t* data = new uint8_t[m_width * m_height * m_channels];
+    memcpy(data, m_data.get(), m_width * m_height * m_channels);
+
     if (ext == ".png" || ext == ".PNG")
     {
         stbi_write_png(filepath.string().c_str(), m_width, m_height, m_channels, data, m_width * m_channels);
@@ -285,17 +283,77 @@ void Bitmap_<PixelType>::write(const std::filesystem::path& filepath, int qualit
         stbi_write_bmp(filepath.string().c_str(), m_width, m_height, m_channels, data);
         delete[] data;
     }
-    else if (ext == ".exr" || ext == ".EXR")
+
+    Message(MSG_NORMAL, "Wrote bitmap to '" + filepath.string() + "'");
+}
+
+template <> 
+void Bitmap_<float>::write(const std::filesystem::path& filepath, int quality) const 
+{
+    std::string ext = pgGetExtension(filepath);
+    
+    bool supported = ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" || ext == ".bmp" || ext == ".BMP" || 
+                     ext == ".exr" || ext == ".EXR" || ext == ".hdr" || ext == ".HDR";
+
+    if (!supported)
     {
-        Message(MSG_WARNING, "Sorry! Bitmap doesn't support to write out image with .exr format currently.");
+        Message(MSG_FATAL, "This extension '" + ext + "' is not suppoted with Bitmap_<unsigned char>");
         return;
     }
-    else 
+
+    // Copy bitmap data to temporal pointer
+    float* data = new float[m_width * m_height * m_channels];
+    memcpy(data, m_data.get(), m_width * m_height * m_channels * sizeof(float));
+
+    // PNG/JPG/BMP の場合は float [0, 1] -> uint8_t [0, 255] に変換する
+    if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" || ext == ".bmp" || ext == ".BMP") 
     {
-        Message(MSG_WARNING, "This format is not writable with bitmap.");
-        return;
+        uint8_t* uc_data = new uint8_t[m_width * m_height * m_channels];
+        for (int i=0; i<m_width; i++)
+        {
+            for (int j=0; j<m_height; j++)
+            {
+                int idx = (i * m_height + j) * m_channels;
+
+                // Convert float data to uint8_t to write image using stb_image
+                float4 tmp{0.0f, 0.0f, 0.0f, 1.0f};
+                memcpy(&tmp, &data[idx], sizeof(float)*m_channels);
+                uchar4 ucolor = make_color(tmp, false);
+                memcpy(&uc_data[idx], &ucolor, m_channels);
+            }
+        }
+
+        if (ext == ".png" || ext == ".PNG")
+            stbi_write_png(filepath.string().c_str(), m_width, m_height, m_channels, uc_data, m_width * m_channels);
+        else if (ext == ".jpg" || ext == ".JPG")
+            stbi_write_jpg(filepath.string().c_str(), m_width, m_height, m_channels, uc_data, quality);
+        else if (ext == ".bmp" || ext == ".BMP")
+            stbi_write_bmp(filepath.string().c_str(), m_width, m_height, m_channels, uc_data);
+
+        delete[] uc_data;
+        delete[] data;
     }
-    Message(MSG_NORMAL, "prayground::Bitmap::write(): Wrote bitmap to '" + filepath.string() + "'");
+    else // EXR or HDR
+    {
+        if (ext == ".exr" || ext == ".EXR")
+        {
+            const char* err;
+            int ret = SaveEXR(data, m_width, m_height, m_channels, /* save_as_fp16 = */ 0, filepath.string().c_str(), &err);
+            if (ret != TINYEXR_SUCCESS)
+            {
+                Message(MSG_FATAL, "Failed to write EXR:", err);
+                delete[] data;
+                return;
+            }
+            delete[] data;
+        }
+        else // HDR 
+        {
+            stbi_write_hdr(filepath.string().c_str(), m_width, m_height, m_channels, data);
+            delete[] data;
+        }
+    }
+    Message(MSG_NORMAL, "Wrote bitmap to '" + filepath.string() + "'");
 }
 
 // --------------------------------------------------------------------

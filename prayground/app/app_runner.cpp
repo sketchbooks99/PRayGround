@@ -4,61 +4,66 @@
 namespace prayground {
 
 namespace { // nonamed-namespace
-    std::unique_ptr<AppRunner> current_runner;
-    int32_t current_frame{ 0 };
-    float start_time;
-    float frame_rate = 60.0f;
-    bool is_fix_fps = false;
+    struct RunnerState
+    {
+        std::unique_ptr<AppRunner> runner;
+        int32_t current_frame;
+        float start_time;
+        float frame_rate = 60.0f;
+        bool is_fix_fps = false;
+        bool is_window_initialized = false;
+    };
+    RunnerState g_state;
 } // ::nonamed-namespace
 
 float pgGetMouseX()
 {
-    return current_runner->window()->events().inputStates.mousePosition.x;
+    return g_state.runner->window()->events().inputStates.mousePosition.x;
 }
 
 float pgGetMouseY()
 {
-    return current_runner->window()->events().inputStates.mousePosition.y;
+    return g_state.runner->window()->events().inputStates.mousePosition.y;
 }
 
 float pgGetPreviousMouseX()
 {
-    return current_runner->window()->events().inputStates.mousePreviousPosition.x;
+    return g_state.runner->window()->events().inputStates.mousePreviousPosition.x;
 }
 
 float pgGetPreviousMouseY()
 {
-    return current_runner->window()->events().inputStates.mousePreviousPosition.y;
+    return g_state.runner->window()->events().inputStates.mousePreviousPosition.y;
 }
 
 float2 pgGetMousePosition()
 {
-    return current_runner->window()->events().inputStates.mousePosition;
+    return g_state.runner->window()->events().inputStates.mousePosition;
 }
 
 float2  pgGetPreviousMousePosition()
 {
-    return current_runner->window()->events().inputStates.mousePreviousPosition;
+    return g_state.runner->window()->events().inputStates.mousePreviousPosition;
 }
 
 int32_t pgGetMouseButton()
 {
-    return current_runner->window()->events().inputStates.mouseButton;
+    return g_state.runner->window()->events().inputStates.mouseButton;
 }
 
 int32_t pgGetWidth()
 {
-    return current_runner->window()->width();
+    return g_state.runner->window()->width();
 }
 
 int32_t pgGetHeight()
 {
-    return current_runner->window()->height();
+    return g_state.runner->window()->height();
 }
 
 int32_t pgGetFrame() 
 {
-    return current_frame;
+    return g_state.current_frame;
 }
 
 float pgGetFrameRate()
@@ -68,34 +73,39 @@ float pgGetFrameRate()
 
 void pgSetFrameRate(const float fps)
 {
-    is_fix_fps = true;
-    frame_rate = fps;
+    g_state.is_fix_fps = true;
+    g_state.frame_rate = fps;
 }
 
 float pgGetElapsedTimef()
 {
-    return glfwGetTime() - start_time;
+    return glfwGetTime() - g_state.start_time;
 }
 
 void pgSetWindowName(const std::string& name)
 {
-    current_runner->window()->setName(name);
+    g_state.runner->window()->setName(name);
 }
 
 std::shared_ptr<Window> pgGetCurrentWindow()
 {
-    return current_runner->window();
+    return g_state.runner->window();
 }
 
 void pgRunApp(const std::shared_ptr<BaseApp>& app, const std::shared_ptr<Window>& window)
 {
-    current_runner = std::make_unique<AppRunner>(app, window);
-    current_runner->run();
+    g_state.runner = std::make_unique<AppRunner>(app, window);
+    g_state.runner->run();
+}
+
+bool pgWindowInitialized()
+{
+    return g_state.is_window_initialized;
 }
 
 void pgExit()
 {
-    current_runner->window()->notifyShouldClose();
+    g_state.runner->window()->notifyShouldClose();
 }
 
 // AppRunner ------------------------------------------------
@@ -109,6 +119,8 @@ AppRunner::AppRunner(const std::shared_ptr<BaseApp>& app, const std::shared_ptr<
 void AppRunner::run() const
 {
     m_window->setup();
+    g_state.is_window_initialized = true;
+
     m_app->setup();
 
     // Register the listener functions
@@ -122,7 +134,7 @@ void AppRunner::run() const
 
     m_window->setVisible(true);
 
-    start_time = glfwGetTime();
+    g_state.start_time = glfwGetTime();
     loop();
 }
 
@@ -137,12 +149,12 @@ void AppRunner::loop() const
         m_app->draw();
         m_window->swap();
 
-        current_frame++;
-        while (glfwGetTime() < lasttime + 1.0f / frame_rate && is_fix_fps)
+        g_state.current_frame++;
+        while (glfwGetTime() < lasttime + 1.0f / g_state.frame_rate && g_state.is_fix_fps)
         {
 
         }
-        lasttime += 1.0f / frame_rate;
+        lasttime += 1.0f / g_state.frame_rate;
     }
     close();
 }

@@ -1,5 +1,6 @@
 PRAYGROUND_add_executalbe(core target_name
-    main.cpp
+    # main.cpp
+    load_and_write_hdr.cpp
 )
 
 target_compile_definitions(

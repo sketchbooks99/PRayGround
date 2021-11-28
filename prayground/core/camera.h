@@ -23,21 +23,10 @@ public:
         Diagonal
     };
 
-    Camera() : 
-        m_origin(make_float3(0.0f, 0.0f, -1.0f)), 
-        m_lookat(make_float3(0.0f)),
-        m_up(make_float3(0.0f, 1.0f, 0.0f)),
-        m_fov(40.0f), 
-        m_aspect(1.0f),
-        m_nearclip(0.01f),
-        m_farclip(10000.0f),
-        m_fovaxis(FovAxis::Horizontal) {}
+    Camera();
 
-    Camera(const float3& origin, const float3& lookat, const float3& up, float fov, float aspect, 
-        float nearclip = 0.01f, float farclip = 10000.0f, FovAxis fovaxis=FovAxis::Horizontal)
-    : m_origin(origin), m_lookat(lookat), m_up(up), m_fov(fov), m_aspect(aspect) 
-    , m_nearclip(nearclip), m_farclip(farclip), m_fovaxis(fovaxis) 
-    {}
+    Camera(const float3& origin, const float3& lookat, const float3& up, float fov, float aspect,
+        float nearclip = 0.01f, float farclip = 10000.0f, FovAxis fovaxis = FovAxis::Horizontal);
 
     float3 direction() const;
 
@@ -94,23 +83,25 @@ private:
  */
 class LensCamera final : public Camera {
 public:
-    LensCamera() : Camera(), m_aperture(0.01f), m_focal_length(100.0) {}
+    LensCamera() : Camera(), m_aperture(0.01f), m_focus_distance(100.0) {}
     LensCamera(
         const float3& origin, const float3& lookat, const float3& up, float fov, float aspect, 
         float nearclip = 0.01f, float farclip = 10000.0f, 
-        float aperture = 0.01f, float focal_length = 100.0f,
+        float aperture = 0.01f, float focus_dist = 100.0f,
         FovAxis fovaxis=FovAxis::Horizontal)
-    : Camera(origin, lookat, up, fov, aspect, nearclip, farclip, fovaxis), m_aperture(aperture), m_focal_length(focal_length)
+    : Camera(origin, lookat, up, fov, aspect, nearclip, farclip, fovaxis), m_aperture(aperture), m_focus_distance(focus_dist)
     {}
 
     const float& aperture() const { return m_aperture; }
     void setAperture( const float& aperture ) { m_aperture = aperture; }
 
-    const float& focalLength() const { return m_focal_length; }
-    void setFocalLength( const float& focal_length ) { m_focal_length = focal_length; }
+    const float& focusDistance() const { return m_focus_distance; }
+    void setFocusDistance( const float& focus_dist ) { m_focus_distance = focus_dist; }
+
+
 private:
     float m_aperture;
-    float m_focal_length;
+    float m_focus_distance;
 };
 
 #endif // __CUDACC__

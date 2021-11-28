@@ -12,6 +12,7 @@ float   pgGetPreviousMouseY();
 float2  pgGetMousePosition();
 float2  pgGetPreviousMousePosition();
 int32_t pgGetMouseButton();
+int32_t pgGetKey();
 int32_t pgGetWidth();
 int32_t pgGetHeight();
 int32_t pgGetFrame();

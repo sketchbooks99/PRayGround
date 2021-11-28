@@ -107,6 +107,18 @@ int32_t BitmapTexture_<PixelType>::height() const
     return m_bitmap.height();
 }
 
+template<typename PixelType>
+void BitmapTexture_<PixelType>::setTextureDesc(const cudaTextureDesc& desc)
+{
+    m_tex_desc = desc;
+}
+
+template<typename PixelType>
+cudaTextureDesc BitmapTexture_<PixelType>::textureDesc() const
+{
+    return m_tex_desc;
+}
+
 template class BitmapTexture_<float>;
 template class BitmapTexture_<unsigned char>;
 

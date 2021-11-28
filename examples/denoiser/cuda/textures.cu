@@ -13,11 +13,11 @@ extern "C" __device__ float4 __direct_callable__bitmap(SurfaceInteraction* si, v
 
 extern "C" __device__ float4 __direct_callable__constant(SurfaceInteraction* si, void* tex_data) {
     const ConstantTextureData* constant = reinterpret_cast<ConstantTextureData*>(tex_data);
-    return make_float4(constant->color, 1.0f);
+    return constant->color;
 }
 
 extern "C" __device__ float4 __direct_callable__checker(SurfaceInteraction* si, void* tex_data) {
     const CheckerTextureData* checker = reinterpret_cast<CheckerTextureData*>(tex_data);
     const bool is_odd = sinf(si->uv.x*M_PIf*checker->scale) * sinf(si->uv.y*M_PIf*checker->scale) < 0;
-    return is_odd ? make_float4(checker->color1, 1.0f) : make_float4(checker->color2, 1.0f);
+    return is_odd ? checker->color1 : checker->color2;
 }

@@ -343,10 +343,10 @@ void App::setup()
         // Shape
         auto plane_light = make_shared<Plane>(make_float2(213.0f, 227.0f), make_float2(343.0f, 332.0f));
         // Texture
-        auto light_white = make_shared<ConstantTexture>(make_float3(1.0f), constant_prg_id);
+        auto light_white = make_shared<ConstantTexture>(make_float3(0.9f, 0.9f, 0.6f), constant_prg_id);
         light_white->copyToDevice();
         // Area emitter
-        auto plane_area_emitter = AreaEmitter(light_white, 15.0f);
+        auto plane_area_emitter = AreaEmitter(light_white, 20.0f);
         Matrix4f transform = Matrix4f::translate({0.0f, 554.0f, 0.0f});
         setupAreaEmitter(plane_prg, plane_light, plane_area_emitter, transform, plane_sample_pdf_prg_id);
     }
@@ -435,8 +435,8 @@ void App::draw()
 
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-    // if (params.subframe_index == 4096)
-    //     result_bitmap.write(pgPathJoin(pgAppDir(), "rtRestOfYourLife.jpg"));
+    if (params.subframe_index == 4096)
+        result_bitmap.write(pgPathJoin(pgAppDir(), "rtRestOfYourLife.jpg"));
 }
 
 // ----------------------------------------------------------------

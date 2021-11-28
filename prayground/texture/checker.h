@@ -4,8 +4,8 @@
 namespace prayground {
 
 struct CheckerTextureData {
-    float3 color1;
-    float3 color2;
+    float4 color1;
+    float4 color2;
     float scale;
 };
 
@@ -13,19 +13,22 @@ struct CheckerTextureData {
 class CheckerTexture final : public Texture {
 public:
     CheckerTexture(const float3& c1, const float3& c2, float s, int prg_id);
+    CheckerTexture(const float4& c1, const float4& c2, float s, int prg_id);
 
     void setColor1(const float3& c1);
-    float3 color1() const;
+    void setColor1(const float4& c1);
+    float4 color1() const;
 
     void setColor2(const float3& c2);
-    float3 color2() const;
+    void setColor2(const float4& c2);
+    float4 color2() const;
 
     void setScale(const float s);
     float scale() const;
 
     void copyToDevice() override;
 private:
-    float3 m_color1, m_color2;
+    float4 m_color1, m_color2;
     float m_scale;
 }; 
 

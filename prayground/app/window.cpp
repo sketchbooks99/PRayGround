@@ -1,4 +1,5 @@
 #include "window.h"
+#include <prayground/app/input.h>
 
 namespace prayground {
 
@@ -235,22 +236,23 @@ void Window::_cursorPosCallback(GLFWwindow* window, double xpos, double ypos)
 void Window::_keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     Window* current_window = _getCurrent(window);
-    
-    current_window->events().inputStates.key = key;
 
     if (action == GLFW_PRESS)
     {
+        current_window->events().inputStates.key = key;
         current_window->events().inputStates.keyButtonPressed = true;
         current_window->events().keyPressed.invoke(key);
     }
     else if (action == GLFW_REPEAT)
     {
+        current_window->events().inputStates.key = key;
         /** Not implemented */
     }
     else if (action == GLFW_RELEASE)
     {
         current_window->events().inputStates.keyButtonPressed = false;
         current_window->events().keyReleased.invoke(key);
+        current_window->events().inputStates.key = +(Key::Unknown);
     }
 }
 

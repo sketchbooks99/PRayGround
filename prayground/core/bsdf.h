@@ -35,6 +35,13 @@ HOSTDEVICE INLINE float3 randomSampleToSphere(unsigned int& seed, const float ra
     return make_float3(x, y, z);
 }
 
+HOSTDEVICE INLINE float3 randomSampleInUnitDisk(unsigned int& seed)
+{
+    const float theta = rnd(seed) * math::two_pi;
+    const float r = rnd(seed);
+    return make_float3(r * cos(theta), r * sin(theta), 0);
+}
+
 HOSTDEVICE INLINE float3 randomSampleHemisphere(unsigned int& seed)
 {
     float a = rnd(seed) * 2.0f * math::pi;
@@ -154,6 +161,11 @@ HOSTDEVICE INLINE float GTR2(float NdotH, float a)
 HOSTDEVICE INLINE float GTR2_aniso(float NdotH, float HdotX, float HdotY, float ax, float ay)
 {
     return 1.0f / ( math::pi * ax * ay * math::sqr( math::sqr(HdotX / ax) + math::sqr(HdotY / ay) + NdotH * NdotH) );
+}
+
+HOSTDEVICE INLINE float smithG_GGX_aniso(float NdotV, float VdotX, float VdotY, float ax, float ay)
+{
+    return 1 / (NdotV + sqrt(math::sqr(VdotX * ax) + math::sqr(VdotY * ay) + math::sqr(NdotV)));
 }
 
 /**

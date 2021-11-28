@@ -51,6 +51,17 @@ struct SurfaceInfo
     SurfaceType type;
 };
 
+/// Shading frame 
+/// @todo Easy function to transform shading from object to world space, and vice versa.
+struct Shading
+{
+    float3 n; 
+    float3 dpdu; 
+    float3 dpdv; 
+    float3 dndu;
+    float3 dndv;
+};
+
 /// @note Currently \c spectrum is RGB representation, not spectrum. 
 struct SurfaceInteraction {
     /** Position of intersection point in world coordinates. */
@@ -79,6 +90,10 @@ struct SurfaceInteraction {
     /** Partial derivatives on intersection point */
     float3 dpdu;
     float3 dpdv;
+
+    /** @todo 
+    * Shading shading;
+    */
 
     unsigned int seed;
 

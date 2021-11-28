@@ -221,7 +221,7 @@ extern "C" __device__ float3 __continuation_callable__bsdf_disney(SurfaceInterac
     const float3 f_clearcoat = make_float3( 0.25f * disney->clearcoat * (Fcc * Dcc * Gcc) / (4.0f * NdotV * NdotL) ); 
 
     const float3 out = ( 1.0f - disney->metallic ) * ( lerp( f_diffuse, f_subsurface, disney->subsurface ) + f_sheen ) + f_specular + f_clearcoat;
-    return out * clamp(NdotL, 0.0f, 1.0f) / math::pi;
+    return out * clamp(NdotL, 0.0f, 1.0f);
 }
 
 /**
@@ -251,7 +251,7 @@ extern "C" __device__ float __direct_callable__pdf_disney(SurfaceInteraction* si
     const float pdf_Ds = GTR2(NdotH, alpha);
     const float pdf_Dcc = GTR1(NdotH, alpha_cc);
     const float ratio = 1.0f / (1.0f + disney->clearcoat);
-    const float pdf_specular = (pdf_Dcc + ratio * (pdf_Ds - pdf_Dcc)) / (4.0f * NdotH);
+    const float pdf_specular = (pdf_Dcc + ratio * (pdf_Ds - pdf_Dcc)) / (4.0f * NdotL * NdotV);
     const float pdf_diffuse = NdotL / math::pi;
 
     return diffuse_ratio * pdf_diffuse + specular_ratio * pdf_specular;

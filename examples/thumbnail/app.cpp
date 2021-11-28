@@ -324,7 +324,7 @@ void App::setup()
     materials.emplace("wooden_disney", wooden_disney);
     
     lights.emplace("logo1", AreaEmitter{ textures.at("orange"), 150.0f, true });
-    lights.emplace("logo2", AreaEmitter{ textures.at("white"), 300.0f, true });
+    lights.emplace("logo2", AreaEmitter{ textures.at("white"),  300.0f, true });
 
     shapes.emplace("plane", new Plane(make_float2(-0.5f), make_float2(0.5f)));
     shapes.emplace("sphere", new Sphere(make_float3(0.0f), 1.0f));
@@ -532,8 +532,10 @@ void App::draw()
 
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-    if (params.subframe_index == 4096)
+    if (params.subframe_index == 20000) {
         result_bitmap.write(pgPathJoin(pgAppDir(), "thumbnail.jpg"));
+        pgExit();
+    }
 }
 
 // ----------------------------------------------------------------

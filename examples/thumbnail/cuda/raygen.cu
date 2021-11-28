@@ -21,7 +21,6 @@ static __forceinline__ __device__ void getLensCameraRay(const CameraData& camera
     const float viewport_height = h;
     const float viewport_width = camera.aspect * viewport_height;
 
-    //const float wlen = length(camera.origin - camera.lookat);
     float3 horizontal = camera.focus_distance * normalize(camera.U) * viewport_width;
     float3 vertical = camera.focus_distance * normalize(camera.V) * viewport_height;
     float3 center = camera.origin - camera.focus_distance * normalize(-camera.W);
@@ -156,65 +155,65 @@ extern "C" __device__ void __raygen__lens()
                 bsdf_pdf = fmaxf(bsdf_pdf, math::eps);
 
                 throughput *= bsdf_val / bsdf_pdf;
-                // unsigned int seed = si.seed;
-                // AreaEmitterInfo light;
-                // if (params.num_lights > 0) {
-                //     const int light_id = rnd_int(seed, 0, params.num_lights-1);
-                //     light = params.lights[light_id];
-                // }
+                //unsigned int seed = si.seed;
+                //AreaEmitterInfo light;
+                //if (params.num_lights > 0) {
+                //    const int light_id = rnd_int(seed, 0, params.num_lights-1);
+                //    light = params.lights[light_id];
+                //}
 
-                // const float weight = 1.0f / (params.num_lights + 1);
+                //const float weight = 1.0f / (params.num_lights + 1);
 
-                // float pdf_val = 0.0f;
+                //float pdf_val = 0.0f;
 
-                // // Importance sampling according to the BSDF
-                // optixDirectCall<void, SurfaceInteraction*, void*>(
-                //     si.surface_info.sample_id,
-                //     &si,
-                //     si.surface_info.data
-                //     );
+                //// Importance sampling according to the BSDF
+                //optixDirectCall<void, SurfaceInteraction*, void*>(
+                //    si.surface_info.sample_id,
+                //    &si,
+                //    si.surface_info.data
+                //    );
 
-                // if (rnd(seed) < weight * params.num_lights) {
-                //     // Light sampling
-                //     float3 to_light = optixDirectCall<float3, AreaEmitterInfo, SurfaceInteraction*>(
-                //         light.sample_id,
-                //         light,
-                //         &si
-                //         );
-                //     si.wo = normalize(to_light);
-                // }
+                //if (rnd(seed) < weight * params.num_lights) {
+                //    // Light sampling
+                //    float3 to_light = optixDirectCall<float3, AreaEmitterInfo, SurfaceInteraction*>(
+                //        light.sample_id,
+                //        light,
+                //        &si
+                //        );
+                //    si.wo = normalize(to_light);
+                //}
 
-                // for (int i = 0; i < params.num_lights; i++)
-                // {
-                //     // Evaluate PDF of area emitter
-                //     float light_pdf = optixContinuationCall<float, AreaEmitterInfo, const float3&, const float3&>(
-                //         params.lights[i].pdf_id,
-                //         params.lights[i],
-                //         si.p,
-                //         si.wo
-                //     );
-                //     pdf_val += weight * light_pdf;
-                // }
+                //for (int i = 0; i < params.num_lights; i++)
+                //{
+                //    // Evaluate PDF of area emitter
+                //    float light_pdf = optixContinuationCall<float, AreaEmitterInfo, const float3&, const float3&>(
+                //        params.lights[i].pdf_id,
+                //        params.lights[i],
+                //        si.p,
+                //        si.wo
+                //    );
+                //    pdf_val += weight * light_pdf;
+                //}
 
-                // // Evaluate PDF depends on BSDF
-                // float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*>(
-                //     si.surface_info.pdf_id,
-                //     &si,
-                //     si.surface_info.data
-                // );
+                //// Evaluate PDF depends on BSDF
+                //float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*>(
+                //    si.surface_info.pdf_id,
+                //    &si,
+                //    si.surface_info.data
+                //);
 
-                // pdf_val += bsdf_pdf;
+                //pdf_val += bsdf_pdf;
 
-                // // Evaluate BSDF
-                // float3 bsdf_val = optixContinuationCall<float3, SurfaceInteraction*, void*>(
-                //     si.surface_info.bsdf_id,
-                //     &si,
-                //     si.surface_info.data
-                //     );
+                //// Evaluate BSDF
+                //float3 bsdf_val = optixContinuationCall<float3, SurfaceInteraction*, void*>(
+                //    si.surface_info.bsdf_id,
+                //    &si,
+                //    si.surface_info.data
+                //    );
 
-                // pdf_val = fmaxf(pdf_val, math::eps);
-                
-                // throughput *= bsdf_val / pdf_val;
+                //pdf_val = fmaxf(pdf_val, math::eps);
+                //
+                //throughput *= bsdf_val / pdf_val;
             }
 
             // Make tmax large except for when the primary ray

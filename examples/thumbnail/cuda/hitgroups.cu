@@ -31,7 +31,8 @@ static INLINE DEVICE float2 getBoxUV(const float3& p, const float3& min, const f
     return clamp(uv, 0.0f, 1.0f);
 }
 
-static INLINE DEVICE bool hitBox(
+// Return hit axis
+static INLINE DEVICE int hitBox(
     const BoxData* box_data,
     const float3& o, const float3& v,
     const float tmin, const float tmax,
@@ -65,7 +66,7 @@ static INLINE DEVICE bool hitBox(
         _tmax = fminf(t1, _tmax);
 
         if (_tmax < _tmin)
-            return false;
+            return -1;
     }
 
     float3 center = (min + max) / 2.0f;
@@ -80,7 +81,7 @@ static INLINE DEVICE bool hitBox(
         si.n = normal;
         si.uv = uv;
         si.t = _tmin;
-        return true;
+        return min_axis;
     }
 
     if ((tmin < _tmax && _tmax < tmax) && (-1 < max_axis && max_axis < 3))
@@ -94,9 +95,9 @@ static INLINE DEVICE bool hitBox(
         si.n = normal;
         si.uv = uv;
         si.t = _tmax;
-        return true;
+        return max_axis;
     }
-    return false;
+    return -1;
 }
 
 extern "C" __device__ void __intersection__box()
@@ -108,8 +109,9 @@ extern "C" __device__ void __intersection__box()
     Ray ray = getLocalRay();
 
     SurfaceInteraction si;
-    if (hitBox(&box_data, ray.o, ray.d, ray.tmin, ray.tmax, si)) {
-        optixReportIntersection(si.t, 0, float3_as_ints(si.n), float2_as_ints(si.uv));
+    int hit_axis = hitBox(&box_data, ray.o, ray.d, ray.tmin, ray.tmax, si);
+    if (hit_axis >= 0) {
+        optixReportIntersection(si.t, 0, float3_as_ints(si.n), float2_as_ints(si.uv), hit_axis);
     }
 }
 
@@ -121,6 +123,7 @@ extern "C" __device__ void __closesthit__box()
 
     float3 local_n = getFloat3FromAttribute<0>();
     float2 uv = getFloat2FromAttribute<3>();
+    uint32_t hit_axis = getAttribute<5>();
 
     float3 world_n = optixTransformNormalFromObjectToWorldSpace(local_n);
     world_n = normalize(world_n);
@@ -133,6 +136,26 @@ extern "C" __device__ void __closesthit__box()
     si->wi = ray.d;
     si->uv = uv;
     si->surface_info = data->surface_info;
+
+    float3 dpdu, dpdv;
+    // x
+    if (hit_axis == 0)
+    {
+        dpdu = make_float3(0.0f, 0.0f, 1.0f);
+        dpdv = make_float3(0.0f, 1.0f, 0.0f);
+    }
+    else if (hit_axis == 1)
+    {
+        dpdu = make_float3(1.0f, 0.0f, 0.0f);
+        dpdv = make_float3(0.0f, 0.0f, 1.0f);
+    }
+    else if (hit_axis == 2)
+    {
+        dpdu = make_float3(1.0f, 0.0f, 0.0f);
+        dpdv = make_float3(0.0f, 1.0f, 0.0f);
+    }
+    si->dpdu = normalize(optixTransformVectorFromObjectToWorldSpace(dpdu));
+    si->dpdv = normalize(optixTransformVectorFromObjectToWorldSpace(dpdv));
 }
 
 // Cylinder -------------------------------------------------------------------------------

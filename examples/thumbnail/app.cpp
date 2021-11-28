@@ -66,7 +66,7 @@ void App::setup()
     pipeline.setDirectCallableDepth(5);
     pipeline.setContinuationCallableDepth(5);
     pipeline.setNumPayloads(5);
-    pipeline.setNumAttributes(5);
+    pipeline.setNumAttributes(6);
 
     // Create modules from cuda source file 
     Module raygen_module, miss_module, hitgroups_module, textures_module, surfaces_module;

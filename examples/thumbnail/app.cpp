@@ -1,6 +1,6 @@
 #include "app.h"
 
-#define INTERACTIVE 0
+#define INTERACTIVE 1
 
 static void streamProgress(int frame, int max_frame, float elapsed_time, int bar_length)
 {
@@ -476,7 +476,7 @@ void App::setup()
     ImGui_ImplOpenGL3_Init(glsl_version);
 #else 
     float start_time = pgGetElapsedTimef();
-    constexpr int num_samples = 1;
+    constexpr int num_samples = 100000;
     for (int frame = 0; frame < num_samples; frame += params.samples_per_launch)
     {
         d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);

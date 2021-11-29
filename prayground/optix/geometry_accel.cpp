@@ -119,7 +119,7 @@ void GeometryAccel::build(const Context& ctx, CUstream stream)
 
 void GeometryAccel::update(const Context& ctx, CUstream stream)
 {
-    ASSERT((m_options.buildFlags & OPTIX_BUILD_FLAG_ALLOW_UPDATE) != 0, "prayground::GeometryAccel::update(): allowUpdate() must be called when using update operation.");
+    ASSERT((m_options.buildFlags & OPTIX_BUILD_FLAG_ALLOW_UPDATE) != 0, "allowUpdate() must be called before an update operation.");
 
     m_options.operation = OPTIX_BUILD_OPERATION_UPDATE;
 

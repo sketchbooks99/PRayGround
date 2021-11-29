@@ -43,10 +43,10 @@ void Window::setup()
 
     // Initialize GLFW
     if (!glfwInit())
-        THROW("prayground::Window::setup(): Failed to initialize GLFW.");
+        THROW("Failed to initialize GLFW.");
     
     if ((m_gl_version_major == 3 && m_gl_version_minor < 2) || m_gl_version_major < 3)
-        LOG_FATAL("prayground::Window::setup(): The version of OpenGL must supports the programmable renderer (OpenGL 3.2 ~).");
+        LOG_FATAL("The version of OpenGL must supports the programmable renderer (OpenGL 3.2 ~).");
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, m_gl_version_major);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, m_gl_version_minor);
@@ -58,7 +58,7 @@ void Window::setup()
     if (m_window_ptr == nullptr)
     {
         glfwTerminate();
-        THROW("prayground::Window::setup(): Failed to create GLFW window.");
+        THROW("Failed to create GLFW window.");
     }
 
     // Set current window context
@@ -81,7 +81,7 @@ void Window::setup()
     // Initialize GLAD
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
-        THROW("prayground::Window::setup(): Failed to initialize GLAD.");
+        THROW("Failed to initialize GLAD.");
     }
 }
 

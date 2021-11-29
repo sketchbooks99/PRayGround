@@ -152,7 +152,7 @@ void Module::createFromCudaFile(const Context& ctx, const fs::path& filename, Op
 #endif
 
     auto filepath = pgFindDataPath(filename);
-    ASSERT(filepath, "prayground::Module::createFromModule(): The CUDA file to create module of '" + filename.string() + "' is not found.");
+    ASSERT(filepath, "The CUDA file to create module of '" + filename.string() + "' is not found.");
 
     const char** log = nullptr;
     std::string key = filepath.value().string();
@@ -188,7 +188,7 @@ void Module::createFromCudaSource(const Context& ctx, const std::string& source,
 void Module::createFromPtxFile(const Context& ctx, const fs::path& filename, OptixPipelineCompileOptions pipeline_options)
 {
     auto filepath = pgFindDataPath(filename);
-    ASSERT(filepath, "prayground::Module::createFromModule(): The CUDA file to create module of '" + filename.string() + "' is not found.");
+    ASSERT(filepath, "The PTX file to create module of '" + filename.string() + "' is not found.");
 
     std::string key = filepath.value().string();
     std::map<std::string, std::string*>::iterator elem = g_ptxSourceCache.map.find(key);

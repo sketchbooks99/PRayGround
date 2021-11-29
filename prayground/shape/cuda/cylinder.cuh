@@ -101,7 +101,7 @@ CALLABLE_FUNC void CH_FUNC(cylinder)()
     const HitGroupData* data = reinterpret_cast<HitGroupData*>(optixGetSbtDataPointer());
     const CylinderData* cylinder = reinterpret_cast<CylinderData*>(data->shape_data);
 
-    prayground::Ray ray = getWorldRay();
+    Ray ray = getWorldRay();
 
     float3 local_n = make_float3(
         int_as_float( optixGetAttribute_0() ),

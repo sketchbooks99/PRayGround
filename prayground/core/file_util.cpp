@@ -108,7 +108,7 @@ std::string pgGetTextFromFile(const fs::path& relative_path)
     }
     catch(const std::istream::failure& e)
     {
-        LOG_FATAL("prayground::getTextureFromFile(): Failed to load text file due to '" + std::string(e.what()) + "'.");
+        LOG_FATAL("Failed to load text file due to '" + std::string(e.what()) + "'.");
         return "";
     }
 }

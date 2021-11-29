@@ -87,7 +87,7 @@ void InstanceAccel::build(const Context& ctx, CUstream stream)
 
 void InstanceAccel::update(const Context& ctx, CUstream stream)
 {
-    ASSERT((m_options.buildFlags & OPTIX_BUILD_FLAG_ALLOW_UPDATE) != 0, "prayground::InstanceAccel::update(): allowUpdate() must be called when using update operation.");
+    ASSERT((m_options.buildFlags & OPTIX_BUILD_FLAG_ALLOW_UPDATE) != 0, "allowUpdate() must be called before an update operation.");
 
     OptixInstance* instance_device_ptr = reinterpret_cast<OptixInstance*>(d_instances);
     for (int i=0; OptixInstance* instance : m_instances)

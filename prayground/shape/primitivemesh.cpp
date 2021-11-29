@@ -21,7 +21,7 @@ IcoSphereMesh::IcoSphereMesh(float radius, int level)
 : m_radius(radius), m_level(level)
 {
     ASSERT(level >= 0 && level < 20, 
-        "prayground::IcoSphereMesh(): The level of details must be 0 ~ 19.");
+        "The level of details must be 0 ~ 19.");
 
     const int l2 = (level+1) * (level+1);
     const int num_vertices = 2 + l2 * 10;

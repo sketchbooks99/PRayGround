@@ -109,9 +109,9 @@ public:
     void setMissRecord(const MissRecordArgs&... args)
     {
         static_assert(sizeof...(args) == N, 
-            "prayground::ShaderBindingTable::setMissRecord(): The number of record must be same with the number of ray types.");        
+            "The number of record must be same with the number of ray types.");        
         static_assert(std::conjunction<std::is_same<MissRecord, MissRecordArgs>...>::value, 
-            "prayground::ShaderBindingTable::setMissRecord(): Data type must be same with 'MissRecord'.");
+            "Data type must be same with 'MissRecord'.");
 
         push_to_vector(m_miss_records, args...);
     }
@@ -121,7 +121,7 @@ public:
     {
         if (idx >= m_miss_records.size())
         {
-            LOG_FATAL("prayground::ShaderBindingTable::replaceMissRecord(): The index out of range.");
+            LOG_FATAL("The index out of range.");
             return;
         }
         m_miss_records[idx] = record;
@@ -135,9 +135,9 @@ public:
     void addHitgroupRecord(const HitgroupRecordArgs&... args)
     {
         static_assert(sizeof...(args) == N, 
-            "prayground::ShaderBindingTable::addHitgroupRecord(): The number of hitgroup record must be same with the number of ray types.");        
+            "The number of hitgroup record must be same with the number of ray types.");        
         static_assert(std::conjunction<std::is_same<HitgroupRecord, HitgroupRecordArgs>...>::value, 
-            "prayground::ShaderBindingTable::addHitgroupRecord(): Record type must be same with 'HitgroupRecord'.");
+            "Record type must be same with 'HitgroupRecord'.");
         push_to_vector(m_hitgroup_records, args...);
     }
 
@@ -146,7 +146,7 @@ public:
     {
         if (idx >= m_hitgroup_records.size())
         {
-            LOG_FATAL("prayground::ShaderBindingTable::replaceHitgroupRecord(): The index out of range.");
+            LOG_FATAL("The index out of range");
             return;
         }
         m_hitgroup_records[idx] = record;
@@ -164,7 +164,7 @@ public:
     void addCallablesRecord(const CallablesRecordArgs&... args)
     {
         static_assert(std::conjunction<std::is_same<CallablesRecord, CallablesRecordArgs>...>::value, 
-            "prayground::ShaderBindingTable::addCallablesRecord(): Record type must be same with 'CallablesRecord'.");
+            "Record type must be same with 'CallablesRecord'.");
 
         push_to_vector(m_callables_records, args...);
     }
@@ -174,7 +174,7 @@ public:
     {
         if (idx >= m_callables_records.size())
         {
-            LOG_FATAL("prayground::ShaderBindingTable::replaceCallablesRecord(): The index out of range.");
+            LOG_FATAL("The index out of range.");
             return;
         }
         m_callables_records[idx] = record;

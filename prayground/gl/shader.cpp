@@ -349,7 +349,7 @@ GLuint Shader::_createGLShaderFromSource(const std::string& source, GLuint type)
 GLuint Shader::_createGLShaderFromFile(const fs::path& relative_path, GLuint type)
 {
     std::optional<fs::path> filepath = pgFindDataPath(relative_path);
-    ASSERT(filepath, "prayground::gl::Shader::The shader file '" + relative_path.string() + "' is not found.");
+    ASSERT(filepath, "The shader file '" + relative_path.string() + "' is not found.");
 
     std::string source;
     std::ifstream file_stream;

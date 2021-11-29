@@ -91,8 +91,12 @@ void BitmapTexture_<PixelType>::free()
 {
     if (d_texture != 0) 
         CUDA_CHECK( cudaDestroyTextureObject( d_texture ) );
-    if (d_array != 0)
-        CUDA_CHECK( cudaFreeArray( d_array ) );
+
+    /// @todo Following function raised cudaErrorContextIsDestroyed when call it from App::close();
+    /// if (d_array != 0)
+    ///     CUDA_CHECK( cudaFreeArray( d_array ) );
+
+    Texture::free();
 }
 
 template<typename PixelType>

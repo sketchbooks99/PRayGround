@@ -25,12 +25,13 @@ public:
 
     virtual void free()
     {
-        if (d_data) cuda_free(d_data);
+        if (d_data) CUDA_CHECK(cudaFree(d_data));
+        d_data = nullptr;
     }
     
     void* devicePtr() const { return d_data; }
 protected:
-    void* d_data { 0 };
+    void* d_data { nullptr };
 };
 
 #endif

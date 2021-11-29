@@ -28,7 +28,8 @@ void AreaEmitter::copyToDevice()
         .tex_program_id = m_texture->programId()
     };
 
-    CUDA_CHECK(cudaMalloc(&d_data, sizeof(AreaEmitterData)));
+    if (!d_data)
+        CUDA_CHECK(cudaMalloc(&d_data, sizeof(AreaEmitterData)));
     CUDA_CHECK(cudaMemcpy(
         d_data,
         &data, sizeof(AreaEmitterData),
@@ -36,9 +37,24 @@ void AreaEmitter::copyToDevice()
     ));
 }
 
+void AreaEmitter::setTexture(const std::shared_ptr<Texture>& texture)
+{
+    m_texture = texture;
+}
+
 std::shared_ptr<Texture> AreaEmitter::texture() const
 {
     return m_texture;
+}
+
+void AreaEmitter::setIntensity(float intensity)
+{
+    m_intensity = intensity;
+}
+
+float AreaEmitter::intensity() const 
+{
+    return m_intensity;
 }
 
 void AreaEmitter::free()

@@ -1,5 +1,26 @@
 #include "app.h"
 
+#define INTERACTIVE 0
+
+static void streamProgress(int frame, int max_frame, float elapsed_time, int bar_length)
+{
+    cout << "\rRendering: [";
+    int progress = static_cast<int>( ( (float)(frame) / max_frame) * bar_length );
+    for (int i = 0; i < progress; i++)
+        cout << "+";
+    for (int i = progress; i < bar_length; i++)
+        cout << " ";
+    cout << "]";
+
+    cout << " [" << fixed << setprecision(2) << elapsed_time << "s]";
+
+    float percent = (float)(frame) / max_frame;
+    cout << " (" << fixed << setprecision(2) << (float)(percent * 100.0f) << "%, ";
+    cout << "Samples: " << frame << " / " << max_frame << ")" << flush;
+    if (frame == max_frame)
+        cout << endl;
+}
+
 void App::initResultBufferOnDevice()
 {
     params.subframe_index = 0;
@@ -154,7 +175,6 @@ void App::setup()
     
     // Callable program for direct sampling of area emitter
     uint32_t plane_sample_pdf_prg_id = setupCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_plane"), CC_FUNC_STR("pdf_plane"));
-    uint32_t sphere_sample_pdf_prg_id = setupCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_sphere"), CC_FUNC_STR("pdf_sphere"));
 
     textures.emplace("env", new FloatBitmapTexture("resources/image/christmas_photo_studio_01_4k.exr", bitmap_prg_id));
 
@@ -182,7 +202,6 @@ void App::setup()
     auto cylinder_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("cylinder"), IS_FUNC_STR("cylinder"));
     // Triangle mesh
     auto mesh_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("mesh"));
-    auto mesh_alpha_discard_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("mesh"), "", AH_FUNC_STR("alpha_discard"));
 
     struct Primitive
     {
@@ -196,7 +215,7 @@ void App::setup()
     uint32_t sbt_offset = 0;
     uint32_t instance_id = 0;
 
-    using SurfaceP = variant<shared_ptr<Material>, AreaEmitter>;
+    using SurfaceP = variant<shared_ptr<Material>, shared_ptr<AreaEmitter>>;
     auto addHitgroupRecord = [&](ProgramGroup& prg, shared_ptr<Shape> shape, SurfaceP surface, uint32_t sample_bsdf_id, uint32_t pdf_id, shared_ptr<Texture> alpha_texture = nullptr)
     {
         const bool is_mat = holds_alternative<shared_ptr<Material>>(surface);
@@ -208,7 +227,7 @@ void App::setup()
         if (is_mat)
             std::get<shared_ptr<Material>>(surface)->copyToDevice();
         else 
-            std::get<AreaEmitter>(surface).copyToDevice();
+            std::get<shared_ptr<AreaEmitter>>(surface)->copyToDevice();
 
         // Register data to shader binding table
         HitgroupRecord record;
@@ -218,7 +237,7 @@ void App::setup()
             .shape_data = shape->devicePtr(),
             .surface_info =
             {
-                .data = is_mat ? std::get<shared_ptr<Material>>(surface)->devicePtr() : std::get<AreaEmitter>(surface).devicePtr(),
+                .data = is_mat ? std::get<shared_ptr<Material>>(surface)->devicePtr() : std::get<shared_ptr<AreaEmitter>>(surface)->devicePtr(),
                 .sample_id = sample_bsdf_id,
                 .bsdf_id = sample_bsdf_id,
                 .pdf_id = pdf_id,
@@ -260,7 +279,7 @@ void App::setup()
     auto setupAreaEmitter = [&](
         ProgramGroup& prg,
         shared_ptr<Shape> shape,
-        AreaEmitter area, Matrix4f transform,
+        shared_ptr<AreaEmitter> area, Matrix4f transform,
         uint32_t sample_pdf_id,
         shared_ptr<Texture> alpha_texture = nullptr
     )
@@ -323,8 +342,8 @@ void App::setup()
     wooden_disney->setRoughness(0.02f);
     materials.emplace("wooden_disney", wooden_disney);
     
-    lights.emplace("logo1", AreaEmitter{ textures.at("orange"), 150.0f, true });
-    lights.emplace("logo2", AreaEmitter{ textures.at("white"),  300.0f, true });
+    lights.emplace("logo1", new AreaEmitter( textures.at("orange"), 150.0f, true ));
+    lights.emplace("logo2", new AreaEmitter( textures.at("white"),  300.0f, true ));
 
     shapes.emplace("plane", new Plane(make_float2(-0.5f), make_float2(0.5f)));
     shapes.emplace("sphere", new Sphere(make_float3(0.0f), 1.0f));
@@ -432,7 +451,7 @@ void App::setup()
         Matrix4f::translate(0, 12.5f, 80) * Matrix4f::rotate(math::pi * 1 / 3, { 1.0f, 0.0f, 0.0f }) * Matrix4f::scale(make_float3(logo_aspect * 10, 1, 10)),
         plane_sample_pdf_prg_id, textures.at("logo_alpha"));
 
-    // 光源データをGPU側にコピー
+    // Copy light infomation to device
     CUDABuffer<AreaEmitterInfo> d_area_emitter_infos;
     d_area_emitter_infos.copyToDevice(area_emitter_infos);
     params.lights = d_area_emitter_infos.deviceData();
@@ -445,6 +464,7 @@ void App::setup()
     pipeline.create(context);
     d_params.allocate(sizeof(LaunchParams));
 
+#if INTERACTIVE
     // GUI setting
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -454,6 +474,34 @@ void App::setup()
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(pgGetCurrentWindow()->windowPtr(), true);
     ImGui_ImplOpenGL3_Init(glsl_version);
+#else 
+    float start_time = pgGetElapsedTimef();
+    constexpr int num_samples = 100000;
+    for (int frame = 0; frame < num_samples; frame += params.samples_per_launch)
+    {
+        d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);
+
+        OPTIX_CHECK(optixLaunch(
+            static_cast<OptixPipeline>(pipeline), 
+            stream, 
+            d_params.devicePtr(), 
+            sizeof(LaunchParams), 
+            &sbt.sbt(), 
+            params.width, 
+            params.height, 
+            1
+        ));
+
+        CUDA_CHECK(cudaStreamSynchronize(stream));
+        CUDA_SYNC_CHECK();
+
+        params.subframe_index = frame + 1;
+        streamProgress(params.subframe_index, num_samples, pgGetElapsedTimef() - start_time, 20);
+    }
+    result_bitmap.copyFromDevice();
+    result_bitmap.write(pgPathJoin(pgAppDir(), "thumbnail.jpg"));
+    pgExit();
+#endif
 }
 
 // ----------------------------------------------------------------
@@ -510,14 +558,34 @@ void App::draw()
     ImGui::SliderFloat("Aperture", &aperture, 0.01f, 4.0f);
     if (aperture != camera.aperture()) {
         camera.setAperture(aperture);
-        camera_update = true;
+        initResultBufferOnDevice();
     }
 
     float focus_dist = camera.focusDistance();
     ImGui::SliderFloat("Focus distance", &focus_dist, 1.0f, 100.0f);
     if (focus_dist != camera.focusDistance()) {
         camera.setFocusDistance(focus_dist);
-        camera_update = true;
+        initResultBufferOnDevice();
+    }
+
+    auto& light1 = lights.at("logo1");
+    float intensity1 = light1->intensity();
+    ImGui::SliderFloat("Emittance (light1)", &intensity1, 1.0f, 1000.0f);
+    if (intensity1 != light1->intensity())
+    {
+        light1->setIntensity(intensity1);
+        light1->copyToDevice();
+        initResultBufferOnDevice();
+    }
+
+    auto& light2 = lights.at("logo2");
+    float intensity2 = light2->intensity();
+    ImGui::SliderFloat("Emittance (light2)", &intensity2, 1.0f, 1000.0f);
+    if (intensity2 != light2->intensity())
+    {
+        light2->setIntensity(intensity2);
+        light2->copyToDevice();
+        initResultBufferOnDevice();
     }
 
     ImGui::Text("Frame rate: %.3f ms/frame (%.2f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
@@ -542,12 +610,20 @@ void App::draw()
 void App::close()
 {
     env.free();
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
+
+    for (auto& it : shapes) it.second->free();
+    for (auto& it : materials) it.second->free();
+    for (auto& it : textures) it.second->free();
+    for (auto& it : lights) it.second->free();
 
     pipeline.destroy();
     context.destroy();
+
+#if INTERACTIVE
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+#endif
 }
 
 // ----------------------------------------------------------------

@@ -28,7 +28,12 @@ public:
     void free() override;
 
     EmitterType type() const override { return EmitterType::Area; }
+    
+    void setTexture(const std::shared_ptr<Texture>& texture);
     std::shared_ptr<Texture> texture() const;
+
+    void setIntensity(float intensity);
+    float intensity() const;
 private:
     std::shared_ptr<Texture> m_texture;
     float m_intensity;

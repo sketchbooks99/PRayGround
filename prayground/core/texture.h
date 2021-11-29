@@ -19,7 +19,8 @@ public:
     virtual void copyToDevice() = 0;
     virtual void free()
     {
-        if (d_data) cuda_free(d_data);
+        if (d_data) CUDA_CHECK(cudaFree(d_data));
+        d_data = nullptr;
     }
 
     // Get data pointer on the device.

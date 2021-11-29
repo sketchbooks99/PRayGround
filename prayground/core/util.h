@@ -111,24 +111,21 @@ inline void Message(MessageType type, Head head, Args... args) {
 #define LOG(msg, ...)                                                    \
     do {                                                                 \
         std::stringstream ss;                                            \
-        ss << "Log called at ( " __FILE__ << ":" << __LINE__ << " ): "   \
-           << msg;                                                       \
+        ss << msg;                                                       \
         Message(MSG_NORMAL, ss.str() __VA_OPT__(,) __VA_ARGS__);         \
     } while (0)
 
 #define LOG_WARN(msg, ...)                                                          \
     do {                                                                            \
     std::stringstream ss;                                                           \
-        ss << "Warning: Log called at ( " __FILE__ << ":" << __LINE__ << " ): "     \
-           << msg;                                                                  \
+        ss << "[Warning] " << msg;                                                  \
         Message(MSG_WARNING, ss.str() __VA_OPT__(,) __VA_ARGS__);                   \
     } while (0)
 
 #define LOG_FATAL(msg, ...)                                                     \
     do {                                                                        \
         std::stringstream ss;                                                   \
-        ss << "Fatal: Log called at ( " __FILE__ << ":" << __LINE__ << " ): "   \
-           << msg;                                                              \
+        ss << "[Fatal] " << msg;                                                \
         Message(MSG_FATAL, ss.str() __VA_OPT__(,) __VA_ARGS__);                 \
     } while (0)
 

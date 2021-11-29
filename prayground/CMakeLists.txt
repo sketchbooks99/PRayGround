@@ -13,8 +13,6 @@ set(sources
   core/emitter.h 
   core/file_util.h 
   core/file_util.cpp 
-  core/film.h       # Deleted in the future
-  core/film.cpp     # Deleted in the future
   core/interaction.h
   core/load3d.h 
   core/load3d.cpp

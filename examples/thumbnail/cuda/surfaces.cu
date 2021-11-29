@@ -10,8 +10,6 @@
 
 using namespace prayground;
 
-/// @todo 確率密度関数、Next event estimationの実装
-
 // Diffuse -----------------------------------------------------------------------------------------------
 extern "C" __device__ void __direct_callable__sample_diffuse(SurfaceInteraction* si, void* mat_data) {
     const DiffuseData* diffuse = reinterpret_cast<DiffuseData*>(mat_data);
@@ -203,16 +201,16 @@ extern "C" __device__ float3 __continuation_callable__bsdf_disney(SurfaceInterac
     const float3 Y = si->dpdv;
     const float alpha = fmaxf(0.001f, disney->roughness * disney->roughness); // Remapping of roughness
     const float aspect = sqrtf(1.0f - disney->anisotropic * 0.9f);
-    const float ax = fmaxf(0.001f, math::sqr(disney->roughness) / aspect);
-    const float ay = fmaxf(0.001f, math::sqr(disney->roughness) * aspect);
-    //const float ax = fmaxf(0.001f, math::sqr(alpha) / aspect);
-    //const float ay = fmaxf(0.001f, math::sqr(alpha) * aspect);
+    // const float ax = fmaxf(0.001f, math::sqr(disney->roughness) / aspect);
+    // const float ay = fmaxf(0.001f, math::sqr(disney->roughness) * aspect);
+    const float ax = fmaxf(0.001f, math::sqr(alpha) / aspect);
+    const float ay = fmaxf(0.001f, math::sqr(alpha) * aspect);
     const float3 rho_specular = lerp(make_float3(1.0f), rho_tint, disney->specular_tint);
     const float3 Fs0 = lerp(0.08f * disney->specular * rho_specular, base_color, disney->metallic);
     const float3 FHs0 = fresnelSchlickR(LdotH, Fs0);
     const float Ds = GTR2_aniso(NdotH, dot(H, X), dot(H, Y), ax, ay);
-    const float alpha_g = powf(0.5f*disney->roughness + 0.5f, 2.0f);
-    // const float alpha_g = powf(0.5f*alpha + 0.5f, 2.0f);
+    // const float alpha_g = powf(0.5f*disney->roughness + 0.5f, 2.0f);
+    const float alpha_g = powf(0.5f*alpha + 0.5f, 2.0f);
     float Gs = smithG_GGX_aniso(NdotL, dot(L, X), dot(L, Y), ax, ay);
     Gs *= smithG_GGX_aniso(NdotL, dot(V, X), dot(V, Y), ax, ay);
     const float3 f_specular = FHs0 * Ds * Gs / (4.0f * NdotV * NdotL) ;

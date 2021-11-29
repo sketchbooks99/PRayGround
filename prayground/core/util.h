@@ -102,7 +102,7 @@ inline void Message(MessageType type, Head head, Args... args) {
 #define UNIMPLEMENTED()                                                     \
     do {                                                                    \
         std::stringstream ss;                                               \
-        ss << "Sorry! The function you called at "                          \
+        ss << "The function you called at "                                 \
            << "' (" __FILE__ << ":" << __LINE__ << ")"                      \
            << " will not be implemented or is still under development";     \
         Message(MSG_WARNING, ss.str());                                     \

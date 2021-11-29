@@ -331,7 +331,7 @@ extern "C" __device__ void __closesthit__plane()
     si->surface_info = data->surface_info;
 }
 
-extern "C" __device__ float __continuation_callable__pdf_plane(AreaEmitterInfo area_info, const float3 & origin, const float3 & direction)
+extern "C" __device__ float __continuation_callable__pdf_plane(const AreaEmitterInfo& area_info, const float3& origin, const float3& direction)
 {
     const PlaneData* plane_data = reinterpret_cast<PlaneData*>(area_info.shape_data);
 
@@ -355,7 +355,7 @@ extern "C" __device__ float __continuation_callable__pdf_plane(AreaEmitterInfo a
 }
 
 // グローバル空間における si.p -> 光源上の点 のベクトルを返す
-extern "C" __device__ float3 __direct_callable__rnd_sample_plane(AreaEmitterInfo area_info, SurfaceInteraction * si)
+extern "C" __device__ float3 __direct_callable__rnd_sample_plane(const AreaEmitterInfo& area_info, SurfaceInteraction * si)
 {
     const PlaneData* plane_data = reinterpret_cast<PlaneData*>(area_info.shape_data);
     // サーフェスの原点をローカル空間に移す

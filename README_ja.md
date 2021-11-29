@@ -126,6 +126,8 @@ add_subdirectory(apps/<your-app-name>) # Add this line
   - ![](examples/dynamic_update/dynamic_update.gif)
 - [Motion blur](examples/motion_blur/)
   - <img src=examples/motion_blur/motion_blur.png width=320>
+- [Denoiser](examples/denoiser/)
+  - <img src=examples/denoiser/denoiser.png width=640>
 
 # External libraries
 - [glad](https://github.com/Dav1dde/glad) ... For OpenGL 

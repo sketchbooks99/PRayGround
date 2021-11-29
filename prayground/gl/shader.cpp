@@ -74,7 +74,7 @@ void Shader::load(const fs::path& vert_name, const fs::path& frag_name)
         glGetProgramInfoLog(m_program, bufsize, &length, infolog);
 
         glDeleteProgram(m_program);
-        Message(MSG_FATAL, "Shader::load(): Linking of program failed:", infolog);
+        LOG_FATAL("Shader::load(): Linking of program failed:", infolog);
 
         return;
     }
@@ -130,7 +130,7 @@ void Shader::load(const fs::path& vert_name, const fs::path& frag_name, const fs
         glGetProgramInfoLog(m_program, bufsize, &length, infolog);
 
         glDeleteProgram(m_program);
-        Message(MSG_FATAL, "Shader::load(): Linking of program failed:", infolog);
+        LOG_FATAL("Shader::load(): Linking of program failed:", infolog);
 
         return;
     }
@@ -162,7 +162,7 @@ void Shader::bindDefaultAttributes()
 {
     if (m_program == 0)
     {
-        Message(MSG_FATAL, "The shader program hasn't been created yet.");
+        LOG_FATAL("The shader program hasn't been created yet.");
         return;
     }
     else 

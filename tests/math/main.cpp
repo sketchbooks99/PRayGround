@@ -14,10 +14,10 @@ int main()
     auto inv_v1 = inv_transform.vectorMul(v1);
     auto _v1 = transform.vectorMul(v1);
 
-    Message(MSG_NORMAL, transform * inv_transform);
-    Message(MSG_NORMAL, inv_transform * transform);
+    LOG(transform * inv_transform);
+    LOG(inv_transform * transform);
 
-    Message(MSG_NORMAL, length(v1), v1);
-    Message(MSG_NORMAL, length(inv_v1), inv_v1, transform.vectorMul(inv_v1));
-    Message(MSG_NORMAL, length(_v1), _v1, inv_transform.vectorMul(_v1));
+    LOG(length(v1), v1);
+    LOG(length(inv_v1), inv_v1, transform.vectorMul(inv_v1));
+    LOG(length(_v1), _v1, inv_transform.vectorMul(_v1));
 }

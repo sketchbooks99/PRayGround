@@ -12,7 +12,7 @@ BitmapTexture_<PixelType>::BitmapTexture_(const std::filesystem::path& filename,
     std::optional<std::filesystem::path> filepath = pgFindDataPath(filename);
     if (!filepath)
     {
-        Message(MSG_FATAL, "The texture file '" + filename.string() + "' is not found.");
+        LOG_FATAL("The texture file '" + filename.string() + "' is not found.");
         int width = 512;
         int height = 512;
         Vec_t magenta;

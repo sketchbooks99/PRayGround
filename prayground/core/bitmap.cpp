@@ -111,7 +111,7 @@ void Bitmap_<PixelType>::setData(PixelType* data, int offset_x, int offset_y, in
 
     if (m_width < offset_x + width || m_height < offset_y + height)
     {
-        Message(MSG_WARNING, "The range of data to fill which specified by offset and resolution exceeded the dimension of the bitmap.");
+        LOG_WARN("The range of data to fill which specified by offset and resolution exceeded the dimension of the bitmap.");
         height = m_height - offset_y;
         width = m_height - offset_x;
     }
@@ -155,14 +155,14 @@ void Bitmap_<unsigned char>::load(const std::filesystem::path& filename)
     auto ext = pgGetExtension(filepath.value());
 
     if (ext == ".png" || ext == ".PNG")
-        Message(MSG_NORMAL, "Loading PNG file '" + filepath.value().string() + "' ...");
+        LOG("Loading PNG file '" + filepath.value().string() + "' ...");
     else if (ext == ".jpg" || ext == ".JPG")
-        Message(MSG_NORMAL, "Loading JPG file '" + filepath.value().string() + "' ...");
+        LOG("Loading JPG file '" + filepath.value().string() + "' ...");
     else if (ext == ".bmp" || ext == ".BMP")
-        Message(MSG_NORMAL, "Loading BMP file '" + filepath.value().string() + "' ...");
+        LOG("Loading BMP file '" + filepath.value().string() + "' ...");
     else if (ext == ".exr" || ext == ".EXR" || ext == ".hdr" || ext == ".HDR")
     {
-        Message(MSG_FATAL, "EXR format can be loaded only in Bitmap_<float>.");
+        LOG_FATAL("EXR format can be loaded only in Bitmap_<float>.");
         return;
     }
     uint8_t* raw_data;
@@ -189,7 +189,7 @@ void Bitmap_<float>::load(const std::filesystem::path& filename)
     if (ext == ".exr" || ext == ".EXR" || ext == ".hdr" || ext == ".HDR")
     {
         std::string kind = ext == ".exr" || ext == ".EXR" ? "EXR" : "HDR";
-        Message(MSG_NORMAL, "Loading " + kind + " file '" + filepath.value().string() + "' ...");
+        LOG("Loading " + kind + " file '" + filepath.value().string() + "' ...");
         m_format = m_format == PixelFormat::NONE ? PixelFormat::RGBA : m_format;
 
         const char* err = nullptr;
@@ -204,7 +204,7 @@ void Bitmap_<float>::load(const std::filesystem::path& filename)
             {
                 if (err)
                 {
-                    Message(MSG_FATAL, err);
+                    LOG_FATAL(err);
                     FreeEXRErrorMessage(err);
                     return;
                 }
@@ -221,11 +221,11 @@ void Bitmap_<float>::load(const std::filesystem::path& filename)
     else
     {
         if (ext == ".png" || ext == ".PNG")
-            Message(MSG_NORMAL, "Loading EXR file '" + filepath.value().string() + "' ...");
+            LOG("Loading EXR file '" + filepath.value().string() + "' ...");
         else if (ext == ".jpg" || ext == ".JPG")
-            Message(MSG_NORMAL, "Loading JPG file '" + filepath.value().string() + "' ...");
+            LOG("Loading JPG file '" + filepath.value().string() + "' ...");
         else if (ext == ".bmp" || ext == ".BMP")
-            Message(MSG_NORMAL, "Loading BMP file '" + filepath.value().string() + "' ...");
+            LOG("Loading BMP file '" + filepath.value().string() + "' ...");
 
         uint8_t* raw_data = stbi_load(filepath.value().string().c_str(), &m_width, &m_height, &m_channels, static_cast<int>(m_format));
         if (m_format == PixelFormat::NONE)
@@ -261,7 +261,7 @@ void Bitmap_<unsigned char>::write(const std::filesystem::path& filepath, int qu
     bool supported = ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" || ext == ".bmp" || ext == ".BMP";
     if (!supported)
     {
-        Message(MSG_FATAL, "This extension '" + ext + "' is not suppoted with Bitmap_<unsigned char>");
+        LOG_FATAL("This extension '" + ext + "' is not suppoted with Bitmap_<unsigned char>");
         return;
     }
 
@@ -284,7 +284,7 @@ void Bitmap_<unsigned char>::write(const std::filesystem::path& filepath, int qu
         delete[] data;
     }
 
-    Message(MSG_NORMAL, "Wrote bitmap to '" + filepath.string() + "'");
+    LOG("Wrote bitmap to '" + filepath.string() + "'");
 }
 
 template <> 
@@ -297,7 +297,7 @@ void Bitmap_<float>::write(const std::filesystem::path& filepath, int quality) c
 
     if (!supported)
     {
-        Message(MSG_FATAL, "This extension '" + ext + "' is not suppoted with Bitmap_<float>");
+        LOG_FATAL("This extension '" + ext + "' is not suppoted with Bitmap_<float>");
         return;
     }
 
@@ -341,7 +341,7 @@ void Bitmap_<float>::write(const std::filesystem::path& filepath, int quality) c
             int ret = SaveEXR(data, m_width, m_height, m_channels, /* save_as_fp16 = */ 0, filepath.string().c_str(), &err);
             if (ret != TINYEXR_SUCCESS)
             {
-                Message(MSG_FATAL, "Failed to write EXR:", err);
+                LOG_FATAL("Failed to write EXR:", err);
                 delete[] data;
                 return;
             }
@@ -353,7 +353,7 @@ void Bitmap_<float>::write(const std::filesystem::path& filepath, int quality) c
             delete[] data;
         }
     }
-    Message(MSG_NORMAL, "Wrote bitmap to '" + filepath.string() + "'");
+    LOG("Wrote bitmap to '" + filepath.string() + "'");
 }
 
 // --------------------------------------------------------------------

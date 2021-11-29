@@ -5,14 +5,14 @@ namespace prayground {
 // ------------------------------------------------------------------
 Film::Film()
 {
-    Message(MSG_WARNING, "This class is deprecated because it doesn't have much usage, and will be deleted soon.");
+    LOG_WARN("This class is deprecated because it doesn't have much usage, and will be deleted soon.");
 }
 
 // ------------------------------------------------------------------
 Film::Film(int width, int height)
 : m_width(width), m_height(height)
 {
-    Message(MSG_WARNING, "This class is deprecated because it doesn't have much usage, and will be deleted soon.");
+    LOG_WARN("This class is deprecated because it doesn't have much usage, and will be deleted soon.");
 }
 
 Film::~Film()
@@ -25,13 +25,13 @@ void Film::addBitmap(const std::string& name, PixelFormat format)
 {
     if (format == PixelFormat::NONE)
     {
-        Message(MSG_FATAL, "prayground::Film::addBitmap(): The unknown format.");
+        LOG_FATAL("prayground::Film::addBitmap(): The unknown format.");
         return;
     }
 
     if (m_width == 0 || m_height == 0)
     {
-        Message(MSG_FATAL, "prayground::Film::addBitmap(): The resolution of Film is invalid value.");
+        LOG_FATAL("prayground::Film::addBitmap(): The resolution of Film is invalid value.");
         return;
     }
 
@@ -62,13 +62,13 @@ void Film::addFloatBitmap(const std::string& name, PixelFormat format)
 {
     if (format == PixelFormat::NONE)
     {
-        Message(MSG_FATAL, "prayground::Film::addFloatBitmap(): The unknown format.");
+        LOG_FATAL("prayground::Film::addFloatBitmap(): The unknown format.");
         return;
     }
 
     if (m_width == 0 || m_height == 0)
     {
-        Message(MSG_FATAL, "prayground::Film::addFloatBitmap(): The resolution of Film is invalid value.");
+        LOG_FATAL("prayground::Film::addFloatBitmap(): The resolution of Film is invalid value.");
         return;
     }
 

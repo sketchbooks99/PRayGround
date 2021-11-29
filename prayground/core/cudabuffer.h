@@ -128,8 +128,10 @@ template <class T>
 inline T* CUDABuffer<T>::copyFromDevice()
 {
     T* h_ptr = static_cast<T*>(malloc(m_size));
-    if (!isAllocated())
-        Message(MSG_FATAL, "The device-side data hasn't been allocated yet.");
+    if (!isAllocated()) {
+        LOG_FATAL("The device-side data hasn't been allocated yet.");
+        return nullptr;
+    }
     CUDA_CHECK(cudaMemcpy(
         h_ptr, 
         reinterpret_cast<T*>(d_ptr), 

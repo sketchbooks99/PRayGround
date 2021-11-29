@@ -45,7 +45,6 @@ public:
     float4 findOneFloat4(const std::string& name, const float4& d) const;
     const std::string* findString(const std::string&, int* n) const;
     std::string findOneString(const std::string& name, const std::string& d) const;
-
 public:
     std::string name;
 private:

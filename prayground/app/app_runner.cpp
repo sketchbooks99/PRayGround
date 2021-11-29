@@ -51,6 +51,11 @@ int32_t pgGetMouseButton()
     return g_state.runner->window()->events().inputStates.mouseButton;
 }
 
+int32_t pgGetKey()
+{
+    return g_state.runner->window()->events().inputStates.key;
+}
+
 int32_t pgGetWidth()
 {
     return g_state.runner->window()->width();

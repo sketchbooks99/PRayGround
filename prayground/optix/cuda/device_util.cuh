@@ -77,7 +77,7 @@ namespace prayground {
     INLINE DEVICE uint32_t getPayload()
     {
         static_assert(i < PG_MAX_NUM_PAYLOADS, 
-            "Index to set attribute exceeds the maximum number of attributes (" PG_MAX_NUM_PAYLOADS_STR ")");
+            "Index to set attribute exceeds the maximum number of payloads (" PG_MAX_NUM_PAYLOADS_STR ")");
         if constexpr (i == 0)
             return optixGetPayload_0();
         if constexpr (i == 1)
@@ -100,7 +100,7 @@ namespace prayground {
     INLINE DEVICE void setPayload(uint32_t value)
     {
         static_assert(i < PG_MAX_NUM_PAYLOADS, 
-            "Index to set payload exceeds the maximum number of payloads (" PG_MAX_NUM_PATLOADS_STR ")");
+            "Index to set payload exceeds the maximum number of payloads (" PG_MAX_NUM_PAYLOADS_STR ")");
         if constexpr (i == 0)
             optixSetPayload_0(value);
         if constexpr (i == 1)

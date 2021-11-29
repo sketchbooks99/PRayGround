@@ -91,8 +91,12 @@ void BitmapTexture_<PixelType>::free()
 {
     if (d_texture != 0) 
         CUDA_CHECK( cudaDestroyTextureObject( d_texture ) );
-    if (d_array != 0)
-        CUDA_CHECK( cudaFreeArray( d_array ) );
+
+    /// @todo Following function raised cudaErrorContextIsDestroyed when call it from App::close();
+    /// if (d_array != 0)
+    ///     CUDA_CHECK( cudaFreeArray( d_array ) );
+
+    Texture::free();
 }
 
 template<typename PixelType>
@@ -105,6 +109,18 @@ template<typename PixelType>
 int32_t BitmapTexture_<PixelType>::height() const
 {
     return m_bitmap.height();
+}
+
+template<typename PixelType>
+void BitmapTexture_<PixelType>::setTextureDesc(const cudaTextureDesc& desc)
+{
+    m_tex_desc = desc;
+}
+
+template<typename PixelType>
+cudaTextureDesc BitmapTexture_<PixelType>::textureDesc() const
+{
+    return m_tex_desc;
 }
 
 template class BitmapTexture_<float>;

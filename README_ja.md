@@ -8,7 +8,8 @@ PRayGroundは、OptiX 7を用いたC++/CUDAライブラリで、GPUによるイ�
 
 このプロジェクトには、読みやすさ、パフォーマンス、スケーラビリティを向上させるためにまだまだやることがたくさん残っています。何かアドバイスを頂ければ幸いです。
 
-![output.png](result/016_env.jpg)
+![output.png](examples/thumbnail/thumbnail.jpg)
+1920 x 1080, 100000spp, 592.9s on NVIDIA RTX 3090
 
 # :computer: Requirements
 プロジェクトをビルドする前に、以下の要件、特にC++のコンパイラが `<concepts>` ヘッダー等のC++20の機能をサポートしているかどうか確認してください。
@@ -125,6 +126,8 @@ add_subdirectory(apps/<your-app-name>) # Add this line
   - ![](examples/dynamic_update/dynamic_update.gif)
 - [Motion blur](examples/motion_blur/)
   - <img src=examples/motion_blur/motion_blur.png width=320>
+- [Denoiser](examples/denoiser/)
+  - <img src=examples/denoiser/denoiser.png width=640>
 
 # External libraries
 - [glad](https://github.com/Dav1dde/glad) ... For OpenGL 

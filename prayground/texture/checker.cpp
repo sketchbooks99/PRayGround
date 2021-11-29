@@ -4,7 +4,13 @@ namespace prayground {
 
 // ------------------------------------------------------------------
 CheckerTexture::CheckerTexture(const float3& c1, const float3& c2, float s, int prg_id)
-: Texture(prg_id), m_color1(c1), m_color2(c2), m_scale(s)
+: Texture(prg_id), m_color1(make_float4(c1, 1.0f)), m_color2(make_float4(c2, 1.0)), m_scale(s)
+{
+
+}
+
+CheckerTexture::CheckerTexture(const float4& c1, const float4& c2, float s, int prg_id)
+    : Texture(prg_id), m_color1(c1), m_color2(c2), m_scale(s)
 {
 
 }
@@ -12,10 +18,15 @@ CheckerTexture::CheckerTexture(const float3& c1, const float3& c2, float s, int 
 // ------------------------------------------------------------------
 void CheckerTexture::setColor1(const float3& c1)
 {
+    m_color1 = make_float4(c1, 1.0f);
+}
+
+void CheckerTexture::setColor1(const float4& c1)
+{
     m_color1 = c1;
 }
 
-float3 CheckerTexture::color1() const 
+float4 CheckerTexture::color1() const 
 {
     return m_color1;
 }
@@ -23,10 +34,15 @@ float3 CheckerTexture::color1() const
 // ------------------------------------------------------------------
 void CheckerTexture::setColor2(const float3& c2)
 {
+    m_color2 = make_float4(c2, 1.0f);
+}
+
+void CheckerTexture::setColor2(const float4& c2)
+{
     m_color2 = c2;
 }
 
-float3 CheckerTexture::color2() const 
+float4 CheckerTexture::color2() const 
 {
     return m_color2;
 }

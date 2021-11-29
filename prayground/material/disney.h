@@ -68,8 +68,11 @@ public:
     void setClearcoat(float clearcoat);
     float clearcoat() const;
 
-    void setClearoatGloss(float clearcoat_gloss);
+    void setClearcoatGloss(float clearcoat_gloss);
     float clearcoatGloss() const;
+
+    void setTwosided(bool twosided);
+    bool twosided() const;
     
 private:
     std::shared_ptr<Texture> m_base;

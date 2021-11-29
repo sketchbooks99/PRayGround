@@ -189,7 +189,7 @@ void Bitmap_<float>::load(const std::filesystem::path& filename)
     if (ext == ".exr" || ext == ".EXR" || ext == ".hdr" || ext == ".HDR")
     {
         std::string kind = ext == ".exr" || ext == ".EXR" ? "EXR" : "HDR";
-        Message(MSG_NORMAL, "Loading kind file '" + filepath.value().string() + "' ...");
+        Message(MSG_NORMAL, "Loading " + kind + " file '" + filepath.value().string() + "' ...");
         m_format = m_format == PixelFormat::NONE ? PixelFormat::RGBA : m_format;
 
         const char* err = nullptr;

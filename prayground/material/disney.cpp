@@ -171,13 +171,23 @@ float Disney::clearcoat() const
 }
 
 // ------------------------------------------------------------------
-void Disney::setClearoatGloss(float clearcoat_gloss) 
+void Disney::setClearcoatGloss(float clearcoat_gloss) 
 { 
     m_clearcoat_gloss = clearcoat_gloss; 
 }
 float Disney::clearcoatGloss() const 
 { 
     return m_clearcoat_gloss; 
+}
+
+void Disney::setTwosided(bool twosided)
+{
+    m_twosided = twosided;
+}
+
+bool Disney::twosided() const
+{
+    return m_twosided;
 }
 
 } // ::prayground

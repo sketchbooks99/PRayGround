@@ -15,7 +15,8 @@ uint32_t Shape::sbtIndex() const
 
 void Shape::free()
 {
-    cuda_free(d_data);
+    if (d_data) CUDA_CHECK(cudaFree(d_data));
+    d_data = nullptr;
 }
 
 void* Shape::devicePtr() const

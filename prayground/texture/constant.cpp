@@ -4,7 +4,14 @@ namespace prayground {
 
 // ------------------------------------------------------------------
 ConstantTexture::ConstantTexture(const float3& c, int prg_id)
-: Texture(prg_id), m_color(c)
+    : Texture(prg_id), m_color(make_float4(c, 1.0f))
+{
+
+}
+
+
+ConstantTexture::ConstantTexture(const float4& c, int prg_id)
+    : Texture(prg_id), m_color(c)
 {
 
 }
@@ -12,10 +19,15 @@ ConstantTexture::ConstantTexture(const float3& c, int prg_id)
 // ------------------------------------------------------------------
 void ConstantTexture::setColor(const float3& c)
 {
+    m_color = make_float4(c, 1.0f);
+}
+
+void ConstantTexture::setColor(const float4& c)
+{
     m_color = c;
 }
 
-float3 ConstantTexture::color() const 
+float4 ConstantTexture::color() const 
 {
     return m_color;
 }

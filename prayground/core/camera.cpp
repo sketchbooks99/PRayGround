@@ -1,8 +1,30 @@
 #include "camera.h"
 #include <prayground/app/app_runner.h>
+#include <prayground/app/input.h>
 #include <prayground/math/util.h>
 
 namespace prayground {
+
+Camera::Camera()
+    : m_origin(make_float3(0.0f, 0.0f, -1.0f)),
+    m_lookat(make_float3(0.0f)),
+    m_up(make_float3(0.0f, 1.0f, 0.0f)),
+    m_fov(40.0f),
+    m_aspect(1.0f),
+    m_nearclip(0.01f),
+    m_farclip(10000.0f),
+    m_fovaxis(FovAxis::Vertical)
+{
+
+}
+
+Camera::Camera(const float3& origin, const float3& lookat, const float3& up, float fov, float aspect,
+    float nearclip, float farclip, FovAxis fovaxis)
+    : m_origin(origin), m_lookat(lookat), m_up(up), m_fov(fov), m_aspect(aspect)
+    , m_nearclip(nearclip), m_farclip(farclip), m_fovaxis(fovaxis)
+{
+
+}
 
 // --------------------------------------------------------------------------------------
 float3 Camera::direction() const 
@@ -113,7 +135,7 @@ void Camera::UVWFrame(float3& U, float3& V, float3& W) const
     U = normalize(cross(W, m_up));
     V = normalize(cross(W, U));
 
-    float vlen = wlen * tanf(0.5f * m_fov * math::pi / 180.0f);
+    float vlen = wlen * tanf(math::radians(m_fov) / 2.0f);
     V *= vlen;
     float ulen = vlen * m_aspect;
     U *= ulen;
@@ -122,22 +144,42 @@ void Camera::UVWFrame(float3& U, float3& V, float3& W) const
 // --------------------------------------------------------------------------------------
 void Camera::mouseDragged(float x, float y, int button)
 {
-    float deltaX = x - pgGetPreviousMousePosition().x;
-    float deltaY = y - pgGetPreviousMousePosition().y;
-    float cam_length = length(this->origin() - this->lookat());
-    float3 cam_dir = normalize(this->origin() - this->lookat());
+    bool is_move = button == MouseButton::Middle;
+    if (!is_move) return;
 
-    float theta = acosf(cam_dir.y);
-    float phi = atan2(cam_dir.z, cam_dir.x);
+    bool is_slide = pgGetKey() != Key::Unknown && +(pgGetKey() & (Key::LeftShift | Key::RightShift));
 
-    theta = clamp(theta - math::radians(deltaY * 0.25f), math::eps, math::pi - math::eps);
-    phi += math::radians(deltaX * 0.25f);
+    if (is_slide) {
+        float deltaX = x - pgGetPreviousMousePosition().x;
+        float deltaY = y - pgGetPreviousMousePosition().y;
+        float3 cam_dir = normalize(this->origin() - this->lookat());
+        float3 cam_side = normalize(cross(cam_dir, this->up()));
+        float3 cam_up = normalize(cross(cam_dir, cam_side));
 
-    float cam_x = cam_length * sinf(theta) * cosf(phi);
-    float cam_y = cam_length * cosf(theta);
-    float cam_z = cam_length * sinf(theta) * sinf(phi);
+        float3 offset = cam_side * deltaX + cam_up * deltaY;
+        
+        this->setOrigin(this->origin() + offset * 0.25f);
+        this->setLookat(this->lookat() + offset * 0.25f);
+    }
+    else 
+    {
+        float deltaX = x - pgGetPreviousMousePosition().x;
+        float deltaY = y - pgGetPreviousMousePosition().y;
+        float cam_length = length(this->origin() - this->lookat());
+        float3 cam_dir = normalize(this->origin() - this->lookat());
 
-    this->setOrigin(this->lookat() + make_float3(cam_x, cam_y, cam_z));
+        float theta = acosf(cam_dir.y);
+        float phi = atan2(cam_dir.z, cam_dir.x);
+
+        theta = clamp(theta - math::radians(deltaY * 0.25f), math::eps, math::pi - math::eps);
+        phi += math::radians(deltaX * 0.25f);
+
+        float cam_x = cam_length * sinf(theta) * cosf(phi);
+        float cam_y = cam_length * cosf(theta);
+        float cam_z = cam_length * sinf(theta) * sinf(phi);
+
+        this->setOrigin(this->lookat() + make_float3(cam_x, cam_y, cam_z));
+    }
 }
 
 void Camera::mouseScrolled(float xoffset, float yoffset)

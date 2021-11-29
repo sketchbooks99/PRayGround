@@ -26,6 +26,9 @@ public:
     int32_t width() const;
     int32_t height() const;
 
+    void setTextureDesc(const cudaTextureDesc& desc);
+    cudaTextureDesc textureDesc() const;
+
 private:
     using Vec_t = std::conditional_t<std::is_same_v<PixelType, float>, float4, uchar4>;
 

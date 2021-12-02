@@ -50,6 +50,8 @@ public:
     int height() const { return m_height; }
     int channels() const { return m_channels; }
 private:
+    void prepareGL();
+
     std::unique_ptr<PixelType[]> m_data;  // CPU側のデータ
     PixelType* d_data { nullptr };        // GPU側のデータ
 
@@ -59,7 +61,8 @@ private:
     int m_channels { 0 };
 
     // Member variables to draw Bitmap on OpenGL context
-    GLint m_gltex; 
+    GLuint m_gltex; 
+    GLuint m_vbo, m_vao, m_ebo; // vertex buffer object, vertex array object, element buffer object
     gl::Shader m_shader;
 };
 

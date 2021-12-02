@@ -22,23 +22,6 @@
 
 namespace prayground {
 
-GLuint prepareGL(gl::Shader& shader)
-{
-    // Preparing texture
-    GLuint gltex = 0;
-    glGenTextures(1, &gltex);
-    glBindTexture(GL_TEXTURE_2D, gltex);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-    shader.load("prayground/core/shaders/bitmap.vert", "prayground/core/shaders/bitmap.frag");
-
-    return gltex;
-}
-
 template <typename PixelType>
 Bitmap_<PixelType>::Bitmap_()
 {
@@ -100,7 +83,7 @@ void Bitmap_<PixelType>::allocate(PixelFormat format, int width, int height)
     memcpy(m_data.get(), zero_arr.data(), m_channels * m_width * m_height * sizeof(PixelType));
 
     if (pgWindowInitialized())
-        m_gltex = prepareGL(m_shader);
+        prepareGL();
 }
 
 // --------------------------------------------------------------------
@@ -173,7 +156,7 @@ void Bitmap_<unsigned char>::load(const std::filesystem::path& filename)
     m_data.reset(raw_data);
 
     if (pgWindowInitialized())
-        m_gltex = prepareGL(m_shader);
+        prepareGL();
 }
 
 // --------------------------------------------------------------------
@@ -221,7 +204,7 @@ void Bitmap_<float>::load(const std::filesystem::path& filename)
     else
     {
         if (ext == ".png" || ext == ".PNG")
-            pgLog("Loading EXR file '" + filepath.value().string() + "' ...");
+            pgLog("Loading PNG file '" + filepath.value().string() + "' ...");
         else if (ext == ".jpg" || ext == ".JPG")
             pgLog("Loading JPG file '" + filepath.value().string() + "' ...");
         else if (ext == ".bmp" || ext == ".BMP")
@@ -243,7 +226,7 @@ void Bitmap_<float>::load(const std::filesystem::path& filename)
     }
 
     if (pgWindowInitialized())
-        m_gltex = prepareGL(m_shader);
+        prepareGL();
 }
 
 // --------------------------------------------------------------------
@@ -390,19 +373,13 @@ void Bitmap_<PixelType>::draw(int32_t x, int32_t y, int32_t width, int32_t heigh
         2, 1, 3
     };
 
-    // Prepare vertex array object
-    GLuint vertex_buffer, vertex_array, element_buffer;
-    glGenVertexArrays(1, &vertex_array);
-    glGenBuffers(1, &vertex_buffer); 
-    glGenBuffers(1, &element_buffer);
+    glBindVertexArray(m_vao);
 
-    glBindVertexArray(vertex_array);
-
-    glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
     
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, element_buffer);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
+    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(indices), indices);
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)0);
     glEnableVertexAttribArray(0);
@@ -410,31 +387,53 @@ void Bitmap_<PixelType>::draw(int32_t x, int32_t y, int32_t width, int32_t heigh
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
     glEnableVertexAttribArray(1);
 
+    // Initialize Texture2D 
     bool is_gray = m_format == PixelFormat::GRAY;
     GLenum texture_data_type = GL_UNSIGNED_BYTE;
-    if constexpr (std::is_same_v<PixelType, float>)
+    GLint internal_format = GL_RGB8;
+    GLenum format = GL_RGB;
+    if constexpr (std::is_same_v<PixelType, float>) {
         texture_data_type = GL_FLOAT;
-    
-    glBindTexture(GL_TEXTURE_2D, m_gltex);
-    PixelType* raw_data = m_data.get();
-    switch (m_format)
+    }
+
+    switch(m_format)
     {
     case PixelFormat::GRAY:
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, m_width, m_height, 0, GL_RED, texture_data_type, raw_data);
+        format = GL_RED;
+        if constexpr (std::is_same_v<PixelType, float>)
+            internal_format = GL_R32F;
+        else 
+            internal_format = GL_R8;
         break;
     case PixelFormat::GRAY_ALPHA:
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RG, m_width, m_height, 0, GL_RG, texture_data_type, raw_data);
+        format = GL_RG;
+        if constexpr (std::is_same_v<PixelType, float>)
+            internal_format = GL_RG32F;
+        else 
+            internal_format = GL_RG8;
         break;
     case PixelFormat::RGB:
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_width, m_height, 0, GL_RGB, texture_data_type, raw_data);
+        format = GL_RGB;
+        if constexpr (std::is_same_v<PixelType, float>)
+            internal_format = GL_RGB32F;
+        else 
+            internal_format = GL_RGB8;
         break;
     case PixelFormat::RGBA:
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_RGBA, texture_data_type, raw_data);
+        format = GL_RGBA;
+        if constexpr (std::is_same_v<PixelType, float>)
+            internal_format = GL_RGBA32F;
+        else 
+            internal_format = GL_RGBA8;
         break;
     case PixelFormat::NONE:
     default:
         return;
     }
+    
+    glBindTexture(GL_TEXTURE_2D, m_gltex);
+    PixelType* raw_data = m_data.get();
+    glTexImage2D(GL_TEXTURE_2D, 0, internal_format, m_width, m_height, 0, format, texture_data_type, raw_data);
 
     m_shader.begin();
     m_shader.setUniform1i("tex", 0);
@@ -442,7 +441,7 @@ void Bitmap_<PixelType>::draw(int32_t x, int32_t y, int32_t width, int32_t heigh
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_gltex);
-    glBindVertexArray(vertex_array);
+    glBindVertexArray(m_vao);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 }
 
@@ -483,6 +482,34 @@ void Bitmap_<PixelType>::copyFromDevice()
         d_data, m_width * m_height * m_channels * sizeof(PixelType),
         cudaMemcpyDeviceToHost
     ));
+}
+
+// --------------------------------------------------------------------
+template <typename PixelType>
+void Bitmap_<PixelType>::prepareGL()
+{
+    // Prepare vertex array object
+    glGenVertexArrays(1, &m_vao);
+    glGenBuffers(1, &m_vbo);
+    glGenBuffers(1, &m_ebo);
+
+    glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat)*20, nullptr, GL_DYNAMIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint)*6, nullptr, GL_DYNAMIC_DRAW);
+
+    // Preparing texture
+    m_gltex = 0;
+    glGenTextures(1, &m_gltex);
+    glBindTexture(GL_TEXTURE_2D, m_gltex);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    m_shader.load("prayground/core/shaders/bitmap.vert", "prayground/core/shaders/bitmap.frag");
 }
 
 template class Bitmap_<float>;

@@ -29,7 +29,7 @@ void loadObj(
     }
 
     if (!reader.Warning().empty())
-        LOG_WARN("TinyObjReader:", reader.Warning());
+        pgLogWarn("TinyObjReader:", reader.Warning());
 
     auto& attrib = reader.GetAttrib();
     auto& shapes = reader.GetShapes();
@@ -114,7 +114,7 @@ void loadObjWithMtl(
     }
 
     if (!reader.Warning().empty())
-        LOG_WARN("TinyObjReader:", reader.Warning());
+        pgLogWarn("TinyObjReader:", reader.Warning());
 
     auto& attrib = reader.GetAttrib();
     auto& shapes = reader.GetShapes();

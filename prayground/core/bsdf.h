@@ -66,7 +66,7 @@ HOSTDEVICE INLINE float3 cosineSampleHemisphere(const float u1, const float u2)
 HOSTDEVICE INLINE float3 sampleGGX(const float u1, const float u2, const float roughness)
 {
     float3 p;
-    const float a = roughness * roughness;
+    const float a = fmaxf(0.001f, roughness);
     const float phi = 2.0f * math::pi * u1;
     const float cos_theta = sqrtf((1.0f - u2) / (1.0f + (a*a - 1.0f) * u2));
     const float sin_theta = sqrtf(1.0f - cos_theta * cos_theta);
@@ -161,6 +161,13 @@ HOSTDEVICE INLINE float GTR2(float NdotH, float a)
 HOSTDEVICE INLINE float GTR2_aniso(float NdotH, float HdotX, float HdotY, float ax, float ay)
 {
     return 1.0f / ( math::pi * ax * ay * math::sqr( math::sqr(HdotX / ax) + math::sqr(HdotY / ay) + NdotH * NdotH) );
+}
+
+HOSTDEVICE INLINE float smithG_GGX(float NdotV, float alphaG)
+{
+    float a = alphaG*alphaG;
+    float b = NdotV*NdotV;
+    return 1 / (NdotV + sqrt(a + b - a*b));
 }
 
 HOSTDEVICE INLINE float smithG_GGX_aniso(float NdotV, float VdotX, float VdotY, float ax, float ay)

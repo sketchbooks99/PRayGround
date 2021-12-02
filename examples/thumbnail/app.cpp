@@ -437,7 +437,7 @@ void App::setup()
 
     // Box
     Primitive p13{ shapes.at("box"), materials.at("wooden_disney"), disney_sample_bsdf_prg_id, disney_pdf_prg_id };
-    setupPrimitive(box_prg, p13, Matrix4f::translate(0, -1, -15) * Matrix4f::rotate(math::pi / 6, {0, 1, 0}) * Matrix4f::scale(8));
+    setupPrimitive(box_prg, p13, Matrix4f::translate(0, -0.9f, -15) * Matrix4f::rotate(math::pi / 6, {0, 1, 0}) * Matrix4f::scale(8));
 
     // Plane
     Primitive p14{ shapes.at("plane"), materials.at("image_diffuse"), diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id};

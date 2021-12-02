@@ -207,14 +207,14 @@ void TriangleMesh::load(const fs::path& filename)
         std::optional<fs::path> filepath = pgFindDataPath(filename);
         ASSERT(filepath, "The OBJ file '" + filename.string() + "' is not found.");
 
-        LOG("Loading OBJ file '" + filepath.value().string() + "' ...");
+        pgLog("Loading OBJ file '" + filepath.value().string() + "' ...");
         loadObj(filepath.value(), m_vertices, m_faces, m_normals, m_texcoords);
     }
     else if (ext == ".ply") {
         std::optional<fs::path> filepath = pgFindDataPath(filename);
         ASSERT(filepath, "The OBJ file '" + filename.string() + "' is not found.");
 
-        LOG("Loading PLY file '" + filepath.value().string() + "' ...");
+        pgLog("Loading PLY file '" + filepath.value().string() + "' ...");
         loadPly(filepath.value(), m_vertices, m_faces, m_normals, m_texcoords);
     }
 
@@ -254,7 +254,7 @@ void TriangleMesh::loadWithMtl(
     std::optional<fs::path> filepath = pgFindDataPath(objpath);
     ASSERT(filepath, "The OBJ file '" + objpath.string() + "' is not found.");
 
-    LOG("Loading OBJ file '" + filepath.value().string() + "' ...");
+    pgLog("Loading OBJ file '" + filepath.value().string() + "' ...");
 
     const size_t current_num_attribs = material_attribs.size();
     loadObjWithMtl(filepath.value(), m_vertices, m_faces, m_normals, m_texcoords, m_sbt_indices, material_attribs, mtlpath);

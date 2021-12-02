@@ -71,7 +71,7 @@ void pgCreateDir( const fs::path& abs_path )
 {
     // Check if the directory is existed.
     if (fs::exists(abs_path)) {
-        LOG_WARN("The directory '", abs_path, "' is already existed.");
+        pgLogWarn("The directory '", abs_path, "' is already existed.");
         return;
     }
     // Create new directory with path specified.
@@ -84,7 +84,7 @@ void pgCreateDirs( const fs::path& abs_path )
 {
     // Check if the directory is existed.
     if (fs::exists(abs_path)) {
-        LOG_WARN("The directory '", abs_path, "' is already existed.");
+        pgLogWarn("The directory '", abs_path, "' is already existed.");
         return;
     }
     bool result = fs::create_directories( abs_path );
@@ -108,7 +108,7 @@ std::string pgGetTextFromFile(const fs::path& relative_path)
     }
     catch(const std::istream::failure& e)
     {
-        LOG_FATAL("Failed to load text file due to '" + std::string(e.what()) + "'.");
+        pgLogFatal("Failed to load text file due to '" + std::string(e.what()) + "'.");
         return "";
     }
 }

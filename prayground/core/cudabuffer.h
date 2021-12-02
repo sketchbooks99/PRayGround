@@ -129,7 +129,7 @@ inline T* CUDABuffer<T>::copyFromDevice()
 {
     T* h_ptr = static_cast<T*>(malloc(m_size));
     if (!isAllocated()) {
-        LOG_FATAL("The device-side data hasn't been allocated yet.");
+        pgLogFatal("The device-side data hasn't been allocated yet.");
         return nullptr;
     }
     CUDA_CHECK(cudaMemcpy(

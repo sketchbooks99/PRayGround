@@ -46,7 +46,7 @@ void Window::setup()
         THROW("Failed to initialize GLFW.");
     
     if ((m_gl_version_major == 3 && m_gl_version_minor < 2) || m_gl_version_major < 3)
-        LOG_FATAL("The version of OpenGL must supports the programmable renderer (OpenGL 3.2 ~).");
+        pgLogFatal("The version of OpenGL must supports the programmable renderer (OpenGL 3.2 ~).");
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, m_gl_version_major);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, m_gl_version_minor);

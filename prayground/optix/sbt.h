@@ -121,7 +121,7 @@ public:
     {
         if (idx >= m_miss_records.size())
         {
-            LOG_FATAL("The index out of range.");
+            pgLogFatal("The index out of range");
             return;
         }
         m_miss_records[idx] = record;
@@ -146,7 +146,7 @@ public:
     {
         if (idx >= m_hitgroup_records.size())
         {
-            LOG_FATAL("The index out of range");
+            pgLogFatal("The index out of range");
             return;
         }
         m_hitgroup_records[idx] = record;
@@ -174,7 +174,7 @@ public:
     {
         if (idx >= m_callables_records.size())
         {
-            LOG_FATAL("The index out of range.");
+            pgLogFatal("The index out of range.");
             return;
         }
         m_callables_records[idx] = record;

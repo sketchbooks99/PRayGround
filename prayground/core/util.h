@@ -99,6 +99,15 @@ inline void Message(MessageType type, Head head, Args... args) {
     if constexpr (num_args == 0) std::cout << std::endl;
 }
 
+template <typename Head, typename... Args>
+inline void pgLog(Head head, Args... args) { Message(MSG_NORMAL, head, args...); }
+
+template <typename Head, typename... Args>
+inline void pgLogWarn(Head head, Args... args) { Message(MSG_WARNING, "[Warning]", head, args...); }
+
+template <typename Head, typename... Args>
+inline void pgLogFatal(Head head, Args... args) { Message(MSG_FATAL, "[Fatal]", head, args...); }
+
 #define UNIMPLEMENTED()                                                     \
     do {                                                                    \
         std::stringstream ss;                                               \
@@ -106,27 +115,6 @@ inline void Message(MessageType type, Head head, Args... args) {
            << " (" __FILE__ << ":" << __LINE__ << ")"                       \
            << " will not be implemented or is still under development";     \
         Message(MSG_WARNING, ss.str());                                     \
-    } while (0)
-
-#define LOG(msg, ...)                                                    \
-    do {                                                                 \
-        std::stringstream ss;                                            \
-        ss << msg;                                                       \
-        Message(MSG_NORMAL, ss.str() __VA_OPT__(,) __VA_ARGS__);         \
-    } while (0)
-
-#define LOG_WARN(msg, ...)                                                          \
-    do {                                                                            \
-    std::stringstream ss;                                                           \
-        ss << "[Warning] " << msg;                                                  \
-        Message(MSG_WARNING, ss.str() __VA_OPT__(,) __VA_ARGS__);                   \
-    } while (0)
-
-#define LOG_FATAL(msg, ...)                                                     \
-    do {                                                                        \
-        std::stringstream ss;                                                   \
-        ss << "[Fatal] " << msg;                                                \
-        Message(MSG_FATAL, ss.str() __VA_OPT__(,) __VA_ARGS__);                 \
     } while (0)
 
 /** アサーション用 */

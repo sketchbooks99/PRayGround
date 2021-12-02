@@ -109,6 +109,7 @@ extern "C" __device__ float __direct_callable__pdf_conductor(SurfaceInteraction*
 {
     return 1.0f;
 }
+
 // Disney BRDF ------------------------------------------------------------------------------------------
 extern "C" __device__ void __direct_callable__sample_disney(SurfaceInteraction* si, void* mat_data)
 {
@@ -131,10 +132,12 @@ extern "C" __device__ void __direct_callable__sample_disney(SurfaceInteraction* 
     }
     else
     {
-        /// @todo Change sampling functions according to the ratio to choose specular or clearcoat pdf
-        /// ratio = 1.0f / (1.0f + clearcoat);
-
-        float3 h = sampleGGX(z1, z2, disney->roughness);
+        float gtr2_ratio = 1.0f / (1.0f + disney->clearcoat);
+        float3 h;
+        if (rnd(seed) < gtr2_ratio)
+            h = sampleGGX(z1, z2, disney->roughness);
+        else 
+            h = sampleGTR1(z1, z2, disney->roughness);
         onb.inverseTransform(h);
         si->wo = normalize(reflect(si->wi, h));
     }
@@ -172,9 +175,10 @@ extern "C" __device__ float3 __continuation_callable__bsdf_disney(SurfaceInterac
     const float NdotH = dot(N, H);
     const float LdotH /* = VdotH */ = dot(L, H);
 
-    const float3 base_color = optixDirectCall<float3, SurfaceInteraction*, void*>(
-        disney->base_program_id, si, disney->base_tex_data
+    float4 tmp = optixDirectCall<float4, const float2&, void*>(
+        disney->base_program_id, si->uv, disney->base_tex_data
     );
+    const float3 base_color = make_float3(tmp);
     si->albedo = base_color;
 
     // Diffuse term (diffuse, subsurface, sheen) ======================
@@ -197,9 +201,8 @@ extern "C" __device__ float3 __continuation_callable__bsdf_disney(SurfaceInterac
 
     // Specular term (specular, clearcoat) ============================
     // Spcular
-    Onb onb(N);
-    const float3 X = onb.tangent;
-    const float3 Y = onb.bitangent;
+    const float3 X = si->dpdu;
+    const float3 Y = si->dpdv;
     const float alpha = fmaxf(0.001f, disney->roughness * disney->roughness); // Remapping of roughness
     const float aspect = sqrtf(1.0f - disney->anisotropic * 0.9f);
     const float ax = fmaxf(0.001f, math::sqr(disney->roughness) / aspect);
@@ -208,16 +211,16 @@ extern "C" __device__ float3 __continuation_callable__bsdf_disney(SurfaceInterac
     const float3 Fs0 = lerp(0.08f * disney->specular * rho_specular, base_color, disney->metallic);
     const float3 FHs0 = fresnelSchlickR(LdotH, Fs0);
     const float Ds = GTR2_aniso(NdotH, dot(H, X), dot(H, Y), ax, ay);
-    const float alpha_g = powf(0.5f*disney->roughness + 0.5f, 2.0f);
-    const float Gs = geometrySmith(N, V, L, alpha_g);
-    const float3 f_specular = FHs0 * Ds * Gs / (4.0f * NdotV * NdotL);
+    float Gs = smithG_GGX_aniso(NdotL, dot(L, X), dot(L, Y), ax, ay);
+    Gs *= smithG_GGX_aniso(NdotV, dot(V, X), dot(V, Y), ax, ay);
+    const float3 f_specular = FHs0 * Ds * Gs/* / (4.0f * NdotV * NdotL) */;
 
     // Clearcoat
     const float Fcc = fresnelSchlickR(LdotH, 0.04f);
     const float alpha_cc = 0.1f + (0.001f - 0.1f) * disney->clearcoat_gloss; // lerp
     const float Dcc = GTR1(NdotH, alpha_cc);
     const float Gcc = geometrySmith(N, V, L, 0.25f);
-    const float3 f_clearcoat = make_float3( 0.25f * disney->clearcoat * (Fcc * Dcc * Gcc) / (4.0f * NdotV * NdotL) ); 
+    const float3 f_clearcoat = make_float3( 0.25f * disney->clearcoat * (Fcc * Dcc * Gcc) )/* / (4.0f * NdotV * NdotL)) */;
 
     const float3 out = ( 1.0f - disney->metallic ) * ( lerp( f_diffuse, f_subsurface, disney->subsurface ) + f_sheen ) + f_specular + f_clearcoat;
     return out * clamp(NdotL, 0.0f, 1.0f);
@@ -242,7 +245,7 @@ extern "C" __device__ float __direct_callable__pdf_disney(SurfaceInteraction* si
     const float NdotL = abs(dot(N, L));
     const float NdotV = abs(dot(N, V));
 
-    const float alpha = fmaxf(0.001f, disney->roughness * disney->roughness);
+    const float alpha = fmaxf(0.001f, disney->roughness);
     const float alpha_cc = 0.1f + (0.001f - 0.1f) * disney->clearcoat_gloss; // lerp
     const float3 H = normalize(V + L);
     const float NdotH = abs(dot(H, N));
@@ -250,7 +253,7 @@ extern "C" __device__ float __direct_callable__pdf_disney(SurfaceInteraction* si
     const float pdf_Ds = GTR2(NdotH, alpha);
     const float pdf_Dcc = GTR1(NdotH, alpha_cc);
     const float ratio = 1.0f / (1.0f + disney->clearcoat);
-    const float pdf_specular = (pdf_Dcc + ratio * (pdf_Ds - pdf_Dcc)) / (4.0f * NdotL * NdotV);
+    const float pdf_specular = (pdf_Dcc + ratio * (pdf_Ds - pdf_Dcc))/* / (4.0f * NdotL * NdotV) */;
     const float pdf_diffuse = NdotL / math::pi;
 
     return diffuse_ratio * pdf_diffuse + specular_ratio * pdf_specular;

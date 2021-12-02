@@ -108,6 +108,7 @@ extern "C" __device__ float __direct_callable__pdf_conductor(SurfaceInteraction*
 {
     return 1.0f;
 }
+
 // Disney BRDF ------------------------------------------------------------------------------------------
 extern "C" __device__ void __direct_callable__sample_disney(SurfaceInteraction* si, void* mat_data)
 {

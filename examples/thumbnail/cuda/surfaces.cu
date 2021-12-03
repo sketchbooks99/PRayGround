@@ -133,10 +133,11 @@ extern "C" __device__ void __direct_callable__sample_disney(SurfaceInteraction* 
     {
         float gtr2_ratio = 1.0f / (1.0f + disney->clearcoat);
         float3 h;
+        const float alpha = fmaxf(0.001f, disney->roughness);
         if (rnd(seed) < gtr2_ratio)
-            h = sampleGGX(z1, z2, disney->roughness);
+            h = sampleGGX(z1, z2, alpha);
         else 
-            h = sampleGTR1(z1, z2, disney->roughness);
+            h = sampleGTR1(z1, z2, alpha);
         onb.inverseTransform(h);
         si->wo = normalize(reflect(si->wi, h));
     }
@@ -202,10 +203,10 @@ extern "C" __device__ float3 __continuation_callable__bsdf_disney(SurfaceInterac
     // Spcular
     const float3 X = si->dpdu;
     const float3 Y = si->dpdv;
-    const float alpha = fmaxf(0.001f, disney->roughness * disney->roughness); // Remapping of roughness
+    const float alpha = fmaxf(0.001f, disney->roughness);
     const float aspect = sqrtf(1.0f - disney->anisotropic * 0.9f);
-    const float ax = fmaxf(0.001f, math::sqr(disney->roughness) / aspect);
-    const float ay = fmaxf(0.001f, math::sqr(disney->roughness) * aspect);
+    const float ax = fmaxf(0.001f, math::sqr(alpha) / aspect);
+    const float ay = fmaxf(0.001f, math::sqr(alpha) * aspect);
     const float3 rho_specular = lerp(make_float3(1.0f), rho_tint, disney->specular_tint);
     const float3 Fs0 = lerp(0.08f * disney->specular * rho_specular, base_color, disney->metallic);
     const float3 FHs0 = fresnelSchlickR(LdotH, Fs0);

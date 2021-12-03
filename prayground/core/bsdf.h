@@ -82,7 +82,7 @@ HOSTDEVICE INLINE float3 sampleGTR1(const float u1, const float u2, const float 
     float3 p;
     const float a = roughness * roughness;
     const float phi = 2.0f * math::pi * u1;
-    const float cos_theta = 1.0f; 
+    const float cos_theta = 1.0f;
 }
 
 /** 

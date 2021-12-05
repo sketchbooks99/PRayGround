@@ -18,7 +18,7 @@ PRayGroundは、OptiX 7を用いたC++/CUDAライブラリで、GPUによるイ�
 - C++ compiler which supports C++20 
     - Linux (Tested : g++ 10.3.0)
     - Windows (Tested : Visual Studio 2019, version 16.10.2) 
-- OptiX 7 (Tested : 7.1, 7.2, 7.3)
+- OptiX 7 (Tested : 7.1, 7.2, 7.3, 7.4)
 - CMake 3.0 minimum (Tested : cmake 3.16.3)
 
 # :inbox_tray: Cloning

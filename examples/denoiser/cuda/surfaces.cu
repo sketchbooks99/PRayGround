@@ -177,7 +177,7 @@ extern "C" __device__ float3 __continuation_callable__bsdf_disney(SurfaceInterac
     const float NdotH = dot(N, H);
     const float LdotH /* = VdotH */ = dot(L, H);
 
-    float4 tmp = optixDirectCall<float3, SurfaceInteraction*, void*>(
+    float4 tmp = optixDirectCall<float4, SurfaceInteraction*, void*>(
         disney->base_program_id, si, disney->base_tex_data
     );
     const float3 base_color = make_float3(tmp);

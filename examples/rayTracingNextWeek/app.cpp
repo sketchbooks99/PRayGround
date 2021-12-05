@@ -69,7 +69,7 @@ void App::setup()
     pipeline.setDirectCallableDepth(5);
     pipeline.setContinuationCallableDepth(5);
     pipeline.setNumPayloads(5);
-    pipeline.setNumAttributes(5);
+    pipeline.setNumAttributes(6);
     pipeline.enableMotionBlur();
 
     // OptixModuleをCUDAファイルから生成

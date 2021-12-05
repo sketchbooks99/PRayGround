@@ -1,6 +1,6 @@
 #include "app.h"
 
-#define INTERACTIVE 0
+#define INTERACTIVE 1
 
 static void streamProgress(int frame, int max_frame, float elapsed_time, int bar_length)
 {
@@ -124,7 +124,7 @@ void App::setup()
     camera.UVWFrame(U, V, W);
 
     // Raygen program
-    ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, raygen_module, "__raygen__lens");
+    ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, raygen_module, "__raygen__pinhole");
     // Shader binding table data for raygen program
     RaygenRecord raygen_record;
     raygen_prg.recordPackHeader(&raygen_record);

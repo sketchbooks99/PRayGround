@@ -165,16 +165,17 @@ static INLINE DEVICE float2 getCylinderUV(
 {
     if (hit_disk)
     {
-        const float r = sqrtf(p.x * p.x + p.z * p.z) / radius;
+        const float r = sqrtf(p.x*p.x + p.z*p.z) / radius;
         const float theta = atan2(p.z, p.x);
-        float u = 1.0f - (theta + math::pi / 2.0f) / math::pi;
+        float u = 1.0f - (theta + math::pi/2.0f) / math::pi;
         return make_float2(u, r);
-    }
+    } 
     else
     {
-        const float theta = atan2(p.z, p.x);
+        float phi = atan2(p.z, p.x);
+        if (phi < 0.0f) phi += math::two_pi;
+        const float u = phi / math::two_pi;
         const float v = (p.y + height / 2.0f) / height;
-        float u = 1.0f - (theta + math::pi / 2.0f) / math::pi;
         return make_float2(u, v);
     }
 }
@@ -188,11 +189,12 @@ extern "C" __device__ void __intersection__cylinder()
     const float height = cylinder->height;
 
     Ray ray = getLocalRay();
-
+    SurfaceInteraction* si = getSurfaceInteraction();
+    
     const float a = dot(ray.d, ray.d) - ray.d.y * ray.d.y;
     const float half_b = (ray.o.x * ray.d.x + ray.o.z * ray.d.z);
-    const float c = dot(ray.o, ray.o) - ray.o.y * ray.o.y - radius * radius;
-    const float discriminant = half_b * half_b - a * c;
+    const float c = dot(ray.o, ray.o) - ray.o.y * ray.o.y - radius*radius;
+    const float discriminant = half_b*half_b - a*c;
 
     if (discriminant > 0.0f)
     {
@@ -200,35 +202,46 @@ extern "C" __device__ void __intersection__cylinder()
         const float side_t1 = (-half_b - sqrtd) / a;
         const float side_t2 = (-half_b + sqrtd) / a;
 
-        const float side_tmin = fmin(side_t1, side_t2);
-        const float side_tmax = fmax(side_t1, side_t2);
+        const float side_tmin = fmin( side_t1, side_t2 );
+        const float side_tmax = fmax( side_t1, side_t2 );
 
-        if (side_tmin > ray.tmax || side_tmax < ray.tmin)
+        if ( side_tmin > ray.tmax || side_tmax < ray.tmin )
             return;
 
         const float upper = height / 2.0f;
         const float lower = -height / 2.0f;
-        const float y_tmin = fmin((lower - ray.o.y) / ray.d.y, (upper - ray.o.y) / ray.d.y);
-        const float y_tmax = fmax((lower - ray.o.y) / ray.d.y, (upper - ray.o.y) / ray.d.y);
+        const float y_tmin = fmin( (lower - ray.o.y) / ray.d.y, (upper - ray.o.y) / ray.d.y );
+        const float y_tmax = fmax( (lower - ray.o.y) / ray.d.y, (upper - ray.o.y) / ray.d.y );
 
         float t1 = fmax(y_tmin, side_tmin);
         float t2 = fmin(y_tmax, side_tmax);
         if (t1 > t2 || (t2 < ray.tmin) || (t1 > ray.tmax))
             return;
-
+        
         bool check_second = true;
         if (ray.tmin < t1 && t1 < ray.tmax)
         {
             float3 P = ray.at(t1);
             bool hit_disk = y_tmin > side_tmin;
-            float3 normal = hit_disk
-                ? normalize(P - make_float3(P.x, 0.0f, P.z))   // Hit at disk
-                : normalize(P - make_float3(0.0f, P.y, 0.0f)); // Hit at side
+            float3 normal = hit_disk 
+                          ? normalize(P - make_float3(P.x, 0.0f, P.z))   // Hit at disk
+                          : normalize(P - make_float3(0.0f, P.y, 0.0f)); // Hit at side
             float2 uv = getCylinderUV(P, radius, height, hit_disk);
+            if (hit_disk)
+            {
+                const float rHit = sqrtf(P.x*P.x + P.z*P.z);
+                si->dpdu = make_float3(-math::two_pi * P.y, 0.0f, math::two_pi * P.z);
+                si->dpdv = make_float3(P.x, 0.0f, P.z) * radius / rHit;
+            }
+            else 
+            {
+                si->dpdu = make_float3(-math::two_pi * P.z, 0.0f, math::two_pi * P.x);
+                si->dpdv = make_float3(0.0f, height, 0.0f);
+            }
             optixReportIntersection(t1, 0, float3_as_ints(normal), float2_as_ints(uv));
             check_second = false;
         }
-
+        
         if (check_second)
         {
             if (ray.tmin < t2 && t2 < ray.tmax)
@@ -236,9 +249,20 @@ extern "C" __device__ void __intersection__cylinder()
                 float3 P = ray.at(t2);
                 bool hit_disk = y_tmax < side_tmax;
                 float3 normal = hit_disk
-                    ? normalize(P - make_float3(P.x, 0.0f, P.z))   // Hit at disk
-                    : normalize(P - make_float3(0.0f, P.y, 0.0f)); // Hit at side
+                            ? normalize(P - make_float3(P.x, 0.0f, P.z))   // Hit at disk
+                            : normalize(P - make_float3(0.0f, P.y, 0.0f)); // Hit at side
                 float2 uv = getCylinderUV(P, radius, height, hit_disk);
+                if (hit_disk)
+                {
+                    const float rHit = sqrtf(P.x*P.x + P.z*P.z);
+                    si->dpdu = make_float3(-math::two_pi * P.y, 0.0f, math::two_pi * P.z);
+                    si->dpdv = make_float3(P.x, 0.0f, P.z) * radius / rHit;
+                }
+                else 
+                {
+                    si->dpdu = make_float3(-math::two_pi * P.z, 0.0f, math::two_pi * P.x);
+                    si->dpdv = make_float3(0.0f, height, 0.0f);
+                }
                 optixReportIntersection(t2, 0, float3_as_ints(normal), float2_as_ints(uv));
             }
         }
@@ -248,11 +272,11 @@ extern "C" __device__ void __intersection__cylinder()
 extern "C" __device__ void __closesthit__cylinder()
 {
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
+    const CylinderData* cylinder = reinterpret_cast<CylinderData*>(data->shape_data);
 
     Ray ray = getWorldRay();
 
     float3 local_n = getFloat3FromAttribute<0>();
-
     float2 uv = getFloat2FromAttribute<3>();
 
     float3 world_n = optixTransformNormalFromObjectToWorldSpace(local_n);
@@ -264,6 +288,10 @@ extern "C" __device__ void __closesthit__cylinder()
     si->wi = ray.d;
     si->uv = uv;
     si->surface_info = data->surface_info;
+
+    // dpdu and dpdv are calculated in intersection shader
+    si->dpdu = normalize(optixTransformVectorFromObjectToWorldSpace(si->dpdu));
+    si->dpdv = normalize(optixTransformVectorFromObjectToWorldSpace(si->dpdv));
 }
 
 // Plane -------------------------------------------------------------------------------
@@ -329,6 +357,8 @@ extern "C" __device__ void __closesthit__plane()
     si->wi = ray.d;
     si->uv = uv;
     si->surface_info = data->surface_info;
+    si->dpdu = optixTransformNormalFromObjectToWorldSpace(make_float3(1.0f, 0.0f, 0.0f));
+    si->dpdv = optixTransformNormalFromObjectToWorldSpace(make_float3(0.0f, 0.0f, 1.0f));
 }
 
 extern "C" __device__ float __continuation_callable__pdf_plane(const AreaEmitterInfo& area_info, const float3& origin, const float3& direction)
@@ -469,8 +499,6 @@ extern "C" __device__ void __closesthit__sphere() {
     float phi = atan2(local_n.z, local_n.x);
     if (phi < 0) phi += 2.0f * math::pi;
     const float theta = acos(local_n.y);
-    const float u = phi / (2.0f * math::pi);
-    const float v = theta / math::pi;
     const float3 dpdu = make_float3(-math::two_pi * local_n.z, 0, math::two_pi * local_n.x);
     const float3 dpdv = math::pi * make_float3(local_n.y * cos(phi), -sin(theta), local_n.y * sin(phi));
     si->dpdu = normalize(optixTransformVectorFromObjectToWorldSpace(dpdu));

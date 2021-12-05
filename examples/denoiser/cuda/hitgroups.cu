@@ -78,6 +78,9 @@ extern "C" __device__ void __closesthit__plane()
     si->wi = ray.d;
     si->uv = uv;
     si->surface_info = data->surface_info;
+
+    si->dpdu = optixTransformNormalFromObjectToWorldSpace(make_float3(1.0f, 0.0f, 0.0f));
+    si->dpdv = optixTransformNormalFromObjectToWorldSpace(make_float3(0.0f, 0.0f, 1.0f));
 }
 
 extern "C" __device__ float __continuation_callable__pdf_plane(AreaEmitterInfo area_info, const float3 & origin, const float3 & direction)
@@ -213,6 +216,16 @@ extern "C" __device__ void __closesthit__sphere() {
     si->wi = ray.d;
     si->uv = getSphereUV(local_n);
     si->surface_info = data->surface_info;
+
+    float phi = atan2(local_n.z, local_n.x);
+    if (phi < 0) phi += 2.0f * math::pi;
+    const float theta = acos(local_n.y);
+    const float u = phi / (2.0f * math::pi);
+    const float v = theta / math::pi;
+    const float3 dpdu = make_float3(-math::two_pi * local_n.z, 0, math::two_pi * local_n.x);
+    const float3 dpdv = math::pi * make_float3(local_n.y * cos(phi), -sin(theta), local_n.y * sin(phi));
+    si->dpdu = normalize(optixTransformVectorFromObjectToWorldSpace(dpdu));
+    si->dpdv = normalize(optixTransformVectorFromObjectToWorldSpace(dpdv));
 }
 
 // Cylinder -------------------------------------------------------------------------------
@@ -229,9 +242,10 @@ static INLINE DEVICE float2 getCylinderUV(
     } 
     else
     {
-        const float theta = atan2(p.z, p.x);
+        float phi = atan2(p.z, p.x);
+        if (phi < 0.0f) phi += math::two_pi;
+        const float u = phi / math::two_pi;
         const float v = (p.y + height / 2.0f) / height;
-        float u = 1.0f - (theta + math::pi/2.0f) / math::pi;
         return make_float2(u, v);
     }
 }
@@ -245,6 +259,7 @@ extern "C" __device__ void __intersection__cylinder()
     const float height = cylinder->height;
 
     Ray ray = getLocalRay();
+    SurfaceInteraction* si = getSurfaceInteraction();
     
     const float a = dot(ray.d, ray.d) - ray.d.y * ray.d.y;
     const float half_b = (ray.o.x * ray.d.x + ray.o.z * ray.d.z);
@@ -282,6 +297,17 @@ extern "C" __device__ void __intersection__cylinder()
                           ? normalize(P - make_float3(P.x, 0.0f, P.z))   // Hit at disk
                           : normalize(P - make_float3(0.0f, P.y, 0.0f)); // Hit at side
             float2 uv = getCylinderUV(P, radius, height, hit_disk);
+            if (hit_disk)
+            {
+                const float rHit = sqrtf(P.x*P.x + P.z*P.z);
+                si->dpdu = make_float3(-math::two_pi * P.y, 0.0f, math::two_pi * P.z);
+                si->dpdv = make_float3(P.x, 0.0f, P.z) * radius / rHit;
+            }
+            else 
+            {
+                si->dpdu = make_float3(-math::two_pi * P.z, 0.0f, math::two_pi * P.x);
+                si->dpdv = make_float3(0.0f, height, 0.0f);
+            }
             optixReportIntersection(t1, 0, float3_as_ints(normal), float2_as_ints(uv));
             check_second = false;
         }
@@ -296,6 +322,17 @@ extern "C" __device__ void __intersection__cylinder()
                             ? normalize(P - make_float3(P.x, 0.0f, P.z))   // Hit at disk
                             : normalize(P - make_float3(0.0f, P.y, 0.0f)); // Hit at side
                 float2 uv = getCylinderUV(P, radius, height, hit_disk);
+                if (hit_disk)
+                {
+                    const float rHit = sqrtf(P.x*P.x + P.z*P.z);
+                    si->dpdu = make_float3(-math::two_pi * P.y, 0.0f, math::two_pi * P.z);
+                    si->dpdv = make_float3(P.x, 0.0f, P.z) * radius / rHit;
+                }
+                else 
+                {
+                    si->dpdu = make_float3(-math::two_pi * P.z, 0.0f, math::two_pi * P.x);
+                    si->dpdv = make_float3(0.0f, height, 0.0f);
+                }
                 optixReportIntersection(t2, 0, float3_as_ints(normal), float2_as_ints(uv));
             }
         }
@@ -309,16 +346,8 @@ extern "C" __device__ void __closesthit__cylinder()
 
     Ray ray = getWorldRay();
 
-    float3 local_n = make_float3(
-        int_as_float( optixGetAttribute_0() ),
-        int_as_float( optixGetAttribute_1() ), 
-        int_as_float( optixGetAttribute_2() )
-    );
-
-    float2 uv = make_float2(
-        int_as_float( optixGetAttribute_3() ),
-        int_as_float( optixGetAttribute_4() )
-    );
+    float3 local_n = getFloat3FromAttribute<0>();
+    float2 uv = getFloat2FromAttribute<3>();
 
     float3 world_n = optixTransformNormalFromObjectToWorldSpace(local_n);
 
@@ -329,6 +358,10 @@ extern "C" __device__ void __closesthit__cylinder()
     si->wi = ray.d;
     si->uv = uv;
     si->surface_info = data->surface_info;
+
+    // dpdu and dpdv are calculated in intersection shader
+    si->dpdu = normalize(optixTransformVectorFromObjectToWorldSpace(si->dpdu));
+    si->dpdv = normalize(optixTransformVectorFromObjectToWorldSpace(si->dpdv));
 }
 
 // Triangle mesh -------------------------------------------------------------------------------
@@ -343,6 +376,10 @@ extern "C" __device__ void __closesthit__mesh()
     const Face face = mesh_data->faces[prim_id];
     const float u = optixGetTriangleBarycentrics().x;
     const float v = optixGetTriangleBarycentrics().y;
+
+    const float3 p0 = mesh_data->vertices[face.vertex_id.x];
+    const float3 p1 = mesh_data->vertices[face.vertex_id.y];
+    const float3 p2 = mesh_data->vertices[face.vertex_id.z];
 
     const float2 texcoord0 = mesh_data->texcoords[face.texcoord_id.x];
     const float2 texcoord1 = mesh_data->texcoords[face.texcoord_id.y];
@@ -365,4 +402,26 @@ extern "C" __device__ void __closesthit__mesh()
     si->wi = ray.d;
     si->uv = texcoords;
     si->surface_info = data->surface_info;
+
+    // Calculate partial derivative on texture coordinates
+    float3 dpdu, dpdv;
+    const float2 duv02 = texcoord0 - texcoord2, duv12 = texcoord1 - texcoord2;
+    const float3 dp02 = p0 - p2, dp12 = p1 - p2;
+    const float D = duv02.x * duv12.y - duv02.y * duv12.x;
+    bool degenerateUV = abs(D) < 1e-8f;
+    if (!degenerateUV)
+    {
+        const float invD = 1.0f / D;
+        dpdu = (duv12.y * dp02 - duv02.y * dp12) * invD;
+        dpdv = (-duv12.x * dp02 + duv02.x * dp12) * invD;
+    }
+    if (degenerateUV || length(cross(dpdu, dpdv)) == 0.0f)
+    {
+        const float3 n = normalize(cross(p2 - p0, p1 - p0));
+        Onb onb(n);
+        dpdu = onb.tangent;
+        dpdv = onb.bitangent;
+    }
+    si->dpdu = normalize(optixTransformNormalFromObjectToWorldSpace(dpdu));
+    si->dpdv = normalize(optixTransformNormalFromObjectToWorldSpace(dpdv));
 }

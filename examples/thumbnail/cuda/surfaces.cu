@@ -136,7 +136,7 @@ extern "C" __device__ void __direct_callable__sample_disney(SurfaceInteraction* 
         const float alpha = fmaxf(0.001f, disney->roughness);
         if (rnd(seed) < gtr2_ratio)
             h = sampleGGX(z1, z2, alpha);
-        else 
+        else
             h = sampleGTR1(z1, z2, alpha);
         onb.inverseTransform(h);
         si->wo = normalize(reflect(si->wi, h));
@@ -213,14 +213,15 @@ extern "C" __device__ float3 __continuation_callable__bsdf_disney(SurfaceInterac
     const float Ds = GTR2_aniso(NdotH, dot(H, X), dot(H, Y), ax, ay);
     float Gs = smithG_GGX_aniso(NdotL, dot(L, X), dot(L, Y), ax, ay);
     Gs *= smithG_GGX_aniso(NdotV, dot(V, X), dot(V, Y), ax, ay);
-    const float3 f_specular = FHs0 * Ds * Gs/* / (4.0f * NdotV * NdotL) */;
+    const float3 f_specular = FHs0 * Ds * Gs;
 
     // Clearcoat
     const float Fcc = fresnelSchlickR(LdotH, 0.04f);
     const float alpha_cc = 0.1f + (0.001f - 0.1f) * disney->clearcoat_gloss; // lerp
     const float Dcc = GTR1(NdotH, alpha_cc);
-    const float Gcc = geometrySmith(N, V, L, 0.25f);
-    const float3 f_clearcoat = make_float3( 0.25f * disney->clearcoat * (Fcc * Dcc * Gcc) )/* / (4.0f * NdotV * NdotL)) */;
+    // const float Gcc = smithG_GGX(N, V, L, 0.25f);
+    const float Gcc = smithG_GGX(NdotV, 0.25f);
+    const float3 f_clearcoat = make_float3( 0.25f * disney->clearcoat * (Fcc * Dcc * Gcc) );
 
     const float3 out = ( 1.0f - disney->metallic ) * ( lerp( f_diffuse, f_subsurface, disney->subsurface ) + f_sheen ) + f_specular + f_clearcoat;
     return out * clamp(NdotL, 0.0f, 1.0f);

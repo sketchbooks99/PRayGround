@@ -135,7 +135,11 @@ Module::Module()
 {
     m_options.maxRegisterCount = OPTIX_COMPILE_DEFAULT_MAX_REGISTER_COUNT;
     m_options.optLevel = OPTIX_COMPILE_OPTIMIZATION_DEFAULT;
+#if OPTIX_VERSION == 70400
+    m_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_MODERATE;
+#else 
     m_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_LINEINFO;
+#endif
 }
 
 Module::Module(const OptixModuleCompileOptions& options)

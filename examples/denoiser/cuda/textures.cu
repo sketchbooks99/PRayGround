@@ -18,6 +18,6 @@ extern "C" __device__ float4 __direct_callable__constant(SurfaceInteraction* si,
 
 extern "C" __device__ float4 __direct_callable__checker(SurfaceInteraction* si, void* tex_data) {
     const CheckerTextureData* checker = reinterpret_cast<CheckerTextureData*>(tex_data);
-    const bool is_odd = sinf(si->uv.x*M_PIf*checker->scale) * sinf(si->uv.y*M_PIf*checker->scale) < 0;
+    const bool is_odd = sinf(si->uv.x*math::pi*checker->scale) * sinf(si->uv.y*math::pi*checker->scale) < 0;
     return is_odd ? checker->color1 : checker->color2;
 }

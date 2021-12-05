@@ -134,10 +134,11 @@ extern "C" __device__ void __direct_callable__sample_disney(SurfaceInteraction* 
     {
         float gtr2_ratio = 1.0f / (1.0f + disney->clearcoat);
         float3 h;
+        const float alpha = fmaxf(0.001f, disney->roughness);
         if (rnd(seed) < gtr2_ratio)
-            h = sampleGGX(z1, z2, disney->roughness);
-        else 
-            h = sampleGTR1(z1, z2, disney->roughness);
+            h = sampleGGX(z1, z2, alpha);
+        else
+            h = sampleGTR1(z1, z2, alpha);
         onb.inverseTransform(h);
         si->wo = normalize(reflect(si->wi, h));
     }
@@ -175,10 +176,9 @@ extern "C" __device__ float3 __continuation_callable__bsdf_disney(SurfaceInterac
     const float NdotH = dot(N, H);
     const float LdotH /* = VdotH */ = dot(L, H);
 
-    float4 tmp = optixDirectCall<float4, const float2&, void*>(
-        disney->base_program_id, si->uv, disney->base_tex_data
-    );
-    const float3 base_color = make_float3(tmp);
+    const float3 base_color = optixDirectCall<float3, SurfaceInteraction*, void*>(
+        disney->base_program_id, si, disney->base_tex_data
+        );
     si->albedo = base_color;
 
     // Diffuse term (diffuse, subsurface, sheen) ======================
@@ -203,24 +203,25 @@ extern "C" __device__ float3 __continuation_callable__bsdf_disney(SurfaceInterac
     // Spcular
     const float3 X = si->dpdu;
     const float3 Y = si->dpdv;
-    const float alpha = fmaxf(0.001f, disney->roughness * disney->roughness); // Remapping of roughness
+    const float alpha = fmaxf(0.001f, disney->roughness);
     const float aspect = sqrtf(1.0f - disney->anisotropic * 0.9f);
-    const float ax = fmaxf(0.001f, math::sqr(disney->roughness) / aspect);
-    const float ay = fmaxf(0.001f, math::sqr(disney->roughness) * aspect);
+    const float ax = fmaxf(0.001f, math::sqr(alpha) / aspect);
+    const float ay = fmaxf(0.001f, math::sqr(alpha) * aspect);
     const float3 rho_specular = lerp(make_float3(1.0f), rho_tint, disney->specular_tint);
     const float3 Fs0 = lerp(0.08f * disney->specular * rho_specular, base_color, disney->metallic);
     const float3 FHs0 = fresnelSchlickR(LdotH, Fs0);
     const float Ds = GTR2_aniso(NdotH, dot(H, X), dot(H, Y), ax, ay);
     float Gs = smithG_GGX_aniso(NdotL, dot(L, X), dot(L, Y), ax, ay);
     Gs *= smithG_GGX_aniso(NdotV, dot(V, X), dot(V, Y), ax, ay);
-    const float3 f_specular = FHs0 * Ds * Gs/* / (4.0f * NdotV * NdotL) */;
+    const float3 f_specular = FHs0 * Ds * Gs;
 
     // Clearcoat
     const float Fcc = fresnelSchlickR(LdotH, 0.04f);
     const float alpha_cc = 0.1f + (0.001f - 0.1f) * disney->clearcoat_gloss; // lerp
     const float Dcc = GTR1(NdotH, alpha_cc);
-    const float Gcc = geometrySmith(N, V, L, 0.25f);
-    const float3 f_clearcoat = make_float3( 0.25f * disney->clearcoat * (Fcc * Dcc * Gcc) )/* / (4.0f * NdotV * NdotL)) */;
+    // const float Gcc = smithG_GGX(N, V, L, 0.25f);
+    const float Gcc = smithG_GGX(NdotV, 0.25f);
+    const float3 f_clearcoat = make_float3( 0.25f * disney->clearcoat * (Fcc * Dcc * Gcc) );
 
     const float3 out = ( 1.0f - disney->metallic ) * ( lerp( f_diffuse, f_subsurface, disney->subsurface ) + f_sheen ) + f_specular + f_clearcoat;
     return out * clamp(NdotL, 0.0f, 1.0f);

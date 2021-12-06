@@ -19,6 +19,7 @@ struct Spectrum
 
 };
 
+/// @todo sRGBよりlinearToSRGB の方がいい気がする
 HOSTDEVICE INLINE float3 toSRGB( const float3& c )
 {
     float  invGamma = 1.0f / 2.4f;
@@ -29,6 +30,15 @@ HOSTDEVICE INLINE float3 toSRGB( const float3& c )
         c.z < 0.0031308f ? 12.92f * c.z : 1.055f * powed.z - 0.055f );
 }
 
+HOSTDEVICE INLINE float3 sRGBToLinear(const float3& c)
+{
+    const float gamma = 2.4f;
+    return make_float3(
+        c.x < 0.0404482f ? c.x/12.92 : powf((c.x + 0.055f)/1.055f, gamma),
+        c.y < 0.0404482f ? c.y/12.92 : powf((c.y + 0.055f)/1.055f, gamma),
+        c.z < 0.0404482f ? c.z/12.92 : powf((c.z + 0.055f)/1.055f, gamma)
+    );
+}
 INLINE HOSTDEVICE float4 color2float( const uchar4& c )
 {
     return make_float4(

@@ -175,37 +175,6 @@ HOSTDEVICE INLINE float smithG_GGX_aniso(float NdotV, float VdotX, float VdotY, 
     return 1 / (NdotV + sqrt(math::sqr(VdotX * ax) + math::sqr(VdotY * ay) + math::sqr(NdotV)));
 }
 
-/**
- * @brief Geometry function of combining GGX and Schlick-Beckmann approximation
- * 
- * @param n : normal
- * @param v : view vector
- * @param k : remapping of roughness that depends on lighting context (direct or IBL).
- */
-HOSTDEVICE INLINE float geometrySchlickGGX(float NdotV, float roughness)
-{
-    float r = (roughness + 1.0f);
-    float k = (r*r) / 8.0f;
-    return NdotV / (NdotV * (1.0f - k) + k);
-}
-
-/**
- * @brief Geometry function that takes account view direction (obstruction) and light direction (shadowing).
- * 
- * @param n : normal
- * @param v : view vector
- * @param l : light vector
- * @param k : remapping of roughness that depends on lighting context (direct or IBL).
- */
-HOSTDEVICE INLINE float geometrySmith(const float3& n, const float3& v, const float3& l, float roughness)
-{
-    const float NdotV = fmaxf(dot(n, v), 0.0f);
-    const float NdotL = fmaxf(dot(n, l), 0.0f);
-    const float ggxV = geometrySchlickGGX(NdotV, roughness);
-    const float ggxL = geometrySchlickGGX(NdotL, roughness);
-    return ggxV * ggxL;
-}
-
 HOSTDEVICE INLINE float3 refract(const float3& v, const float3& n, float ior) {
     float3 nv = normalize(v);
     float cos_i = dot(-nv, n);

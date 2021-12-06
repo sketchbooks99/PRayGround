@@ -20,8 +20,10 @@ extern "C" __device__ void __direct_callable__sample_diffuse(SurfaceInteraction*
         si->n = faceforward(si->n, -si->wi, si->n);
 
     si->trace_terminate = false;
-    unsigned int seed = si->seed;
-    float3 wi = randomSampleHemisphere(seed);
+    uint32_t seed = si->seed;
+    const float z0 = rnd(seed);
+    const float z1 = rnd(seed);
+    float3 wi = cosineSampleHemisphere(z0, z1);
     Onb onb(si->n);
     onb.inverseTransform(wi);
     si->wo = normalize(wi);

@@ -128,9 +128,10 @@ extern "C" __device__ float3 __direct_callable__rnd_sample_plane(AreaEmitterInfo
 // Sphere -------------------------------------------------------------------------------
 static __forceinline__ __device__ float2 getSphereUV(const float3& p) {
     float phi = atan2(p.z, p.x);
-    float theta = asin(p.y);
-    float u = 1.0f - (phi + math::pi) / (2.0f * math::pi);
-    float v = 1.0f - (theta + math::pi / 2.0f) / math::pi;
+    if (phi < 0) phi += math::two_pi;
+    float theta = acos(p.y);
+    float u = phi / math::two_pi;
+    float v = theta / math::pi;
     return make_float2(u, v);
 }
 
@@ -138,7 +139,7 @@ static __forceinline__ __device__ bool hitSphere(
     const SphereData* sphere_data, 
     const float3& o, const float3& v, 
     const float tmin, const float tmax, 
-    SurfaceInteraction& si)
+    SurfaceInteraction* si)
 {
     const float3 center = sphere_data->center;
     const float radius = sphere_data->radius;
@@ -161,10 +162,10 @@ static __forceinline__ __device__ bool hitSphere(
             return false;
     }
     
-    si.p = o + t * v;
-    si.n = (si.p - center) / radius;
-    si.t = t;
-    si.uv = getSphereUV(si.n);
+    si->p = o + t * v;
+    si->n = (si->p - center) / radius;
+    si->t = t;
+    si->uv = getSphereUV(si->n);
     return true;
 }
 
@@ -177,7 +178,7 @@ extern "C" __device__ void __intersection__sphere()
     Ray ray = getLocalRay();
 
     SurfaceInteraction si;
-    if (hitSphere(&sphere_data, ray.o, ray.d, ray.tmin, ray.tmax, si))
+    if (hitSphere(&sphere_data, ray.o, ray.d, ray.tmin, ray.tmax, &si))
         optixReportIntersection(si.t, 0, float3_as_ints(si.n), float2_as_ints(si.uv));
 }
 
@@ -199,9 +200,9 @@ extern "C" __device__ void __intersection__sphere_medium()
     unsigned int seed = global_si->seed;
 
     SurfaceInteraction si1, si2;
-    if (!hitSphere(&sphere_data, ray.o, ray.d, -1e16f, 1e16f, si1))
+    if (!hitSphere(&sphere_data, ray.o, ray.d, -1e16f, 1e16f, &si1))
         return;
-    if (!hitSphere(&sphere_data, ray.o, ray.d, si1.t + math::eps, 1e16f, si2))
+    if (!hitSphere(&sphere_data, ray.o, ray.d, si1.t + math::eps, 1e16f, &si2))
         return;
 
     if (si1.t < ray.tmin) si1.t = ray.tmin;
@@ -231,15 +232,8 @@ extern "C" __device__ void __closesthit__sphere() {
 
     Ray ray = getWorldRay();
 
-    float3 local_n = make_float3(
-        int_as_float(optixGetAttribute_0()),
-        int_as_float(optixGetAttribute_1()),
-        int_as_float(optixGetAttribute_2())
-    );
-    float2 uv = make_float2(
-        int_as_float( optixGetAttribute_3() ),
-        int_as_float( optixGetAttribute_4() )
-    );
+    float3 local_n = getFloat3FromAttribute<0>();
+    float2 uv = getFloat2FromAttribute<3>();
     float3 world_n = optixTransformNormalFromObjectToWorldSpace(local_n);
     world_n = normalize(world_n);
 
@@ -268,7 +262,7 @@ extern "C" __device__ float __continuation_callable__pdf_sphere(AreaEmitterInfo 
     const float3 local_o = area_info.worldToObj.pointMul(origin);
     const float3 local_d = area_info.worldToObj.vectorMul(direction);
     
-    if (!hitSphere(sphere_data, local_o, local_d, 0.01f, 1e16f, si))
+    if (!hitSphere(sphere_data, local_o, local_d, 0.01f, 1e16f, &si))
         return 0.0f;
 
     const float3 center = sphere_data->center;

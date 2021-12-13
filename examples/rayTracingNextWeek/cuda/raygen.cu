@@ -33,6 +33,7 @@ extern "C" __device__ void __raygen__pinhole()
     unsigned seed = tea<4>(idx.x * params.width + idx.y, subframe_index);
 
     float3 result = make_float3(0.0f);
+    float3 normal = make_float3(0.0f);
 
     int i = params.samples_per_launch;
 
@@ -65,21 +66,15 @@ extern "C" __device__ void __raygen__pinhole()
             if ( depth >= params.max_depth )
 				break;
 
-            trace(
-                params.handle, 
-                ro,   
-                rd,
-                0.01f, 
-                tmax, 
-                rnd(seed),
-                0,      // ray type
-                &si
-            );
+            trace(params.handle, ro, rd, 0.01f, tmax, rnd(seed), /* ray_type = */ 0, &si);
 
             if (si.trace_terminate) {
                 result += si.emission * throughput;
                 break;
             }
+
+            if (depth == 0)
+                normal = si.n;
 
             // Get emission from area emitter
             if ( si.surface_info.type == SurfaceType::AreaEmitter )

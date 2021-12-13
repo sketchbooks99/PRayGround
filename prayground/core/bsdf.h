@@ -52,15 +52,12 @@ HOSTDEVICE INLINE float3 randomSampleHemisphere(unsigned int& seed)
 
 HOSTDEVICE INLINE float3 cosineSampleHemisphere(const float u1, const float u2)
 {
-    float3 p;
-    const float r = sqrtf(u1);
-    const float phi = 2.0f * math::pi * u2;
-    p.x = r * cosf(phi);
-    p.y = r * sinf(phi);
-
-    // Project up to hemisphere
-    p.z = sqrtf(fmaxf(0.0f, 1.0f - p.x * p.x - p.y * p.y));
-    return p;
+    const float r = sqrtf(u2);
+    const float phi = math::two_pi * u1;
+    const float x = r * cosf(phi);
+    const float y = r * sinf(phi);
+    const float z = sqrtf(1.0f - u2);
+    return make_float3(x, y, z);
 }
 
 HOSTDEVICE INLINE float3 sampleGGX(const float u1, const float u2, const float roughness)

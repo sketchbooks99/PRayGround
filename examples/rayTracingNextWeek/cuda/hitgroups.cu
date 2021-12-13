@@ -539,9 +539,9 @@ extern "C" __device__ void __intersection__box_medium()
     unsigned int seed = global_si->seed;
 
     SurfaceInteraction si1, si2;
-    if (!hitBox(&box_data, ray.o, ray.d, -1e16f, 1e16f, si1)) 
+    if (hitBox(&box_data, ray.o, ray.d, -1e16f, 1e16f, si1) < 0) 
         return;
-    if (!hitBox(&box_data, ray.o, ray.d, si1.t + math::eps, 1e16f, si2))
+    if (hitBox(&box_data, ray.o, ray.d, si1.t + math::eps, 1e16f, si2) < 0)
         return;
 
     if (si1.t < ray.tmin) si1.t = ray.tmin;

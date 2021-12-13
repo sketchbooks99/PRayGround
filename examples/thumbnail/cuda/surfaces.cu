@@ -172,10 +172,10 @@ extern "C" __device__ float3 __continuation_callable__bsdf_disney(SurfaceInterac
     const float3 L = normalize(si->wo);
     const float3 N = normalize(si->n);
 
-    const float NdotV = fabs(dot(N, V));
-    const float NdotL = fabs(dot(N, L));
+    const float NdotV = dot(N, V);
+    const float NdotL = dot(N, L);
 
-    if (NdotV == 0.0f || NdotL == 0.0f)
+    if (NdotV <= 0.0f || NdotL <= 0.0f)
         return make_float3(0.0f);
 
     const float3 H = normalize(V + L);
@@ -250,8 +250,11 @@ extern "C" __device__ float __direct_callable__pdf_disney(SurfaceInteraction* si
     const float diffuse_ratio = 0.5f * (1.0f - disney->metallic);
     const float specular_ratio = 1.0f - diffuse_ratio;
 
-    const float NdotL = abs(dot(N, L));
-    const float NdotV = abs(dot(N, V));
+    const float NdotL = dot(N, L);
+    const float NdotV = dot(N, V);
+
+    if (NdotL <= 0.0f || NdotV <= 0.0f)
+        return 1.0f;
 
     const float alpha = fmaxf(0.001f, disney->roughness);
     const float alpha_cc = 0.1f + (0.001f - 0.1f) * disney->clearcoat_gloss; // lerp

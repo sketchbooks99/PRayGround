@@ -74,6 +74,24 @@ HOSTDEVICE INLINE float3 sampleGGX(const float u1, const float u2, const float r
     return p;
 }
 
+/// @ref: https://jcgt.org/published/0007/04/01/
+HOSTDEVICE INLINE float3 sampleGGXAniso(const float3& v, const float ax, const float ay, const float u0, const float u1)
+{
+    const float3 Vh = normalize(make_float3(ax * v.x, ay * v.y, v.z));
+    const float lensq = Vh.x * Vh.x + Vh.y * Vh.y;
+    const float3 T1 = lensq > 0 ? make_float3(-Vh.y, Vh.x, 0) * inverseSqrt(lensq) : make_float3(1.0f, 0.0f, 0.0);
+    const float3 T2 = cross(Vh, T1);
+    const float r = sqrt(u0);
+    const float phi = math::two_pi * u1;
+    float t1 = r * cosf(phi); 
+    float t2 = r * sinf(phi);
+    float s = 0.5f * (1.0f + Vh.z);
+    t2 = (1.0f - s) * sqrtf(1.0f - t1 * t1) + s * t2;
+    const float3 Nh = t1 * T1 + t2 * T2 + sqrtf(fmaxf(0.0f, 1.0f - t1 * t1 - t2 * t2)) * Vh;
+    const float3 Ne = normalize(make_float3(ax * Nh.x, ay * Nh.y, fmaxf(0.0f, Nh.z)));
+    return Ne;
+}
+
 HOSTDEVICE INLINE float3 sampleGTR1(const float u1, const float u2, const float roughness)
 {
     float3 p;

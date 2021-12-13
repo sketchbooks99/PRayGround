@@ -136,8 +136,13 @@ extern "C" __device__ void __direct_callable__sample_disney(SurfaceInteraction* 
         float gtr2_ratio = 1.0f / (1.0f + disney->clearcoat);
         float3 h;
         const float alpha = fmaxf(0.001f, disney->roughness);
+        /// For debugging microfacet sampling according to this cite @ref: https://jcgt.org/published/0007/04/01/
+        //const float aspect = sqrtf(1.0f - disney->anisotropic * 0.9f);
+        //const float ax = fmaxf(0.001f, math::sqr(alpha) / aspect);
+        //const float ay = fmaxf(0.001f, math::sqr(alpha) * aspect);
         if (rnd(seed) < gtr2_ratio)
-            h = sampleGGX(z1, z2, alpha);
+             h = sampleGGX(z1, z2, alpha);
+            //h = sampleGGXAniso(-si->wi, ax, ay, z1, z2);
         else
             h = sampleGTR1(z1, z2, alpha);
         onb.inverseTransform(h);

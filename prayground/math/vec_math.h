@@ -130,6 +130,11 @@ INLINE HOSTDEVICE float clamp( const float f, const float a, const float b )
     return fmaxf( a, fminf( f, b ) );
 }
 
+INLINE HOSTDEVICE float inverseSqrt(float x)
+{
+    return 1.0f / sqrtf(x);
+}
+
 
 /* float2 functions */
 /******************************************************************************/

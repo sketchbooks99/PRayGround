@@ -669,6 +669,7 @@ extern "C" __device__ void __closesthit__mesh()
     }
     if (degenerateUV || length(cross(dpdu, dpdv)) == 0.0f)
     {
+        /// @note Is it OK with n = world_n? 
         const float3 n = normalize(cross(p2 - p0, p1 - p0));
         Onb onb(n);
         dpdu = onb.tangent;

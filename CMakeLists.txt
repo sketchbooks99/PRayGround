@@ -399,6 +399,7 @@ add_subdirectory(examples/thumbnail)
 # Please add your custom applications to build :-)
 ################################################################
 add_subdirectory(apps/empty_app)
+add_subdirectory(../PRayGroundApps/glass build/bin)
 
 ################################################################
 # Unit test

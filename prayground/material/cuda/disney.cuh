@@ -3,7 +3,7 @@
 #include <cuda/random.h>
 #include <prayground/core/bsdf.h>
 #include <prayground/core/onb.h>
-#include <prayground/core/color.h>
+#include <prayground/core/spectrum.h>
 #include <prayground/core/interaction.h>
 #include <prayground/material/disney.h>
 

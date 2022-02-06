@@ -55,7 +55,7 @@ INLINE DEVICE Ray getLocalRay() {
 INLINE DEVICE Ray getWorldRay() {
     Ray ray;
     ray.o = optixGetWorldRayOrigin();
-    ray.d = normalize(optixGetWorldRayDirection());
+    ray.d = optixGetWorldRayDirection();
     ray.tmin = optixGetRayTmin();
     ray.tmax = optixGetRayTmax();
     ray.t = optixGetRayTime();

@@ -6,7 +6,7 @@
 #include <prayground/emitter/area.h>
 #include <prayground/core/bsdf.h>
 #include <prayground/core/onb.h>
-#include <prayground/core/color.h>
+#include <prayground/core/spectrum.h>
 
 using namespace prayground;
 
@@ -60,7 +60,7 @@ extern "C" __device__ void __direct_callable__sample_dielectric(SurfaceInteracti
 
     cosine = fabs(cosine);
     float sine = sqrtf(1.0 - cosine*cosine);
-    bool cannot_refract = (ni / nt) * sine > 1.0f;
+    bool cannot_refract = ni * sine > nt;
 
     float reflect_prob = fresnel(cosine, ni, nt);
     unsigned int seed = si->seed;

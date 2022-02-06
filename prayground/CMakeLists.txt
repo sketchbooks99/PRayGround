@@ -8,7 +8,7 @@ set(sources
   core/bsdf.h 
   core/camera.h 
   core/camera.cpp
-  core/color.h 
+  core/spectrum.h 
   core/cudabuffer.h 
   core/emitter.h 
   core/file_util.h 

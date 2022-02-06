@@ -1,5 +1,5 @@
 #include "bitmap.h"
-#include <prayground/core/color.h>
+#include <prayground/core/spectrum.h>
 #include <prayground/core/cudabuffer.h>
 #include <prayground/core/file_util.h>
 #include <prayground/core/util.h>

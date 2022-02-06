@@ -6,7 +6,7 @@
 #include <prayground/emitter/area.h>
 #include <prayground/core/bsdf.h>
 #include <prayground/core/onb.h>
-#include <prayground/core/color.h>
+#include <prayground/core/spectrum.h>
 
 using namespace prayground;
 

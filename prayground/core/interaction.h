@@ -51,24 +51,11 @@ struct SurfaceInfo
     SurfaceType type;
 };
 
-/// Shading frame 
-/// @todo Easy function to transform shading from object to world space, and vice versa.
-struct Shading
-{
-    float3 n; 
-    float3 dpdu; 
-    float3 dpdv; 
-    float3 dndu;
-    float3 dndv;
-};
-
 /// @note Currently \c spectrum is RGB representation, not spectrum. 
+/// @todo template <typename Spectrum>
 struct SurfaceInteraction {
     /** Position of intersection point in world coordinates. */
     float3 p;
-
-    /** Surface normal of primitive at an intersection point. */
-    float3 n;
 
     /** Incident and outgoing directions at a surface. */
     float3 wi;
@@ -86,14 +73,17 @@ struct SurfaceInteraction {
 
     /** UV coordinate at an intersection point. */
     float2 uv;
+ 
+    struct {
+        /** Surface normal */
+        float3 n;
 
-    /** Partial derivatives on intersection point */
-    float3 dpdu;
-    float3 dpdv;
+        /** Partial derivative on intersection point */
+        float3 dpdu, dpdv;
 
-    /** @todo 
-    * Shading shading;
-    */
+        /** Partial derivative on surface normal */
+        float3 dndu, dndv;
+    } shading;
 
     unsigned int seed;
 

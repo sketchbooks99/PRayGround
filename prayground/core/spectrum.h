@@ -6,14 +6,17 @@
 #include <prayground/optix/macros.h>
 #include <prayground/optix/helpers.h>
 
+#ifndef __CUDACC__
+#include <filesystem>
+#include <fstream>
+#endif
+
 namespace prayground {
 
     constexpr int min_lambda = 380;
     constexpr int max_lambda = 780;
+    constexpr int nSpectrumSamples = 80;
     constexpr float CIE_Y_integral = 106.919853f;
-
-    class RGBSpectrum;
-    template <int nSpectrumSamples> class SampledSpectrum;
 
     /* Conversion from XYZ to RGB color space, vice versa */
     HOSTDEVICE INLINE float3 XYZToSRGB(const float3& xyz)
@@ -219,6 +222,8 @@ namespace prayground {
      * コーディングルールによってコンパイルエラーを防ぐ 
      */
 
+    
+
     // RGBSpectrum ---------------------------------------------------------------
     class RGBSpectrum {
     public:
@@ -344,12 +349,11 @@ namespace prayground {
     };
 
      // SampledSpectrum ---------------------------------------------------------------
-    template <int nSpectrumSamples>
     class SampledSpectrum {
     public:
         static constexpr int nSamples = nSpectrumSamples;
 
-        SampledSpectrum(float t)
+        SampledSpectrum(float t = 0.0f)
         {
             for (int i = 0; i < nSpectrumSamples; i++)
                 c[i] = t;
@@ -364,10 +368,36 @@ namespace prayground {
             {
                 float lambda0 = lerp(min_lambda, max_lambda, float(i) / nSpectrumSamples);
                 float lambda1 = lerp(min_lambda, max_lambda, float(i+1) / nSpectrumSamples);
-                ss.c[i] = averageSpectrumSamples(lambda, v, n, lamdba0, lambda1);
+                ss.c[i] = averageSpectrumSamples(lambda, v, n, lambda0, lambda1);
             }
             return ss;
         }
+
+#ifndef __CUDACC__ /// @note Not defined on CUDA kernel
+        static SampledSpectrum fromFile(const std::filesystem::path& filepath)
+        {
+            SampledSpectrum ss;
+            std::vector<float> lambda;
+            std::vector<float> value;
+
+            std::ifstream ifs(filepath, std::ios::in);
+            ASSERT(ifs.is_open(), "The SPD file '" + filepath.string() + "' is not found.");
+
+            while (!ifs.eof())
+            {
+                std::string line;
+                if (!std::getline(ifs, line)) continue;
+
+                std::istringstream iss(line);
+                float l, v;
+                iss >> l >> v;
+                lambda.emplace_back(l);
+                value.emplace_back(v);
+            }
+
+            return fromSample(lambda.data(), value.data(), static_cast<int>(lambda.size()));
+        }
+#endif
 
         float& operator[](int i) {
             return c[i];
@@ -456,7 +486,7 @@ namespace prayground {
         float3 toRGB() const 
         {
             float3 xyz = toXYZ();
-            return XYZtoSRGB(xyz);
+            return XYZToSRGB(xyz);
         }
 
         friend SampledSpectrum sqrtf(const SampledSpectrum& s)

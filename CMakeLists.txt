@@ -392,6 +392,7 @@ add_subdirectory(examples/rayTracingNextWeek)
 add_subdirectory(examples/rayTracingRestOfYourLife)
 add_subdirectory(examples/denoiser)
 add_subdirectory(examples/thumbnail)
+add_subdirectory(examples/spectrum)
 
 ################################################################
 # Applications

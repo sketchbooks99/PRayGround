@@ -12,6 +12,133 @@ namespace prayground {
     constexpr int max_lambda = 780;
     constexpr float CIE_Y_integral = 106.919853f;
 
+    class RGBSpectrum;
+    template <int nSpectrumSamples> class SampledSpectrum;
+
+    /* Conversion from XYZ to RGB color space, vice versa */
+    HOSTDEVICE INLINE float3 XYZToSRGB(const float3& xyz)
+    {
+        return make_float3(
+             3.2410f * xyz.x - 1.5374f * xyz.y - 0.4986f * xyz.z,
+            -0.9692f * xyz.x + 1.8760f * xyz.y + 0.0416f * xyz.z,
+             3.2410f * xyz.x - 0.2040f * xyz.y + 1.0507f * xyz.z
+        );
+    }
+
+    HOSTDEVICE INLINE void XYZToSRGB(float xyz2rgb[3])
+    {
+        const float x = xyz2rgb[0];
+        const float y = xyz2rgb[1];
+        const float z = xyz2rgb[2];
+        xyz2rgb[0] = 3.2410f * x - 1.5374f * y - 0.4986f * z;
+        xyz2rgb[1] = -0.9692f * x + 1.8760f * y + 0.0416f * z;
+        xyz2rgb[2] = 3.2410f * x - 0.2040f * y + 1.0507f * z;
+    }
+
+    HOSTDEVICE INLINE float3 sRGBToXYZ(const float3& rgb)
+    {
+        return make_float3(
+            0.4124f * rgb.x + 0.3576f * rgb.y + 0.1805f * rgb.z,
+            0.2126f * rgb.x + 0.7152f * rgb.y + 0.0722f * rgb.z,
+            0.0193f * rgb.x + 0.1192f * rgb.y + 0.9505f * rgb.z
+        );
+    }
+
+    HOSTDEVICE INLINE void sRGBToXYZ(float rgb2xyz[3])
+    {
+        const float r = rgb2xyz[0];
+        const float g = rgb2xyz[1];
+        const float b = rgb2xyz[2];
+        rgb2xyz[0] = 0.4124f * r + 0.3576f * g + 0.1805f * b;
+        rgb2xyz[1] = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+        rgb2xyz[2] = 0.0193f * r + 0.1192f * g + 0.9505f * b;
+    }
+
+    /* Conversion from linear to sRGB color, vice versa */
+    HOSTDEVICE INLINE float3 linearToSRGB(const float3& c)
+    {
+        float invGamma = 1.0f / 2.4f;
+        float3 powed = make_float3(powf(c.x, invGamma), powf(c.y, invGamma), powf(c.z, invGamma));
+        return make_float3(
+            c.x < 0.0031308f ? 12.92f * c.x : 1.055f * powed.x - 0.055f,
+            c.y < 0.0031308f ? 12.92f * c.y : 1.055f * powed.y - 0.055f,
+            c.z < 0.0031308f ? 12.92f * c.z : 1.055f * powed.z - 0.055f
+        );
+    }
+
+    HOSTDEVICE INLINE RGBSpectrum linearToSRGB(const RGBSpectrum& c)
+    {
+        float  invGamma = 1.0f / 2.4f;
+        RGBSpectrum ret;
+        RGBSpectrum powed = powf(c, invGamma);
+        ret[0] = c[0] < 0.0031308f ? 12.92f * c[0] : 1.055f * powed[0] - 0.055f;
+        ret[1] = c[1] < 0.0031308f ? 12.92f * c[1] : 1.055f * powed[1] - 0.055f;
+        ret[2] = c[2] < 0.0031308f ? 12.92f * c[2] : 1.055f * powed[2] - 0.055f;
+        return ret;
+    }
+
+    HOSTDEVICE INLINE float3 sRGBToLinear(const float3& c)
+    {
+        const float gamma = 2.4f;
+        return make_float3(
+            c.x < 0.0404482f ? c.x / 12.92 : powf((c.x + 0.055f) / 1.055f, gamma),
+            c.y < 0.0404482f ? c.y / 12.92 : powf((c.y + 0.055f) / 1.055f, gamma),
+            c.z < 0.0404482f ? c.z / 12.92 : powf((c.z + 0.055f) / 1.055f, gamma)
+        );
+    }
+
+    HOSTDEVICE INLINE RGBSpectrum sRGBToLinear(const RGBSpectrum& c)
+    {
+        const float gamma = 2.4f;
+        RGBSpectrum ret;
+        ret[0] = c[0] < 0.0404482f ? c[0] / 12.92 : powf((c[0] + 0.055f) / 1.055f, gamma);
+        ret[1] = c[1] < 0.0404482f ? c[1] / 12.92 : powf((c[1] + 0.055f) / 1.055f, gamma);
+        ret[2] = c[2] < 0.0404482f ? c[2] / 12.92 : powf((c[2] + 0.055f) / 1.055f, gamma);
+        return ret;
+    }
+
+    /* 1 byte color to 4 bit float color */
+    HOSTDEVICE INLINE float4 color2float(const uchar4& c)
+    {
+        return make_float4(
+            static_cast<float>(c.x) / 255.0f,
+            static_cast<float>(c.y) / 255.0f,
+            static_cast<float>(c.z) / 255.0f,
+            static_cast<float>(c.w) / 255.0f
+        );
+    }
+
+    HOSTDEVICE INLINE float3 color2float(const uchar3& c)
+    {
+        return make_float3(
+            static_cast<float>(c.x) / 255.0f,
+            static_cast<float>(c.y) / 255.0f,
+            static_cast<float>(c.z) / 255.0f
+        );
+    }
+
+    /* Conversion from float to 1 byte color considering gamma correction */
+    HOSTDEVICE INLINE uchar3 make_color(const float3& c, bool gamma_enalbed = true)
+    {
+        // first apply gamma, then convert to unsigned char
+        float3 rgb = c;
+        if (gamma_enalbed)
+            rgb = linearToSRGB(clamp(c, 0.0f, 1.0f));
+        return make_uchar3(quantizeUnsigned8Bits(rgb.x), quantizeUnsigned8Bits(rgb.y), quantizeUnsigned8Bits(rgb.z));
+    }
+
+    HOSTDEVICE INLINE uchar4 make_color(const float4& c, bool gamma_enabled = true)
+    {
+        uchar3 rgb = make_color(make_float3(c.x, c.y, c.z), gamma_enabled);
+        return make_uchar4(rgb.x, rgb.y, rgb.z, (unsigned char)(clamp(c.w, 0.0f, 1.0f) * 255.0f));
+    }
+
+    /* Luminance of RGB color */
+    HOSTDEVICE INLINE float luminance(const float3& c)
+    {
+        return 0.2126f * c.x + 0.7152f * c.y + 0.0722f * c.z;
+    }
+
     /* Approximation of CIE 1931 XYZ curve */
     static HOSTDEVICE INLINE float gauss(const float& x, const float& mu, const float& sigma1, const float& sigma2)
     {
@@ -33,7 +160,7 @@ namespace prayground {
         return 1.217f * gauss(lambda, 437.0f, 11.8f, 36.0f) + 0.681f * gauss(lambda, 459.0f, 26.0f, 13.8f);
     }
 
-    static HOSTDEVICE INLINE float averageSpectrumSample(const float* lambda, const float* v, int n, const float& lambdaStart, const float& lambdaEnd)
+    static HOSTDEVICE INLINE float averageSpectrumSamples(const float* lambda, const float* v, int n, const float& lambdaStart, const float& lambdaEnd)
     {
         /// @todo Check if input arrays are sorted with lambda 
 
@@ -60,6 +187,29 @@ namespace prayground {
         }
 
         return sum / (lambdaEnd - lambdaStart);
+    }
+    
+    /* Linearly interpolate spectrum value with lambda sample 'l' */
+    HOSTDEVICE INLINE float linearInterpSpectrumSamples(
+        const float* lambda, const float* v, int n, const float& l
+    )
+    {
+        /// @todo Check if the 'lambda' is sorted
+
+        if (l <= lambda[0]) return v[0];
+        if (l >= lambda[n-1]) return v[n-1];
+        int offset = 0;
+        for (int i = 0; i < n-1; i++)
+        {
+            /// @note Assumption: all lambda values are different
+            if (lambda[i] <= l && lambda[i + 1] > l)
+            {
+                offset = i;
+                break;
+            }
+        }
+        const float t = (l - lambda[offset]) / (lambda[offset + 1] - lambda[offset]);
+        return lerp(v[offset], v[offset + 1], t);
     }
 
     /**
@@ -156,6 +306,16 @@ namespace prayground {
             return true;
         }
 
+        float3 toXYZ() const 
+        {
+            return sRGBToXYZ(make_float3(c[0], c[1], c[2]));
+        }
+
+        float3 toRGB() const 
+        {
+            return make_float3(c[0], c[1], c[2]);
+        }
+
         friend RGBSpectrum sqrtf(const RGBSpectrum& s)
         {
             RGBSpectrum ret;
@@ -204,7 +364,7 @@ namespace prayground {
             {
                 float lambda0 = lerp(min_lambda, max_lambda, float(i) / nSpectrumSamples);
                 float lambda1 = lerp(min_lambda, max_lambda, float(i+1) / nSpectrumSamples);
-                ss.c[i] = averageSpectrumSample(lambda, v, n, lamdba0, lambda1);
+                ss.c[i] = averageSpectrumSamples(lambda, v, n, lamdba0, lambda1);
             }
             return ss;
         }
@@ -293,6 +453,12 @@ namespace prayground {
             return ret / CIE_Y_integral;
         }
 
+        float3 toRGB() const 
+        {
+            float3 xyz = toXYZ();
+            return XYZtoSRGB(xyz);
+        }
+
         friend SampledSpectrum sqrtf(const SampledSpectrum& s)
         {
             SampledSpectrum ret;
@@ -319,110 +485,5 @@ namespace prayground {
     private:
         float c[nSamples];
     };
-
-    HOSTDEVICE INLINE float3 XYZToSRGB(const float3& xyz)
-    {
-        return make_float3(
-             3.2410f * xyz.x - 1.5374f * xyz.y - 0.4986f * xyz.z,
-            -0.9692f * xyz.x + 1.8760f * xyz.y + 0.0416f * xyz.z,
-             3.2410f * xyz.x - 0.2040f * xyz.y + 1.0507f * xyz.z
-        );
-    }
-
-    HOSTDEVICE INLINE void XYZToSRGB(float xyz2rgb[3])
-    {
-        const float x = xyz2rgb[0];
-        const float y = xyz2rgb[1];
-        const float z = xyz2rgb[2];
-        xyz2rgb[0] = 3.2410f * x - 1.5374f * y - 0.4986f * z;
-        xyz2rgb[1] = -0.9692f * x + 1.8760f * y + 0.0416f * z;
-        xyz2rgb[2] = 3.2410f * x - 0.2040f * y + 1.0507f * z;
-    }
-
-    HOSTDEVICE INLINE float3 linearToSRGB(const float3& c)
-    {
-        float invGamma = 1.0f / 2.4f;
-        float3 powed = make_float3(powf(c.x, invGamma), powf(c.y, invGamma), powf(c.z, invGamma));
-        return make_float3(
-            c.x < 0.0031308f ? 12.92f * c.x : 1.055f * powed.x - 0.055f,
-            c.y < 0.0031308f ? 12.92f * c.y : 1.055f * powed.y - 0.055f,
-            c.z < 0.0031308f ? 12.92f * c.z : 1.055f * powed.z - 0.055f
-        );
-    }
-
-    HOSTDEVICE INLINE RGBSpectrum linearToSRGB(const RGBSpectrum& c)
-    {
-        float  invGamma = 1.0f / 2.4f;
-        RGBSpectrum ret;
-        RGBSpectrum powed = powf(c, invGamma);
-        ret[0] = c[0] < 0.0031308f ? 12.92f * c[0] : 1.055f * powed[0] - 0.055f;
-        ret[1] = c[1] < 0.0031308f ? 12.92f * c[1] : 1.055f * powed[1] - 0.055f;
-        ret[2] = c[2] < 0.0031308f ? 12.92f * c[2] : 1.055f * powed[2] - 0.055f;
-        return ret;
-    }
-
-    HOSTDEVICE INLINE float3 sRGBToLinear(const float3& c)
-    {
-        const float gamma = 2.4f;
-        return make_float3(
-            c.x < 0.0404482f ? c.x / 12.92 : powf((c.x + 0.055f) / 1.055f, gamma),
-            c.y < 0.0404482f ? c.y / 12.92 : powf((c.y + 0.055f) / 1.055f, gamma),
-            c.z < 0.0404482f ? c.z / 12.92 : powf((c.z + 0.055f) / 1.055f, gamma)
-        );
-    }
-
-    HOSTDEVICE INLINE RGBSpectrum sRGBToLinear(const RGBSpectrum& c)
-    {
-        const float gamma = 2.4f;
-        RGBSpectrum ret;
-        ret[0] = c[0] < 0.0404482f ? c[0] / 12.92 : powf((c[0] + 0.055f) / 1.055f, gamma);
-        ret[1] = c[1] < 0.0404482f ? c[1] / 12.92 : powf((c[1] + 0.055f) / 1.055f, gamma);
-        ret[2] = c[2] < 0.0404482f ? c[2] / 12.92 : powf((c[2] + 0.055f) / 1.055f, gamma);
-        return ret;
-    }
-
-    HOSTDEVICE INLINE float4 color2float(const uchar4& c)
-    {
-        return make_float4(
-            static_cast<float>(c.x) / 255.0f,
-            static_cast<float>(c.y) / 255.0f,
-            static_cast<float>(c.z) / 255.0f,
-            static_cast<float>(c.w) / 255.0f
-        );
-    }
-
-    HOSTDEVICE INLINE float3 color2float(const uchar3& c)
-    {
-        return make_float3(
-            static_cast<float>(c.x) / 255.0f,
-            static_cast<float>(c.y) / 255.0f,
-            static_cast<float>(c.z) / 255.0f
-        );
-    }
-
-    INLINE HOSTDEVICE uchar3 make_color(const float3& c, bool gamma_enalbed = true)
-    {
-        // first apply gamma, then convert to unsigned char
-        float3 rgb = c;
-        if (gamma_enalbed)
-            rgb = linearToSRGB(clamp(c, 0.0f, 1.0f));
-        return make_uchar3(quantizeUnsigned8Bits(rgb.x), quantizeUnsigned8Bits(rgb.y), quantizeUnsigned8Bits(rgb.z));
-    }
-
-    INLINE HOSTDEVICE uchar4 make_color(const float4& c, bool gamma_enabled = true)
-    {
-        uchar3 rgb = make_color(make_float3(c.x, c.y, c.z), gamma_enabled);
-        return make_uchar4(rgb.x, rgb.y, rgb.z, (unsigned char)(clamp(c.w, 0.0f, 1.0f) * 255.0f));
-    }
-
-    /**
-     * @ref https://qiita.com/yoya/items/96c36b069e74398796f3
-     *
-     * @note CIE XYZ
-     */
-    HOSTDEVICE INLINE float luminance(const float3& c)
-    {
-        return 0.299f * c.x + 0.587f * c.y + 0.114f * c.z;
-    }
 
 } // namespace prayground

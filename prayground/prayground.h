@@ -33,6 +33,7 @@
 #include "core/bitmap.h"
 #include "core/camera.h"
 #include "core/attribute.h"
+#include "core/spectrum.h"
 
 // application utilities
 #include "app/baseapp.h"

@@ -406,7 +406,7 @@ add_subdirectory(../PRayGroundApps/glass build/bin)
 # Unit test
 ################################################################
 # add_subdirectory(tests/math)
-# add_subdirectory(tests/core)
+add_subdirectory(tests/core)
 
 #################################################################
 

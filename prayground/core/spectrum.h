@@ -16,7 +16,20 @@ namespace prayground {
 
     constexpr int min_lambda = 380;
     constexpr int max_lambda = 720;
-    constexpr int nSpectrumSamples = 80;
+    constexpr int nSpectrumSamples = 81;
+    constexpr float spectrum_lambda[nSpectrumSamples] = {
+        380.00f, 384.25f, 388.50f, 392.75f, 397.00f, 401.25f, 405.50f, 409.75f, 414.00f, 418.25f, 
+        422.50f, 426.75f, 431.00f, 435.25f, 439.50f, 443.75f, 448.00f, 452.25f, 456.50f, 460.75f, 
+        465.00f, 469.25f, 473.50f, 477.75f, 482.00f, 486.25f, 490.50f, 494.75f, 499.00f, 503.25f,
+        507.50f, 511.75f, 516.00f, 520.25f, 524.50f, 528.75f, 533.00f, 537.25f, 541.50f, 545.75f,
+        550.00f, 554.25f, 558.50f, 562.75f, 567.00f, 571.25f, 575.50f, 579.75f, 584.00f, 588.25f,
+        592.50f, 596.75f, 601.00f, 605.25f, 609.50f, 613.75f, 618.00f, 622.25f, 626.50f, 630.75f,
+        635.00f, 639.25f, 643.50f, 647.75f, 652.00f, 656.25f, 660.50f, 664.75f, 669.00f, 673.25f,
+        677.50f, 681.75f, 686.00f, 690.25f, 694.50f, 698.75f, 703.00f, 707.25f, 711.50f, 715.75f,
+        720.00f
+    };
+
+
     constexpr float CIE_Y_integral = 106.911594f;
 
     /** @ref An RGB to Spectrum Conversion for Reflectances, Smits 2000 */
@@ -400,18 +413,6 @@ namespace prayground {
             CUDA_CHECK(cudaMemcpy(d_rgb2spectrum_spd_blue, &rgb2spectrum_spd_blue, sizeof(SampledSpectrum), cudaMemcpyHostToDevice));
         }
 #endif
-
-        static void debugPrint()
-        {
-            pgLog("white:", rgb2spectrum_spd_white);
-            pgLog("cyan:", rgb2spectrum_spd_cyan);
-            pgLog("magenta:", rgb2spectrum_spd_magenta);
-            pgLog("yellow:", rgb2spectrum_spd_yellow);
-            pgLog("red:", rgb2spectrum_spd_red);
-            pgLog("green:", rgb2spectrum_spd_green);
-            pgLog("blue:", rgb2spectrum_spd_blue);
-        }
-
         float& operator[](int i) {
             return c[i];
         }
@@ -545,6 +546,11 @@ namespace prayground {
             return XYZToSRGB(xyz);
         }
 
+        float getSpectrumFromLambda(const float& lambda) const
+        {
+            return linearInterpSpectrumSamples(spectrum_lambda, c, nSpectrumSamples, lambda);
+        }
+
         friend SampledSpectrum sqrtf(const SampledSpectrum& s)
         {
             SampledSpectrum ret;
@@ -574,6 +580,7 @@ namespace prayground {
         /* Convert RGB to spectrum */
         static bool spd_on_device;
         static bool spd_on_host;
+
         // Host side
         static SampledSpectrum rgb2spectrum_spd_white;
         static SampledSpectrum rgb2spectrum_spd_cyan;

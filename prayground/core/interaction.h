@@ -53,7 +53,8 @@ struct SurfaceInfo
 
 /// @note Currently \c spectrum is RGB representation, not spectrum. 
 /// @todo template <typename Spectrum>
-struct SurfaceInteraction {
+template <typename Spectrum>
+struct SurfaceInteraction_ {
     /** Position of intersection point in world coordinates. */
     float3 p;
 
@@ -65,8 +66,8 @@ struct SurfaceInteraction {
     float t;
 
     /** Albedo and self-emission from a surface attached with a shape. */
-    float3 albedo;
-    float3 emission;
+    Spectrum albedo;
+    Spectrum emission;
 
     /** UV coordinate at an intersection point. */
     float2 uv;

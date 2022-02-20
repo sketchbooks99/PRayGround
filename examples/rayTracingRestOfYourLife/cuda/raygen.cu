@@ -30,7 +30,7 @@ extern "C" __device__ void __raygen__pinhole()
 
     const int subframe_index = params.subframe_index;
     const uint3 idx = optixGetLaunchIndex();
-    unsigned seed = tea<4>(idx.x * params.width + idx.y, subframe_index);
+    unsigned int seed = tea<4>(idx.x * params.width + idx.y, subframe_index);
 
     float3 result = make_float3(0.0f, 0.0f, 0.0f);
 

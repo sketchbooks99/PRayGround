@@ -18,24 +18,25 @@ struct Ray {
     float tmin;
     float tmax;
     float t;
-
-    /* Spectrum information of ray. */
-    float3 spectrum;
 };
 
 struct pRay {
     /** @todo Polarized ray */
     HOSTDEVICE INLINE float3 at(const float time) { return o + d*time; }
 
+    /* Position of ray origin in world coordinates. */
     float3 o;
-    float3 d; 
-    float3 tangent; // tangent vector
 
+    /* Direction of out-going ray from origin. */
+    float3 d; 
+
+    /* Tangent vector along with ray direction */
+    float3 tangent;
+
+    /* Time of ray. It is mainly used for realizing motion blur. */
     float tmin; 
     float tmax; 
     float t;
-
-    float3 spectrum;
 };
 
 /** Useful function to get ray info on OptiX */

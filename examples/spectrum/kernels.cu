@@ -16,63 +16,350 @@
 #include <prayground/shape/plane.h>
 #include <prayground/shape/sphere.h>
 
+#include <prayground/emitter/envmap.h>
+
 #include "params.h"
 
 using namespace prayground;
 
+// Utilities ------------------------------------------------------------------------------
 #define SAMPLE_FUNC(name) __direct_callable__sample_ ## name
 #define BSDF_FUNC(name) __continuation_callable__bsdf_ ## name
 #define PDF_FUNC(name) __direct_callable__pdf_ ## name
-#define USE_SAMPLED_SPECTRUM 1
-
-#if USE_SAMPLED_SPECTRUM
-using Spectrum = SampledSpectrum;
-#else 
-using Spectrum = RGBSpectrum;
-#endif
 
 extern "C" { __constant__ LaunchParams params; }
 
+using SurfaceInteraction = SurfaceInteraction_<SampledSpectrum>;
+
 static INLINE DEVICE SurfaceInteraction* getSurfaceInteraction()
 {
-    const unsigned int u0 = optixGetPayload_0();
-    const unsigned int u1 = optixGetPayload_1();
+    const unsigned int u0 = getPayload<0>();
+    const unsigned int u1 = getPayload<1>();
     return reinterpret_cast<SurfaceInteraction*>(unpackPointer(u0, u1));
+}
+
+__forceinline__ __device__ void traceSpectrum(
+    OptixTraversableHandle handle, 
+    float3 ro, float3 rd, 
+    float tmin, float tmax, 
+    unsigned int ray_type, 
+    SurfaceInteraction* si, 
+    float lambda
+)
+{
+    unsigned int u0, u1;
+    packPointer(si, u0, u1);
+    optixTrace(
+        handle, 
+        ro, 
+        rd, 
+        tmin, 
+        tmax, 
+        0.0f, 
+        OptixVisibilityMask(1), 
+        OPTIX_RAY_FLAG_NONE, 
+        ray_type, 
+        1, 
+        ray_type, 
+        u0, u1, 
+        __float_as_int(lambda)
+    );
+}
+
+// Raygen ------------------------------------------------------------------------------
+static __forceinline__ __device__ void getCameraRay(
+    const CameraData& camera, 
+    const float& x, const float& y, 
+    float3& ro, float3& rd)
+{
+    rd = normalize(x * camera.U + y * camera.V + camera.W);
+    ro = camera.origin;
+}
+
+static __forceinline__ __device__ float uniformSpectrumPDF()
+{
+    return 1.0f / (max_lambda - min_lambda);
 }
 
 // Raygen function
 extern "C" __global__ void __raygen__spectrum()
 {
+    const RaygenData* raygen = reinterpret_cast<RaygenData*>(optixGetSbtDataPointer());
 
+    const int subframe_index = params.subframe_index;
+    const uint3 idx = optixGetLaunchIndex();
+    unsigned int seed = tea<4>(idx.x * params.width + idx.y, subframe_index);
+
+    float radiance;
+
+    int i = params.samples_per_launch;
+
+    // Uniform sampling of lambda
+    const float lambda = lerp(min_lambda, max_lambda, rnd(seed));
+
+    do 
+    {
+        const float2 subpixel_jitter = make_float2(rnd(seed) - 0.5f, rnd(seed) - 0.5f);
+        const float2 d = 2.0f * make_float2(
+            (static_cast<float>(idx.x) + subpixel_jitter.x) / static_cast<float>(params.width), 
+            (static_cast<float>(idx.y) + subpixel_jitter.y) / static_cast<float>(params.height)
+        ) - 1.0f;
+
+        float3 ro, rd;
+        getCameraRay(raygen->camera, d.x, d.y, ro, rd);
+        
+        float throughput = 1.0f;
+
+        SurfaceInteraction si;
+        si.seed = seed;
+        si.emission = SampledSpectrum{};
+        si.albedo = SampledSpectrum{};
+        si.trace_terminate = false;
+        si.radiance_evaled = false;
+
+        int depth = 0;
+        for (;;)
+        {
+            if (depth >= params.max_depth)
+                break;
+
+            traceSpectrum(params.handle, ro, rd, 0.01f, 1e16f, 0, &si, lambda);
+
+            if (si.trace_terminate)
+            {
+                radiance += si.emission * throughput;
+                break;
+            }
+
+            // Get emission from area emitter
+            if (si.surface_info.type == SurfaceType::AreaEmitter)
+            {
+                // Evaluating emission from emitter
+                optixDirectCall<void, SurfaceInteraction*, void*>(
+                    si.surface_info.bsdf_id, 
+                    &si, 
+                    si.surface_info.data
+                );
+                radiance += si.emission.getSpectrumFromLambda(lambda) * throughput;
+                if (si.trace_terminate)
+                    break;
+            }
+            // Specular sampling
+            else if (+(si.surface_info.type & SurfaceType::Delta))
+            {
+                // Samling scattered direction 
+                optixDirectCall<void, SurfaceInteraction*, void*>(
+                    si.surface_info.sample_id, 
+                    &si, 
+                    si.surface_info.data
+                );
+
+                // Evaluate bsdf
+                SampledSpectrum bsdf_val = optixContinuationCall<SampledSpectrum, SurfaceInteraction*, void*>(
+                    si.surface_info.bsdf_id, 
+                    &si, 
+                    si.surface_info.data
+                );
+
+                throughput *= bsdf_val.getSpectrumFromLambda(lambda);
+            }
+            // Rough surface sampling with applying MIS
+            else if (+(si.surface_info.type & (SurfaceType::Rough | SurfaceType::Diffuse)))
+            {
+                unsigned int seed = si.seed;
+                AreaEmitterInfo light;
+                if (params.num_lights > 0)
+                {
+                    const int light_id = rnd_int(seed, 0, params.num_lights);
+                    light = params.lights[light_id];
+                }
+
+                const float weight = 1.0f / (params.num_lights + 1);
+                float pdf_val = 0.0f;
+
+                // Importance sampling according to the BSDF
+                optixDirectCall<void, SurfaceInteraction*, void*>(
+                    si.surface_info.sample_id, 
+                    &si, 
+                    si.surface_info.data
+                );
+
+                if (rnd(seed) < weight * params.num_lights)
+                {
+                    // Light sampling
+                    float3 to_light = optixDirectCall<float3, AreaEmitterInfo, SurfaceInteraction*>(
+                        light.sample_id, 
+                        light, 
+                        &si
+                    );
+                    si.wo = normalize(to_light);
+                }
+
+                for (int i = 0; i < params.num_lights; i++)
+                {
+                    // Evaluate PDF of area emitter
+                    float light_pdf = optixContinuationCall<float, AreaEmitterInfo, const float3&, const float3&>(
+                        params.lights[i].pdf_id,
+                        params.lights[i],
+                        si.p, 
+                        si.wo
+                    );
+                    pdf_val += weight * light_pdf;
+                }
+
+                // Evaluate PDF depends on BSDF 
+                float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*>(
+                    si.surface_info.pdf_id, 
+                    &si, 
+                    si.surface_info.data
+                );
+
+                pdf_val += weight * bsdf_pdf;
+
+                // Evaluate BSDF
+                SampledSpectrum bsdf_val = optixContinuationCall<SampledSpectrum, SurfaceInteraction*, void*>(
+                    si.surface_info.bsdf_id, 
+                    &si, 
+                    si.surface_info.data
+                );
+
+                pdf_val = fmaxf(pdf_val, math::eps);
+
+                throughput *= bsdf_val.getSpectrumFromLambda(lambda) / pdf_val;
+            }
+
+            ro = si.p;
+            rd = si.wo;
+
+            ++depth;
+        }
+    } while (--i);
+
+    const unsigned int image_idx = idx.x * params.width + idx.y;
+
+    float3 xyz_result = make_float3(
+        radiance * CIE_X(lambda) / CIE_Y_integral / uniformSpectrumPDF(),
+        radiance * CIE_X(lambda) / CIE_Y_integral / uniformSpectrumPDF(),
+        radiance * CIE_X(lambda) / CIE_Y_integral / uniformSpectrumPDF()
+    );
+
+    float3 color = XYZToSRGB(xyz_result);
+
+    float3 accum_color = color / static_cast<float>(params.samples_per_launch);
+
+    if (subframe_index > 0)
+    {
+        const float a = 1.0f / static_cast<float>(subframe_index + 1);
+        const float3 accum_color_prev = make_float3(params.accum_buffer[image_idx]);
+        accum_color = lerp(accum_color_prev, accum_color, a);
+    }
+    params.accum_buffer[image_idx] = make_float4(accum_color, 1.0f);
+    uchar3 ucolor = make_color(accum_color);
+    params.result_buffer[image_idx] = make_uchar4(ucolor.x, ucolor.y, ucolor.z, 255);
 }
 
 // Miss function
 extern "C" __device__ void __miss__envmap()
 {
+    MissData* data = reinterpret_cast<MissData*>(optixGetSbtDataPointer());
+    EnvironmentEmitterData* env = reintepret_cast<EnvironmentEmitterData*>(data->env_data);
+    SurfaceInteraction* si = getSurfaceInteraction();
 
+    Ray ray = getWorldRay();
+    const float lambda = __int_as_float(getPayload<2>());
+
+    const float a = dot(ray.d, ray.d);
+    const float half_b = dot(ray.o, ray.d);
+    const float c = dot(ray.o, ray.o) - 1e8f*1e8f;
+    const float D = half_b * half_b - a * c;
+
+    float sqrtD = sqrtf(D);
+    float t = (-half_b + sqrtD) / a;
+
+    const float3 p = normalize(ray.at(t));
+
+    const float phi = atan2(p.z, p.x);
+    const float theta = asin(p.y);
+    const float u = 1.0f - (phi + math::pi) / (2.0f * math::pi);
+    const float v = 1.0f - (theta + math::pi / 2.0f) / math::pi;
+    si->uv = make_float2(u, v);
+    si->trace_terminate = true;
+    si->surface_info.type = SurfaceType::None;
+    si->emission = optixDirectCall<SampledSpectrum, SurfaceInteraction*, void*>(
+        env->tex_program_id, si, env->tex_data
+    );
+}
+
+/** 
+ * @note Sellmeier equation of BK7 
+ * @ref  https://www.thorlabs.co.jp/newgrouppage9.cfm?objectgroup_id=6973&tabname=N-BK7 
+ **/
+static __forceinline__ __device__ float bk7Index(const float& lambda)
+{
+    // Convert unit of wavelength: nm -> μm
+    const float l = lambda * 0.001f;
+    const float l2 = l * l;
+    return sqrtf(1.0f + ((1.03961212f * l2) / (l2 - 0.00600069867f)) + ((0.231792344f * l2) / (l2 - 0.0200179144f)) + ((1.01046945 * l2) / (l2 - 103.560653f)));
 }
 
 // Material functions
 extern "C" __device__ void SAMPLE_FUNC(dielectric)(float lambda, SurfaceInteraction* si, void* mat_data)
 {
+    const DielectricData* dielectric = reinterpret_cast<DielectricData*>(mat_data);
 
+    float ni = 1.000292f;
+    const float lambda = __int_as_float(getPayload<2>());
+    float nt = bk7Index(lambda);
+    float cosine = dot(si->wi, si->n);
+    bool into = cosine < 0;
+    float3 outward_normal = into ? si->n : -si->n;
+
+    if (!into) swap(ni, nt);
+
+    cosine = fabs(cosine);
+    float sine = sqrtf(1.0f - cosine * cosine);
+    bool cannot_refract = ni * sine > nt;
+
+    float reflect_prob = fresnel(cosine, ni, nt);
+    unsigned int seed = si->seed;
+
+    if (cannot_refract || reflect_prob > rnd(seed))
+        si->wi = reflect(si->wo, outward_normal);
+    else
+        si->wi = refract(si->wo, outward_normal, cosine, ni, nt);
+    si->radiance_evaled = false;
+    si->trace_terminate = false;
+    si->seed = seed;
 }
 
-extern "C" __device__ Spectrum BSDF_FUNC(dielectric)(SurfaceInteraction* si, void* mat_data)
+extern "C" __device__ SampledSpectrum BSDF_FUNC(dielectric)(SurfaceInteraction* si, void* mat_data)
 {
     const DielectricData* dielectric = reinterpret_cast<DielectricData*>(mat_data);
     si->emission = make_float3(0.0f);
-    float4 albedo = optixDirectCall<Spectrum, SurfaceInteraction*, void*>(dielectric->tex_program_id, si, dielectric->tex_data);
+    return optixDirectCall<SampledSpectrum, SurfaceInteraction*, void*>(dielectric->tex_program_id, si, dielectric->tex_data);
 }
 
 extern "C" __device__ float PDF_FUNC(dielectric)(SurfaceInteraction * si, void* mat_data)
 {
-
+    return 1.0f;
 }
 
 extern "C" __device__ void SAMPLE_FUNC(diffuse)(float lambda, SurfaceInteraction * si, void* mat_data)
 {
+    const DiffuseData* diffuse = reinterpret_cast<DiffuseData*>(mat_data);
 
+    if (diffuse->twosided)
+        si->n = faceforward(si->n, -si->wi, si->n);
+    
+    si->trace_terminate = false;
+    unsigned int seed = si->seed;
+    const float z0 = rnd(seed);
+    const float z1 = rnd(seed);
+    float3 wi = cosineSampleHemisphere(z0, z1);
+    Onb onb(si->n);
+    onb.inverseTransform(wi);
+    si->wi = normalize(wi);
+    si->seed = seed;
 }
 
 extern "C" __device__ Spectrum BSDF_FUNC(diffuse)(SurfaceInteraction * si, void* mat_data)

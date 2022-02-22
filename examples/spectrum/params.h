@@ -8,6 +8,11 @@
 
 using namespace prayground;
 
+using Spectrum = SampledSpectrum;
+
+using ConstantTexture = ConstantTexture_<Spectrum>;
+using CheckerTexture = CheckerTexture_<Spectrum>;
+
 struct AreaEmitterInfo
 {
     void* shape_data;

@@ -4,26 +4,47 @@
 
 namespace prayground {
 
+template <typename T>
 struct ConstantTextureData {
-    float4 color;
+    T color;
 };
+
+template <typename T>
+class ConstantTexture_ final : public Texture {
+public:
+    using ColorType = T;
+    using Data = ConstantTextureData<T>;
 
 #ifndef __CUDACC__
-class ConstantTexture final : public Texture {
-public:
-    ConstantTexture(const float3& c, int prg_id);
-    ConstantTexture(const float4& c, int prg_id);
+    ConstantTexture_(const T& c, int prg_id)
+        : Texture(prg_id), m_color(c)
+    {}
 
-    void setColor(const float3& c);
-    void setColor(const float4& c);
-    float4 color() const;
+    void setColor(const T& c)
+    {
+        m_color = c;
+    }
+    T color() const
+    {
+        return m_color;
+    }
 
-    void copyToDevice() override;
+    void copyToDevice() override
+    {
+        Data data = { m_color };
+
+        if (!d_data)
+            CUDA_CHECK(cudaMalloc(&d_data, sizeof(Data)));
+        CUDA_CHECK(cudaMemcpy(
+            d_data,
+            &data, sizeof(Data),
+            cudaMemcpyHostToDevice
+        ));
+    }
     
 private:
-    float4 m_color;
+    T m_color;
+#endif // __CUDACC__
 };
-
-#endif
 
 }

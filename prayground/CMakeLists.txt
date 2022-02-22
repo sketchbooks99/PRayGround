@@ -111,9 +111,9 @@ set(sources
   texture/bitmap.h
   texture/bitmap.cpp
   texture/checker.h 
-  texture/checker.cpp 
+  # texture/checker.cpp 
   texture/constant.h  
-  texture/constant.cpp
+  # texture/constant.cpp
 
   # Emitter ==========
   emitter/area.h 

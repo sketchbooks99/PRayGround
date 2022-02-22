@@ -224,6 +224,12 @@ namespace prayground {
                 c[i] = t;
         }
 
+        SampledSpectrum(const SampledSpectrum& spd)
+        {
+            for (int i = 0; i < nSpectrumSamples; i++)
+                c[i] = spd.c[i];
+        }
+
         static SampledSpectrum fromSample(float* lambda, float* v, int n)
         {
             /// @todo Sort with lambda if the spectrum is randomly stored.
@@ -251,10 +257,10 @@ namespace prayground {
             const float blue = rgb[2];
 
 #ifdef __CUDACC__
-            assert(on_device);
+            assert(spd_on_device);
             if (red <= green && red <= blue)
             {
-                ret += d_rgb2spectrum_spd_white * red;
+                ret += *d_rgb2spectrum_spd_white * red;
                 if (green <= blue)
                 {
                     ret += *d_rgb2spectrum_spd_cyan * (green - red);
@@ -268,6 +274,7 @@ namespace prayground {
             }
             else if (green <= red && green <= blue)
             {
+                ret += *d_rgb2spectrum_spd_white * green;
                 if (red <= blue)
                 {
                     ret += *d_rgb2spectrum_spd_magenta * (red - green);
@@ -275,12 +282,13 @@ namespace prayground {
                 }
                 else
                 {
-                    ret += *d_rgb2spectrum_spd_magenta * (green - red);
+                    ret += *d_rgb2spectrum_spd_magenta * (blue - green);
                     ret += *d_rgb2spectrum_spd_red * (red - blue);
                 }
             }
             else // blue <= red && blue <= green
             {
+                ret += *d_rgb2spectrum_spd_white * blue;
                 if (red <= green)
                 {
                     ret += *d_rgb2spectrum_spd_yellow * (red - blue);
@@ -288,7 +296,7 @@ namespace prayground {
                 }
                 else
                 {
-                    ret += *d_rgb2spectrum_spd_yellow * (blue - red);
+                    ret += *d_rgb2spectrum_spd_yellow * (green - blue);
                     ret += *d_rgb2spectrum_spd_red * (red - green);
                 }
             }
@@ -411,6 +419,8 @@ namespace prayground {
             CUDA_CHECK(cudaMemcpy(d_rgb2spectrum_spd_red, &rgb2spectrum_spd_red, sizeof(SampledSpectrum), cudaMemcpyHostToDevice));
             CUDA_CHECK(cudaMemcpy(d_rgb2spectrum_spd_green, &rgb2spectrum_spd_green, sizeof(SampledSpectrum), cudaMemcpyHostToDevice));
             CUDA_CHECK(cudaMemcpy(d_rgb2spectrum_spd_blue, &rgb2spectrum_spd_blue, sizeof(SampledSpectrum), cudaMemcpyHostToDevice));
+
+            spd_on_device = true;
         }
 #endif
         float& operator[](int i) {
@@ -546,9 +556,19 @@ namespace prayground {
             return XYZToSRGB(xyz);
         }
 
-        float getSpectrumFromLambda(const float& lambda) const
+        float getSpectrumFromWavelength(const float& lambda) const
         {
             return linearInterpSpectrumSamples(spectrum_lambda, c, nSpectrumSamples, lambda);
+        }
+
+        float y() const
+        {
+            float sum = 0.0f;
+            for (int i = 0; i < nSpectrumSamples; i++)
+            {
+                sum += c[i];
+            }
+            return sum;
         }
 
         friend SampledSpectrum sqrtf(const SampledSpectrum& s)
@@ -601,24 +621,24 @@ namespace prayground {
     };
 
     /* Definition of static members */
-    bool SampledSpectrum::spd_on_device;
-    bool SampledSpectrum::spd_on_host;
+    inline bool SampledSpectrum::spd_on_device;
+    inline bool SampledSpectrum::spd_on_host;
 
-    SampledSpectrum SampledSpectrum::rgb2spectrum_spd_white;
-    SampledSpectrum SampledSpectrum::rgb2spectrum_spd_cyan;
-    SampledSpectrum SampledSpectrum::rgb2spectrum_spd_magenta;
-    SampledSpectrum SampledSpectrum::rgb2spectrum_spd_yellow;
-    SampledSpectrum SampledSpectrum::rgb2spectrum_spd_red;
-    SampledSpectrum SampledSpectrum::rgb2spectrum_spd_green;
-    SampledSpectrum SampledSpectrum::rgb2spectrum_spd_blue;
+    inline SampledSpectrum SampledSpectrum::rgb2spectrum_spd_white;
+    inline SampledSpectrum SampledSpectrum::rgb2spectrum_spd_cyan;
+    inline SampledSpectrum SampledSpectrum::rgb2spectrum_spd_magenta;
+    inline SampledSpectrum SampledSpectrum::rgb2spectrum_spd_yellow;
+    inline SampledSpectrum SampledSpectrum::rgb2spectrum_spd_red;
+    inline SampledSpectrum SampledSpectrum::rgb2spectrum_spd_green;
+    inline SampledSpectrum SampledSpectrum::rgb2spectrum_spd_blue;
 
-    SampledSpectrum* SampledSpectrum::d_rgb2spectrum_spd_white;
-    SampledSpectrum* SampledSpectrum::d_rgb2spectrum_spd_cyan;
-    SampledSpectrum* SampledSpectrum::d_rgb2spectrum_spd_magenta;
-    SampledSpectrum* SampledSpectrum::d_rgb2spectrum_spd_yellow;
-    SampledSpectrum* SampledSpectrum::d_rgb2spectrum_spd_red;
-    SampledSpectrum* SampledSpectrum::d_rgb2spectrum_spd_green;
-    SampledSpectrum* SampledSpectrum::d_rgb2spectrum_spd_blue;
+    inline SampledSpectrum* SampledSpectrum::d_rgb2spectrum_spd_white;
+    inline SampledSpectrum* SampledSpectrum::d_rgb2spectrum_spd_cyan;
+    inline SampledSpectrum* SampledSpectrum::d_rgb2spectrum_spd_magenta;
+    inline SampledSpectrum* SampledSpectrum::d_rgb2spectrum_spd_yellow;
+    inline SampledSpectrum* SampledSpectrum::d_rgb2spectrum_spd_red;
+    inline SampledSpectrum* SampledSpectrum::d_rgb2spectrum_spd_green;
+    inline SampledSpectrum* SampledSpectrum::d_rgb2spectrum_spd_blue;
 
 #ifndef __CUDACC__
     /* Stream function of spectrum classes */
@@ -801,7 +821,7 @@ namespace prayground {
         int i = 0;
         while (lambda_start > lambda[i + 1]) i++;
 
-        auto interp = [lambda, v] HOSTDEVICE(float w, int i)
+        auto interp = [lambda, v](float w, int i)
         {
             return lerp(v[i], v[i + 1], (w - lambda[i]) / (lambda[i + 1] - lambda[i]));
         };

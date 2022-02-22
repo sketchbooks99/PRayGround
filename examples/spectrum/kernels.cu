@@ -1,22 +1,4 @@
-#include <prayground/optix/cuda/device_util.cuh>
-#include <prayground/core/spectrum.h>
-#include <prayground/core/ray.h>
-#include <prayground/core/onb.h>
-#include <prayground/math/random.h>
-
-#include <prayground/material/dielectric.h>
-#include <prayground/material/diffuse.h>
-#include <prayground/material/disney.h>
-
-#include <prayground/texture/bitmap.h>
-#include <prayground/texture/constant.h>
-#include <prayground/texture/checker.h>
-
-#include <prayground/shape/trianglemesh.h>
-#include <prayground/shape/plane.h>
-#include <prayground/shape/sphere.h>
-
-#include <prayground/emitter/envmap.h>
+#include <prayground/prayground.h>
 
 #include "params.h"
 
@@ -29,7 +11,7 @@ using namespace prayground;
 
 extern "C" { __constant__ LaunchParams params; }
 
-using SurfaceInteraction = SurfaceInteraction_<SampledSpectrum>;
+using SurfaceInteraction = SurfaceInteraction_<Spectrum>;
 
 static INLINE DEVICE SurfaceInteraction* getSurfaceInteraction()
 {
@@ -38,13 +20,13 @@ static INLINE DEVICE SurfaceInteraction* getSurfaceInteraction()
     return reinterpret_cast<SurfaceInteraction*>(unpackPointer(u0, u1));
 }
 
-__forceinline__ __device__ void traceSpectrum(
+static __forceinline__ __device__ void traceSpectrum(
     OptixTraversableHandle handle, 
     float3 ro, float3 rd, 
     float tmin, float tmax, 
     unsigned int ray_type, 
     SurfaceInteraction* si, 
-    float lambda
+    float& lambda
 )
 {
     unsigned int u0, u1;
@@ -112,8 +94,8 @@ extern "C" __global__ void __raygen__spectrum()
 
         SurfaceInteraction si;
         si.seed = seed;
-        si.emission = SampledSpectrum{};
-        si.albedo = SampledSpectrum{};
+        si.emission = Spectrum{};
+        si.albedo = Spectrum{};
         si.trace_terminate = false;
         si.radiance_evaled = false;
 
@@ -127,7 +109,7 @@ extern "C" __global__ void __raygen__spectrum()
 
             if (si.trace_terminate)
             {
-                radiance += si.emission * throughput;
+                radiance += si.emission.getSpectrumFromWavelength(lambda) * throughput;
                 break;
             }
 
@@ -140,7 +122,7 @@ extern "C" __global__ void __raygen__spectrum()
                     &si, 
                     si.surface_info.data
                 );
-                radiance += si.emission.getSpectrumFromLambda(lambda) * throughput;
+                radiance += si.emission.getSpectrumFromWavelength(lambda) * throughput;
                 if (si.trace_terminate)
                     break;
             }
@@ -155,13 +137,13 @@ extern "C" __global__ void __raygen__spectrum()
                 );
 
                 // Evaluate bsdf
-                SampledSpectrum bsdf_val = optixContinuationCall<SampledSpectrum, SurfaceInteraction*, void*>(
+                float bsdf_val = optixContinuationCall<float, SurfaceInteraction*, void*>(
                     si.surface_info.bsdf_id, 
                     &si, 
                     si.surface_info.data
                 );
 
-                throughput *= bsdf_val.getSpectrumFromLambda(lambda);
+                throughput *= bsdf_val;
             }
             // Rough surface sampling with applying MIS
             else if (+(si.surface_info.type & (SurfaceType::Rough | SurfaceType::Diffuse)))
@@ -217,7 +199,7 @@ extern "C" __global__ void __raygen__spectrum()
                 pdf_val += weight * bsdf_pdf;
 
                 // Evaluate BSDF
-                SampledSpectrum bsdf_val = optixContinuationCall<SampledSpectrum, SurfaceInteraction*, void*>(
+                float bsdf_val = optixContinuationCall<float, SurfaceInteraction*, void*>(
                     si.surface_info.bsdf_id, 
                     &si, 
                     si.surface_info.data
@@ -225,7 +207,7 @@ extern "C" __global__ void __raygen__spectrum()
 
                 pdf_val = fmaxf(pdf_val, math::eps);
 
-                throughput *= bsdf_val.getSpectrumFromLambda(lambda) / pdf_val;
+                throughput *= bsdf_val / pdf_val;
             }
 
             ro = si.p;
@@ -258,11 +240,11 @@ extern "C" __global__ void __raygen__spectrum()
     params.result_buffer[image_idx] = make_uchar4(ucolor.x, ucolor.y, ucolor.z, 255);
 }
 
-// Miss function
+// Miss ------------------------------------------------------------------------------
 extern "C" __device__ void __miss__envmap()
 {
     MissData* data = reinterpret_cast<MissData*>(optixGetSbtDataPointer());
-    EnvironmentEmitterData* env = reintepret_cast<EnvironmentEmitterData*>(data->env_data);
+    EnvironmentEmitterData* env = reinterpret_cast<EnvironmentEmitterData*>(data->env_data);
     SurfaceInteraction* si = getSurfaceInteraction();
 
     Ray ray = getWorldRay();
@@ -285,10 +267,12 @@ extern "C" __device__ void __miss__envmap()
     si->uv = make_float2(u, v);
     si->trace_terminate = true;
     si->surface_info.type = SurfaceType::None;
-    si->emission = optixDirectCall<SampledSpectrum, SurfaceInteraction*, void*>(
+    si->emission = optixDirectCall<Spectrum, SurfaceInteraction*, void*>(
         env->tex_program_id, si, env->tex_data
     );
 }
+
+// Materials ------------------------------------------------------------------------------
 
 /** 
  * @note Sellmeier equation of BK7 
@@ -302,17 +286,15 @@ static __forceinline__ __device__ float bk7Index(const float& lambda)
     return sqrtf(1.0f + ((1.03961212f * l2) / (l2 - 0.00600069867f)) + ((0.231792344f * l2) / (l2 - 0.0200179144f)) + ((1.01046945 * l2) / (l2 - 103.560653f)));
 }
 
-// Material functions
-extern "C" __device__ void SAMPLE_FUNC(dielectric)(float lambda, SurfaceInteraction* si, void* mat_data)
+extern "C" __device__ void SAMPLE_FUNC(dielectric)(const float& lambda, SurfaceInteraction* si, void* mat_data)
 {
     const DielectricData* dielectric = reinterpret_cast<DielectricData*>(mat_data);
 
     float ni = 1.000292f;
-    const float lambda = __int_as_float(getPayload<2>());
     float nt = bk7Index(lambda);
-    float cosine = dot(si->wi, si->n);
+    float cosine = dot(si->wo, si->shading.n);
     bool into = cosine < 0;
-    float3 outward_normal = into ? si->n : -si->n;
+    float3 outward_normal = into ? si->shading.n : -si->shading.n;
 
     if (!into) swap(ni, nt);
 
@@ -332,11 +314,12 @@ extern "C" __device__ void SAMPLE_FUNC(dielectric)(float lambda, SurfaceInteract
     si->seed = seed;
 }
 
-extern "C" __device__ SampledSpectrum BSDF_FUNC(dielectric)(SurfaceInteraction* si, void* mat_data)
+extern "C" __device__ float BSDF_FUNC(dielectric)(const float& lambda, SurfaceInteraction* si, void* mat_data)
 {
     const DielectricData* dielectric = reinterpret_cast<DielectricData*>(mat_data);
-    si->emission = make_float3(0.0f);
-    return optixDirectCall<SampledSpectrum, SurfaceInteraction*, void*>(dielectric->tex_program_id, si, dielectric->tex_data);
+    si->emission = Spectrum{};  
+    Spectrum albedo = optixDirectCall<Spectrum, SurfaceInteraction*, void*>(dielectric->tex_program_id, si, dielectric->tex_data);
+    return albedo.getSpectrumFromWavelength(lambda);
 }
 
 extern "C" __device__ float PDF_FUNC(dielectric)(SurfaceInteraction * si, void* mat_data)
@@ -344,63 +327,207 @@ extern "C" __device__ float PDF_FUNC(dielectric)(SurfaceInteraction * si, void* 
     return 1.0f;
 }
 
-extern "C" __device__ void SAMPLE_FUNC(diffuse)(float lambda, SurfaceInteraction * si, void* mat_data)
+extern "C" __device__ void SAMPLE_FUNC(diffuse)(const float& /* lambda */, SurfaceInteraction * si, void* mat_data)
 {
     const DiffuseData* diffuse = reinterpret_cast<DiffuseData*>(mat_data);
 
     if (diffuse->twosided)
-        si->n = faceforward(si->n, -si->wi, si->n);
+        si->shading.n = faceforward(si->shading.n, -si->wo, si->shading.n);
     
     si->trace_terminate = false;
     unsigned int seed = si->seed;
     const float z0 = rnd(seed);
     const float z1 = rnd(seed);
     float3 wi = cosineSampleHemisphere(z0, z1);
-    Onb onb(si->n);
+    Onb onb(si->shading.n);
     onb.inverseTransform(wi);
     si->wi = normalize(wi);
     si->seed = seed;
 }
 
-extern "C" __device__ Spectrum BSDF_FUNC(diffuse)(SurfaceInteraction * si, void* mat_data)
+extern "C" __device__ float BSDF_FUNC(diffuse)(const float& lambda, SurfaceInteraction* si, void* mat_data)
 {
-
+    const DiffuseData* diffuse = reinterpret_cast<DiffuseData*>(mat_data);
+    const Spectrum albedo = optixDirectCall<Spectrum, SurfaceInteraction*, void*>(diffuse->tex_program_id, si, diffuse->tex_data);
+    si->emission = Spectrum{};
+    const float cosine = fmaxf(0.0f, dot(si->shading.n, si->wi));
+    return albedo.getSpectrumFromWavelength(lambda) * (cosine / math::pi);
 }
 
-extern "C" __device__ float PDF_FUNC(diffuse)(SurfaceInteraction * si, void* mat_data)
+extern "C" __device__ float PDF_FUNC(diffuse)(SurfaceInteraction* si, void* mat_data)
 {
-
+    const float cosine = fmaxf(0.0f, dot(si->shading.n, si->wi));
+    return cosine / math::pi;
 }
 
-extern "C" __device__ void SAMPLE_FUNC(disney)(float lambda, SurfaceInteraction * si, void* mat_data)
+extern "C" __device__ void SAMPLE_FUNC(disney)(const float& /* lambda */, SurfaceInteraction * si, void* mat_data)
 {
+    const DisneyData* disney = reinterpret_cast<DisneyData*>(mat_data);
+    if (disney->twosided)
+        si->shading.n = faceforward(si->shading.n, -si->wo, si->shading.n);
 
+    unsigned int seed = si->seed;
+    const float z1 = rnd(seed);
+    const float z2 = rnd(seed);
+    const float diffuse_ratio = 0.5f * (1.0f - disney->metallic);
+    Onb onb(si->shading.n);
+
+    if (rnd(seed) < diffuse_ratio)
+    {
+        float3 wi = cosineSampleHemisphere(z1, z2);
+        onb.inverseTransform(wi);
+        si->wi = normalize(wi);
+    }
+    else
+    {
+        float gtr2_ratio = 1.0f / (1.0f + disney->clearcoat);
+        float3 h;
+        const float alpha = fmaxf(0.001f, disney->roughness);
+        if (rnd(seed) < gtr2_ratio)
+            h = sampleGGX(z1, z2, alpha);
+        else
+            h = sampleGTR1(z1, z2, alpha);
+        onb.inverseTransform(h);
+        si->wi = normalize(reflect(si->wo, h));
+    }
+    si->radiance_evaled = false;
+    si->trace_terminate = false;
+    si->seed = seed;
 }
 
-extern "C" __device__ Spectrum BSDF_FUNC(disney)(SurfaceInteraction * si, void* mat_data)
+extern "C" __device__ float BSDF_FUNC(disney)(const float& lambda, SurfaceInteraction * si, void* mat_data)
 {
+    const DisneyData* disney = reinterpret_cast<DisneyData*>(mat_data);
+    si->emission = Spectrum{};
 
+    const float3 V = -normalize(si->wo);
+    const float3 L = normalize(si->wi);
+    const float3 N = normalize(si->shading.n);
+
+    const float NdotV = fabs(dot(N, V));
+    const float NdotL = fabs(dot(N, L));
+
+    if (NdotV == 0.0f || NdotL == 0.0f)
+        return 0.0f;
+
+    const float3 H = normalize(V + L);
+    const float NdotH = dot(N, H);
+    const float LdotH /* = VdotH */ = dot(L, H);
+
+    const Spectrum base_color = optixDirectCall<Spectrum, SurfaceInteraction*, void*>(
+        disney->base_program_id, si, disney->base_tex_data
+        );
+    const float base_spectrum = base_color.getSpectrumFromWavelength(lambda);
+
+    // Diffuse term (diffuse, subsurface, sheen) ======================
+    // Diffuse
+    const float Fd90 = 0.5f + 2.0f * disney->roughness * LdotH*LdotH;
+    const float FVd90 = fresnelSchlickT(NdotV, Fd90);
+    const float FLd90 = fresnelSchlickT(NdotL, Fd90);
+    const float f_diffuse = (base_spectrum / math::pi) * FVd90 * FLd90;
+
+    // Subsurface
+    const float Fss90 = disney->roughness * LdotH*LdotH;
+    const float FVss90 = fresnelSchlickT(NdotV, Fss90);
+    const float FLss90 = fresnelSchlickT(NdotL, Fss90); 
+    const float f_subsurface = (base_spectrum / math::pi) * 1.25f * (FVss90 * FLss90 * ((1.0f / (NdotV * NdotL)) - 0.5f) + 0.5f);
+
+    // Sheen
+    const float lumi = base_color.y() / CIE_Y_integral;
+    const float rho_tint = base_spectrum / lumi;
+    const float rho_sheen = lerp(1.0f, rho_tint, disney->sheen_tint);
+    const float f_sheen = disney->sheen * rho_sheen * powf(1.0f - LdotH, 5.0f);
+
+    // Specular term (specular, clearcoat) ============================
+    // Spcular
+    const float3 X = si->shading.dpdu;
+    const float3 Y = si->shading.dpdv;
+    const float alpha = fmaxf(0.001f, disney->roughness);
+    const float aspect = sqrtf(1.0f - disney->anisotropic * 0.9f);
+    const float ax = fmaxf(0.001f, math::sqr(alpha) / aspect);
+    const float ay = fmaxf(0.001f, math::sqr(alpha) * aspect);
+    const float rho_specular = lerp(1.0f, rho_tint, disney->specular_tint);
+    const float Fs0 = lerp(0.08f * disney->specular * rho_specular, base_spectrum, disney->metallic);
+    const float FHs0 = fresnelSchlickR(LdotH, Fs0);
+    const float Ds = GTR2_aniso(NdotH, dot(H, X), dot(H, Y), ax, ay);
+    float Gs = smithG_GGX_aniso(NdotL, dot(L, X), dot(L, Y), ax, ay);
+    Gs *= smithG_GGX_aniso(NdotV, dot(V, X), dot(V, Y), ax, ay);
+    const float f_specular = FHs0 * Ds * Gs;
+
+    // Clearcoat
+    const float Fcc = fresnelSchlickR(LdotH, 0.04f);
+    const float alpha_cc = 0.1f + (0.001f - 0.1f) * disney->clearcoat_gloss; // lerp
+    const float Dcc = GTR1(NdotH, alpha_cc);
+    // const float Gcc = smithG_GGX(N, V, L, 0.25f);
+    const float Gcc = smithG_GGX(NdotV, 0.25f);
+    const float f_clearcoat = 0.25f * disney->clearcoat * Fcc * Dcc * Gcc;
+
+    const float out = ( 1.0f - disney->metallic ) * ( lerp( f_diffuse, f_subsurface, disney->subsurface ) + f_sheen ) + f_specular + f_clearcoat;
+    return out * clamp(NdotL, 0.0f, 1.0f);
 }
 
-extern "C" __device__ float PDF_FUNC(disney)(SurfaceInteraction * si, void* mat_data)
+extern "C" __device__ float PDF_FUNC(disney)(SurfaceInteraction* si, void* mat_data)
 {
+    const DisneyData* disney = reinterpret_cast<DisneyData*>(mat_data);
 
+    const float3 V = -si->wo;
+    const float3 L = si->wi;
+    const float3 N = si->shading.n;
+    const float3 H = normalize(V + L);
+
+    const float diffuse_ratio = 0.5f * (1.0f - disney->metallic);
+    const float specular_ratio = 1.0f - diffuse_ratio;
+
+    const float NdotL = fabs(dot(N, L));
+    const float NdotV = fabs(dot(N, V));
+    const float NdotH = fabs(dot(H, N));
+
+    const float alpha = fmaxf(0.001f, disney->roughness);
+    const float alpha_cc = 0.1f + (0.001f - 0.1f) * disney->clearcoat_gloss;
+
+    const float pdf_Ds = GTR2(NdotH, alpha);
+    const float pdf_Dcc = GTR1(NdotH, alpha_cc);
+    const float ratio = 1.0f / (1.0f + disney->clearcoat);
+    const float pdf_specular = (pdf_Dcc + ratio * (pdf_Ds - pdf_Dcc));
+    const float pdf_diffuse = NdotL / math::pi;
+
+    return diffuse_ratio * pdf_diffuse + specular_ratio * pdf_specular;
+}
+
+// Area emitter
+extern "C" __device__ void __direct_callable__area_emitter(SurfaceInteraction* si, void* surface_data)
+{
+    const AreaEmitterData* area = reinterpret_cast<AreaEmitterData*>(surface_data);
+    si->trace_terminate = true;
+    float is_emitted = 1.0f;
+    if (!area->twosided)
+        is_emitted = dot(si->wo, si->shading.n) < 0.0f ? 1.0f : 0.0f;
+    
+    const Spectrum base = optixDirectCall<Spectrum, SurfaceInteraction*, void*>(
+        area->tex_program_id, si, area->tex_data);
+    si->albedo = base;
+    si->emission = base * area->intensity * is_emitted;
 }
 
 // Texture functions
 extern "C" __device__ Spectrum DC_FUNC(constant)(SurfaceInteraction * si, void* tex_data)
 {
-    const BitmapTextureData* image = reinterpret_cast<BitmapTextureData*>(tex_data);
+    const ConstantTexture::Data* constant = reinterpret_cast<ConstantTexture::Data*>(tex_data);
+    return constant->color;
 }
 
 extern "C" __device__ Spectrum DC_FUNC(checker)(SurfaceInteraction * si, void* tex_data)
 {
-
+    const CheckerTexture::Data* checker = reinterpret_cast<CheckerTexture::Data*>(tex_data);
+    const bool is_odd = sinf(si->uv.x * math::pi * checker->scale) * sinf(si->uv.y * math::pi * checker->scale);
+    return is_odd ? checker->color1 : checker->color2;
 }
 
 extern "C" __device__ Spectrum DC_FUNC(bitmap)(SurfaceInteraction * si, void* tex_data)
 {
-
+    const BitmapTexture::Data* image = reinterpret_cast<BitmapTextureData*>(tex_data);
+    float4 c = tex2D<float4>(image->texture, si->uv.x, si->uv.y);
+    return Spectrum::fromRGB(make_float3(c.x, c.y, c.z));
 }
 
 // Hitgroup functions

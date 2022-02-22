@@ -2,16 +2,21 @@
 
 // CPU only
 #ifndef __CUDACC__
-
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+
+#include <prayground_config.h>
 
 #include <cuda_gl_interop.h>
 #include <cuda_runtime.h>
 
-#include <optix.h>
-
-#include <prayground_config.h>
+// core utilities
+#include "core/util.h"
+#include "core/file_util.h"
+#include "core/cudabuffer.h"
+#include "core/bitmap.h"
+#include "core/camera.h"
+#include "core/attribute.h"
 
 // optix utilities
 #include "optix/module.h"
@@ -26,15 +31,6 @@
 #include "optix/transform.h"
 #include "optix/denoiser.h"
 
-// core utilities
-#include "core/util.h"
-#include "core/file_util.h"
-#include "core/cudabuffer.h"
-#include "core/bitmap.h"
-#include "core/camera.h"
-#include "core/attribute.h"
-#include "core/spectrum.h"
-
 // application utilities
 #include "app/baseapp.h"
 #include "app/window.h"
@@ -43,7 +39,19 @@
 
 #include "gl/shader.h"
 
-#endif
+#else // GPU only
+#include "core/ray.h"
+#include "core/bsdf.h"
+#include "core/interaction.h"
+#include "core/onb.h"
+
+#include "optix/cuda/device_util.cuh"
+#endif // __CUDACC__
+
+#include <optix.h>
+
+#include "core/spectrum.h"
+#include "core/aabb.h"
 
 // math utilities
 #include "math/util.h"

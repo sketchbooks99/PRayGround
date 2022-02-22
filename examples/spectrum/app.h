@@ -45,4 +45,8 @@ private:
     bool camera_update;
 
     EnvironmentEmitter env;
+
+    vector<shared_ptr<Shape>> shapes;
+    vector<shared_ptr<Material>> materials;
+    vector<shared_ptr<Texture>> textures;
 };

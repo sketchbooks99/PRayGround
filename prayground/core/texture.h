@@ -9,12 +9,11 @@
 
 namespace prayground {
 
-#ifndef __CUDACC__
-
 class Texture {
 public:
     Texture(int prg_id) : m_prg_id(prg_id) {}
 
+#ifndef __CUDACC__
     // Preparing texture data on the device.
     virtual void copyToDevice() = 0;
     virtual void free()
@@ -38,11 +37,11 @@ public:
         ASSERT(m_prg_id > -1, "Please set program id to texture.");
         return static_cast<uint32_t>(m_prg_id);
     }
+#endif
+
 protected:
     void* d_data{ nullptr };
     int m_prg_id;
 };
-
-#endif
 
 } // ::prayground

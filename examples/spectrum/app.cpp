@@ -52,6 +52,9 @@ void App::setup()
     OPTIX_CHECK(optixInit());
     context.create();
 
+    // Initialize SampledSpectrum class
+    SampledSpectrum::init(true);
+
     // Instance acceleration structureの初期化
     scene_ias = InstanceAccel{InstanceAccel::Type::Instances};
 
@@ -63,12 +66,7 @@ void App::setup()
     pipeline.setNumAttributes(5);
 
     // OptixModuleをCUDAファイルから生成
-    Module raygen_module, miss_module, hitgroups_module, textures_module, surfaces_module;
-    raygen_module = pipeline.createModuleFromCudaFile(context, "cuda/raygen.cu");
-    miss_module = pipeline.createModuleFromCudaFile(context, "cuda/miss.cu");
-    hitgroups_module = pipeline.createModuleFromCudaFile(context, "cuda/hitgroups.cu");
-    textures_module = pipeline.createModuleFromCudaFile(context, "cuda/textures.cu");
-    surfaces_module = pipeline.createModuleFromCudaFile(context, "cuda/surfaces.cu");
+    Module module = pipeline.createModuleFromCudaFile(context, "kernels.cu");
 
     // レンダリング結果を保存する用のBitmapを用意
     result_bitmap.allocate(PixelFormat::RGBA, pgGetWidth(), pgGetHeight());
@@ -94,7 +92,7 @@ void App::setup()
     camera.enableTracking(pgGetCurrentWindow());
 
     // Raygenプログラム
-    ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, raygen_module, "__raygen__pinhole");
+    ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, module, "__raygen__spectrum");
     // Raygenプログラム用のShader Binding Tableデータ
     RaygenRecord raygen_record;
     raygen_prg.recordPackHeader(&raygen_record);
@@ -120,29 +118,29 @@ void App::setup()
     };
 
     // テクスチャ用のCallableプログラム
-    uint32_t constant_prg_id = setupCallable(textures_module, DC_FUNC_STR("constant"), "");
+    uint32_t constant_prg_id = setupCallable(module, DC_FUNC_STR("constant"), "");
 
     // Surface用のCallableプログラム 
     // Diffuse
-    uint32_t diffuse_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_diffuse"), CC_FUNC_STR("bsdf_diffuse"));
-    uint32_t diffuse_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_diffuse"), "");
+    uint32_t diffuse_sample_bsdf_prg_id = setupCallable(module, DC_FUNC_STR("sample_diffuse"), CC_FUNC_STR("bsdf_diffuse"));
+    uint32_t diffuse_pdf_prg_id = setupCallable(module, DC_FUNC_STR("pdf_diffuse"), "");
     // Dielectric
-    uint32_t dielectric_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_dielectric"), CC_FUNC_STR("bsdf_dielectric"));
-    uint32_t dielectric_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_dielectric"), "");
+    uint32_t dielectric_sample_bsdf_prg_id = setupCallable(module, DC_FUNC_STR("sample_dielectric"), CC_FUNC_STR("bsdf_dielectric"));
+    uint32_t dielectric_pdf_prg_id = setupCallable(module, DC_FUNC_STR("pdf_dielectric"), "");
     // AreaEmitter
-    uint32_t area_emitter_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("area_emitter"), "");
+    uint32_t area_emitter_prg_id = setupCallable(module, DC_FUNC_STR("area_emitter"), "");
 
     // Shape用のCallableプログラム(主に面光源サンプリング用)
-    uint32_t plane_sample_pdf_prg_id = setupCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_plane"), CC_FUNC_STR("pdf_plane"));
+    uint32_t plane_sample_pdf_prg_id = setupCallable(module, DC_FUNC_STR("rnd_sample_plane"), CC_FUNC_STR("pdf_plane"));
 
     // 環境マッピング (Sphere mapping) 用のテクスチャとデータ準備
-    auto env_texture = make_shared<ConstantTexture>(make_float3(0.0f), constant_prg_id);
+    auto env_texture = make_shared<ConstantTexture>(SampledSpectrum::fromRGB(make_float3(0.0f)), constant_prg_id);
     env_texture->copyToDevice();
     env = EnvironmentEmitter{env_texture};
     env.copyToDevice();
 
     // Missプログラム
-    ProgramGroup miss_prg = pipeline.createMissProgram(context, miss_module, MS_FUNC_STR("envmap"));
+    ProgramGroup miss_prg = pipeline.createMissProgram(context, module, MS_FUNC_STR("envmap"));
     // Missプログラム用のShader Binding Tableデータ
     MissRecord miss_record;
     miss_prg.recordPackHeader(&miss_record);
@@ -151,11 +149,11 @@ void App::setup()
 
     // Hitgroupプログラム
     // Plane
-    auto plane_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("plane"), IS_FUNC_STR("plane"));
+    auto plane_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("plane"), IS_FUNC_STR("plane"));
     // Sphere
-    auto sphere_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("sphere"), IS_FUNC_STR("sphere"));
+    auto sphere_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("sphere"), IS_FUNC_STR("sphere"));
     // Triangle mesh
-    auto mesh_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("mesh"));
+    auto mesh_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("mesh"));
 
     struct Primitive
     {
@@ -205,7 +203,7 @@ void App::setup()
         scene_ias.addInstance(instance);
 
         instance_id++;
-        sbt_offset += RtRestLifeSBT::NRay;
+        sbt_offset += SBT::NRay;
     };
 
     std::vector<AreaEmitterInfo> area_emitter_infos;
@@ -256,7 +254,7 @@ void App::setup()
         scene_ias.addInstance(instance);
 
         instance_id++;
-        sbt_offset += RtRestLifeSBT::NRay;
+        sbt_offset += SBT::NRay;
 
         AreaEmitterInfo area_emitter_info = 
         {
@@ -270,15 +268,62 @@ void App::setup()
         area_emitter_infos.push_back(area_emitter_info);
     };
 
-    // Scene ==========================================================================
-    auto green = make_shared<ConstantTexture>(make_float3(0.05f, 0.8f, 0.05f), constant_prg_id);
-    auto red = make_shared<ConstantTexture>(make_float3(0.8f, 0.05f, 0.05f), constant_prg_id);
-    auto white = make_shared<ConstantTexture>(make_float3(0.8f, 0.8f, 0.8f), constant_prg_id);
+    // Scene ---------------------------------------------------------
+    constexpr int32_t N_SPD = 21;
+    struct SPD {
+        float lambda;
+        float val;
+    };
+
+    array<SPD, N_SPD> white = 
+    { { 
+        {380.0f, 1.0f}, {397.0f, 1.0f}, {414.0f, 1.0f}, {431.0f, 1.0f}, {448.0f, 1.0f}, 
+        {465.0f, 1.0f}, {482.0f, 1.0f}, {499.0f, 1.0f}, {516.0f, 1.0f}, {533.0f, 1.0f}, 
+        {550.0f, 1.0f}, {567.0f, 1.0f}, {584.0f, 1.0f}, {601.0f, 1.0f}, {618.0f, 1.0f}, 
+        {635.0f, 1.0f}, {652.0f, 1.0f}, {669.0f, 1.0f}, {686.0f, 1.0f}, {703.0f, 1.0f}, 
+        {720.0f, 1.0f}
+    } };
+
+    array<SPD, N_SPD> red = 
+    { { 
+        {380.0f, 0.04f}, {397.0f, 0.04f}, {414.0f, 0.05f}, {431.0f, 0.05f}, {448.0f, 0.06f}, 
+        {465.0f, 0.06f}, {482.0f, 0.06f}, {499.0f, 0.06f}, {516.0f, 0.06f}, {533.0f, 0.06f}, 
+        {550.0f, 0.06f}, {567.0f, 0.07f}, {584.0f, 0.12f}, {601.0f, 0.29f}, {618.0f, 0.46f}, 
+        {635.0f, 0.61f}, {652.0f, 0.61f}, {669.0f, 0.62f}, {686.0f, 0.15f}, {703.0f, 0.16f}, 
+        {720.0f, 0.16f}
+    } };
+
+    array<SPD, N_SPD> green = 
+    { { 
+        {380.0f, 0.09f}, {397.0f, 0.09f}, {414.0f, 0.10f}, {431.0f, 0.10f}, {448.0f, 0.10f}, 
+        {465.0f, 0.11f}, {482.0f, 0.13f}, {499.0f, 0.29f}, {516.0f, 0.46f}, {533.0f, 0.46f}, 
+        {550.0f, 0.38f}, {567.0f, 0.30f}, {584.0f, 0.23f}, {601.0f, 0.17f}, {618.0f, 0.13f}, 
+        {635.0f, 0.12f}, {652.0f, 0.12f}, {669.0f, 0.13f}, {686.0f, 0.15f}, {703.0f, 0.16f}, 
+        {720.0f, 0.16f}
+    } };
+
+    auto createConstantTextureFromSPD = [&](const array<SPD, N_SPD>& spd)
+        -> shared_ptr<ConstantTexture>
+    {
+        float lambda[N_SPD];
+        float val[N_SPD];
+        for (int32_t i = 0; i < N_SPD; i++)
+        {
+            lambda[i] = spd[i].lambda;
+            val[i] = spd[i].val;
+        }
+        SampledSpectrum ret = SampledSpectrum::fromSample(lambda, val, N_SPD);
+        return make_shared<ConstantTexture>(ret, constant_prg_id);
+    };
+
+    auto tex_white = createConstantTextureFromSPD(white);
+    auto tex_red = createConstantTextureFromSPD(red);
+    auto tex_green = createConstantTextureFromSPD(green);
 
     // Ceiling
     {
         auto plane = make_shared<Plane>(make_float2(0.0f,0.0f), make_float2(555.0f,555.0f));
-        auto diffuse = make_shared<Diffuse>(white);
+        auto diffuse = make_shared<Diffuse>(tex_white);
         auto transform = Matrix4f::translate({0.0f, 555.0f, 0.0f});
         Primitive ceiling{plane, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id};
         setupPrimitive(plane_prg, ceiling, transform);
@@ -287,7 +332,7 @@ void App::setup()
     // Red wall
     {
         auto plane = make_shared<Plane>(make_float2(0.0f,0.0f), make_float2(555.0f,555.0f));
-        auto diffuse = make_shared<Diffuse>(red);
+        auto diffuse = make_shared<Diffuse>(tex_red);
         auto transform = Matrix4f::rotate(math::pi / 2.0f, {0.0f, 0.0f, 1.0f});
         Primitive left_wall{plane, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id};
         setupPrimitive(plane_prg, left_wall, transform);
@@ -296,7 +341,7 @@ void App::setup()
     // Green wall
     {
         auto plane = make_shared<Plane>(make_float2(0.0f,0.0f), make_float2(555.0f,555.0f));
-        auto diffuse = make_shared<Diffuse>(green);
+        auto diffuse = make_shared<Diffuse>(tex_green);
         auto transform = Matrix4f::translate({555.0f, 0.0f, 0.0f}) * Matrix4f::rotate(math::pi / 2.0f, {0.0f, 0.0f, 1.0f});
         Primitive right_wall{plane, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id};
         setupPrimitive(plane_prg, right_wall, transform);
@@ -305,7 +350,7 @@ void App::setup()
     // Back
     {
         auto plane = make_shared<Plane>(make_float2(0.0f,0.0f), make_float2(555.0f,555.0f));
-        auto diffuse = make_shared<Diffuse>(white);
+        auto diffuse = make_shared<Diffuse>(tex_white);
         auto transform = Matrix4f::translate({0.0f, 555.0f, 555.0f}) * Matrix4f::rotate(math::pi / 2.0f, {1.0f, 0.0f, 0.0f});
         Primitive back{plane, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id};
         setupPrimitive(plane_prg, back, transform);
@@ -314,7 +359,7 @@ void App::setup()
     // Floor
     {
         auto plane = make_shared<Plane>(make_float2(0.0f,0.0f), make_float2(555.0f,555.0f));
-        auto diffuse = make_shared<Diffuse>(white);
+        auto diffuse = make_shared<Diffuse>(tex_white);
         auto transform = Matrix4f::translate({0.0f, 0.0f, 0.0f});
         Primitive floor{plane, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id};
         setupPrimitive(plane_prg, floor, transform);
@@ -323,7 +368,7 @@ void App::setup()
     // Cube
     {
         auto mesh = make_shared<TriangleMesh>("resources/model/cube.obj");
-        auto diffuse = make_shared<Diffuse>(white);
+        auto diffuse = make_shared<Diffuse>(tex_white);
         auto transform = Matrix4f::translate({347.5f, 165, 377.5f}) * Matrix4f::rotate(math::radians(15.0f), {0.0f, 1.0f, 0.0f}) * Matrix4f::scale({82.5f, 165.0f, 82.5f});
         Primitive cube{mesh, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id};
         setupPrimitive(mesh_prg, cube, transform);
@@ -332,7 +377,7 @@ void App::setup()
     // Glass sphere
     {
         auto sphere = make_shared<Sphere>(make_float3(190.0f, 90.0f, 190.0f), 90.0f);
-        auto glass = make_shared<Dielectric>(white, 1.5f);
+        auto glass = make_shared<Dielectric>(tex_white, 1.5f);
         auto transform = Matrix4f::identity();
         Primitive glass_sphere{sphere, glass, dielectric_sample_bsdf_prg_id, dielectric_pdf_prg_id};
         setupPrimitive(sphere_prg, glass_sphere, transform);
@@ -342,11 +387,8 @@ void App::setup()
     {
         // Shape
         auto plane_light = make_shared<Plane>(make_float2(213.0f, 227.0f), make_float2(343.0f, 332.0f));
-        // Texture
-        auto light_white = make_shared<ConstantTexture>(make_float3(0.9f, 0.9f, 0.6f), constant_prg_id);
-        light_white->copyToDevice();
         // Area emitter
-        auto plane_area_emitter = AreaEmitter(light_white, 20.0f);
+        auto plane_area_emitter = AreaEmitter(tex_white, 20.0f);
         Matrix4f transform = Matrix4f::translate({0.0f, 554.0f, 0.0f});
         setupAreaEmitter(plane_prg, plane_light, plane_area_emitter, transform, plane_sample_pdf_prg_id);
     }

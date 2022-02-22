@@ -22,38 +22,38 @@
 
 namespace prayground {
 
-template <typename PixelType>
-Bitmap_<PixelType>::Bitmap_()
+template <typename PixelT>
+Bitmap_<PixelT>::Bitmap_()
 {
     
 }
 
 // --------------------------------------------------------------------
-template <typename PixelType>
-Bitmap_<PixelType>::Bitmap_(PixelFormat format, int width, int height, PixelType* data)
+template <typename PixelT>
+Bitmap_<PixelT>::Bitmap_(PixelFormat format, int width, int height, PixelT* data)
 {
     allocate(format, width, height);
     if (data)
-        memcpy(m_data.get(), data, sizeof(PixelType) * m_width * m_height * m_channels);
+        memcpy(m_data.get(), data, sizeof(PixelT) * m_width * m_height * m_channels);
 }
 
 // --------------------------------------------------------------------
-template <typename PixelType>
-Bitmap_<PixelType>::Bitmap_(const std::filesystem::path& filename)
+template <typename PixelT>
+Bitmap_<PixelT>::Bitmap_(const std::filesystem::path& filename)
 {
     load(filename);
 }
 
 // --------------------------------------------------------------------
-template <typename PixelType>
-Bitmap_<PixelType>::Bitmap_(const std::filesystem::path& filename, PixelFormat format)
+template <typename PixelT>
+Bitmap_<PixelT>::Bitmap_(const std::filesystem::path& filename, PixelFormat format)
 {
     load(filename, format);
 }
 
 // --------------------------------------------------------------------
-template <typename PixelType>
-void Bitmap_<PixelType>::allocate(PixelFormat format, int width, int height)
+template <typename PixelT>
+void Bitmap_<PixelT>::allocate(PixelFormat format, int width, int height)
 {
     m_width = width; 
     m_height = height;
@@ -78,17 +78,17 @@ void Bitmap_<PixelType>::allocate(PixelFormat format, int width, int height)
     }
 
     // Zero-initialization of pixel data
-    std::vector<PixelType> zero_arr(m_channels * m_width * m_height, static_cast<PixelType>(0));
-    m_data = std::make_unique<PixelType[]>(m_channels * m_width * m_height);
-    memcpy(m_data.get(), zero_arr.data(), m_channels * m_width * m_height * sizeof(PixelType));
+    std::vector<PixelT> zero_arr(m_channels * m_width * m_height, static_cast<PixelT>(0));
+    m_data = std::make_unique<PixelT[]>(m_channels * m_width * m_height);
+    memcpy(m_data.get(), zero_arr.data(), m_channels * m_width * m_height * sizeof(PixelT));
 
     if (pgWindowInitialized())
         prepareGL();
 }
 
 // --------------------------------------------------------------------
-template <typename PixelType>
-void Bitmap_<PixelType>::setData(PixelType* data, int offset_x, int offset_y, int width, int height)
+template <typename PixelT>
+void Bitmap_<PixelT>::setData(PixelT* data, int offset_x, int offset_y, int width, int height)
 {
     ASSERT(m_data.get(), "Please allocate the bitmap before filling data with specified range.");
 
@@ -103,27 +103,27 @@ void Bitmap_<PixelType>::setData(PixelType* data, int offset_x, int offset_y, in
     {
         int dst_base = (y * m_width + offset_x) * m_channels;
         int src_base = ((y - offset_y) * width) * m_channels;
-        memcpy(&m_data[dst_base], &data[src_base], sizeof(PixelType) * width * m_channels);
+        memcpy(&m_data[dst_base], &data[src_base], sizeof(PixelT) * width * m_channels);
     }
 }
 
-template <typename PixelType>
-void Bitmap_<PixelType>::setData(PixelType* data, const int2& offset, const int2& res)
+template <typename PixelT>
+void Bitmap_<PixelT>::setData(PixelT* data, const int2& offset, const int2& res)
 {
     setData(data, offset.x, offset.y, res.x, res.y); 
 }
 
 // --------------------------------------------------------------------
-template <typename PixelType>
-void Bitmap_<PixelType>::load(const std::filesystem::path& filename, PixelFormat format)
+template <typename PixelT>
+void Bitmap_<PixelT>::load(const std::filesystem::path& filename, PixelFormat format)
 {
     m_format = format;
     load(filename);
 }
 
 // --------------------------------------------------------------------
-template <typename PixelType>
-void Bitmap_<PixelType>::load(const std::filesystem::path& filename)
+template <typename PixelT>
+void Bitmap_<PixelT>::load(const std::filesystem::path& filename)
 {
     UNIMPLEMENTED();
 }
@@ -230,8 +230,8 @@ void Bitmap_<float>::load(const std::filesystem::path& filename)
 }
 
 // --------------------------------------------------------------------
-template <typename PixelType>
-void Bitmap_<PixelType>::write(const std::filesystem::path& filepath, int quality) const 
+template <typename PixelT>
+void Bitmap_<PixelT>::write(const std::filesystem::path& filepath, int quality) const 
 {
     UNIMPLEMENTED();
 }
@@ -340,20 +340,20 @@ void Bitmap_<float>::write(const std::filesystem::path& filepath, int quality) c
 }
 
 // --------------------------------------------------------------------
-template <typename PixelType>
-void Bitmap_<PixelType>::draw() const
+template <typename PixelT>
+void Bitmap_<PixelT>::draw() const
 {
     draw(0, 0, m_width, m_height);
 }
 
-template <typename PixelType>
-void Bitmap_<PixelType>::draw(int32_t x, int32_t y) const
+template <typename PixelT>
+void Bitmap_<PixelT>::draw(int32_t x, int32_t y) const
 {
     draw(x, y, m_width, m_height);
 }
 
-template <typename PixelType>
-void Bitmap_<PixelType>::draw(int32_t x, int32_t y, int32_t width, int32_t height) const
+template <typename PixelT>
+void Bitmap_<PixelT>::draw(int32_t x, int32_t y, int32_t width, int32_t height) const
 {
     // Prepare vertices data
     int window_width = pgGetWidth(), window_height = pgGetHeight();
@@ -392,7 +392,7 @@ void Bitmap_<PixelType>::draw(int32_t x, int32_t y, int32_t width, int32_t heigh
     GLenum texture_data_type = GL_UNSIGNED_BYTE;
     GLint internal_format = GL_RGB8;
     GLenum format = GL_RGB;
-    if constexpr (std::is_same_v<PixelType, float>) {
+    if constexpr (std::is_same_v<PixelT, float>) {
         texture_data_type = GL_FLOAT;
     }
 
@@ -400,28 +400,28 @@ void Bitmap_<PixelType>::draw(int32_t x, int32_t y, int32_t width, int32_t heigh
     {
     case PixelFormat::GRAY:
         format = GL_RED;
-        if constexpr (std::is_same_v<PixelType, float>)
+        if constexpr (std::is_same_v<PixelT, float>)
             internal_format = GL_R32F;
         else 
             internal_format = GL_R8;
         break;
     case PixelFormat::GRAY_ALPHA:
         format = GL_RG;
-        if constexpr (std::is_same_v<PixelType, float>)
+        if constexpr (std::is_same_v<PixelT, float>)
             internal_format = GL_RG32F;
         else 
             internal_format = GL_RG8;
         break;
     case PixelFormat::RGB:
         format = GL_RGB;
-        if constexpr (std::is_same_v<PixelType, float>)
+        if constexpr (std::is_same_v<PixelT, float>)
             internal_format = GL_RGB32F;
         else 
             internal_format = GL_RGB8;
         break;
     case PixelFormat::RGBA:
         format = GL_RGBA;
-        if constexpr (std::is_same_v<PixelType, float>)
+        if constexpr (std::is_same_v<PixelT, float>)
             internal_format = GL_RGBA32F;
         else 
             internal_format = GL_RGBA8;
@@ -432,7 +432,7 @@ void Bitmap_<PixelType>::draw(int32_t x, int32_t y, int32_t width, int32_t heigh
     }
     
     glBindTexture(GL_TEXTURE_2D, m_gltex);
-    PixelType* raw_data = m_data.get();
+    PixelT* raw_data = m_data.get();
     glTexImage2D(GL_TEXTURE_2D, 0, internal_format, m_width, m_height, 0, format, texture_data_type, raw_data);
 
     m_shader.begin();
@@ -446,47 +446,47 @@ void Bitmap_<PixelType>::draw(int32_t x, int32_t y, int32_t width, int32_t heigh
 }
 
 // --------------------------------------------------------------------
-template <typename PixelType>
-void Bitmap_<PixelType>::allocateDevicePtr()
+template <typename PixelT>
+void Bitmap_<PixelT>::allocateDevicePtr()
 {
     if (d_data)
         CUDA_CHECK(cudaFree(d_data));
     CUDA_CHECK(cudaMalloc(
         reinterpret_cast<void**>(&d_data),
-        m_width * m_height * m_channels * sizeof(PixelType)
+        m_width * m_height * m_channels * sizeof(PixelT)
     ));
 }
 
 // --------------------------------------------------------------------
-template <typename PixelType>
-void Bitmap_<PixelType>::copyToDevice() 
+template <typename PixelT>
+void Bitmap_<PixelT>::copyToDevice() 
 {
     // CPU側のデータが準備されているかチェック
     ASSERT(m_data.get(), "Image data in the host side has been not allocated yet.");
 
     // GPU上に画像データを準備
-    CUDABuffer<PixelType> d_buffer;
-    d_buffer.copyToDevice(m_data.get(), m_width * m_height * m_channels*sizeof(PixelType));
+    CUDABuffer<PixelT> d_buffer;
+    d_buffer.copyToDevice(m_data.get(), m_width * m_height * m_channels*sizeof(PixelT));
     d_data = d_buffer.deviceData();
 }
 
 // --------------------------------------------------------------------
-template <typename PixelType>
-void Bitmap_<PixelType>::copyFromDevice()
+template <typename PixelT>
+void Bitmap_<PixelT>::copyFromDevice()
 {
     ASSERT(d_data, "No data has been allocated on the device yet.");
 
-    PixelType* raw_data = m_data.get();
+    PixelT* raw_data = m_data.get();
     CUDA_CHECK(cudaMemcpy(
         raw_data,
-        d_data, m_width * m_height * m_channels * sizeof(PixelType),
+        d_data, m_width * m_height * m_channels * sizeof(PixelT),
         cudaMemcpyDeviceToHost
     ));
 }
 
 // --------------------------------------------------------------------
-template <typename PixelType>
-void Bitmap_<PixelType>::prepareGL()
+template <typename PixelT>
+void Bitmap_<PixelT>::prepareGL()
 {
     // Prepare vertex array object
     glGenVertexArrays(1, &m_vao);

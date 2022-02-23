@@ -80,7 +80,7 @@ void App::setup()
     params.width = result_bitmap.width();
     params.height = result_bitmap.height();
     params.samples_per_launch = 1;
-    params.max_depth = 10;
+    params.max_depth = 8;
     params.white = 5.0f;
 
     constexpr size_t spd_size = sizeof(SampledSpectrum);
@@ -508,8 +508,10 @@ void App::draw()
 
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-    if (params.subframe_index == 4096)
-        result_bitmap.write(pgPathJoin(pgAppDir(), "rtRestOfYourLife.jpg"));
+    if (params.subframe_index == 4096) {
+        result_bitmap.write(pgPathJoin(pgAppDir(), "spectrum.jpg"));
+        pgExit();
+    }
 }
 
 // ----------------------------------------------------------------

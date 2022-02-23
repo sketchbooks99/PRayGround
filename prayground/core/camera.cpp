@@ -158,8 +158,8 @@ void Camera::mouseDragged(float x, float y, int button)
 
         float3 offset = cam_side * deltaX + cam_up * deltaY;
         
-        this->setOrigin(this->origin() + offset * 0.25f);
-        this->setLookat(this->lookat() + offset * 0.25f);
+        this->setOrigin(this->origin() + offset * 0.1f);
+        this->setLookat(this->lookat() + offset * 0.1f);
     }
     else 
     {

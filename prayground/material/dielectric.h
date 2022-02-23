@@ -5,10 +5,18 @@
 
 namespace prayground {
 
+enum class Sellmeier
+{
+    None, 
+    BK7, 
+    Diamond
+};
+
 struct DielectricData {
     void* tex_data;
     float ior;
     float absorb_coeff;
+    Sellmeier sellmeier;
     unsigned int tex_program_id;
 };
 
@@ -16,7 +24,7 @@ struct DielectricData {
 
 class Dielectric final : public Material {
 public:
-    Dielectric(const std::shared_ptr<Texture>& texture, float ior, float absorb_coeff = 0.0f);
+    Dielectric(const std::shared_ptr<Texture>& texture, float ior, float absorb_coeff = 0.0f, Sellmeier sellmeier = Sellmeier::None);
     ~Dielectric();
 
     SurfaceType surfaceType() const override;
@@ -30,6 +38,8 @@ public:
     void setAbsorbCoeff(const float absorb_coeff);
     float absorbCoeff() const;
 
+    void setSellmeierType(Sellmeier ior_func);
+
     void setTexture(const std::shared_ptr<Texture>& texture);
     std::shared_ptr<Texture> texture() const;
 private:
@@ -38,6 +48,7 @@ private:
     /// For controlling absorption intensity according to the distance
     /// that the ray travel inside of the glass. 
     float m_absorb_coeff; 
+    Sellmeier m_sellmeier;
 };
 
 #else 

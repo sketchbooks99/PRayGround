@@ -3,8 +3,8 @@
 namespace prayground {
 
 // ------------------------------------------------------------------
-Dielectric::Dielectric(const std::shared_ptr<Texture>& texture, float ior, float absorb_coeff)
-: m_texture(texture), m_ior(ior), m_absorb_coeff(absorb_coeff)
+Dielectric::Dielectric(const std::shared_ptr<Texture>& texture, float ior, float absorb_coeff, Sellmeier sellmeier)
+: m_texture(texture), m_ior(ior), m_absorb_coeff(absorb_coeff), m_sellmeier(sellmeier)
 {
 
 }
@@ -25,11 +25,12 @@ void Dielectric::copyToDevice()
 {
     if (!m_texture->devicePtr())
         m_texture->copyToDevice();
-
+    
     DielectricData data = {
         .tex_data = m_texture->devicePtr(), 
         .ior = m_ior, 
         .absorb_coeff = m_absorb_coeff,
+        .sellmeier = m_sellmeier,
         .tex_program_id = m_texture->programId()
     };
 
@@ -67,6 +68,11 @@ void Dielectric::setAbsorbCoeff(const float absorb_coeff)
 float Dielectric::absorbCoeff() const
 {
     return m_absorb_coeff;
+}
+
+void Dielectric::setSellmeierType(Sellmeier sellmeier)
+{
+    m_sellmeier = sellmeier;
 }
 
 // ------------------------------------------------------------------

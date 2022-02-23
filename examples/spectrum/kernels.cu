@@ -30,6 +30,7 @@ static __forceinline__ __device__ void traceSpectrum(
 )
 {
     unsigned int u0, u1;
+    unsigned int l = __float_as_int(lambda);
     packPointer(si, u0, u1);
     optixTrace(
         handle, 
@@ -44,7 +45,7 @@ static __forceinline__ __device__ void traceSpectrum(
         1, 
         ray_type, 
         u0, u1, 
-        __float_as_int(lambda)
+        l
     );
 }
 
@@ -56,6 +57,24 @@ static __forceinline__ __device__ void getCameraRay(
 {
     rd = normalize(x * camera.U + y * camera.V + camera.W);
     ro = camera.origin;
+}
+
+static __forceinline__ __device__ void getLensCameraRay(const CameraData& camera, const float x, const float y, float3& ro, float3& rd, uint32_t& seed)
+{
+    float3 _rd = (camera.aperture / 2.0f) * randomSampleInUnitDisk(seed);
+    float3 offset = normalize(camera.U) * _rd.x + normalize(camera.V) * _rd.y;
+
+    const float theta = math::radians(camera.fov);
+    const float h = tan(theta / 2.0f);
+    const float viewport_height = h;
+    const float viewport_width = camera.aspect * viewport_height;
+
+    float3 horizontal = camera.focus_distance * normalize(camera.U) * viewport_width;
+    float3 vertical = camera.focus_distance * normalize(camera.V) * viewport_height;
+    float3 center = camera.origin - camera.focus_distance * normalize(-camera.W);
+
+    ro = camera.origin + offset;
+    rd = normalize(center + x * horizontal + y * vertical - ro);
 }
 
 static __forceinline__ __device__ float uniformSpectrumPDF()
@@ -77,7 +96,7 @@ extern "C" __global__ void __raygen__spectrum()
     int i = params.samples_per_launch;
 
     // Uniform sampling of lambda
-    const float lambda = lerp(min_lambda, max_lambda, rnd(seed));
+    float lambda = lerp(float(min_lambda), float(max_lambda), rnd(seed));
 
     do 
     {
@@ -88,7 +107,7 @@ extern "C" __global__ void __raygen__spectrum()
         ) - 1.0f;
 
         float3 ro, rd;
-        getCameraRay(raygen->camera, d.x, d.y, ro, rd);
+        getLensCameraRay(raygen->camera, d.x, d.y, ro, rd, seed);
         
         float throughput = 1.0f;
 
@@ -130,15 +149,17 @@ extern "C" __global__ void __raygen__spectrum()
             else if (+(si.surface_info.type & SurfaceType::Delta))
             {
                 // Samling scattered direction 
-                optixDirectCall<void, SurfaceInteraction*, void*>(
+                optixDirectCall<void, const float&, SurfaceInteraction*, void*>(
                     si.surface_info.sample_id, 
+                    lambda, 
                     &si, 
                     si.surface_info.data
                 );
 
                 // Evaluate bsdf
-                float bsdf_val = optixContinuationCall<float, SurfaceInteraction*, void*>(
+                float bsdf_val = optixContinuationCall<float, const float&, SurfaceInteraction*, void*>(
                     si.surface_info.bsdf_id, 
+                    lambda,
                     &si, 
                     si.surface_info.data
                 );
@@ -148,46 +169,13 @@ extern "C" __global__ void __raygen__spectrum()
             // Rough surface sampling with applying MIS
             else if (+(si.surface_info.type & (SurfaceType::Rough | SurfaceType::Diffuse)))
             {
-                unsigned int seed = si.seed;
-                AreaEmitterInfo light;
-                if (params.num_lights > 0)
-                {
-                    const int light_id = rnd_int(seed, 0, params.num_lights);
-                    light = params.lights[light_id];
-                }
-
-                const float weight = 1.0f / (params.num_lights + 1);
-                float pdf_val = 0.0f;
-
                 // Importance sampling according to the BSDF
-                optixDirectCall<void, SurfaceInteraction*, void*>(
+                optixDirectCall<void, const float&, SurfaceInteraction*, void*>(
                     si.surface_info.sample_id, 
+                    lambda, 
                     &si, 
                     si.surface_info.data
                 );
-
-                if (rnd(seed) < weight * params.num_lights)
-                {
-                    // Light sampling
-                    float3 to_light = optixDirectCall<float3, AreaEmitterInfo, SurfaceInteraction*>(
-                        light.sample_id, 
-                        light, 
-                        &si
-                    );
-                    si.wo = normalize(to_light);
-                }
-
-                for (int i = 0; i < params.num_lights; i++)
-                {
-                    // Evaluate PDF of area emitter
-                    float light_pdf = optixContinuationCall<float, AreaEmitterInfo, const float3&, const float3&>(
-                        params.lights[i].pdf_id,
-                        params.lights[i],
-                        si.p, 
-                        si.wo
-                    );
-                    pdf_val += weight * light_pdf;
-                }
 
                 // Evaluate PDF depends on BSDF 
                 float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*>(
@@ -196,33 +184,32 @@ extern "C" __global__ void __raygen__spectrum()
                     si.surface_info.data
                 );
 
-                pdf_val += weight * bsdf_pdf;
-
                 // Evaluate BSDF
-                float bsdf_val = optixContinuationCall<float, SurfaceInteraction*, void*>(
+                float bsdf_val = optixContinuationCall<float, const float&, SurfaceInteraction*, void*>(
                     si.surface_info.bsdf_id, 
+                    lambda, 
                     &si, 
                     si.surface_info.data
                 );
 
-                pdf_val = fmaxf(pdf_val, math::eps);
-
-                throughput *= bsdf_val / pdf_val;
+                bsdf_pdf = fmaxf(bsdf_pdf, math::eps);
+                
+                throughput *= bsdf_val / bsdf_pdf;
             }
 
             ro = si.p;
-            rd = si.wo;
+            rd = si.wi;
 
             ++depth;
         }
     } while (--i);
 
-    const unsigned int image_idx = idx.x * params.width + idx.y;
+    const unsigned int image_idx = idx.y * params.width + idx.x;
 
     float3 xyz_result = make_float3(
         radiance * CIE_X(lambda) / CIE_Y_integral / uniformSpectrumPDF(),
-        radiance * CIE_X(lambda) / CIE_Y_integral / uniformSpectrumPDF(),
-        radiance * CIE_X(lambda) / CIE_Y_integral / uniformSpectrumPDF()
+        radiance * CIE_Y(lambda) / CIE_Y_integral / uniformSpectrumPDF(),
+        radiance * CIE_Z(lambda) / CIE_Y_integral / uniformSpectrumPDF()
     );
 
     float3 color = XYZToSRGB(xyz_result);
@@ -286,12 +273,27 @@ static __forceinline__ __device__ float bk7Index(const float& lambda)
     return sqrtf(1.0f + ((1.03961212f * l2) / (l2 - 0.00600069867f)) + ((0.231792344f * l2) / (l2 - 0.0200179144f)) + ((1.01046945 * l2) / (l2 - 103.560653f)));
 }
 
+static __forceinline__ __device__ float diamondIndex(const float& lambda)
+{
+    const float l2 = lambda * lambda;
+    return sqrtf(1.0f + ((0.3306f * l2) / (l2 - 175.0f * 175.0f)) + ((4.3346f * l2) / (l2 - 106.0f * 106.0f)));
+}
+
 extern "C" __device__ void SAMPLE_FUNC(dielectric)(const float& lambda, SurfaceInteraction* si, void* mat_data)
 {
     const DielectricData* dielectric = reinterpret_cast<DielectricData*>(mat_data);
 
     float ni = 1.000292f;
-    float nt = bk7Index(lambda);
+    float nt = 1.5f;
+    if (dielectric->sellmeier == Sellmeier::None)
+        nt = dielectric->ior;
+    else
+    {
+        if (dielectric->sellmeier == Sellmeier::Diamond)
+            nt = diamondIndex(lambda);
+        else if (dielectric->sellmeier == Sellmeier::BK7)
+            nt = bk7Index(lambda);
+    }
     float cosine = dot(si->wo, si->shading.n);
     bool into = cosine < 0;
     float3 outward_normal = into ? si->shading.n : -si->shading.n;
@@ -317,7 +319,7 @@ extern "C" __device__ void SAMPLE_FUNC(dielectric)(const float& lambda, SurfaceI
 extern "C" __device__ float BSDF_FUNC(dielectric)(const float& lambda, SurfaceInteraction* si, void* mat_data)
 {
     const DielectricData* dielectric = reinterpret_cast<DielectricData*>(mat_data);
-    si->emission = Spectrum{};  
+    si->emission = Spectrum{};
     Spectrum albedo = optixDirectCall<Spectrum, SurfaceInteraction*, void*>(dielectric->tex_program_id, si, dielectric->tex_data);
     return albedo.getSpectrumFromWavelength(lambda);
 }
@@ -327,7 +329,7 @@ extern "C" __device__ float PDF_FUNC(dielectric)(SurfaceInteraction * si, void* 
     return 1.0f;
 }
 
-extern "C" __device__ void SAMPLE_FUNC(diffuse)(const float& /* lambda */, SurfaceInteraction * si, void* mat_data)
+extern "C" __device__ void SAMPLE_FUNC(diffuse)(const float& /* lambda */, SurfaceInteraction* si, void* mat_data)
 {
     const DiffuseData* diffuse = reinterpret_cast<DiffuseData*>(mat_data);
 
@@ -495,7 +497,7 @@ extern "C" __device__ float PDF_FUNC(disney)(SurfaceInteraction* si, void* mat_d
 }
 
 // Area emitter
-extern "C" __device__ void __direct_callable__area_emitter(SurfaceInteraction* si, void* surface_data)
+extern "C" __device__ void DC_FUNC(area_emitter)(SurfaceInteraction* si, void* surface_data)
 {
     const AreaEmitterData* area = reinterpret_cast<AreaEmitterData*>(surface_data);
     si->trace_terminate = true;
@@ -509,28 +511,31 @@ extern "C" __device__ void __direct_callable__area_emitter(SurfaceInteraction* s
     si->emission = base * area->intensity * is_emitted;
 }
 
-// Texture functions
-extern "C" __device__ Spectrum DC_FUNC(constant)(SurfaceInteraction * si, void* tex_data)
+// Texture functions ---------------------------------------------------------------
+extern "C" __device__ Spectrum DC_FUNC(constant)(SurfaceInteraction* si, void* tex_data)
 {
     const ConstantTexture::Data* constant = reinterpret_cast<ConstantTexture::Data*>(tex_data);
     return constant->color;
 }
 
-extern "C" __device__ Spectrum DC_FUNC(checker)(SurfaceInteraction * si, void* tex_data)
+extern "C" __device__ Spectrum DC_FUNC(checker)(SurfaceInteraction* si, void* tex_data)
 {
     const CheckerTexture::Data* checker = reinterpret_cast<CheckerTexture::Data*>(tex_data);
     const bool is_odd = sinf(si->uv.x * math::pi * checker->scale) * sinf(si->uv.y * math::pi * checker->scale);
     return is_odd ? checker->color1 : checker->color2;
 }
 
-extern "C" __device__ Spectrum DC_FUNC(bitmap)(SurfaceInteraction * si, void* tex_data)
+extern "C" __device__ Spectrum DC_FUNC(bitmap)(SurfaceInteraction* si, void* tex_data)
 {
-    const BitmapTexture::Data* image = reinterpret_cast<BitmapTextureData*>(tex_data);
+    const BitmapTexture::Data* image = reinterpret_cast<BitmapTexture::Data*>(tex_data);
     float4 c = tex2D<float4>(image->texture, si->uv.x, si->uv.y);
-    return Spectrum::fromRGB(make_float3(c.x, c.y, c.z));
+    return reconstructSpectrumFromRGB(make_float3(c.x, c.y, c.z),
+        *params.white_spd, *params.cyan_spd, *params.magenta_spd, *params.yellow_spd, 
+        *params.red_spd, *params.green_spd, *params.blue_spd
+    );
 }
 
-// Hitgroup functions
+// Hitgroup functions ---------------------------------------------------------------
 extern "C" __device__ void CH_FUNC(mesh)()
 {
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
@@ -563,7 +568,7 @@ extern "C" __device__ void CH_FUNC(mesh)()
     si->p = ray.at(ray.tmax);
     si->shading.n = world_n;
     si->t = ray.tmax;
-    si->wi = ray.d;
+    si->wo = ray.d;
     si->uv = texcoords;
     si->surface_info = data->surface_info;
 
@@ -649,7 +654,7 @@ extern "C" __device__ void CH_FUNC(sphere)()
     si->p = ray.at(ray.tmax);
     si->shading.n = world_n;
     si->t = ray.tmax;
-    si->wi = ray.d;
+    si->wo = ray.d;
     si->uv = getSphereUV(local_n);
     si->surface_info = data->surface_info;
 
@@ -660,6 +665,64 @@ extern "C" __device__ void CH_FUNC(sphere)()
     const float3 dpdv = math::pi * make_float3(local_n.y * cos(phi), -sin(theta), local_n.y * sin(phi));
     si->shading.dpdu = normalize(optixTransformVectorFromObjectToWorldSpace(dpdu));
     si->shading.dpdv = normalize(optixTransformVectorFromObjectToWorldSpace(dpdv));
+}
+
+static __forceinline__ __device__ bool hitPlane(const PlaneData* plane_data, const float3& o, const float3& v, const float tmin, const float tmax, SurfaceInteraction& si)
+{
+    const float2 min = plane_data->min;
+    const float2 max = plane_data->max;
+
+    const float t = -o.y / v.y;
+    const float x = o.x + t * v.x;
+    const float z = o.z + t * v.z;
+
+    if (min.x < x && x < max.x && min.y < z && z < max.y && tmin < t && t < tmax)
+    {
+        si.uv = make_float2((x - min.x) / (max.x - min.x), (z - min.y) / max.y - min.y);
+        si.shading.n = make_float3(0, 1, 0);
+        si.t = t;
+        si.p = o + t * v;
+        return true;
+    }
+    return false;
+}
+
+extern "C" __device__ float CC_FUNC(pdf_plane)(const AreaEmitterInfo& area_info, const float3& origin, const float3& direction)
+{
+    const PlaneData* plane_data = reinterpret_cast<PlaneData*>(area_info.shape_data);
+
+    SurfaceInteraction si;
+    const float3 local_o = area_info.worldToObj.pointMul(origin);
+    const float3 local_d = area_info.worldToObj.vectorMul(direction);
+
+    if (!hitPlane(plane_data, local_o, local_d, 0.01f, 1e16f, si))
+        return 0.0f;
+
+    const float3 corner0 = area_info.objToWorld.pointMul(make_float3(plane_data->min.x, 0.0f, plane_data->min.y));
+    const float3 corner1 = area_info.objToWorld.pointMul(make_float3(plane_data->max.x, 0.0f, plane_data->min.y));
+    const float3 corner2 = area_info.objToWorld.pointMul(make_float3(plane_data->min.x, 0.0f, plane_data->max.y));
+    si.shading.n = normalize(area_info.objToWorld.vectorMul(si.shading.n));
+    const float area = length(cross(corner1 - corner0, corner2 - corner0));
+    const float distance_squared = si.t * si.t;
+    const float cosine = fabs(dot(si.shading.n, direction));
+    if (cosine < math::eps)
+        return 0.0f;
+    return distance_squared / (cosine * area);
+}
+
+// グローバル空間における si.p -> 光源上の点 のベクトルを返す
+extern "C" __device__ float3 DC_FUNC(rnd_sample_plane)(const AreaEmitterInfo& area_info, SurfaceInteraction* si)
+{
+    const PlaneData* plane_data = reinterpret_cast<PlaneData*>(area_info.shape_data);
+    // サーフェスの原点をローカル空間に移す
+    const float3 local_p = area_info.worldToObj.pointMul(si->p);
+    unsigned int seed = si->seed;
+    // 平面光源上のランダムな点を取得
+    const float3 rnd_p = make_float3(rnd(seed, plane_data->min.x, plane_data->max.x), 0.0f, rnd(seed, plane_data->min.y, plane_data->max.y));
+    float3 to_light = rnd_p - local_p;
+    to_light = area_info.objToWorld.vectorMul(to_light);
+    si->seed = seed;
+    return to_light;
 }
 
 extern "C" __device__ void IS_FUNC(plane)()
@@ -698,7 +761,7 @@ extern "C" __device__ void CH_FUNC(plane)()
     si->p = ray.at(ray.tmax);
     si->shading.n = world_n;
     si->t = ray.tmax;
-    si->wi = ray.d;
+    si->wo = ray.d;
     si->uv = uv;
     si->surface_info = data->surface_info;
     si->shading.dpdu = optixTransformNormalFromObjectToWorldSpace(make_float3(1.0f, 0.0f, 0.0f));

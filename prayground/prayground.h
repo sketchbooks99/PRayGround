@@ -2,50 +2,53 @@
 
 // CPU only
 #ifndef __CUDACC__
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
 
-#include <prayground_config.h>
+	#include <glad/glad.h>
+	#include <GLFW/glfw3.h>
 
-#include <cuda_gl_interop.h>
-#include <cuda_runtime.h>
+	#include <prayground_config.h>
 
-// core utilities
-#include "core/util.h"
-#include "core/file_util.h"
-#include "core/cudabuffer.h"
-#include "core/bitmap.h"
-#include "core/camera.h"
-#include "core/attribute.h"
+	#include <cuda_gl_interop.h>
+	#include <cuda_runtime.h>
 
-// optix utilities
-#include "optix/module.h"
-#include "optix/pipeline.h"
-#include "optix/sbt.h"
-#include "optix/program.h"
-#include "optix/macros.h"
-#include "optix/context.h"
-#include "optix/geometry_accel.h"
-#include "optix/instance_accel.h"
-#include "optix/instance.h"
-#include "optix/transform.h"
-#include "optix/denoiser.h"
+	// core utilities
+	#include "core/util.h"
+	#include "core/file_util.h"
+	#include "core/cudabuffer.h"
+	#include "core/bitmap.h"
+	#include "core/camera.h"
+	#include "core/attribute.h"
 
-// application utilities
-#include "app/baseapp.h"
-#include "app/window.h"
-#include "app/app_runner.h"
-#include "app/input.h"
+	// optix utilities
+	#include "optix/module.h"
+	#include "optix/pipeline.h"
+	#include "optix/sbt.h"
+	#include "optix/program.h"
+	#include "optix/macros.h"
+	#include "optix/context.h"
+	#include "optix/geometry_accel.h"
+	#include "optix/instance_accel.h"
+	#include "optix/instance.h"
+	#include "optix/transform.h"
+	#include "optix/denoiser.h"
 
-#include "gl/shader.h"
+	// application utilities
+	#include "app/baseapp.h"
+	#include "app/window.h"
+	#include "app/app_runner.h"
+	#include "app/input.h"
+
+	#include "gl/shader.h"
 
 #else // GPU only
-#include "core/ray.h"
-#include "core/bsdf.h"
-#include "core/interaction.h"
-#include "core/onb.h"
 
-#include "optix/cuda/device_util.cuh"
+	#include "core/ray.h"
+	#include "core/bsdf.h"
+	#include "core/interaction.h"
+	#include "core/onb.h"
+
+	#include "optix/cuda/device_util.cuh"
+
 #endif // __CUDACC__
 
 #include <optix.h>

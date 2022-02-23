@@ -82,6 +82,13 @@ namespace prayground {
     HOSTDEVICE float CIE_Z(const float& lambda);
     static HOSTDEVICE float averageSpectrumSamples(const float* lambda, const float* v, int n, const float& lambda_start, const float& lambda_end);
     HOSTDEVICE float linearInterpSpectrumSamples(const float* lambda, const float* v, int n, const float& l);
+    HOSTDEVICE SampledSpectrum reconstructSpectrumFromRGB(const float3& rgb,
+        const SampledSpectrum& white, const SampledSpectrum& cyan, const SampledSpectrum& magenta, const SampledSpectrum& yellow,
+        const SampledSpectrum& red, const SampledSpectrum& green, const SampledSpectrum& blue);
+    HOSTDEVICE SampledSpectrum reconstructSpectrumFromRGB(const RGBSpectrum& rgb,
+        const SampledSpectrum& white, const SampledSpectrum& cyan, const SampledSpectrum& magenta, const SampledSpectrum& yellow,
+        const SampledSpectrum& red, const SampledSpectrum& green, const SampledSpectrum& blue);
+    HOSTDEVICE float Lerp(const float a, const float b, const float t);
 
 
     // RGBSpectrum ---------------------------------------------------------------
@@ -230,125 +237,25 @@ namespace prayground {
                 c[i] = spd.c[i];
         }
 
-        static SampledSpectrum fromSample(float* lambda, float* v, int n)
+#ifndef __CUDACC__ /// @note Not defined on CUDA kernel
+        static HOSTDEVICE SampledSpectrum fromSample(const float* lambda, const float* v, int n)
         {
             /// @todo Sort with lambda if the spectrum is randomly stored.
 
             SampledSpectrum ss;
             for (int i = 0; i < nSpectrumSamples; i++)
             {
-                float lambda0 = lerp(min_lambda, max_lambda, float(i) / nSpectrumSamples);
-                float lambda1 = lerp(min_lambda, max_lambda, float(i+1) / nSpectrumSamples);
+                const float start_l = static_cast<float>(min_lambda);
+                const float end_l = static_cast<float>(max_lambda);
+                const float offset0 = float(i) / nSpectrumSamples;
+                const float offset1 = float(i + 1) / nSpectrumSamples;
+                float lambda0 = Lerp(start_l, end_l, offset0);
+                float lambda1 = Lerp(start_l, end_l, offset1);
                 ss.c[i] = averageSpectrumSamples(lambda, v, n, lambda0, lambda1);
             }
             return ss;
         }
 
-        static SampledSpectrum fromRGB(const float3& rgb)
-        {
-            return fromRGB(RGBSpectrum{ rgb });
-        }
-
-        static SampledSpectrum fromRGB(const RGBSpectrum& rgb)
-        {
-            SampledSpectrum ret;
-            const float red = rgb[0];
-            const float green = rgb[1];
-            const float blue = rgb[2];
-
-#ifdef __CUDACC__
-            assert(spd_on_device);
-            if (red <= green && red <= blue)
-            {
-                ret += *d_rgb2spectrum_spd_white * red;
-                if (green <= blue)
-                {
-                    ret += *d_rgb2spectrum_spd_cyan * (green - red);
-                    ret += *d_rgb2spectrum_spd_blue * (blue - green);
-                }
-                else
-                {
-                    ret += *d_rgb2spectrum_spd_cyan * (blue - red);
-                    ret += *d_rgb2spectrum_spd_green * (green - blue);
-                }
-            }
-            else if (green <= red && green <= blue)
-            {
-                ret += *d_rgb2spectrum_spd_white * green;
-                if (red <= blue)
-                {
-                    ret += *d_rgb2spectrum_spd_magenta * (red - green);
-                    ret += *d_rgb2spectrum_spd_blue * (blue - red);
-                }
-                else
-                {
-                    ret += *d_rgb2spectrum_spd_magenta * (blue - green);
-                    ret += *d_rgb2spectrum_spd_red * (red - blue);
-                }
-            }
-            else // blue <= red && blue <= green
-            {
-                ret += *d_rgb2spectrum_spd_white * blue;
-                if (red <= green)
-                {
-                    ret += *d_rgb2spectrum_spd_yellow * (red - blue);
-                    ret += *d_rgb2spectrum_spd_green * (green - red);
-                }
-                else
-                {
-                    ret += *d_rgb2spectrum_spd_yellow * (green - blue);
-                    ret += *d_rgb2spectrum_spd_red * (red - green);
-                }
-            }
-#else 
-            if (red <= green && red <= blue)
-            {
-                ret += rgb2spectrum_spd_white * red;
-                if (green <= blue)
-                {
-                    ret += rgb2spectrum_spd_cyan * (green - red);
-                    ret += rgb2spectrum_spd_blue * (blue - green);
-                }
-                else
-                {
-                    ret += rgb2spectrum_spd_cyan * (blue - red);
-                    ret += rgb2spectrum_spd_green * (green - blue);
-                }
-            }
-            else if (green <= red && green <= blue)
-            {
-                ret += rgb2spectrum_spd_white * green;
-                if (red <= blue)
-                {
-                    ret += rgb2spectrum_spd_magenta * (red - green);
-                    ret += rgb2spectrum_spd_blue * (blue - red);
-                }
-                else
-                {
-                    ret += rgb2spectrum_spd_magenta * (blue - green);
-                    ret += rgb2spectrum_spd_red * (red - blue);
-                }
-            }
-            else // blue <= red && blue <= green
-            {
-                ret += rgb2spectrum_spd_white * blue;
-                if (red <= green)
-                {
-                    ret += rgb2spectrum_spd_yellow * (red - blue);
-                    ret += rgb2spectrum_spd_green * (green - red);
-                }
-                else
-                {
-                    ret += rgb2spectrum_spd_yellow * (green - blue);
-                    ret += rgb2spectrum_spd_red * (red - green);
-                }
-            }
-#endif // __CUDACC__
-            return ret;
-        }
-
-
-#ifndef __CUDACC__ /// @note Not defined on CUDA kernel
         static HOST SampledSpectrum fromFile(const std::filesystem::path& filepath)
         {
             SampledSpectrum ss;
@@ -373,7 +280,7 @@ namespace prayground {
             return fromSample(lambda.data(), value.data(), static_cast<int>(lambda.size()));
         }
 
-        static HOST void init(bool init_on_device = false)
+        static HOST void init()
         {
             for (int i = 0; i < nSpectrumSamples; i++)
             {
@@ -389,38 +296,6 @@ namespace prayground {
                 rgb2spectrum_spd_green.c[i] = averageSpectrumSamples(rgb2spectrum_lambda, rgb2spectrum_green_table, nRGB2SpectrumSamples, lambda0, lambda1);
                 rgb2spectrum_spd_blue.c[i] = averageSpectrumSamples(rgb2spectrum_lambda, rgb2spectrum_blue_table, nRGB2SpectrumSamples, lambda0, lambda1);
             }
-
-            if (init_on_device)
-                initOnGPU();
-        }
-
-        static HOST void initOnGPU()
-        {
-            if (spd_on_device)
-            {
-                pgLogWarn("SampledSpectrum::init() is can only be called once.");
-                return;
-            }
-
-            // Allocate spd data to convert RGB to spectrum
-            CUDA_CHECK(cudaMalloc(&d_rgb2spectrum_spd_white, sizeof(SampledSpectrum)));
-            CUDA_CHECK(cudaMalloc(&d_rgb2spectrum_spd_cyan, sizeof(SampledSpectrum)));
-            CUDA_CHECK(cudaMalloc(&d_rgb2spectrum_spd_magenta, sizeof(SampledSpectrum)));
-            CUDA_CHECK(cudaMalloc(&d_rgb2spectrum_spd_yellow, sizeof(SampledSpectrum)));
-            CUDA_CHECK(cudaMalloc(&d_rgb2spectrum_spd_red, sizeof(SampledSpectrum)));
-            CUDA_CHECK(cudaMalloc(&d_rgb2spectrum_spd_green, sizeof(SampledSpectrum)));
-            CUDA_CHECK(cudaMalloc(&d_rgb2spectrum_spd_blue, sizeof(SampledSpectrum)));
-
-            // Copy spectrum data to a device
-            CUDA_CHECK(cudaMemcpy(d_rgb2spectrum_spd_white, &rgb2spectrum_spd_white, sizeof(SampledSpectrum), cudaMemcpyHostToDevice));
-            CUDA_CHECK(cudaMemcpy(d_rgb2spectrum_spd_cyan, &rgb2spectrum_spd_cyan, sizeof(SampledSpectrum), cudaMemcpyHostToDevice));
-            CUDA_CHECK(cudaMemcpy(d_rgb2spectrum_spd_magenta, &rgb2spectrum_spd_magenta, sizeof(SampledSpectrum), cudaMemcpyHostToDevice));
-            CUDA_CHECK(cudaMemcpy(d_rgb2spectrum_spd_yellow, &rgb2spectrum_spd_yellow, sizeof(SampledSpectrum), cudaMemcpyHostToDevice));
-            CUDA_CHECK(cudaMemcpy(d_rgb2spectrum_spd_red, &rgb2spectrum_spd_red, sizeof(SampledSpectrum), cudaMemcpyHostToDevice));
-            CUDA_CHECK(cudaMemcpy(d_rgb2spectrum_spd_green, &rgb2spectrum_spd_green, sizeof(SampledSpectrum), cudaMemcpyHostToDevice));
-            CUDA_CHECK(cudaMemcpy(d_rgb2spectrum_spd_blue, &rgb2spectrum_spd_blue, sizeof(SampledSpectrum), cudaMemcpyHostToDevice));
-
-            spd_on_device = true;
         }
 #endif
         float& operator[](int i) {
@@ -597,11 +472,8 @@ namespace prayground {
     private:
         float c[nSamples];
 
-        /* Convert RGB to spectrum */
-        static bool spd_on_device;
-        static bool spd_on_host;
-
-        // Host side
+#ifndef __CUDACC__
+    public:
         static SampledSpectrum rgb2spectrum_spd_white;
         static SampledSpectrum rgb2spectrum_spd_cyan;
         static SampledSpectrum rgb2spectrum_spd_magenta;
@@ -609,38 +481,18 @@ namespace prayground {
         static SampledSpectrum rgb2spectrum_spd_red;
         static SampledSpectrum rgb2spectrum_spd_green;
         static SampledSpectrum rgb2spectrum_spd_blue;
-
-        // Device side
-        static SampledSpectrum* d_rgb2spectrum_spd_white;
-        static SampledSpectrum* d_rgb2spectrum_spd_cyan;
-        static SampledSpectrum* d_rgb2spectrum_spd_magenta;
-        static SampledSpectrum* d_rgb2spectrum_spd_yellow;
-        static SampledSpectrum* d_rgb2spectrum_spd_red;
-        static SampledSpectrum* d_rgb2spectrum_spd_green;
-        static SampledSpectrum* d_rgb2spectrum_spd_blue;
+#endif
     };
 
-    /* Definition of static members */
-    inline bool SampledSpectrum::spd_on_device;
-    inline bool SampledSpectrum::spd_on_host;
-
-    inline SampledSpectrum SampledSpectrum::rgb2spectrum_spd_white;
-    inline SampledSpectrum SampledSpectrum::rgb2spectrum_spd_cyan;
-    inline SampledSpectrum SampledSpectrum::rgb2spectrum_spd_magenta;
-    inline SampledSpectrum SampledSpectrum::rgb2spectrum_spd_yellow;
-    inline SampledSpectrum SampledSpectrum::rgb2spectrum_spd_red;
-    inline SampledSpectrum SampledSpectrum::rgb2spectrum_spd_green;
-    inline SampledSpectrum SampledSpectrum::rgb2spectrum_spd_blue;
-
-    inline SampledSpectrum* SampledSpectrum::d_rgb2spectrum_spd_white;
-    inline SampledSpectrum* SampledSpectrum::d_rgb2spectrum_spd_cyan;
-    inline SampledSpectrum* SampledSpectrum::d_rgb2spectrum_spd_magenta;
-    inline SampledSpectrum* SampledSpectrum::d_rgb2spectrum_spd_yellow;
-    inline SampledSpectrum* SampledSpectrum::d_rgb2spectrum_spd_red;
-    inline SampledSpectrum* SampledSpectrum::d_rgb2spectrum_spd_green;
-    inline SampledSpectrum* SampledSpectrum::d_rgb2spectrum_spd_blue;
-
 #ifndef __CUDACC__
+    INLINE SampledSpectrum SampledSpectrum::rgb2spectrum_spd_white;
+    INLINE SampledSpectrum SampledSpectrum::rgb2spectrum_spd_cyan;
+    INLINE SampledSpectrum SampledSpectrum::rgb2spectrum_spd_magenta;
+    INLINE SampledSpectrum SampledSpectrum::rgb2spectrum_spd_yellow;
+    INLINE SampledSpectrum SampledSpectrum::rgb2spectrum_spd_red;
+    INLINE SampledSpectrum SampledSpectrum::rgb2spectrum_spd_green;
+    INLINE SampledSpectrum SampledSpectrum::rgb2spectrum_spd_blue;
+
     /* Stream function of spectrum classes */
     HOST inline std::ostream& operator<<(std::ostream& out, const RGBSpectrum& rgb)
     {
@@ -856,6 +708,72 @@ namespace prayground {
         }
         const float t = (l - lambda[offset]) / (lambda[offset + 1] - lambda[offset]);
         return lerp(v[offset], v[offset + 1], t);
+    }
+
+    HOSTDEVICE INLINE SampledSpectrum reconstructSpectrumFromRGB(const float3& rgb,
+        const SampledSpectrum& white, const SampledSpectrum& cyan, const SampledSpectrum& magenta, const SampledSpectrum& yellow,
+        const SampledSpectrum& red, const SampledSpectrum& green, const SampledSpectrum& blue)
+    {
+        return reconstructSpectrumFromRGB(RGBSpectrum{ rgb }, white, cyan, magenta, yellow, red, green, blue);
+    }
+
+    HOSTDEVICE INLINE SampledSpectrum reconstructSpectrumFromRGB(const RGBSpectrum& rgb,
+        const SampledSpectrum& white, const SampledSpectrum& cyan, const SampledSpectrum& magenta, const SampledSpectrum& yellow,
+        const SampledSpectrum& red, const SampledSpectrum& green, const SampledSpectrum& blue)
+    {
+        SampledSpectrum ret;
+        const float r = rgb[0];
+        const float g = rgb[1];
+        const float b = rgb[2];
+
+        if (r <= g && r <= b)
+        {
+            ret += white * r;
+            if (g <= b)
+            {
+                ret += cyan * (g - r);
+                ret += blue * (b - g);
+            }
+            else
+            {
+                ret += cyan * (b - r);
+                ret += green * (g - b);
+            }
+        }
+        else if (g <= r && g <= b)
+        {
+            ret += white * g;
+            if (r <= g)
+            {
+                ret += magenta * (r - g);
+                ret += blue * (b - r);
+            }
+            else
+            {
+                ret += magenta * (b - g);
+                ret += red * (r - b);
+            }
+        }
+        else // blue <= red && blue <= green
+        {
+            ret += white * b;
+            if (r <= g)
+            {
+                ret += yellow * (r - b);
+                ret += green * (g - r);
+            }
+            else
+            {
+                ret += yellow * (g - b);
+                ret += red * (r - g);
+            }
+        }
+        return ret;
+    }
+
+    HOSTDEVICE INLINE float Lerp(const float a, const float b, const float t)
+    {
+        return a + t * (b - a);
     }
 
 } // namespace prayground

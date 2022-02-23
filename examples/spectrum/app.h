@@ -41,7 +41,7 @@ private:
     Bitmap result_bitmap;
     FloatBitmap accum_bitmap;
 
-    Camera camera;
+    LensCamera camera;
     bool camera_update;
 
     EnvironmentEmitter env;

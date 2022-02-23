@@ -27,7 +27,6 @@ static __forceinline__ __device__ void getLensCameraRay(const CameraData& camera
 
     ro = camera.origin + offset;
     rd = normalize(center + x * horizontal + y * vertical - ro);
-
 }
 
 static __forceinline__ __device__ float3 reinhardToneMap(const float3& color, const float white)

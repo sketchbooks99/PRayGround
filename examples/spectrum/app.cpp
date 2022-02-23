@@ -28,9 +28,13 @@ void App::handleCameraUpdate()
     {
         .origin = camera.origin(),
         .lookat = camera.lookat(),
-        .U = U, 
-        .V = V, 
+        .U = U,
+        .V = V,
         .W = W,
+        .fov = camera.fov(),
+        .aspect = camera.aspect(),
+        .aperture = camera.aperture(),
+        .focus_distance = camera.focusDistance(),
         .farclip = camera.farClip()
     };
 
@@ -53,7 +57,7 @@ void App::setup()
     context.create();
 
     // Initialize SampledSpectrum class
-    SampledSpectrum::init(true);
+    SampledSpectrum::init();
 
     // Instance acceleration structureの初期化
     scene_ias = InstanceAccel{InstanceAccel::Type::Instances};
@@ -76,17 +80,36 @@ void App::setup()
     params.width = result_bitmap.width();
     params.height = result_bitmap.height();
     params.samples_per_launch = 1;
-    params.max_depth = 5;
+    params.max_depth = 10;
     params.white = 5.0f;
+
+    constexpr size_t spd_size = sizeof(SampledSpectrum);
+    CUDA_CHECK(cudaMalloc(&params.white_spd, spd_size));
+    CUDA_CHECK(cudaMemcpy(params.white_spd, &SampledSpectrum::rgb2spectrum_spd_white, spd_size, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMalloc(&params.cyan_spd, spd_size));
+    CUDA_CHECK(cudaMemcpy(params.cyan_spd, &SampledSpectrum::rgb2spectrum_spd_cyan, spd_size, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMalloc(&params.magenta_spd, spd_size));
+    CUDA_CHECK(cudaMemcpy(params.magenta_spd, &SampledSpectrum::rgb2spectrum_spd_magenta, spd_size, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMalloc(&params.yellow_spd, spd_size));
+    CUDA_CHECK(cudaMemcpy(params.yellow_spd, &SampledSpectrum::rgb2spectrum_spd_yellow, spd_size, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMalloc(&params.red_spd, spd_size));
+    CUDA_CHECK(cudaMemcpy(params.red_spd, &SampledSpectrum::rgb2spectrum_spd_red, spd_size, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMalloc(&params.green_spd, spd_size));
+    CUDA_CHECK(cudaMemcpy(params.green_spd, &SampledSpectrum::rgb2spectrum_spd_green, spd_size, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMalloc(&params.blue_spd, spd_size));
+    CUDA_CHECK(cudaMemcpy(params.blue_spd, &SampledSpectrum::rgb2spectrum_spd_blue, spd_size, cudaMemcpyHostToDevice));
 
     initResultBufferOnDevice();
 
     // カメラの設定
-    camera.setOrigin(make_float3(278.0f, 278.0f, -800.0f));
-    camera.setLookat(make_float3(278.0f, 278.0f, 0.0f));
-    camera.setUp(make_float3(0.0f, 1.0f, 0.0f));
+    camera.setOrigin(-0.5, 0.842760, 2.73f);
+    camera.setLookat(0.0f, -0.3f, 0.0f);
+    camera.setUp(0.0f, 1.0f, 0.0f);
     camera.setFarClip(5000);
     camera.setFov(40.0f);
+    camera.setAperture(0.04f);
+    camera.setAspect(1.0f);
+    camera.setFocusDistance(2.5f);
     float3 U, V, W;
     camera.UVWFrame(U, V, W);
     camera.enableTracking(pgGetCurrentWindow());
@@ -103,6 +126,10 @@ void App::setup()
         .U = U,
         .V = V,
         .W = W,
+        .fov = camera.fov(),
+        .aspect = camera.aspect(),
+        .aperture = camera.aperture(), 
+        .focus_distance = camera.focusDistance(),
         .farclip = camera.farClip()
     };
     sbt.setRaygenRecord(raygen_record);
@@ -119,6 +146,7 @@ void App::setup()
 
     // テクスチャ用のCallableプログラム
     uint32_t constant_prg_id = setupCallable(module, DC_FUNC_STR("constant"), "");
+    uint32_t bitmap_prg_id = setupCallable(module, DC_FUNC_STR("bitmap"), "");
 
     // Surface用のCallableプログラム 
     // Diffuse
@@ -134,7 +162,7 @@ void App::setup()
     uint32_t plane_sample_pdf_prg_id = setupCallable(module, DC_FUNC_STR("rnd_sample_plane"), CC_FUNC_STR("pdf_plane"));
 
     // 環境マッピング (Sphere mapping) 用のテクスチャとデータ準備
-    auto env_texture = make_shared<ConstantTexture>(SampledSpectrum::fromRGB(make_float3(0.0f)), constant_prg_id);
+    auto env_texture = make_shared<FloatBitmapTexture>("resources/image/sepulchral_chapel_rotunda_4k.exr", bitmap_prg_id);
     env_texture->copyToDevice();
     env = EnvironmentEmitter{env_texture};
     env.copyToDevice();
@@ -275,15 +303,6 @@ void App::setup()
         float val;
     };
 
-    array<SPD, N_SPD> white = 
-    { { 
-        {380.0f, 1.0f}, {397.0f, 1.0f}, {414.0f, 1.0f}, {431.0f, 1.0f}, {448.0f, 1.0f}, 
-        {465.0f, 1.0f}, {482.0f, 1.0f}, {499.0f, 1.0f}, {516.0f, 1.0f}, {533.0f, 1.0f}, 
-        {550.0f, 1.0f}, {567.0f, 1.0f}, {584.0f, 1.0f}, {601.0f, 1.0f}, {618.0f, 1.0f}, 
-        {635.0f, 1.0f}, {652.0f, 1.0f}, {669.0f, 1.0f}, {686.0f, 1.0f}, {703.0f, 1.0f}, 
-        {720.0f, 1.0f}
-    } };
-
     array<SPD, N_SPD> red = 
     { { 
         {380.0f, 0.04f}, {397.0f, 0.04f}, {414.0f, 0.05f}, {431.0f, 0.05f}, {448.0f, 0.06f}, 
@@ -316,80 +335,78 @@ void App::setup()
         return make_shared<ConstantTexture>(ret, constant_prg_id);
     };
 
-    auto tex_white = createConstantTextureFromSPD(white);
+    auto tex_white = make_shared<ConstantTexture>(SampledSpectrum(0.95f), constant_prg_id);
     auto tex_red = createConstantTextureFromSPD(red);
     auto tex_green = createConstantTextureFromSPD(green);
+    auto yellow = reconstructSpectrumFromRGB(
+        make_float3(0.9f, 0.5f, 0.3f), SampledSpectrum::rgb2spectrum_spd_white,
+        SampledSpectrum::rgb2spectrum_spd_cyan, SampledSpectrum::rgb2spectrum_spd_magenta, SampledSpectrum::rgb2spectrum_spd_yellow,
+        SampledSpectrum::rgb2spectrum_spd_red, SampledSpectrum::rgb2spectrum_spd_green, SampledSpectrum::rgb2spectrum_spd_blue
+    );
+    auto tex_yellow = make_shared<ConstantTexture>(yellow, constant_prg_id);
+    auto tex_grid = make_shared<BitmapTexture>("resources/image/grid.png", bitmap_prg_id);
 
-    // Ceiling
+    unsigned int seed = tea<4>(0, 0);
+    auto diamond = make_shared<TriangleMesh>("resources/model/diamond.obj");
+    for (int i = 0; i < 15; i++)
     {
-        auto plane = make_shared<Plane>(make_float2(0.0f,0.0f), make_float2(555.0f,555.0f));
-        auto diffuse = make_shared<Diffuse>(tex_white);
-        auto transform = Matrix4f::translate({0.0f, 555.0f, 0.0f});
-        Primitive ceiling{plane, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id};
-        setupPrimitive(plane_prg, ceiling, transform);
-    }
-
-    // Red wall
-    {
-        auto plane = make_shared<Plane>(make_float2(0.0f,0.0f), make_float2(555.0f,555.0f));
-        auto diffuse = make_shared<Diffuse>(tex_red);
-        auto transform = Matrix4f::rotate(math::pi / 2.0f, {0.0f, 0.0f, 1.0f});
-        Primitive left_wall{plane, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id};
-        setupPrimitive(plane_prg, left_wall, transform);
-    }
-
-    // Green wall
-    {
-        auto plane = make_shared<Plane>(make_float2(0.0f,0.0f), make_float2(555.0f,555.0f));
-        auto diffuse = make_shared<Diffuse>(tex_green);
-        auto transform = Matrix4f::translate({555.0f, 0.0f, 0.0f}) * Matrix4f::rotate(math::pi / 2.0f, {0.0f, 0.0f, 1.0f});
-        Primitive right_wall{plane, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id};
-        setupPrimitive(plane_prg, right_wall, transform);
-    }
-
-    // Back
-    {
-        auto plane = make_shared<Plane>(make_float2(0.0f,0.0f), make_float2(555.0f,555.0f));
-        auto diffuse = make_shared<Diffuse>(tex_white);
-        auto transform = Matrix4f::translate({0.0f, 555.0f, 555.0f}) * Matrix4f::rotate(math::pi / 2.0f, {1.0f, 0.0f, 0.0f});
-        Primitive back{plane, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id};
-        setupPrimitive(plane_prg, back, transform);
+        const float scale = rnd(seed, 0.2f, 0.3f);
+        const float3 axis = normalize(make_float3(rnd(seed, -0.4, 0.4f), rnd(seed, -1.0f, 1.0f), rnd(seed, -0.4f, 0.4f)));
+        const float3 pos = make_float3(rnd(seed, -2.0f, 2.0f), scale * 0.9f, rnd(seed, -2.0f, 2.0f));
+        const float rad = rnd(seed, 0.0f, math::pi);
+        auto transform = Matrix4f::translate(pos) * Matrix4f::rotate(rad, axis) * Matrix4f::scale(scale);
+        auto mat = make_shared<Dielectric>(tex_white, 2.41f);
+        mat->setSellmeierType(Sellmeier::Diamond);
+        Primitive p{ diamond, mat, dielectric_sample_bsdf_prg_id, dielectric_pdf_prg_id };
+        setupPrimitive(mesh_prg, p, transform);
     }
 
     // Floor
     {
-        auto plane = make_shared<Plane>(make_float2(0.0f,0.0f), make_float2(555.0f,555.0f));
-        auto diffuse = make_shared<Diffuse>(tex_white);
-        auto transform = Matrix4f::translate({0.0f, 0.0f, 0.0f});
-        Primitive floor{plane, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id};
-        setupPrimitive(plane_prg, floor, transform);
+        auto plane = make_shared<TriangleMesh>("resources/model/plane.obj");
+        auto diffuse = make_shared<Diffuse>(tex_grid);
+        auto transform = Matrix4f::identity() * Matrix4f::scale(3.0f);
+        Primitive floor{ plane, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
+        setupPrimitive(mesh_prg, floor, transform);
     }
 
-    // Cube
+    // Bunny
     {
-        auto mesh = make_shared<TriangleMesh>("resources/model/cube.obj");
-        auto diffuse = make_shared<Diffuse>(tex_white);
-        auto transform = Matrix4f::translate({347.5f, 165, 377.5f}) * Matrix4f::rotate(math::radians(15.0f), {0.0f, 1.0f, 0.0f}) * Matrix4f::scale({82.5f, 165.0f, 82.5f});
-        Primitive cube{mesh, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id};
-        setupPrimitive(mesh_prg, cube, transform);
+        auto mesh = make_shared<TriangleMesh>("resources/model/bunny.obj");
+        mesh->smooth();
+        auto diffuse = make_shared<Diffuse>(tex_red);
+        auto transform = Matrix4f::translate(-0.5, -0.07f, 0.0f) * Matrix4f::scale(2.0f);
+        Primitive p{ mesh, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
+        setupPrimitive(mesh_prg, p, transform);
     }
 
-    // Glass sphere
+    // Armadillo
     {
-        auto sphere = make_shared<Sphere>(make_float3(190.0f, 90.0f, 190.0f), 90.0f);
-        auto glass = make_shared<Dielectric>(tex_white, 1.5f);
-        auto transform = Matrix4f::identity();
-        Primitive glass_sphere{sphere, glass, dielectric_sample_bsdf_prg_id, dielectric_pdf_prg_id};
-        setupPrimitive(sphere_prg, glass_sphere, transform);
+        auto mesh = make_shared<TriangleMesh>("resources/model/Armadillo.ply");
+        mesh->smooth();
+        auto diffuse = make_shared<Diffuse>(tex_green);
+        auto transform = Matrix4f::translate(-0.2f, 0.15f, -0.5f) * Matrix4f::rotate(math::pi * 7/6, {0,1,0}) * Matrix4f::scale(0.003f);
+        Primitive p{ mesh, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
+        setupPrimitive(mesh_prg, p, transform);
+    }
+
+    // Dragon
+    {
+        auto mesh = make_shared<TriangleMesh>("resources/model/dragon.obj");
+        mesh->smooth();
+        auto diffuse = make_shared<Diffuse>(tex_yellow);
+        auto transform = Matrix4f::translate(0.5f, 0.13f, 0.7f) * Matrix4f::rotate(math::pi/3, {0,1,0}) * Matrix4f::scale(0.4f);
+        Primitive p{ mesh, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
+        setupPrimitive(mesh_prg, p, transform);
     }
 
     // Ceiling light
     {
         // Shape
-        auto plane_light = make_shared<Plane>(make_float2(213.0f, 227.0f), make_float2(343.0f, 332.0f));
+        auto plane_light = make_shared<Plane>(make_float2(-2.0f, -0.2f), make_float2(2.0f, 0.2f));
         // Area emitter
-        auto plane_area_emitter = AreaEmitter(tex_white, 20.0f);
-        Matrix4f transform = Matrix4f::translate({0.0f, 554.0f, 0.0f});
+        auto plane_area_emitter = AreaEmitter(tex_yellow, 20.0f);
+        Matrix4f transform = Matrix4f::translate({0.0f, 3.0f, 0.0f});
         setupAreaEmitter(plane_prg, plane_light, plane_area_emitter, transform, plane_sample_pdf_prg_id);
     }
 
@@ -451,7 +468,7 @@ void App::draw()
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    ImGui::Begin("Ray Tracing Rest of Your Life");
+    ImGui::Begin("Spectrum");
 
     ImGui::SliderFloat("White", &params.white, 1.0f, 1000.0f);
     ImGui::Text("Camera info:");
@@ -463,6 +480,20 @@ void App::draw()
     ImGui::SliderFloat("far clip", &farclip, 500.0f, 10000.0f);
     if (farclip != camera.farClip()) {
         camera.setFarClip(farclip);
+        camera_update = true;
+    }
+
+    float aperture = camera.aperture();
+    ImGui::SliderFloat("Aperture", &aperture, 0.01f, 4.0f);
+    if (aperture != camera.aperture()) {
+        camera.setAperture(aperture);
+        camera_update = true;
+    }
+
+    float focus_dist = camera.focusDistance();
+    ImGui::SliderFloat("Focus distance", &focus_dist, 1.0f, 100.0f);
+    if (focus_dist != camera.focusDistance()) {
+        camera.setFocusDistance(focus_dist);
         camera_update = true;
     }
 
@@ -502,6 +533,7 @@ void App::keyPressed(int key)
 // ----------------------------------------------------------------
 void App::mouseDragged(float x, float y, int button)
 {
+    if (button != MouseButton::Middle) return;
     camera_update = true;
 }
 

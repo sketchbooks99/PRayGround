@@ -38,6 +38,14 @@ struct LaunchParams
     AreaEmitterInfo* lights;
     int num_lights;
 
+    SampledSpectrum* white_spd;
+    SampledSpectrum* cyan_spd;
+    SampledSpectrum* magenta_spd;
+    SampledSpectrum* yellow_spd;
+    SampledSpectrum* red_spd;
+    SampledSpectrum* green_spd;
+    SampledSpectrum* blue_spd;
+
     float white;
 };
 
@@ -48,6 +56,10 @@ struct CameraData
     float3 U; 
     float3 V; 
     float3 W;
+    float fov;
+    float aspect;
+    float aperture;
+    float focus_distance;
     float farclip;
 };
 

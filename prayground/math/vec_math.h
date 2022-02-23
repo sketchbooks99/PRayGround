@@ -57,8 +57,6 @@
 #define M_1_PIf     0.318309886183790671538f
 #endif
 
-#if !defined(__CUDACC__)
-
 INLINE HOSTDEVICE int max(int a, int b)
 {
     return a > b ? a : b;
@@ -99,14 +97,14 @@ INLINE HOSTDEVICE unsigned long long min(unsigned long long a, unsigned long lon
     return a < b ? a : b;
 }
 
-#if __cplusplus <= 201703L
 /** lerp */
+#ifdef __CUDACC__
 INLINE HOSTDEVICE float lerp(const float a, const float b, const float t)
 {
     return a + t*(b-a);
 }
 #else 
-  using std::lerp;
+    using std::lerp;
 #endif
 
 /** bilerp */
@@ -121,8 +119,6 @@ INLINE HOSTDEVICE IntegerType roundUp(IntegerType x, IntegerType y)
 {
     return ( ( x + y - 1 ) / y ) * y;
 }
-
-#endif
 
 /** clamp */
 INLINE HOSTDEVICE float clamp( const float f, const float a, const float b )

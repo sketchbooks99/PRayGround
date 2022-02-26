@@ -48,13 +48,13 @@ constexpr ShapeType TriangleMesh::type()
 // ------------------------------------------------------------------
 void TriangleMesh::copyToDevice() 
 {
-    MeshData data = this->deviceData();
+    Data data = this->getData();
 
     if (!d_data) 
-        CUDA_CHECK(cudaMalloc(&d_data, sizeof(MeshData)));
+        CUDA_CHECK(cudaMalloc(&d_data, sizeof(Data)));
     CUDA_CHECK(cudaMemcpy(
         d_data,
-        &data, sizeof(MeshData),
+        &data, sizeof(Data),
         cudaMemcpyHostToDevice
     ));
 }
@@ -115,7 +115,7 @@ AABB TriangleMesh::bound() const
 }
 
 // ------------------------------------------------------------------
-TriangleMesh::DataType TriangleMesh::deviceData()
+TriangleMesh::Data TriangleMesh::getData()
 {
     CUDABuffer<float3> d_vertices_buf;
     CUDABuffer<Face> d_faces_buf;
@@ -132,7 +132,7 @@ TriangleMesh::DataType TriangleMesh::deviceData()
     d_texcoords = d_texcoords_buf.devicePtr();
 
     // device side pointer of mesh data
-    MeshData data = {
+    Data data = {
         .vertices = d_vertices_buf.deviceData(),
         .faces = d_faces_buf.deviceData(),
         .normals = d_normals_buf.deviceData(),

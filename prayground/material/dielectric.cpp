@@ -26,19 +26,18 @@ void Dielectric::copyToDevice()
     if (!m_texture->devicePtr())
         m_texture->copyToDevice();
     
-    DielectricData data = {
-        .tex_data = m_texture->devicePtr(), 
+    Data data = {
+        .tex_data = m_texture->getData(),
         .ior = m_ior, 
         .absorb_coeff = m_absorb_coeff,
-        .sellmeier = m_sellmeier,
-        .tex_program_id = m_texture->programId()
+        .sellmeier = m_sellmeier
     };
 
     if (!d_data) 
-        CUDA_CHECK(cudaMalloc(&d_data, sizeof(DielectricData)));
+        CUDA_CHECK(cudaMalloc(&d_data, sizeof(Data)));
     CUDA_CHECK(cudaMemcpy(
         d_data,
-        &data, sizeof(DielectricData),
+        &data, sizeof(Data),
         cudaMemcpyHostToDevice
     ));
 }

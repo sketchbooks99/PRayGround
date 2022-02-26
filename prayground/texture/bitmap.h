@@ -16,7 +16,10 @@ template <typename PixelT>
 class BitmapTexture_ final : public Texture {
 public:
     using ColorType = PixelT;
-    using Data = BitmapTextureData;
+    struct Data
+    {
+        cudaTextureObject_t texture;
+    };
 
 #ifndef __CUDACC__
     BitmapTexture_(const std::filesystem::path& filename, int prg_id);

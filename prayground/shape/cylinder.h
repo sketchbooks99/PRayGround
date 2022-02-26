@@ -12,11 +12,14 @@ struct CylinderData
     float height;
 };
 
-#ifndef __CUDACC__
 class Cylinder final : public Shape {
 public:
-    using DataType = CylinderData;
+    struct Data {
+        float radius;
+        float height;
+    };
 
+#ifndef __CUDACC__
     Cylinder();
     Cylinder(float radius, float height);
 
@@ -29,13 +32,14 @@ public:
 
     AABB bound() const override;
 
-    DataType deviceData() const;
+    Data getData() const;
 
 private:
     float m_radius;
     float m_height;
     CUdeviceptr d_aabb_buffer{ 0 };
+
+#endif
 };
-#endif // __CUDACC__
 
 } // ::prayground

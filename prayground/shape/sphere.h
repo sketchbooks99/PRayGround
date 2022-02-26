@@ -11,11 +11,14 @@ struct SphereData {
     float radius;
 };
 
-#ifndef __CUDACC__
 class Sphere final : public Shape {
 public:
-    using DataType = SphereData;
+    struct Data {
+        float3 center;
+        float radius;
+    };
 
+#ifndef __CUDACC__
     Sphere();
     Sphere(const float3& c, float r);
 
@@ -26,13 +29,13 @@ public:
 
     AABB bound() const override;
 
-    DataType deviceData() const;
+    Data getData() const;
 private:
     float3 m_center;
     float m_radius;
     CUdeviceptr d_aabb_buffer{ 0 };
-};
 
 #endif
+};
 
 }

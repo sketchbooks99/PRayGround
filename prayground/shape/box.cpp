@@ -27,11 +27,11 @@ constexpr ShapeType Box::type()
 // ------------------------------------------------------------------
 void Box::copyToDevice()
 {
-    BoxData data = this->deviceData();
+    Data data = this->getData();
     if (!d_data)
-        CUDA_CHECK(cudaMalloc(&d_data, sizeof(BoxData)));
+        CUDA_CHECK(cudaMalloc(&d_data, sizeof(Data)));
     CUDA_CHECK(cudaMemcpy(
-        d_data, &data, sizeof(BoxData), cudaMemcpyHostToDevice
+        d_data, &data, sizeof(Data), cudaMemcpyHostToDevice
     ));
 }
 
@@ -65,15 +65,9 @@ const float3& Box::max() const
 }
 
 // ------------------------------------------------------------------
-Box::DataType Box::deviceData() const 
+Box::Data Box::getData() const 
 {
-    BoxData data = 
-    {
-        .min = m_min,
-        .max = m_max
-    };
-
-    return data;
+    return { m_min, m_max };
 }
 
 } // ::prayground

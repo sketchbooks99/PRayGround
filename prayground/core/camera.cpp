@@ -141,6 +141,26 @@ void Camera::UVWFrame(float3& U, float3& V, float3& W) const
     U *= ulen;
 }
 
+Camera::Data Camera::getData() const
+{
+    float3 U, V, W;
+    this->UVWFrame(U, V, W);
+    return
+    {
+        m_origin, 
+        m_lookat, 
+        m_up, 
+        U, 
+        V, 
+        W, 
+        m_fov, 
+        m_aspect, 
+        m_nearclip, 
+        m_farclip, 
+        m_fovaxis
+    };
+}
+
 // --------------------------------------------------------------------------------------
 void Camera::mouseDragged(float x, float y, int button)
 {
@@ -186,6 +206,28 @@ void Camera::mouseScrolled(float xoffset, float yoffset)
 {
     float zoom = yoffset < 0 ? 1.1f : 1.0f / 1.1f;
     this->setOrigin(this->lookat() + (this->origin() - this->lookat()) * zoom);
+}
+
+// --------------------------------------------------------------------------------------
+LensCamera::Data LensCamera::getData() const
+{
+    float3 U, V, W;
+    this->UVWFrame(U, V, W);
+    return {
+        m_origin,
+        m_lookat,
+        m_up,
+        U,
+        V,
+        W,
+        m_fov,
+        m_aspect,
+        m_nearclip,
+        m_farclip,
+        m_aperture, 
+        m_focus_distance,
+        m_fovaxis
+    };
 }
 
 } // ::prayground

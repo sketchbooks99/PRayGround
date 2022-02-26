@@ -72,15 +72,15 @@ void BitmapTexture_<PixelT>::copyToDevice()
     res_desc.res.array.array = d_array;
 
     CUDA_CHECK( cudaCreateTextureObject( &d_texture, &res_desc, &m_tex_desc, nullptr ) );
-    BitmapTextureData texture_data = { 
+    BitmapTexture::Data texture_data = { 
         .texture = d_texture
     };
 
     if (!d_data) 
-        CUDA_CHECK( cudaMalloc( &d_data, sizeof(BitmapTextureData) ) );
+        CUDA_CHECK( cudaMalloc( &d_data, sizeof(BitmapTexture::Data) ) );
     CUDA_CHECK( cudaMemcpy(
         d_data, 
-        &texture_data, sizeof(BitmapTextureData), 
+        &texture_data, sizeof(BitmapTexture::Data), 
         cudaMemcpyHostToDevice
     ));
 }

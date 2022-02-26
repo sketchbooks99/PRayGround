@@ -6,7 +6,6 @@
 namespace prayground {
 
 struct DisneyData {
-    void* base_tex_data;             // base color
     float subsurface;          
     float metallic;
     float specular;
@@ -18,13 +17,27 @@ struct DisneyData {
     float clearcoat;
     float clearcoat_gloss;   
     bool twosided;  
-    unsigned int base_program_id;  
 };
-
-#ifndef __CUDACC__
 
 class Disney final : public Material {
 public:
+    struct Data
+    {
+        Texture::Data tex_data;
+        float subsurface;
+        float metallic;
+        float specular;
+        float specular_tint;
+        float roughness;
+        float anisotropic;
+        float sheen;
+        float sheen_tint;
+        float clearcoat;
+        float clearcoat_gloss;
+        bool twosided;
+    };
+
+#ifndef __CUDACC__
     Disney(const std::shared_ptr<Texture>& base, 
            float subsurface=0.8f, float metallic=0.5f,
            float specular=0.0f, float specular_tint=0.0f,
@@ -73,7 +86,6 @@ public:
 
     void setTwosided(bool twosided);
     bool twosided() const;
-    
 private:
     std::shared_ptr<Texture> m_base;
     float m_subsurface;
@@ -84,10 +96,8 @@ private:
     float m_sheen, m_sheen_tint;
     float m_clearcoat, m_clearcoat_gloss;
     bool m_twosided;
-};
-
-#else
 
 #endif
+};
 
 }

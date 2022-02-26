@@ -12,11 +12,12 @@
 
 namespace prayground {
 
-#ifndef __CUDACC__
-
 // Abstract class to compute scattering properties.
 class Material {
 public:
+
+/// @note Make this class be dummy class on device kernels
+#ifndef __CUDACC__
     virtual ~Material() {}
 
     virtual SurfaceType surfaceType() const = 0;
@@ -25,15 +26,17 @@ public:
 
     virtual void free()
     {
-        if (d_data) CUDA_CHECK(cudaFree(d_data));
-        d_data = nullptr;
+        if (d_data)
+        {
+            CUDA_CHECK(cudaFree(d_data));
+            d_data = nullptr;
+        }
     }
     
     void* devicePtr() const { return d_data; }
 protected:
     void* d_data { nullptr };
-};
-
 #endif
+};
 
 } // ::prayground

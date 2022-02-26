@@ -5,16 +5,14 @@
 
 namespace prayground {
 
-struct DiffuseData {
-    void* tex_data;
-    bool twosided;
-    unsigned int tex_program_id;
-};
-
-#ifndef __CUDACC__
-
 class Diffuse final : public Material {
 public:
+    struct Data {
+        Texture::Data tex_data;
+        bool twosided;
+    };
+
+#ifndef __CUDACC__
     Diffuse(const std::shared_ptr<Texture>& texture, bool twosided=true);
     ~Diffuse();
 
@@ -25,10 +23,7 @@ public:
 private:
     std::shared_ptr<Texture> m_texture;
     bool m_twosided;
-};
-
-#else
-
 #endif
+};
 
 }

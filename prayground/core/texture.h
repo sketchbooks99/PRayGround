@@ -11,6 +11,11 @@ namespace prayground {
 
 class Texture {
 public:
+    struct Data {
+        void* data;
+        int prg_id;
+    };
+
     Texture(int prg_id) : m_prg_id(prg_id) {}
 
 #ifndef __CUDACC__
@@ -26,6 +31,15 @@ public:
     void* devicePtr() const 
     {
         return d_data;
+    }
+
+    Data getData() const
+    {
+        return
+        {
+            d_data,
+            m_prg_id
+        };
     }
 
     void setProgramId(const uint32_t prg_id)

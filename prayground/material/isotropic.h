@@ -4,22 +4,39 @@
 
 namespace prayground {
 
-struct IsotropicData
-{
-    float3 albedo;
-};
-
-#ifndef __CUDACC__
+template <typename T>
 class Isotropic final : public Material {
 public:
-    Isotropic(const float3& albedo);
+    using ColorT = T;
+    struct Data {
+        T albedo;
+    };
 
-    SurfaceType surfaceType() const override;
+#ifndef __CUDACC__
+    Isotropic(const float3& albedo)
+        : m_albedo(albedo) {}
 
-    void copyToDevice() override;
+    SurfaceType surfaceType() const override
+    {
+        return SurfaceType::Diffuse;
+    }
+
+    void copyToDevice() override
+    {
+        Data data{
+            .albedo = m_albedo
+        };
+
+        if (!d_data)
+            CUDA_CHECK(cudaMalloc(&d_data, sizeof(Data)));
+        CUDA_CHECK(cudaMemcpy(
+            d_data, &data, sizeof(Data), cudaMemcpyHostToDevice
+        ));
+    }
 private:
     float3 m_albedo;
-};
+
 #endif
+};
 
 }

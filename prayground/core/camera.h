@@ -23,6 +23,20 @@ public:
         Diagonal
     };
 
+    struct Data {
+        float3 origin;
+        float3 lookat;
+        float3 up;
+        float3 U;
+        float3 V;
+        float3 W;
+        float fov;
+        float aspect;
+        float nearclip;
+        float farclip;
+        FovAxis fovaxis;
+    };
+
     Camera();
 
     Camera(const float3& origin, const float3& lookat, const float3& up, float fov, float aspect,
@@ -62,6 +76,7 @@ public:
 
     void UVWFrame(float3& U, float3& V, float3& W) const;
 
+    Data getData() const;
 protected:
     float3 m_origin;
     float3 m_lookat;
@@ -83,6 +98,22 @@ private:
  */
 class LensCamera final : public Camera {
 public:
+    struct Data {
+        float3 origin;
+        float3 lookat;
+        float3 up;
+        float3 U;
+        float3 V;
+        float3 W;
+        float fov;
+        float aspect;
+        float nearclip;
+        float farclip;
+        float aperture;
+        float focus_distance;
+        FovAxis fovaxis;
+    };
+
     LensCamera() : Camera(), m_aperture(0.01f), m_focus_distance(100.0) {}
     LensCamera(
         const float3& origin, const float3& lookat, const float3& up, float fov, float aspect, 
@@ -98,7 +129,7 @@ public:
     const float& focusDistance() const { return m_focus_distance; }
     void setFocusDistance( const float& focus_dist ) { m_focus_distance = focus_dist; }
 
-
+    Data getData() const;
 private:
     float m_aperture;
     float m_focus_distance;

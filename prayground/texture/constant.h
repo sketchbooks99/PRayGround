@@ -13,7 +13,10 @@ template <typename T>
 class ConstantTexture_ final : public Texture {
 public:
     using ColorType = T;
-    using Data = ConstantTextureData<T>;
+    struct Data
+    {
+        T color;
+    };
 
 #ifndef __CUDACC__
     ConstantTexture_(const T& c, int prg_id)

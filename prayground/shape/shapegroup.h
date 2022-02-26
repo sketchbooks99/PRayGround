@@ -15,9 +15,9 @@ namespace prayground {
 template <class T>
 concept DerivedShape = requires(T x)
 {
-    std::derived_from<T, Shape>;    // Shapeの派生クラスであること
-    x.deviceData();                 // devideData()呼び出しが可能なこと
-    typename T::DataType;           // DataTypeがalias宣言されていること
+    std::derived_from<T, Shape>; // Shapeの派生クラス
+    x.getData();                 // getData()呼び出しが可能
+    typename T::Data;            // Data構造体を持っている
 };
 
 // 力技感が否めない...
@@ -145,7 +145,7 @@ public:
             // GPU側にMeshのデータをコピー
             // tmp_mesh.copyToDevice()としても、tmp_meshの保持するd_dataの寿命が切れる可能性があるため、それは避ける
             TriangleMesh tmp_mesh{vertices, faces, normals, texcoords};
-            MeshData data = tmp_mesh.deviceData();
+            MeshData data = tmp_mesh.getData();
             if (!d_data) 
                 CUDA_CHECK(cudaMalloc(&d_data, sizeof(MeshData)));
             CUDA_CHECK(cudaMemcpy(
@@ -164,15 +164,15 @@ public:
         }
         else if constexpr (Type == ShapeType::Custom)
         {
-            std::vector<typename ShapeT::DataType> device_data;
+            std::vector<typename ShapeT::Data> device_data;
             for (auto& custom : m_shapes)
-                device_data.push_back(custom.deviceData());
+                device_data.push_back(custom.getData());
 
             if (!d_data)
-                CUDA_CHECK(cudaMalloc(&d_data, sizeof(typename ShapeT::DataType) * device_data.size()));
+                CUDA_CHECK(cudaMalloc(&d_data, sizeof(typename ShapeT::Data) * device_data.size()));
             CUDA_CHECK(cudaMemcpy(
                 d_data, 
-                device_data.data(), sizeof(typename ShapeT::DataType) * device_data.size(),
+                device_data.data(), sizeof(typename ShapeT::Data) * device_data.size(),
                 cudaMemcpyHostToDevice
             ));
         }

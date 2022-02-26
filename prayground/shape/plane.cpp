@@ -25,13 +25,13 @@ constexpr ShapeType Plane::type()
 // ------------------------------------------------------------------
 void Plane::copyToDevice() 
 {
-    PlaneData data = this->deviceData();
+    Data data = this->getData();
 
     if (!d_data)
-        CUDA_CHECK( cudaMalloc( &d_data, sizeof(PlaneData) ) );
+        CUDA_CHECK( cudaMalloc( &d_data, sizeof(Data) ) );
     CUDA_CHECK( cudaMemcpy(
         d_data, 
-        &data, sizeof(PlaneData), 
+        &data, sizeof(Data), 
         cudaMemcpyHostToDevice
     ));
 }
@@ -58,14 +58,9 @@ AABB Plane::bound() const
 }
 
 // ------------------------------------------------------------------
-Plane::DataType Plane::deviceData() const 
+Plane::Data Plane::getData() const 
 {
-    PlaneData data = 
-    {
-        .min = m_min, 
-        .max = m_max
-    };
-    return data;
+    return { m_min, m_max };
 }
 
 } // ::prayground

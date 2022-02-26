@@ -12,11 +12,14 @@ struct BoxData
     float3 max;
 };
 
-#ifndef __CUDACC__
 class Box final : public Shape {
 public:
-    using DataType = BoxData;
+    struct Data {
+        float3 min; 
+        float3 max;
+    };
 
+#ifndef __CUDACC__
     Box();
     Box(const float3& min, const float3& max);
 
@@ -32,12 +35,13 @@ public:
     const float3& min() const;
     const float3& max() const;
 
-    DataType deviceData() const;
+    Data getData() const;
 private:
     float3 m_min;
     float3 m_max;
     CUdeviceptr d_aabb_buffer{ 0 };
+
+#endif
 };
-#endif // __CUDACC__
 
 } // ::prayground

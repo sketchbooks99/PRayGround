@@ -9,15 +9,14 @@
 
 namespace prayground {
 
-struct ConductorData {
-    void* tex_data;
-    bool twosided;
-    unsigned int tex_program_id;
-};
-
-#ifndef __CUDACC__
 class Conductor final : public Material {
 public:
+    struct Data {
+        Texture::Data tex_data;
+        bool twosided;
+    };
+
+#ifndef __CUDACC__
     Conductor(const std::shared_ptr<Texture>& texture, bool twosided=true);
     ~Conductor();
 
@@ -28,13 +27,12 @@ public:
 
     void setTexture(const std::shared_ptr<Texture>& texture);
     std::shared_ptr<Texture> texture() const;
-
 private:
     std::shared_ptr<Texture> m_texture;
     bool m_twosided;
-};
 
 #endif
+};
 
 }
 

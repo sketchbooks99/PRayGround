@@ -46,6 +46,8 @@ public:
     PixelT* data() const { return m_data.get(); }
     PixelT* devicePtr() const { return d_data; }
 
+    OptixImage2D toOptixImage2D() const;
+
     int width() const { return m_width; }
     int height() const { return m_height; }
     int channels() const { return m_channels; }

@@ -14,7 +14,13 @@ template <typename T>
 class CheckerTexture_ final : public Texture {
 public:
     using DataType = T;
-    using Data = CheckerTextureData<T>;
+    // using Data = CheckerTextureData<T>;
+    struct Data
+    {
+        T color1;
+        T color2;
+        float scale;
+    };
 
     CheckerTexture_(const T& c1, const T& c2, float s, int prg_id)
         : Texture(prg_id), m_color1(c1), m_color2(c2), m_scale(s)

@@ -25,12 +25,16 @@ struct MeshData {
     float2* texcoords;
 };
 
-#ifndef __CUDACC__
-
 class TriangleMesh : public Shape {
 public:
-    using DataType = MeshData;
+    struct Data {
+        float3* vertices;
+        Face* faces;
+        float3* normals;
+        float2* texcoords;
+    };
 
+#ifndef __CUDACC__
     TriangleMesh();
     TriangleMesh(const std::filesystem::path& filename);
     TriangleMesh(
@@ -51,7 +55,7 @@ public:
 
     AABB bound() const override;
 
-    DataType deviceData();
+    Data getData();
 
     /**
      * @note
@@ -110,8 +114,8 @@ protected:
     CUdeviceptr d_normals { 0 };
     CUdeviceptr d_texcoords { 0 };
     CUdeviceptr d_sbt_indices{ 0 };
-};
 
 #endif // __CUDACC__
+};
 
 }

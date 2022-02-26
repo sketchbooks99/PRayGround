@@ -26,13 +26,13 @@ constexpr ShapeType Sphere::type()
 // ------------------------------------------------------------------
 void Sphere::copyToDevice()
 {
-    SphereData data = this->deviceData();
+    Data data = this->getData();
 
     if (!d_data)
-        CUDA_CHECK(cudaMalloc(&d_data, sizeof(SphereData)));
+        CUDA_CHECK(cudaMalloc(&d_data, sizeof(Data)));
     CUDA_CHECK(cudaMemcpy(
         d_data, 
-        &data, sizeof(SphereData), 
+        &data, sizeof(Data), 
         cudaMemcpyHostToDevice
     ));
 }
@@ -52,14 +52,9 @@ AABB Sphere::bound() const
 }
 
 // ------------------------------------------------------------------
-Sphere::DataType Sphere::deviceData() const 
+Sphere::Data Sphere::getData() const 
 {
-    SphereData data = 
-    {
-        .center = m_center, 
-        .radius = m_radius
-    };
-    return data;
+    return { m_center, m_radius };
 }
 
 } // ::prayground

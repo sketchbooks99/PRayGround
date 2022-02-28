@@ -16,6 +16,8 @@ namespace prayground {
 template <class T>
 class CUDABuffer {
 public:
+    using Type = T;
+
     CUDABuffer();
     explicit CUDABuffer(const std::vector<T>& vec);
     explicit CUDABuffer(const T* data, size_t size);

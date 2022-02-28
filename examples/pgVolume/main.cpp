@@ -1,13 +1,11 @@
 #include "app.h"
 
-int main(int argc, char* argv[])
+int main()
 {
-	pgSetAppDir(APP_DIR);
+    pgSetAppDir(APP_DIR);
 
-	auto window = make_shared<Window>("pgVolume", 1024, 1024);
-	auto app = make_shared<App>();
+    auto window = std::make_shared<Window>("Empty example", 1024, 768);
+    auto app = std::make_shared<App>();
 
-	pgRunApp(app, window);
-
-	return 0;
+    pgRunApp(app, window);
 }

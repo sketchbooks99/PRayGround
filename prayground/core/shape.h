@@ -10,8 +10,6 @@
 
 namespace prayground {
 
-#ifndef __CUDACC__
-
 enum class ShapeType
 {
     Mesh = OPTIX_BUILD_INPUT_TYPE_TRIANGLES,
@@ -20,6 +18,10 @@ enum class ShapeType
 };
 
 class Shape {
+
+/// @note Make this class be dummy class on device kernels
+#ifndef __CUDACC__
+
 public:
     virtual ~Shape() {}
 
@@ -40,7 +42,12 @@ public:
 protected:
     void* d_data { nullptr };
     uint32_t m_sbt_index { 0 };
+
+#endif // __CUDACC__
+
 };
+
+#ifndef __CUDACC__
 
 OptixBuildInput createSingleCustomBuildInput(
     CUdeviceptr& d_aabb_buffer,
@@ -50,5 +57,6 @@ OptixBuildInput createSingleCustomBuildInput(
 );
 
 #endif // __CUDACC__
+
 
 }

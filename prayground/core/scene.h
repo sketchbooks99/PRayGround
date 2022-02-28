@@ -16,12 +16,12 @@
 
 namespace prayground {
 
-using pgRaygenRecord = Record<pgRaygenData>;
-using pgHitgroupRecord = Record<pgHitgroupData>;
-using pgMissRecord = Record<pgMissData>;
-using pgCallableRecord = Record<pgCallableData>;
-using pgExceptionRecord = Record<pgEmptyData>;
-using pgPathTracingSBT = ShaderBindingTable<pgRaygenRecord, pgMissRecord, pgHitgroupRecord, pgCallableRecord, pgExceptionRecord>;
+using pgRGRecord = Record<pgRaygenData>;
+using pgHGRecord = Record<pgHitgroupData>;
+using pgMSRecord = Record<pgMissData>;
+using pgCARecord = Record<pgCallableData>;
+using pgEXRecord = Record<pgEmptyData>;
+using pgSBT = ShaderBindingTable<pgRaygenRecord, pgMissRecord, pgHitgroupRecord, pgCallableRecord, pgExceptionRecord>;
 
 class pgScene {
 public:

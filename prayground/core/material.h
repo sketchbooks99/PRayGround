@@ -14,10 +14,10 @@ namespace prayground {
 
 // Abstract class to compute scattering properties.
 class Material {
-public:
-
 /// @note Make this class be dummy class on device kernels
 #ifndef __CUDACC__
+
+public:
     virtual ~Material() {}
 
     virtual SurfaceType surfaceType() const = 0;

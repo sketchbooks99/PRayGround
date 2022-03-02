@@ -6,12 +6,6 @@
 
 namespace prayground {
 
-struct CylinderData
-{
-    float radius; 
-    float height;
-};
-
 class Cylinder final : public Shape {
 public:
     struct Data {

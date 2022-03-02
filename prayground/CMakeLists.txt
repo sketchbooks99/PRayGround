@@ -101,7 +101,6 @@ set(sources
   material/disney.h
   material/disney.cpp
   material/isotropic.h 
-  # material/isotropic.cpp
   material/cuda/conductor.cuh
   material/cuda/dielectric.cuh
   material/cuda/diffuse.cuh
@@ -111,9 +110,11 @@ set(sources
   texture/bitmap.h
   texture/bitmap.cpp
   texture/checker.h 
-  # texture/checker.cpp 
   texture/constant.h  
-  # texture/constant.cpp
+
+  # Medium ==========
+  medium/grid_medium.h 
+  medium/atmosphere.h
 
   # Emitter ==========
   emitter/area.h 

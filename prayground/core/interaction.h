@@ -6,90 +6,96 @@
 
 namespace prayground {
 
-enum class SurfaceType : unsigned int {
-    // None type ( default )
-    None            = 0,        
-    // Diffuse surface
-    Diffuse         = 1u << 0,  
-    // Specular surfaces
-    Reflection      = 1u << 1,
-    Refraction      = 1u << 2,
-    // Rough surfaces ( w/ microfacet )
-    RoughReflection = 1u << 3,
-    RoughRefraction = 1u << 4,
+    enum class SurfaceType : unsigned int {
+        // None type ( default )
+        None            = 0,        
+        // Diffuse surface
+        Diffuse         = 1u << 0,  
+        // Specular surfaces
+        Reflection      = 1u << 1,
+        Refraction      = 1u << 2,
+        // Rough surfaces ( w/ microfacet )
+        RoughReflection = 1u << 3,
+        RoughRefraction = 1u << 4,
 
-    // Delta
-    Delta = Reflection | Refraction,
+        // Delta
+        Delta = Reflection | Refraction,
 
-    // Rough surface
-    Rough = RoughReflection | RoughRefraction,
+        // Rough surface
+        Rough = RoughReflection | RoughRefraction,
 
-    // Material
-    Material        = Diffuse | Reflection | Refraction | RoughReflection | RoughRefraction,
+        // Material
+        Material        = Diffuse | Reflection | Refraction | RoughReflection | RoughRefraction,
 
-    // Emitter 
-    AreaEmitter     = 1u << 5,
-};
+        // Emitter 
+        AreaEmitter     = 1u << 5,
+    };
 
-constexpr SurfaceType  operator|(SurfaceType t1, SurfaceType t2)    { return static_cast<SurfaceType>(  (unsigned int)t1 | (unsigned int)t2 ); }
-constexpr SurfaceType  operator|(unsigned int t1, SurfaceType t2)   { return static_cast<SurfaceType>(                t1 | (unsigned int)t2 ); }
-constexpr SurfaceType  operator&(SurfaceType t1, SurfaceType t2)    { return static_cast<SurfaceType>(  (unsigned int)t1 & (unsigned int)t2 ); }
-constexpr SurfaceType  operator&(unsigned int t1, SurfaceType t2)   { return static_cast<SurfaceType>(                t1 & (unsigned int)t2 ); }
-constexpr SurfaceType  operator~(SurfaceType t1)                    { return static_cast<SurfaceType>( ~(unsigned int)t1 ); }
-constexpr unsigned int operator+(SurfaceType t1)                    { return static_cast<unsigned int>(t1); }
+    constexpr SurfaceType  operator|(SurfaceType t1, SurfaceType t2)    { return static_cast<SurfaceType>(  (unsigned int)t1 | (unsigned int)t2 ); }
+    constexpr SurfaceType  operator|(unsigned int t1, SurfaceType t2)   { return static_cast<SurfaceType>(                t1 | (unsigned int)t2 ); }
+    constexpr SurfaceType  operator&(SurfaceType t1, SurfaceType t2)    { return static_cast<SurfaceType>(  (unsigned int)t1 & (unsigned int)t2 ); }
+    constexpr SurfaceType  operator&(unsigned int t1, SurfaceType t2)   { return static_cast<SurfaceType>(                t1 & (unsigned int)t2 ); }
+    constexpr SurfaceType  operator~(SurfaceType t1)                    { return static_cast<SurfaceType>( ~(unsigned int)t1 ); }
+    constexpr unsigned int operator+(SurfaceType t1)                    { return static_cast<unsigned int>(t1); }
 
-struct SurfaceInfo 
-{
-    // Surfaceのデータ
-    void* data;
+    struct SurfaceInfo 
+    {
+        // Surfaceのデータ
+        void* data;
 
-    // 重点的サンプリングやbsdfの評価用のCallable関数へのID
-    unsigned int sample_id;
-    unsigned int bsdf_id;
-    unsigned int pdf_id;
+        // 重点的サンプリングやbsdfの評価用のCallable関数へのID
+        unsigned int sample_id;
+        unsigned int bsdf_id;
+        unsigned int pdf_id;
 
-    SurfaceType type;
-};
+        SurfaceType type;
+    };
+    
+    struct MediumInfo {
+        void* data;
 
-/// @note Currently \c spectrum is RGB representation, not spectrum. 
-/// @todo template <typename Spectrum>
-template <typename Spectrum>
-struct SurfaceInteraction_ {
-    /** Position of intersection point in world coordinates. */
-    float3 p;
+        unsigned int transmission_id;
+    };
 
-    /** Incident and outgoing directions at a surface. */
-    float3 wi;
-    float3 wo;
+    /// @note Currently \c spectrum is RGB representation, not spectrum. 
+    /// @todo template <typename Spectrum>
+    template <typename Spectrum>
+    struct SurfaceInteraction_ {
+        /** Position of intersection point in world coordinates. */
+        float3 p;
 
-    /** ray time */
-    float t;
+        /** Incident and outgoing directions at a surface. */
+        float3 wi;
+        float3 wo;
 
-    /** Albedo and self-emission from a surface attached with a shape. */
-    Spectrum albedo;
-    Spectrum emission;
+        /** ray time */
+        float t;
 
-    /** UV coordinate at an intersection point. */
-    float2 uv;
+        /** Albedo and self-emission from a surface attached with a shape. */
+        Spectrum albedo;
+        Spectrum emission;
+
+        /** UV coordinate at an intersection point. */
+        float2 uv;
  
-    struct {
-        /** Surface normal */
-        float3 n;
+        struct {
+            /** Surface normal */
+            float3 n;
 
-        /** Partial derivative on intersection point */
-        float3 dpdu, dpdv;
+            /** Partial derivative on intersection point */
+            float3 dpdu, dpdv;
 
-        /** Partial derivative on surface normal */
-        float3 dndu, dndv;
-    } shading;
+            /** Partial derivative on surface normal */
+            float3 dndu, dndv;
+        } shading;
 
-    unsigned int seed;
+        unsigned int seed;
 
-    SurfaceInfo surface_info;
+        SurfaceInfo surface_info;
 
-    bool trace_terminate;
-    bool radiance_evaled; // For NEE
-};
+        bool trace_terminate;
+        bool radiance_evaled; // For NEE
+    };
 
 } // ::prayground
 

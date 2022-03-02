@@ -87,4 +87,8 @@
 #include "texture/checker.h"
 #include "texture/bitmap.h"
 
+// Medium include 
+#include "medium/atmosphere.h"
+#include "medium/gridmedium.h"
+
 using namespace prayground;

@@ -33,7 +33,7 @@ static INLINE DEVICE float2 getUV(
 CALLABLE_FUNC void IS_FUNC(cylinder)()
 {
     const HitGroupData* data = reinterpret_cast<HitGroupData*>(optixGetSbtDataPointer());
-    const CylinderData* cylinder = reinterpret_cast<CylinderData*>(data->shape_data);
+    const Cylinder::Data* cylinder = reinterpret_cast<Cylinder::Data*>(data->shape_data);
 
     const float radius = cylinder->radius;
     const float height = cylinder->height;
@@ -99,7 +99,7 @@ CALLABLE_FUNC void IS_FUNC(cylinder)()
 CALLABLE_FUNC void CH_FUNC(cylinder)()
 {
     const HitGroupData* data = reinterpret_cast<HitGroupData*>(optixGetSbtDataPointer());
-    const CylinderData* cylinder = reinterpret_cast<CylinderData*>(data->shape_data);
+    const Cylinder::Data* cylinder = reinterpret_cast<Cylinder::Data*>(data->shape_data);
 
     Ray ray = getWorldRay();
 

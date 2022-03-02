@@ -7,12 +7,6 @@
 
 namespace prayground {
 
-struct PlaneData 
-{
-    float2 min;
-    float2 max;
-};
-
 class Plane final : public Shape {
 public:
     struct Data {

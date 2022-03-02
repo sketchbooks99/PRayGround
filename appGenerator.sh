@@ -1,5 +1,7 @@
 #!bin/sh
 
+# This is a very instant shell script to generate an application.
+
 if [ $# -ne 1 ]; then
     echo "Please configure the application name"
     exit 1

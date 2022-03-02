@@ -6,11 +6,6 @@
 
 namespace prayground {
 
-struct SphereData {
-    float3 center;
-    float radius;
-};
-
 class Sphere final : public Shape {
 public:
     struct Data {

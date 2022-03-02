@@ -13,7 +13,7 @@
  */
 
  CALLABLE_FUNC void DC_FUNC(sample_diffuse)(SurfaceInteraction* si, void* mat_data) {
-    const DiffuseData* diffuse = reinterpret_cast<DiffuseData*>(mat_data);
+    const Diffuse::Data* diffuse = reinterpret_cast<Diffuse::Data*>(mat_data);
 
     if (diffuse->twosided)
         si->n = faceforward(si->n, -si->wi, si->n);
@@ -34,7 +34,7 @@
 
 CALLABLE_FUNC float3 CC_FUNC(bsdf_diffuse)(SurfaceInteraction* si, void* mat_data)
 {
-    const DiffuseData* diffuse = reinterpret_cast<DiffuseData*>(mat_data);
+    const Diffuse::Data* diffuse = reinterpret_cast<Diffuse::Data*>(mat_data);
     const float3 albedo = optixDirectCall<float3, SurfaceInteraction*, void*>(diffuse->tex_program_id, si, diffuse->tex_data);
     const float cosine = fmaxf(0.0f, dot(si->n, si->wo));
 

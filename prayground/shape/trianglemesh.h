@@ -18,13 +18,6 @@ struct Face {
     int3 texcoord_id;
 };
 
-struct MeshData {
-    float3* vertices;
-    Face* faces;
-    float3* normals;
-    float2* texcoords;
-};
-
 class TriangleMesh : public Shape {
 public:
     struct Data {

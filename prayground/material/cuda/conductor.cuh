@@ -8,7 +8,7 @@
 namespace prayground {
 
 CALLABLE_FUNC void DC_FUNC(sample_conductor)(SurfaceInteraction* si, void* mat_data) {
-    const ConductorData* conductor = reinterpret_cast<ConductorData*>(mat_data);
+    const Conductor::Data* conductor = reinterpret_cast<Conductor::Data*>(mat_data);
     if (conductor->twosided) 
         si->n = faceforward(si->n, -si->wi, si->n);
 
@@ -19,7 +19,7 @@ CALLABLE_FUNC void DC_FUNC(sample_conductor)(SurfaceInteraction* si, void* mat_d
 
 CALLABLE_FUNC float3 CC_FUNC(bsdf_conductor)(SurfaceInteraction* si, void* mat_data)
 {
-    const ConductorData* conductor = reinterpret_cast<ConductorData*>(mat_data);
+    const Conductor::Data* conductor = reinterpret_cast<Conductor::Data*>(mat_data);
     si->emission = make_float3(0.0f);
     return optixDirectCall<float3, SurfaceInteraction*, void*>(conductor->tex_program_id, si, conductor->tex_data);
 }

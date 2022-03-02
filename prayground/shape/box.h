@@ -4,12 +4,6 @@
 
 namespace prayground {
 
-struct BoxData 
-{
-    float3 min;
-    float3 max;
-};
-
 class Box final : public Shape {
 public:
     struct Data {

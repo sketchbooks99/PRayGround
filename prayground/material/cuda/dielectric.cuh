@@ -6,7 +6,7 @@
 #include <prayground/material/dielectric.h>
 
 CALLABLE_FUNC void DC_FUNC(sample_dielectric)(SurfaceInteraction* si, void* mat_data) {
-    const DielectricData* dielectric = reinterpret_cast<DielectricData*>(mat_data);
+    const Dielectric::Data* dielectric = reinterpret_cast<Dielectric::Data*>(mat_data);
 
     float ni = 1.0f; // air
     float nt = dielectric->ior;  // ior specified 
@@ -34,7 +34,7 @@ CALLABLE_FUNC void DC_FUNC(sample_dielectric)(SurfaceInteraction* si, void* mat_
 
 CALLABLE_FUNC float3 CC_FUNC(bsdf_dielectric)(SurfaceInteraction* si, void* mat_data)
 {
-    const DielectricData* dielectric = reinterpret_cast<DielectricData*>(mat_data);
+    const Dielectric::Data* dielectric = reinterpret_cast<Dielectric::Data*>(mat_data);
     si->emission = make_float3(0.0f);
     return optixDirectCall<float3, SurfaceInteraction*, void*>(dielectric->tex_program_id, si, dielectric->tex_data);    
 }

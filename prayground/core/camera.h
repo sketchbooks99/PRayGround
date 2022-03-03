@@ -8,8 +8,6 @@
 
 namespace prayground {
 
-#ifndef __CUDACC__
-
 /**
  * @brief 
  * Standard pinhole camera
@@ -37,6 +35,7 @@ public:
         FovAxis fovaxis;
     };
 
+#ifndef __CUDACC__
     Camera();
 
     Camera(const float3& origin, const float3& lookat, const float3& up, float fov, float aspect,
@@ -89,6 +88,8 @@ protected:
 private:
     void mouseDragged(float x, float y, int button);
     void mouseScrolled(float xoffset, float yoffset);
+#endif 
+
 };
 
 /**
@@ -114,6 +115,7 @@ public:
         FovAxis fovaxis;
     };
 
+#ifndef __CUDACC__
     LensCamera() : Camera(), m_aperture(0.01f), m_focus_distance(100.0) {}
     LensCamera(
         const float3& origin, const float3& lookat, const float3& up, float fov, float aspect, 
@@ -133,8 +135,8 @@ public:
 private:
     float m_aperture;
     float m_focus_distance;
-};
 
 #endif // __CUDACC__
+};
 
 }

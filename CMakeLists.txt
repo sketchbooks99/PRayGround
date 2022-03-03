@@ -261,12 +261,13 @@ else (WIN32)
   endif()
 endif (WIN32)
 
-set(PRAYGROUND_CUDA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../cuda")
-set(PRAYGROUND_EXTERNAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../prayground/ext")
+set(PRAYGROUND_CUDA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/cuda")
+set(PRAYGROUND_EXTERNAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/prayground/ext")
 
 # NVRTC include paths relative to the sample path
 set(PRAYGROUND_RELATIVE_INCLUDE_DIRS "\\
   \"prayground\", \\
+  \"${PRAYGROUND_EXTERNAL_DIR}\", \\
   \"${CMAKE_CURRENT_SOURCE_DIR}\", ")
 
 # NVRTC absolute include paths to the headers used to build the samples
@@ -347,6 +348,7 @@ function(PRAYGROUND_add_executalbe target_name_base target_name_var)
   target_link_libraries( ${target_name}
     ${GLFW_LIB_NAME}
     imgui
+    nanovdb
     prayground
     )
 

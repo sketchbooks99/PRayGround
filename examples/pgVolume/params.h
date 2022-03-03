@@ -9,8 +9,6 @@
 
 using namespace prayground;
 
-using Spectrum = float4;
-
 using ConstantTexture = ConstantTexture_<float3>;
 using CheckerTexture = CheckerTexture_<float3>;
 using GridMedium = GridMedium_<float3>;

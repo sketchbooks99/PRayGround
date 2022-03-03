@@ -1,5 +1,7 @@
 #include <prayground/prayground.h>
 #include "params.h"
+#include <prayground/ext/nanovdb/util/Ray.h>
+#include <prayground/ext/nanovdb/util/HDDA.h>
 
 extern "C" { __constant__ LaunchParams params; }
 
@@ -180,7 +182,85 @@ extern "C" __device__ void __raygen__medium()
     params.result_buffer[image_index] = make_uchar4(color.x, color.y, color.z, 255);
 }
 
+/* Miss function */
+extern "C" __device__ void __miss__envmap()
+{
+    MissData* data = reinterpret_cast<MissData*>(optixGetSbtDataPointer());
+    EnvironmentEmitter::Data* env = reinterpret_cast<EnvironmentEmitter::Data*>(data->env_data);
+    SurfaceInteraction* si = getSurfaceInteraction();
+
+    Ray ray = getWorldRay();
+    const float lambda = __int_as_float(getPayload<2>());
+
+    const float a = dot(ray.d, ray.d);
+    const float half_b = dot(ray.o, ray.d);
+    const float c = dot(ray.o, ray.o) - 1e8f*1e8f;
+    const float D = half_b * half_b - a * c;
+
+    float sqrtD = sqrtf(D);
+    float t = (-half_b + sqrtD) / a;
+
+    const float3 p = normalize(ray.at(t));
+
+    const float phi = atan2(p.z, p.x);
+    const float theta = asin(p.y);
+    const float u = 1.0f - (phi + math::pi) / (2.0f * math::pi);
+    const float v = 1.0f - (theta + math::pi / 2.0f) / math::pi;
+    si->uv = make_float2(u, v);
+    si->trace_terminate = true;
+    si->surface_info.type = SurfaceType::None;
+    si->emission = optixDirectCall<float3, SurfaceInteraction*, void*>(
+        env->tex_data.prg_id, si, env->tex_data.data
+    );
+}
+
 /* Material functions */
+extern "C" __device__ void __direct_callable__sample_diffuse(SurfaceInteraction* si, void* mat_data) {
+    const Diffuse::Data* diffuse = reinterpret_cast<Diffuse::Data*>(mat_data);
+
+    if (diffuse->twosided)
+        si->shading.n = faceforward(si->shading.n, -si->wo, si->shading.n);
+
+    si->trace_terminate = false;
+    uint32_t seed = si->seed;
+    const float z0 = rnd(seed);
+    const float z1 = rnd(seed);
+    float3 wi = cosineSampleHemisphere(z0, z1);
+    Onb onb(si->shading.n);
+    onb.inverseTransform(wi);
+    si->wi = normalize(wi);
+    si->seed = seed;
+}
+
+extern "C" __device__ float3 __continuation_callable__bsdf_diffuse(SurfaceInteraction* si, void* mat_data)
+{
+    const Diffuse::Data* diffuse = reinterpret_cast<Diffuse::Data*>(mat_data);
+    const float3 albedo = optixDirectCall<float3, SurfaceInteraction*, void*>(diffuse->tex_data.prg_id, si, diffuse->tex_data.data);
+    si->albedo = albedo;
+    si->emission = make_float3(0.0f);
+    const float cosine = fmaxf(0.0f, dot(si->shading.n, si->wi));
+    return albedo * (cosine / math::pi);
+}
+
+extern "C" __device__ float __direct_callable__pdf_diffuse(SurfaceInteraction* si, void* mat_data)
+{
+    const float cosine = fmaxf(0.0f, dot(si->shading.n, si->wi));
+    return cosine / math::pi;
+}
+
+extern "C" __device__ void __direct_callable__area_emitter(SurfaceInteraction* si, void* surface_data)
+{
+    const AreaEmitter::Data* area = reinterpret_cast<AreaEmitter::Data*>(surface_data);
+    si->trace_terminate = true;
+    float is_emitted = 1.0f;
+    if (!area->twosided)
+        is_emitted = dot(si->wo, si->shading.n) < 0.0f ? 1.0f : 0.0f;
+    
+    const float3 base = optixDirectCall<float3, SurfaceInteraction*, void*>(
+        area->tex_data.prg_id, si, area->tex_data.data);
+    si->albedo = base;
+    si->emission = base * area->intensity * is_emitted;
+}
 
 /* Hitgroup functions */
 extern "C" __device__ void __intersection__plane()
@@ -226,6 +306,55 @@ extern "C" __device__ void __closesthit__plane()
     si->shading.dpdv = optixTransformNormalFromObjectToWorldSpace(make_float3(0.0f, 0.0f, 1.0f));
 }
 
+static inline __device__ void confine(const nanovdb::BBox<nanovdb::Coord> &bbox, nanovdb::Vec3f &ivec)
+{
+    auto imin = nanovdb::Vec3f( bbox.min() );
+    auto imax = nanovdb::Vec3f( bbox.max() ) + nanovdb::Vec3f( 1.0f );
+
+    if (ivec[0] < imin[0]) ivec[0] = imin[0];
+    if (ivec[1] < imin[1]) ivec[1] = imin[1];
+    if (ivec[2] < imin[2]) ivec[2] = imin[2];
+    if (ivec[0] >= imax[0]) ivec[0] = imax[0] - fmaxf(1.0f, fabsf(ivec[0])) * math::eps;
+    if (ivec[1] >= imax[1]) ivec[1] = imax[1] - fmaxf(1.0f, fabsf(ivec[1])) * math::eps;
+    if (ivec[2] >= imax[2]) ivec[2] = imax[2] - fmaxf(1.0f, fabsf(ivec[2])) * math::eps;
+}
+
+static inline __device__ void confine(const nanovdb::BBox<nanovdb::Coord> &bbox, nanovdb::Vec3f& istart, nanovdb::Vec3f& iend)
+{
+    confine(bbox, istart);
+    confine(bbox, iend);
+}
+
+template <typename AccT>
+static inline __device__ float transmittanceHDDA(
+    const nanovdb::Vec3f& start, 
+    const nanovdb::Vec3f& end, 
+    AccT& acc)
+{
+    float transmittance = 1.0f;
+    auto dir = end - start;
+    auto len = dir.length();
+    nanovdb::Ray<float> ray(start, dir / len, 0.0f, len);
+    nanovdb::Coord ijk = nanovdb::RoundDown<nanovdb::Coord>(ray.start());
+
+    nanovdb::HDDA<nanovdb::Ray<float>> hdda(ray, acc.getDim(ijk, ray));
+
+    float t = 0.0f;
+    float density = acc.getValue(ijk);
+    while (hdda.step())
+    {
+        float dt = hdda.time() - t;
+        transmittance *= expf(-density * dt);
+        t = hdda.time();
+        ijk = hdda.voxel();
+
+        density = acc.getValue(ijk);
+        hdda.update(ray, acc.getDim(ijk, ray));
+    }
+
+    return transmittance;
+}
+
 extern "C" __device__ void __intersection__grid()
 {
     const HitgroupData* data = reinterpret_cast<const HitgroupData*>(optixGetSbtDataPointer());
@@ -233,7 +362,7 @@ extern "C" __device__ void __intersection__grid()
     const nanovdb::FloatGrid* density = reinterpret_cast<const nanovdb::FloatGrid*>(grid->density);
     assert(density);
 
-    Ray ray = getLocalRay;
+    Ray ray = getLocalRay();
 
     auto bbox = density->indexBBox();
     float t0 = ray.tmin;
@@ -259,6 +388,34 @@ extern "C" __device__ void __closesthit__grid()
     Ray ray = getWorldRay();
     const float t0 = optixGetRayTmax();
     const float t1 = __int_as_float(optixGetPayload_2());
+
+    const auto nanoray = nanovdb::Ray<float>(reinterpret_cast<const nanovdb::Vec3f&>(ray.o), 
+        reinterpret_cast<const nanovdb::Vec3f&>(ray.d));
+    auto start = density->worldToIndexF(nanoray(t0));
+    auto end = density->worldToIndexF(nanoray(t1));
+
+    auto bbox = density->indexBBox();
+    confine(bbox, start, end);
+
+    float transmittance = transmittanceHDDA(start, end, acc);
+
+    SurfaceInteraction* si = getSurfaceInteraction();
+
+    si->p = ray.at(ray.tmax);
+    si->shading.n = make_float3(0, 1, 0); // arbitrary
+    si->t = ray.tmax;
+    si->wo = ray.d;
+    si->uv = make_float2(0.5f); // arbitrary
+    si->surface_info = data->surface_info;
+    si->surface_info.type = SurfaceType::None;
+    si->albedo = make_float3(0.0f);
+    si->emission = make_float3(0.0f);
+    si->shading.dpdu = optixTransformNormalFromObjectToWorldSpace(make_float3(1.0f, 0.0f, 0.0f)); // arbitrary
+    si->shading.dpdv = optixTransformNormalFromObjectToWorldSpace(make_float3(0.0f, 0.0f, 1.0f)); // arbitrary
+
+    uint32_t seed = si->seed;
+    if (rnd(seed) < transmittance)
+        si->trace_terminate = true;
 }
 
 /* Texture functions */

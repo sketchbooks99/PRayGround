@@ -103,7 +103,7 @@ void App::setup()
     // Area emitter
     uint32_t area_emitter_prg_id = setupCallable(DC_FUNC_STR("area_emitter"), "");
     
-    textures.emplace("env", new FloatBitmapTexture("resources/image/drackenstein_quarry_4k.exr", bitmap_prg_id));
+    textures.emplace("env", new FloatBitmapTexture("resources/image/sepulchral_chapel_rotunda_4k.exr", bitmap_prg_id));
 
     env = EnvironmentEmitter{ textures.at("env") };
     env.copyToDevice();
@@ -197,7 +197,7 @@ void App::setup()
 
     // Shapes
     shapes.emplace("floor", new Plane(make_float2(-0.5f), make_float2(0.5f)));
-    shapes.emplace("smoke", new GridMedium("resources/volume/smoke.vdb", make_float3(0.8f), make_float3(0.2f), 0.5f));
+    shapes.emplace("smoke", new GridMedium("resources/volume/smoke.nvdb", make_float3(0.8f), make_float3(0.2f), 0.5f));
 
     // Floor
     Primitive floor{ shapes.at("floor"), materials.at("floor"), diffuse_sample_bsdf_id, diffuse_pdf_id };

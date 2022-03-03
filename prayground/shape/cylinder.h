@@ -1,8 +1,6 @@
 #pragma once 
 
-#ifndef __CUDACC__
 #include <prayground/core/shape.h>
-#endif
 
 namespace prayground {
 

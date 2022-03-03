@@ -231,7 +231,7 @@ extern "C" __global__ void __raygen__spectrum()
 extern "C" __device__ void __miss__envmap()
 {
     MissData* data = reinterpret_cast<MissData*>(optixGetSbtDataPointer());
-    EnvironmentEmitterData* env = reinterpret_cast<EnvironmentEmitterData*>(data->env_data);
+    EnvironmentEmitter::Data* env = reinterpret_cast<EnvironmentEmitter::Data*>(data->env_data);
     SurfaceInteraction* si = getSurfaceInteraction();
 
     Ray ray = getWorldRay();
@@ -255,7 +255,7 @@ extern "C" __device__ void __miss__envmap()
     si->trace_terminate = true;
     si->surface_info.type = SurfaceType::None;
     si->emission = optixDirectCall<Spectrum, SurfaceInteraction*, void*>(
-        env->tex_program_id, si, env->tex_data
+        env->tex_data.prg_id, si, env->tex_data.data
     );
 }
 
@@ -281,7 +281,7 @@ static __forceinline__ __device__ float diamondIndex(const float& lambda)
 
 extern "C" __device__ void SAMPLE_FUNC(dielectric)(const float& lambda, SurfaceInteraction* si, void* mat_data)
 {
-    const DielectricData* dielectric = reinterpret_cast<DielectricData*>(mat_data);
+    const Dielectric::Data* dielectric = reinterpret_cast<Dielectric::Data*>(mat_data);
 
     float ni = 1.000292f;
     float nt = 1.5f;
@@ -318,20 +318,20 @@ extern "C" __device__ void SAMPLE_FUNC(dielectric)(const float& lambda, SurfaceI
 
 extern "C" __device__ float BSDF_FUNC(dielectric)(const float& lambda, SurfaceInteraction* si, void* mat_data)
 {
-    const DielectricData* dielectric = reinterpret_cast<DielectricData*>(mat_data);
+    const Dielectric::Data* dielectric = reinterpret_cast<Dielectric::Data*>(mat_data);
     si->emission = Spectrum{};
-    Spectrum albedo = optixDirectCall<Spectrum, SurfaceInteraction*, void*>(dielectric->tex_program_id, si, dielectric->tex_data);
+    Spectrum albedo = optixDirectCall<Spectrum, SurfaceInteraction*, void*>(dielectric->tex_data.prg_id, si, dielectric->tex_data.data);
     return albedo.getSpectrumFromWavelength(lambda);
 }
 
-extern "C" __device__ float PDF_FUNC(dielectric)(SurfaceInteraction * si, void* mat_data)
+extern "C" __device__ float PDF_FUNC(dielectric)(SurfaceInteraction* /* si */, void* /* mat_data */)
 {
     return 1.0f;
 }
 
 extern "C" __device__ void SAMPLE_FUNC(diffuse)(const float& /* lambda */, SurfaceInteraction* si, void* mat_data)
 {
-    const DiffuseData* diffuse = reinterpret_cast<DiffuseData*>(mat_data);
+    const Diffuse::Data* diffuse = reinterpret_cast<Diffuse::Data*>(mat_data);
 
     if (diffuse->twosided)
         si->shading.n = faceforward(si->shading.n, -si->wo, si->shading.n);
@@ -349,8 +349,8 @@ extern "C" __device__ void SAMPLE_FUNC(diffuse)(const float& /* lambda */, Surfa
 
 extern "C" __device__ float BSDF_FUNC(diffuse)(const float& lambda, SurfaceInteraction* si, void* mat_data)
 {
-    const DiffuseData* diffuse = reinterpret_cast<DiffuseData*>(mat_data);
-    const Spectrum albedo = optixDirectCall<Spectrum, SurfaceInteraction*, void*>(diffuse->tex_program_id, si, diffuse->tex_data);
+    const Diffuse::Data* diffuse = reinterpret_cast<Diffuse::Data*>(mat_data);
+    const Spectrum albedo = optixDirectCall<Spectrum, SurfaceInteraction*, void*>(diffuse->tex_data.prg_id, si, diffuse->tex_data.data);
     si->emission = Spectrum{};
     const float cosine = fmaxf(0.0f, dot(si->shading.n, si->wi));
     return albedo.getSpectrumFromWavelength(lambda) * (cosine / math::pi);
@@ -364,7 +364,7 @@ extern "C" __device__ float PDF_FUNC(diffuse)(SurfaceInteraction* si, void* mat_
 
 extern "C" __device__ void SAMPLE_FUNC(disney)(const float& /* lambda */, SurfaceInteraction * si, void* mat_data)
 {
-    const DisneyData* disney = reinterpret_cast<DisneyData*>(mat_data);
+    const Disney::Data* disney = reinterpret_cast<Disney::Data*>(mat_data);
     if (disney->twosided)
         si->shading.n = faceforward(si->shading.n, -si->wo, si->shading.n);
 
@@ -399,7 +399,7 @@ extern "C" __device__ void SAMPLE_FUNC(disney)(const float& /* lambda */, Surfac
 
 extern "C" __device__ float BSDF_FUNC(disney)(const float& lambda, SurfaceInteraction * si, void* mat_data)
 {
-    const DisneyData* disney = reinterpret_cast<DisneyData*>(mat_data);
+    const Disney::Data* disney = reinterpret_cast<Disney::Data*>(mat_data);
     si->emission = Spectrum{};
 
     const float3 V = -normalize(si->wo);
@@ -417,7 +417,7 @@ extern "C" __device__ float BSDF_FUNC(disney)(const float& lambda, SurfaceIntera
     const float LdotH /* = VdotH */ = dot(L, H);
 
     const Spectrum base_color = optixDirectCall<Spectrum, SurfaceInteraction*, void*>(
-        disney->base_program_id, si, disney->base_tex_data
+        disney->base.prg_id, si, disney->base.data
         );
     const float base_spectrum = base_color.getSpectrumFromWavelength(lambda);
 
@@ -470,7 +470,7 @@ extern "C" __device__ float BSDF_FUNC(disney)(const float& lambda, SurfaceIntera
 
 extern "C" __device__ float PDF_FUNC(disney)(SurfaceInteraction* si, void* mat_data)
 {
-    const DisneyData* disney = reinterpret_cast<DisneyData*>(mat_data);
+    const Disney::Data* disney = reinterpret_cast<Disney::Data*>(mat_data);
 
     const float3 V = -si->wo;
     const float3 L = si->wi;
@@ -499,14 +499,14 @@ extern "C" __device__ float PDF_FUNC(disney)(SurfaceInteraction* si, void* mat_d
 // Area emitter
 extern "C" __device__ void DC_FUNC(area_emitter)(SurfaceInteraction* si, void* surface_data)
 {
-    const AreaEmitterData* area = reinterpret_cast<AreaEmitterData*>(surface_data);
+    const AreaEmitter::Data* area = reinterpret_cast<AreaEmitter::Data*>(surface_data);
     si->trace_terminate = true;
     float is_emitted = 1.0f;
     if (!area->twosided)
         is_emitted = dot(si->wo, si->shading.n) < 0.0f ? 1.0f : 0.0f;
     
     const Spectrum base = optixDirectCall<Spectrum, SurfaceInteraction*, void*>(
-        area->tex_program_id, si, area->tex_data);
+        area->tex_data.prg_id, si, area->tex_data.data);
     si->albedo = base;
     si->emission = base * area->intensity * is_emitted;
 }
@@ -539,7 +539,7 @@ extern "C" __device__ Spectrum DC_FUNC(bitmap)(SurfaceInteraction* si, void* tex
 extern "C" __device__ void CH_FUNC(mesh)()
 {
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
-    const MeshData* mesh = reinterpret_cast<MeshData*>(data->shape_data);
+    const TriangleMesh::Data* mesh = reinterpret_cast<TriangleMesh::Data*>(data->shape_data);
 
     Ray ray = getWorldRay();
 
@@ -607,7 +607,7 @@ static __forceinline__ __device__ float2 getSphereUV(const float3& p) {
 extern "C" __device__ void IS_FUNC(sphere)()
 {
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
-    const SphereData* sphere = reinterpret_cast<SphereData*>(data->shape_data);
+    const Sphere::Data* sphere = reinterpret_cast<Sphere::Data*>(data->shape_data);
 
     const float3 center = sphere->center;
     const float radius = sphere->radius;
@@ -643,7 +643,7 @@ extern "C" __device__ void IS_FUNC(sphere)()
 extern "C" __device__ void CH_FUNC(sphere)()
 {
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
-    const SphereData* sphere_data = reinterpret_cast<SphereData*>(data->shape_data);
+    const Sphere::Data* sphere_data = reinterpret_cast<Sphere::Data*>(data->shape_data);
 
     Ray ray = getWorldRay();
 
@@ -667,7 +667,7 @@ extern "C" __device__ void CH_FUNC(sphere)()
     si->shading.dpdv = normalize(optixTransformVectorFromObjectToWorldSpace(dpdv));
 }
 
-static __forceinline__ __device__ bool hitPlane(const PlaneData* plane_data, const float3& o, const float3& v, const float tmin, const float tmax, SurfaceInteraction& si)
+static __forceinline__ __device__ bool hitPlane(const Plane::Data* plane_data, const float3& o, const float3& v, const float tmin, const float tmax, SurfaceInteraction& si)
 {
     const float2 min = plane_data->min;
     const float2 max = plane_data->max;
@@ -689,7 +689,7 @@ static __forceinline__ __device__ bool hitPlane(const PlaneData* plane_data, con
 
 extern "C" __device__ float CC_FUNC(pdf_plane)(const AreaEmitterInfo& area_info, const float3& origin, const float3& direction)
 {
-    const PlaneData* plane_data = reinterpret_cast<PlaneData*>(area_info.shape_data);
+    const Plane::Data* plane_data = reinterpret_cast<Plane::Data*>(area_info.shape_data);
 
     SurfaceInteraction si;
     const float3 local_o = area_info.worldToObj.pointMul(origin);
@@ -713,7 +713,7 @@ extern "C" __device__ float CC_FUNC(pdf_plane)(const AreaEmitterInfo& area_info,
 // グローバル空間における si.p -> 光源上の点 のベクトルを返す
 extern "C" __device__ float3 DC_FUNC(rnd_sample_plane)(const AreaEmitterInfo& area_info, SurfaceInteraction* si)
 {
-    const PlaneData* plane_data = reinterpret_cast<PlaneData*>(area_info.shape_data);
+    const Plane::Data* plane_data = reinterpret_cast<Plane::Data*>(area_info.shape_data);
     // サーフェスの原点をローカル空間に移す
     const float3 local_p = area_info.worldToObj.pointMul(si->p);
     unsigned int seed = si->seed;
@@ -728,7 +728,7 @@ extern "C" __device__ float3 DC_FUNC(rnd_sample_plane)(const AreaEmitterInfo& ar
 extern "C" __device__ void IS_FUNC(plane)()
 {
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
-    const PlaneData* plane_data = reinterpret_cast<PlaneData*>(data->shape_data);
+    const Plane::Data* plane_data = reinterpret_cast<Plane::Data*>(data->shape_data);
 
     const float2 min = plane_data->min;
     const float2 max = plane_data->max;

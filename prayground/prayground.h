@@ -1,7 +1,6 @@
 #pragma once 
 
-// CPU only
-#ifndef __CUDACC__
+#ifndef __CUDACC__ // CPU only
 
 	#include <glad/glad.h>
 	#include <GLFW/glfw3.h>
@@ -39,16 +38,6 @@
 	#include "app/input.h"
 
 	#include "gl/shader.h"
-
-#else // GPU only
-
-	#include "core/ray.h"
-	#include "core/bsdf.h"
-	#include "core/interaction.h"
-	#include "core/onb.h"
-
-	#include "optix/cuda/device_util.cuh"
-
 #endif // __CUDACC__
 
 #include <optix.h>
@@ -90,5 +79,14 @@
 // Medium include 
 #include "medium/atmosphere.h"
 #include "medium/gridmedium.h"
+
+#ifdef __CUDACC__ // GPU only
+	#include "core/ray.h"
+	#include "core/bsdf.h"
+	#include "core/interaction.h"
+	#include "core/onb.h"
+
+	#include "optix/cuda/device_util.cuh"
+#endif // __CUDACC__
 
 using namespace prayground;

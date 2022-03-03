@@ -9,9 +9,9 @@ enum class EmitterType {
     Count = 3
 };
 
-#ifndef __CUDACC__
-
 class Emitter {
+
+#ifndef __CUDACC__
 public:
     virtual void copyToDevice() = 0;
     virtual EmitterType type() const = 0;
@@ -21,8 +21,7 @@ public:
     void* devicePtr() const { return reinterpret_cast<void*>(d_data); }
 protected:
     void* d_data { nullptr };
+#endif
 };
-
-#endif // __CUDACC__
 
 } // ::prayground

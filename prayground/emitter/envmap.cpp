@@ -7,11 +7,7 @@ void EnvironmentEmitter::copyToDevice()
     if (!m_texture->devicePtr())
         m_texture->copyToDevice();
 
-    EnvironmentEmitterData data =
-    {
-        .tex_data = m_texture->devicePtr(),
-        .tex_program_id = m_texture->programId()
-    };
+    auto data = this->getData();
 
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_data), sizeof(EnvironmentEmitterData)));
     CUDA_CHECK(cudaMemcpy(
@@ -19,6 +15,11 @@ void EnvironmentEmitter::copyToDevice()
         &data, sizeof(EnvironmentEmitterData), 
         cudaMemcpyHostToDevice
     ));
+}
+
+EnvironmentEmitter::Data EnvironmentEmitter::getData() const 
+{
+    return { m_texture->getData() };
 }
 
 } // ::prayground

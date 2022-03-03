@@ -113,7 +113,7 @@ set(sources
   texture/constant.h  
 
   # Medium ==========
-  medium/grid_medium.h 
+  medium/gridmedium.h 
   medium/atmosphere.h
 
   # Emitter ==========

@@ -18,10 +18,13 @@ struct EnvironmentEmitterData {
     unsigned int tex_program_id;
 };
 
-#ifndef __CUDACC__
-
 class EnvironmentEmitter final : public Emitter {
 public:
+    struct Data {
+        Texture::Data tex_data;
+    };
+
+#ifndef __CUDACC__
     EnvironmentEmitter() = default;
     EnvironmentEmitter(const std::shared_ptr<Texture>& texture)
     : m_texture(texture) {}
@@ -32,10 +35,13 @@ public:
 
     EmitterType type() const override { return EmitterType::Envmap; }
     std::shared_ptr<Texture> texture() const { return m_texture; }
+
+    Data getData() const;
 private:
     std::shared_ptr<Texture> m_texture;
-};
 
 #endif
+};
+
 
 } // ::prayground

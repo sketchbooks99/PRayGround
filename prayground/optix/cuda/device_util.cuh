@@ -8,15 +8,39 @@
 #include <prayground/math/util.h>
 
 #ifdef __CUDACC__
-using int8_t = char;
-using int16_t = short;
-using int32_t = int;
-using int64_t = long long;
-using uint8_t = unsigned char;
-using uint16_t = unsigned short;
-using uint32_t = unsigned int;
-using uint64_t = unsigned long long;
+#if !defined(int8_t)
+    typedef signed char int8_t;
 #endif
+
+#if !defined(int16_t)
+    typedef short int16_t;
+#endif
+
+#if !defined(int32_t)
+    typedef int int32_t;
+#endif
+
+#if !defined(int64_t)
+    typedef long long int64_t;
+#endif
+
+#if !defined(uint8_t)
+    typedef unsigned char uint8_t;
+#endif
+
+#if !defined(uint16_t)
+    typedef unsigned short uint16_t;
+#endif
+
+#if !defined(uint32_t)
+    typedef unsigned int uint32_t;
+#endif 
+
+#if !defined(uint64_t)
+    typedef unsigned long long uint64_t;
+#endif
+
+#endif // __CUDACC__
 
 #define PG_MAX_NUM_ATTRIBUTES 8
 #define PG_MAX_NUM_PAYLOADS 8

@@ -3,10 +3,11 @@
 #include <prayground/core/shape.h>
 #include <prayground/core/aabb.h>
 #include <prayground/ext/nanovdb/NanoVDB.h>
-#include <prayground/ext/nanovdb/util/GridHandle.h>
 
 #ifndef __CUDACC__
-#include <filesystem>
+#include <prayground/core/file_util.h>
+#include <prayground/ext/nanovdb/util/GridHandle.h>
+#include <prayground/ext/nanovdb/util/IO.h>
 #endif // __CUDACC__
 
 namespace prayground {
@@ -36,9 +37,6 @@ namespace prayground {
         void load(const std::filesystem::path& filename)
         {
             /* Check if the file exists and file format is correct. */
-            auto ext = pgGetExtension(filepath);
-            ASSERT(ext == ".vdb", "Only OpenVDB file is loaded.");
-
             auto filepath = pgFindDataPath(filename);
             ASSERT(filepath, "The VDB file '" + filename.string() + "' is not found.");
 
@@ -54,14 +52,14 @@ namespace prayground {
             std::string first_gridname = list[0].gridName;
 
             if (first_gridname.length() > 0)
-                grid_handle = nanovdb::io::readGrid<>(filepath.string(), first_gridname);
+                grid_handle = nanovdb::io::readGrid<>(filepath.value().string(), first_gridname);
             else
-                grid_handle = nanovdb::io::readGrid<>(filepath.string());
+                grid_handle = nanovdb::io::readGrid<>(filepath.value().string());
 
             if (!grid_handle)
             {
                 std::stringstream ss;
-                ss << "Unable to read " << first_gridname << " from " << filepath.string();
+                ss << "Unable to read " << first_gridname << " from " << filepath.value().string();
                 THROW(ss.str());
             }
 
@@ -127,7 +125,7 @@ namespace prayground {
         OptixBuildInput createBuildInput() override
         {
             if (d_aabb_buffer) CUDA_CHECK(cudaFree(reinterpret_cast<void*>(d_aabb_buffer)));
-            createSingleCustomBuildInput(d_aabb_buffer, this->bound(), m_sbt_index);
+            return createSingleCustomBuildInput(d_aabb_buffer, this->bound(), m_sbt_index);
         }
     private:
         T m_sigma_a, m_sigma_s, m_sigma_t;

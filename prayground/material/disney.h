@@ -23,7 +23,7 @@ class Disney final : public Material {
 public:
     struct Data
     {
-        Texture::Data tex_data;
+        Texture::Data base;
         float subsurface;
         float metallic;
         float specular;

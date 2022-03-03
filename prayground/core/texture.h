@@ -16,9 +16,9 @@ public:
         int prg_id;
     };
 
+#ifndef __CUDACC__
     Texture(int prg_id) : m_prg_id(prg_id) {}
 
-#ifndef __CUDACC__
     // Preparing texture data on the device.
     virtual void copyToDevice() = 0;
     virtual void free()

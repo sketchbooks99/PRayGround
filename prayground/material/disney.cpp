@@ -40,7 +40,7 @@ void Disney::copyToDevice()
         m_base->copyToDevice();
 
     Data data = {
-        .tex_data = m_base->getData(),
+        .base = m_base->getData(),
         .subsurface = m_subsurface,
         .metallic = m_metallic, 
         .specular = m_specular, 

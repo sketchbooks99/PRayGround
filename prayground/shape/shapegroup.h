@@ -145,12 +145,12 @@ public:
             // GPU側にMeshのデータをコピー
             // tmp_mesh.copyToDevice()としても、tmp_meshの保持するd_dataの寿命が切れる可能性があるため、それは避ける
             TriangleMesh tmp_mesh{vertices, faces, normals, texcoords};
-            MeshData data = tmp_mesh.getData();
+            TriangleMesh::Data data = tmp_mesh.getData();
             if (!d_data) 
-                CUDA_CHECK(cudaMalloc(&d_data, sizeof(MeshData)));
+                CUDA_CHECK(cudaMalloc(&d_data, sizeof(TriangleMesh::Data)));
             CUDA_CHECK(cudaMemcpy(
                 d_data,
-                &data, sizeof(MeshData),
+                &data, sizeof(TriangleMesh::Data),
                 cudaMemcpyHostToDevice
             ));
 

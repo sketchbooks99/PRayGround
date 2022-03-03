@@ -14,7 +14,7 @@ namespace prayground {
 
 #ifndef __CUDACC__
         Atmosphere_(T sigma_a, T sigma_s, float g)
-            : m_sigma_a(sigma_a), m_sigma_s(sigma_s), m_sigma_t(sigma_a + sigma_t), m_g(g) {}
+            : m_sigma_a(sigma_a), m_sigma_s(sigma_s), m_sigma_t(sigma_a + sigma_s), m_g(g) {}
 
         void copyToDevice()
         {

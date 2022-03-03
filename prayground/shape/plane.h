@@ -1,9 +1,10 @@
 #pragma once
 
 #ifndef __CUDACC__
-#include <prayground/core/shape.h>
 #include <prayground/core/cudabuffer.h>
 #endif
+
+#include <prayground/core/shape.h>
 
 namespace prayground {
 

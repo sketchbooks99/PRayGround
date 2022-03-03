@@ -54,9 +54,4 @@ void loadPly(
     std::vector<float2>& texcoords
 );
 
-void loadVDB(
-    const std::filesystem::path& filepath, 
-    float* density, 
-);
-
 } // ::prayground

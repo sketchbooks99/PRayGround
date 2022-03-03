@@ -26,8 +26,8 @@ public:
     Bitmap_(PixelFormat format, int width, int height, PixelT* data = nullptr);
     explicit Bitmap_(const std::filesystem::path& filename);
     explicit Bitmap_(const std::filesystem::path& filename, PixelFormat format);
-    // Disallow the copy-constructor
-    Bitmap_(const Bitmap_& bmp) = delete;
+    /// @todo: Check if "Disallow the copy-constructor"
+    // Bitmap_(const Bitmap_& bmp) = delete;
 
     void allocate(PixelFormat format, int width, int height);
     void setData(PixelT* data, int offset_x, int offset_y, int width, int height);

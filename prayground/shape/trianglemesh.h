@@ -1,12 +1,12 @@
 #pragma once
 
 #ifndef __CUDACC__
-#include <prayground/core/shape.h>
 #include <prayground/core/util.h>
 #include <prayground/core/attribute.h>
 #include <filesystem>
 #endif
 
+#include <prayground/core/shape.h>
 #include <prayground/math/vec_math.h>
 #include <prayground/math/util.h>
 

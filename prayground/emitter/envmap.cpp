@@ -9,10 +9,10 @@ void EnvironmentEmitter::copyToDevice()
 
     auto data = this->getData();
 
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_data), sizeof(EnvironmentEmitterData)));
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_data), sizeof(Data)));
     CUDA_CHECK(cudaMemcpy(
         reinterpret_cast<void*>(d_data), 
-        &data, sizeof(EnvironmentEmitterData), 
+        &data, sizeof(Data), 
         cudaMemcpyHostToDevice
     ));
 }

@@ -10,13 +10,6 @@
 
 namespace prayground {
 
-struct AreaEmitterData {
-    void* tex_data;
-    float intensity;
-    bool twosided;
-    unsigned int tex_program_id;
-};
-
 class AreaEmitter final : public Emitter {
 public:
     struct Data {

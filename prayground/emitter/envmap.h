@@ -13,11 +13,6 @@
 
 namespace prayground {
 
-struct EnvironmentEmitterData {
-    void* tex_data;
-    unsigned int tex_program_id;
-};
-
 class EnvironmentEmitter final : public Emitter {
 public:
     struct Data {

@@ -255,7 +255,7 @@ extern "C" __device__ void __miss__envmap()
     si->trace_terminate = true;
     si->surface_info.type = SurfaceType::None;
     si->emission = optixDirectCall<Spectrum, SurfaceInteraction*, void*>(
-        env->tex_data.prg_id, si, env->tex_data.data
+        env->texture.prg_id, si, env->texture.data
     );
 }
 
@@ -320,7 +320,7 @@ extern "C" __device__ float BSDF_FUNC(dielectric)(const float& lambda, SurfaceIn
 {
     const Dielectric::Data* dielectric = reinterpret_cast<Dielectric::Data*>(mat_data);
     si->emission = Spectrum{};
-    Spectrum albedo = optixDirectCall<Spectrum, SurfaceInteraction*, void*>(dielectric->tex_data.prg_id, si, dielectric->tex_data.data);
+    Spectrum albedo = optixDirectCall<Spectrum, SurfaceInteraction*, void*>(dielectric->texture.prg_id, si, dielectric->texture.data);
     return albedo.getSpectrumFromWavelength(lambda);
 }
 
@@ -350,7 +350,7 @@ extern "C" __device__ void SAMPLE_FUNC(diffuse)(const float& /* lambda */, Surfa
 extern "C" __device__ float BSDF_FUNC(diffuse)(const float& lambda, SurfaceInteraction* si, void* mat_data)
 {
     const Diffuse::Data* diffuse = reinterpret_cast<Diffuse::Data*>(mat_data);
-    const Spectrum albedo = optixDirectCall<Spectrum, SurfaceInteraction*, void*>(diffuse->tex_data.prg_id, si, diffuse->tex_data.data);
+    const Spectrum albedo = optixDirectCall<Spectrum, SurfaceInteraction*, void*>(diffuse->texture.prg_id, si, diffuse->texture.data);
     si->emission = Spectrum{};
     const float cosine = fmaxf(0.0f, dot(si->shading.n, si->wi));
     return albedo.getSpectrumFromWavelength(lambda) * (cosine / math::pi);
@@ -506,7 +506,7 @@ extern "C" __device__ void DC_FUNC(area_emitter)(SurfaceInteraction* si, void* s
         is_emitted = dot(si->wo, si->shading.n) < 0.0f ? 1.0f : 0.0f;
     
     const Spectrum base = optixDirectCall<Spectrum, SurfaceInteraction*, void*>(
-        area->tex_data.prg_id, si, area->tex_data.data);
+        area->texture.prg_id, si, area->texture.data);
     si->albedo = base;
     si->emission = base * area->intensity * is_emitted;
 }

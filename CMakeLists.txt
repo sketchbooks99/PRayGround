@@ -394,7 +394,7 @@ add_subdirectory(prayground)
 # add_subdirectory(examples/rayTracingRestOfYourLife)
 # add_subdirectory(examples/denoiser)
 # add_subdirectory(examples/thumbnail)
-add_subdirectory(examples/spectrum)
+# add_subdirectory(examples/spectrum)
 add_subdirectory(examples/pgVolume)
 
 ################################################################
@@ -403,7 +403,6 @@ add_subdirectory(examples/pgVolume)
 # Please add your custom applications to build :-)
 ################################################################
 add_subdirectory(apps/empty_app)
-# add_subdirectory(../PRayGroundApps/glass build/bin)
 
 ################################################################
 # Unit test

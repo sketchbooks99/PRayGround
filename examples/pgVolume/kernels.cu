@@ -51,13 +51,11 @@ extern "C" __device__ void __raygen__medium()
 {
     const RaygenData* raygen = reinterpret_cast<RaygenData*>(optixGetSbtDataPointer());
 
-    const int subframe_index = params.frame;
+    const int frame = params.frame;
     const uint3 idx = optixGetLaunchIndex();
-    unsigned int seed = tea<4>(idx.x * params.width + idx.y, subframe_index);
+    unsigned int seed = tea<4>(idx.x * params.width + idx.y, frame);
 
     float3 result = make_float3(0.0f);
-    float3 normal = make_float3(0.0f);
-    float p_depth = 0.0f;
     float3 albedo = make_float3(0.0f);
 
     int i = params.samples_per_launch;
@@ -96,7 +94,6 @@ extern "C" __device__ void __raygen__medium()
                 break;
             }
 
-            // Get emission from area emitter
             if (si.surface_info.type == SurfaceType::AreaEmitter)
             {
                 // Evaluating emission from emitter
@@ -156,7 +153,7 @@ extern "C" __device__ void __raygen__medium()
             }
 
             ro = si.p;
-            rd = si.wo;
+            rd = si.wi;
 
             ++depth;
         }
@@ -171,9 +168,9 @@ extern "C" __device__ void __raygen__medium()
 
     float3 accum_color = result / static_cast<float>(params.samples_per_launch);
 
-    if (subframe_index > 0)
+    if (frame > 0)
     {
-        const float a = 1.0f / static_cast<float>(subframe_index + 1);
+        const float a = 1.0f / static_cast<float>(frame + 1);
         const float3 accum_color_prev = make_float3(params.accum_buffer[image_index]);
         accum_color = lerp(accum_color_prev, accum_color, a);
     }
@@ -209,9 +206,10 @@ extern "C" __device__ void __miss__envmap()
     si->uv = make_float2(u, v);
     si->trace_terminate = true;
     si->surface_info.type = SurfaceType::None;
-    si->emission = optixDirectCall<float3, SurfaceInteraction*, void*>(
-        env->tex_data.prg_id, si, env->tex_data.data
+    si->emission = optixDirectCall<float3, const float2&, void*>(
+        env->texture.prg_id, si->uv, env->texture.data
     );
+    si->albedo = si->emission;
 }
 
 /* Material functions */
@@ -235,7 +233,7 @@ extern "C" __device__ void __direct_callable__sample_diffuse(SurfaceInteraction*
 extern "C" __device__ float3 __continuation_callable__bsdf_diffuse(SurfaceInteraction* si, void* mat_data)
 {
     const Diffuse::Data* diffuse = reinterpret_cast<Diffuse::Data*>(mat_data);
-    const float3 albedo = optixDirectCall<float3, SurfaceInteraction*, void*>(diffuse->tex_data.prg_id, si, diffuse->tex_data.data);
+    const float3 albedo = optixDirectCall<float3, const float2&, void*>(diffuse->texture.prg_id, si->uv, diffuse->texture.data);
     si->albedo = albedo;
     si->emission = make_float3(0.0f);
     const float cosine = fmaxf(0.0f, dot(si->shading.n, si->wi));
@@ -248,6 +246,21 @@ extern "C" __device__ float __direct_callable__pdf_diffuse(SurfaceInteraction* s
     return cosine / math::pi;
 }
 
+extern "C" __device__ float __direct_callable__sample_HenyeyGreenstein(SurfaceInteraction * si, void* mat_data)
+{
+
+}
+
+extern "C" __device__ float3 __continuation_callable__bsdf_medium(SurfaceInteraction * si, void* mat_data)
+{
+
+}
+
+extern "C" __device__ float __direct_callable__pdf_medium(SurfaceInteraction * si, void* mat_data)
+{
+    
+}
+
 extern "C" __device__ void __direct_callable__area_emitter(SurfaceInteraction* si, void* surface_data)
 {
     const AreaEmitter::Data* area = reinterpret_cast<AreaEmitter::Data*>(surface_data);
@@ -256,8 +269,8 @@ extern "C" __device__ void __direct_callable__area_emitter(SurfaceInteraction* s
     if (!area->twosided)
         is_emitted = dot(si->wo, si->shading.n) < 0.0f ? 1.0f : 0.0f;
     
-    const float3 base = optixDirectCall<float3, SurfaceInteraction*, void*>(
-        area->tex_data.prg_id, si, area->tex_data.data);
+    const float3 base = optixDirectCall<float3, const float2&, void*>(
+        area->texture.prg_id, si->uv, area->texture.data);
     si->albedo = base;
     si->emission = base * area->intensity * is_emitted;
 }
@@ -306,7 +319,7 @@ extern "C" __device__ void __closesthit__plane()
     si->shading.dpdv = optixTransformNormalFromObjectToWorldSpace(make_float3(0.0f, 0.0f, 1.0f));
 }
 
-static inline __device__ void confine(const nanovdb::BBox<nanovdb::Coord> &bbox, nanovdb::Vec3f &ivec)
+static inline __device__ void confine(const nanovdb::BBox<nanovdb::Coord>& bbox, nanovdb::Vec3f& ivec)
 {
     auto imin = nanovdb::Vec3f( bbox.min() );
     auto imax = nanovdb::Vec3f( bbox.max() ) + nanovdb::Vec3f( 1.0f );
@@ -362,6 +375,9 @@ extern "C" __device__ void __intersection__grid()
     const nanovdb::FloatGrid* density = reinterpret_cast<const nanovdb::FloatGrid*>(grid->density);
     assert(density);
 
+    const auto& tree = density->tree();
+    auto acc = tree.getAccessor();
+
     Ray ray = getLocalRay();
 
     auto bbox = density->indexBBox();
@@ -370,10 +386,18 @@ extern "C" __device__ void __intersection__grid()
     auto iRay = nanovdb::Ray<float>(reinterpret_cast<const nanovdb::Vec3f&>(ray.o),
         reinterpret_cast<const nanovdb::Vec3f&>(ray.d), t0, t1);
 
+    auto* si = getSurfaceInteraction();
+
+    uint32_t seed = si->seed;
+
     if (iRay.intersects(bbox, t0, t1))
     {
-        optixSetPayload_2(__float_as_int(t1));
-        optixReportIntersection(fmaxf(t0, ray.tmin), 0);
+        auto start = density->worldToIndexF(iRay(t0));
+        auto end = density->worldToIndexF(iRay(t1));
+        confine(bbox, start, end);
+        float transmittance = transmittanceHDDA(start, end, acc);
+        if (rnd(seed) > transmittance)
+            optixReportIntersection(t1, 0);
     }
 }
 
@@ -386,36 +410,32 @@ extern "C" __device__ void __closesthit__grid()
     auto acc = tree.getAccessor();
 
     Ray ray = getWorldRay();
-    const float t0 = optixGetRayTmax();
-    const float t1 = __int_as_float(optixGetPayload_2());
+    //const float t0 = optixGetRayTmax();
+    //const float t1 = __int_as_float(optixGetPayload_2());
 
-    const auto nanoray = nanovdb::Ray<float>(reinterpret_cast<const nanovdb::Vec3f&>(ray.o), 
-        reinterpret_cast<const nanovdb::Vec3f&>(ray.d));
-    auto start = density->worldToIndexF(nanoray(t0));
-    auto end = density->worldToIndexF(nanoray(t1));
+    //const auto nanoray = nanovdb::Ray<float>(reinterpret_cast<const nanovdb::Vec3f&>(ray.o), 
+    //    reinterpret_cast<const nanovdb::Vec3f&>(ray.d));
+    //auto start = density->worldToIndexF(nanoray(t0));
+    //auto end = density->worldToIndexF(nanoray(t1));
 
-    auto bbox = density->indexBBox();
-    confine(bbox, start, end);
+    //auto bbox = density->indexBBox();
+    //confine(bbox, start, end);
 
-    float transmittance = transmittanceHDDA(start, end, acc);
+    //float transmittance = transmittanceHDDA(start, end, acc);
 
     SurfaceInteraction* si = getSurfaceInteraction();
 
     si->p = ray.at(ray.tmax);
-    si->shading.n = make_float3(0, 1, 0); // arbitrary
     si->t = ray.tmax;
     si->wo = ray.d;
-    si->uv = make_float2(0.5f); // arbitrary
     si->surface_info = data->surface_info;
     si->surface_info.type = SurfaceType::None;
-    si->albedo = make_float3(0.0f);
-    si->emission = make_float3(0.0f);
-    si->shading.dpdu = optixTransformNormalFromObjectToWorldSpace(make_float3(1.0f, 0.0f, 0.0f)); // arbitrary
-    si->shading.dpdv = optixTransformNormalFromObjectToWorldSpace(make_float3(0.0f, 0.0f, 1.0f)); // arbitrary
 
-    uint32_t seed = si->seed;
-    if (rnd(seed) < transmittance)
-        si->trace_terminate = true;
+    //uint32_t seed = si->seed;
+    //if (transmittance > 0.0f)
+    //    si->trace_terminate = true;
+    //else
+    //    si->trace_terminate = false;
 }
 
 /* Texture functions */
@@ -435,7 +455,7 @@ extern "C" __device__ float3 __direct_callable__constant(const float2& uv, void*
 extern "C" __device__ float3 __direct_callable__checker(const float2& uv, void* tex_data)
 {
     const CheckerTexture::Data* checker = reinterpret_cast<CheckerTexture::Data*>(tex_data);
-    const bool is_odd = sinf(uv.x * math::pi * checker->scale) * sinf(uv.y * math::pi * checker->scale);
+    const bool is_odd = sinf(uv.x * math::pi * checker->scale) * sinf(uv.y * math::pi * checker->scale) < 0;
     return is_odd ? checker->color1 : checker->color2;
 }
 

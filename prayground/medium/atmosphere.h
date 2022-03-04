@@ -2,18 +2,18 @@
 
 namespace prayground {
 
-    template <typename T>
+    template <typename Spectrum>
     class Atmosphere_ {
     public:
         struct Data {
-            T sigma_a;
-            T sigma_s;
-            T sigma_t;
+            Spectrum sigma_a;
+            Spectrum sigma_s;
+            Spectrum sigma_t;
             float m_g;
         };
 
 #ifndef __CUDACC__
-        Atmosphere_(T sigma_a, T sigma_s, float g)
+        Atmosphere_(const Spectrum& sigma_a, const Spectrum& sigma_s, float g)
             : m_sigma_a(sigma_a), m_sigma_s(sigma_s), m_sigma_t(sigma_a + sigma_s), m_g(g) {}
 
         void copyToDevice()
@@ -23,7 +23,7 @@ namespace prayground {
                 .sigma_a = m_sigma_a,
                 .sigma_s = m_sigma_s,
                 .sigma_t = m_sigma_t,
-                .g = m_g,
+                .g = m_g
             };
 
             if (!d_data)
@@ -38,9 +38,10 @@ namespace prayground {
         }
 
     private:
-        T m_sigma_a, m_sigma_s, m_sigma_t;
+        Spectrum m_sigma_a, m_sigma_s, m_sigma_t;
         float m_g;
 
+        // Device side pointer
         void* d_data;
 #endif // __CUDACC__
     };

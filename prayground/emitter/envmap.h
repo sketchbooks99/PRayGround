@@ -16,7 +16,7 @@ namespace prayground {
 class EnvironmentEmitter final : public Emitter {
 public:
     struct Data {
-        Texture::Data tex_data;
+        Texture::Data texture;
     };
 
 #ifndef __CUDACC__

@@ -489,6 +489,7 @@ template <typename PixelT>
 OptixImage2D Bitmap_<PixelT>::toOptixImage2D() const
 {
     UNIMPLEMENTED();
+    return OptixImage2D{};
 }
 
 // --------------------------------------------------------------------

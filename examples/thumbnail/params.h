@@ -8,6 +8,11 @@
 
 using namespace prayground;
 
+using Spectrum = float3;
+
+using ConstantTexture = ConstantTexture_<Spectrum>;
+using CheckerTexture = CheckerTexture_<Spectrum>;
+
 struct AreaEmitterInfo
 {
     void* shape_data;
@@ -34,23 +39,9 @@ struct LaunchParams
     float white;
 };
 
-struct CameraData 
-{
-    float3 origin; 
-    float3 lookat;
-    float3 U;
-    float3 V;
-    float3 W;
-    float fov;
-    float aspect;
-    float aperture;
-    float focus_distance;
-    float farclip;
-};
-
 struct RaygenData
 {
-    CameraData camera;
+    LensCamera::Data camera;
 };
 
 struct AlphaTexture

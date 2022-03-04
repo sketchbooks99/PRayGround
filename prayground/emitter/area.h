@@ -13,7 +13,7 @@ namespace prayground {
 class AreaEmitter final : public Emitter {
 public:
     struct Data {
-        Texture::Data tex_data;
+        Texture::Data texture;
         float intensity;
         bool twosided;
     };

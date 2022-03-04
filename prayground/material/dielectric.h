@@ -15,7 +15,7 @@ enum class Sellmeier
 class Dielectric final : public Material {
 public:
     struct Data {
-        Texture::Data tex_data;
+        Texture::Data texture;
         float ior;
         float absorb_coeff; 
         Sellmeier sellmeier;

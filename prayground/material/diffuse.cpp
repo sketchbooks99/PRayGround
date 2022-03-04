@@ -27,7 +27,7 @@ void Diffuse::copyToDevice()
         m_texture->copyToDevice();
 
     Data data {
-        .tex_data = m_texture->getData(),
+        .texture = m_texture->getData(),
         .twosided = m_twosided
     };
 

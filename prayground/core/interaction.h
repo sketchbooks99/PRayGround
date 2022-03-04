@@ -44,9 +44,9 @@ namespace prayground {
         void* data;
 
         // 重点的サンプリングやbsdfの評価用のCallable関数へのID
-        unsigned int sample_id;
-        unsigned int bsdf_id;
-        unsigned int pdf_id;
+        uint32_t sample_id;
+        uint32_t bsdf_id;
+        uint32_t pdf_id;
 
         SurfaceType type;
     };
@@ -54,7 +54,7 @@ namespace prayground {
     struct MediumInfo {
         void* data;
 
-        unsigned int transmission_id;
+        uint32_t phase_func_id;
     };
 
     /// @note Currently \c spectrum is RGB representation, not spectrum. 
@@ -95,6 +95,17 @@ namespace prayground {
 
         bool trace_terminate;
         bool radiance_evaled; // For NEE
+    };
+
+    struct MediumInteraction {
+        float3 p;
+
+        float3 wi;
+        float3 wo;
+
+        float t;
+
+
     };
 
 } // ::prayground

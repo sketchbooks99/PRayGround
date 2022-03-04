@@ -3,6 +3,7 @@
 #include <prayground/core/attribute.h>
 #include <prayground/math/vec_math.h>
 #include <prayground/shape/trianglemesh.h>
+#include <prayground/ext/nanovdb/util/GridHandle.h>
 #include <filesystem>
 #include <vector>
 
@@ -52,6 +53,13 @@ void loadPly(
     std::vector<Face>& faces, 
     std::vector<float3>& normals,
     std::vector<float2>& texcoords
+);
+
+// Load NanoVDB (not "OpenVDB" file!) 
+// This only accepts .nvdb file
+void loadNanoVDB(
+    const std::filesystem::path& filepath, 
+    nanovdb::GridHandle<>& handle
 );
 
 } // ::prayground

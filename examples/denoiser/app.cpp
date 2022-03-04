@@ -30,15 +30,7 @@ void App::handleCameraUpdate()
 
     RaygenRecord* rg_record = reinterpret_cast<RaygenRecord*>(sbt.raygenRecord());
     RaygenData rg_data;
-    rg_data.camera = 
-    {
-        .origin = camera.origin(),
-        .lookat = camera.lookat(),
-        .U = U,
-        .V = V,
-        .W = W, 
-        .farclip = camera.farClip()
-    };
+    rg_data.camera = camera.getData();
     CUDA_CHECK(cudaMemcpy(&rg_record->data, &rg_data, sizeof(RaygenData), cudaMemcpyHostToDevice));
 
     initResultBufferOnDevice();
@@ -98,23 +90,12 @@ void App::setup()
     camera.setFarClip(5000);
     camera.enableTracking(pgGetCurrentWindow());
 
-    float3 U, V, W;
-    camera.UVWFrame(U, V, W);
-
     // Raygen program
     ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, raygen_module, "__raygen__pinhole");
     // Shader binding table data for raygen program
     RaygenRecord raygen_record;
     raygen_prg.recordPackHeader(&raygen_record);
-    raygen_record.data.camera = 
-    {
-        .origin = camera.origin(), 
-        .lookat = camera.lookat(), 
-        .U = U, 
-        .V = V, 
-        .W = W, 
-        .farclip = camera.farClip()
-    };
+    raygen_record.data.camera = camera.getData();
     sbt.setRaygenRecord(raygen_record);
 
     auto setupCallable = [&](const Module& module, const string& dc, const string& cc) -> uint32_t

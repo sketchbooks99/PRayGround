@@ -10,5 +10,8 @@ build/
 *.exr
 *.hdr
 
+*.vdb
+*.nvdb
+
 *.DS_Store
 

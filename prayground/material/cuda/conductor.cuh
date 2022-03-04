@@ -21,7 +21,7 @@ CALLABLE_FUNC float3 CC_FUNC(bsdf_conductor)(SurfaceInteraction* si, void* mat_d
 {
     const Conductor::Data* conductor = reinterpret_cast<Conductor::Data*>(mat_data);
     si->emission = make_float3(0.0f);
-    return optixDirectCall<float3, SurfaceInteraction*, void*>(conductor->tex_program_id, si, conductor->tex_data);
+    return optixDirectCall<float3, SurfaceInteraction*, void*>(conductor->tex_program_id, si, conductor->texture);
 }
 
 CALLABLE_FUNC float DC_FUNC(pdf_conductor)(SurfaceInteraction* si, void* mat_data)

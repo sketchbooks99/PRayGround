@@ -6,6 +6,7 @@
 
 #ifndef __CUDACC__
 #include <prayground/core/file_util.h>
+#include <prayground/core/load3d.h>
 #include <prayground/ext/nanovdb/util/GridHandle.h>
 #include <prayground/ext/nanovdb/util/IO.h>
 #endif // __CUDACC__
@@ -15,20 +16,20 @@ namespace prayground {
     /* 3D volume medium using OpenVDB format */
 
     /// @todo Initliaze with a empty grid to enable procedual GridMedium calculation
-    template <typename T>
+    template <typename Spectrum>
     class GridMedium_ : public Shape {
     public:
         struct Data {
-            T sigma_a;
-            T sigma_s;
-            T sigma_t;
+            Spectrum sigma_a;
+            Spectrum sigma_s;
+            Spectrum sigma_t;
             float g;
             void* density;
         };
 
 #ifndef __CUDACC__
         GridMedium_(const std::filesystem::path& filename,
-            const T& sigma_a, const T& sigma_s, float g)
+            const Spectrum& sigma_a, const Spectrum& sigma_s, float g)
             : m_sigma_a(sigma_a), m_sigma_s(sigma_s), m_sigma_t(sigma_a + sigma_s), m_g(g)
         {
             load(filename);
@@ -38,38 +39,16 @@ namespace prayground {
         {
             /* Check if the file exists and file format is correct. */
             auto filepath = pgFindDataPath(filename);
-            ASSERT(filepath, "The VDB file '" + filename.string() + "' is not found.");
-
-            auto list = nanovdb::io::readGridMetaData(filepath.value().string());
-            pgLog("Loading VDB file '" + filepath.value().string() + " ...");
-            for (auto& m : list)
-                pgLog("       ", m.gridName);
-            ASSERT(list.size() > 0, "The grid data is not found or incorrect.");
-
-            /* Create grid */
-            nanovdb::GridHandle<> grid_handle;
-
-            std::string first_gridname = list[0].gridName;
-
-            if (first_gridname.length() > 0)
-                grid_handle = nanovdb::io::readGrid<>(filepath.value().string(), first_gridname);
-            else
-                grid_handle = nanovdb::io::readGrid<>(filepath.value().string());
-
-            if (!grid_handle)
+            ASSERT(filepath, "The NanoVDB file '" + filename.string() + "' is not found.");
+            
+            auto ext = pgGetExtension(filename);
+            if (ext == ".nvdb")
             {
-                std::stringstream ss;
-                ss << "Unable to read " << first_gridname << " from " << filepath.value().string();
-                THROW(ss.str());
+                pgLog("Loading NanoVDB file '" + filepath.value().string() + " ...");
+                loadNanoVDB(filepath.value(), m_handle);
             }
-
-            auto* meta_data = m_handle.gridMetaData();
-            if (meta_data->isPointData())
-                THROW("NanoVDB Point Data cannot be handled by PRayGround.");
-            if (meta_data->isLevelSet())
-                THROW("NanoVDB Level Sets cannot be handled by PRayGround.");
-
-            ASSERT(m_handle.size() != 0, "The size of grid data is zero.");
+            else 
+                THROW("GridMedium can only load NanoVDB file");
         }
 
         constexpr ShapeType type() override
@@ -79,19 +58,12 @@ namespace prayground {
 
         void copyToDevice() override
         {
-            Data data;
+            auto data = this->getData();
 
-            if (d_density) 
-                CUDA_CHECK(cudaMalloc(&d_density, m_handle.size()));
-            CUDA_CHECK(cudaMemcpy(d_density, m_handle.data(), m_handle.size(), cudaMemcpyHostToDevice));
-
-            data = Data{
-                .sigma_a = m_sigma_a,
-                .sigma_s = m_sigma_s,
-                .sigma_t = m_sigma_t,
-                .g = m_g,
-                .density = d_density
-            };
+            // Copy data to device through Shape::d_data
+            if (!d_data)
+                CUDA_CHECK(cudaMalloc(&d_data, sizeof(Data)));
+            CUDA_CHECK(cudaMemcpy(d_data, &data, sizeof(Data), cudaMemcpyHostToDevice));
         }
 
         void free() override
@@ -127,14 +99,30 @@ namespace prayground {
             if (d_aabb_buffer) CUDA_CHECK(cudaFree(reinterpret_cast<void*>(d_aabb_buffer)));
             return createSingleCustomBuildInput(d_aabb_buffer, this->bound(), m_sbt_index);
         }
+
+        Data getData() 
+        {
+            // Copy density data to device
+            if (!d_density) 
+                CUDA_CHECK(cudaMalloc(&d_density, m_handle.size()));
+            CUDA_CHECK(cudaMemcpy(d_density, m_handle.data(), m_handle.size(), cudaMemcpyHostToDevice));
+
+            return Data{
+                .sigma_a = m_sigma_a,
+                .sigma_s = m_sigma_s,
+                .sigma_t = m_sigma_t,
+                .g = m_g,
+                .density = d_density
+            };
+        }
     private:
-        T m_sigma_a, m_sigma_s, m_sigma_t;
+        Spectrum m_sigma_a, m_sigma_s, m_sigma_t;
         float m_g;
 
         nanovdb::GridHandle<> m_handle;
 
-        CUdeviceptr d_aabb_buffer;
-        void* d_density;
+        CUdeviceptr d_aabb_buffer{ 0 };
+        void* d_density{ nullptr };
 #endif
     };
 

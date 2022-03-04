@@ -8,11 +8,15 @@
 #endif
 #include <prayground/ext/tinyobjloader/tiny_obj_loader.h>
 
+#include <prayground/ext/nanovdb/util/IO.h>
+
 namespace prayground {
+
+namespace fs = std::filesystem;
 
 // -------------------------------------------------------------------------------
 void loadObj(
-    const std::filesystem::path& filepath, 
+    const fs::path& filepath, 
     std::vector<float3>& vertices,
     std::vector<Face>& faces, 
     std::vector<float3>& normals,  
@@ -80,7 +84,7 @@ void loadObj(
 }
 
 void loadObj(
-    const std::filesystem::path& filepath, 
+    const fs::path& filepath, 
     TriangleMesh& mesh
 )
 {
@@ -89,14 +93,14 @@ void loadObj(
 
 // -------------------------------------------------------------------------------
 void loadObjWithMtl(
-    const std::filesystem::path& objpath, 
+    const fs::path& objpath, 
     std::vector<float3>& vertices,
     std::vector<Face>& faces, 
     std::vector<float3>& normals,  
     std::vector<float2>& texcoords, 
     std::vector<uint32_t>& face_indices,
     std::vector<Attributes>& material_attribs, 
-    const std::filesystem::path& mtlpath = ""
+    const fs::path& mtlpath = ""
 )
 {
     tinyobj::ObjReaderConfig reader_config;
@@ -217,8 +221,8 @@ void loadObjWithMtl(
 }
 
 void loadObjWithMtl(
-    const std::filesystem::path& objpath, 
-    const std::filesystem::path& mtlpath, 
+    const fs::path& objpath, 
+    const fs::path& mtlpath, 
     TriangleMesh& mesh, 
     std::vector<Attributes>& material_attribs
 )
@@ -237,7 +241,7 @@ void loadObjWithMtl(
 }
 
 void loadObjWithMtl(
-    const std::filesystem::path& filepath, 
+    const fs::path& filepath, 
     TriangleMesh& mesh, 
     std::vector<Attributes>& material_attribs
 )
@@ -257,7 +261,7 @@ void loadObjWithMtl(
 
 // -------------------------------------------------------------------------------
 void loadPly(
-    const std::filesystem::path& filepath, 
+    const fs::path& filepath, 
     std::vector<float3>& vertices,
     std::vector<Face>& faces,
     std::vector<float3>& normals, 
@@ -327,4 +331,40 @@ void loadPly(
         } );
 }
 
-} // ::prayground
+// -------------------------------------------------------------------------------
+void loadNanoVDB(const fs::path& filepath, nanovdb::GridHandle<>& handle)
+{
+    nanovdb::GridHandle<> nano_handle;
+
+    auto list = nanovdb::io::readGridMetaData(filepath.string());
+    for (auto& m : list)
+        pgLog("       ", m.gridName);
+    ASSERT(list.size() > 0, "The grid data is not found or incorrect.");
+
+    /* Create grid */
+    std::string first_gridname = list[0].gridName;
+
+    if (first_gridname.length() > 0)
+        nano_handle = nanovdb::io::readGrid<>(filepath.string(), first_gridname);
+    else
+        nano_handle = nanovdb::io::readGrid<>(filepath.string());
+
+    if (!nano_handle)
+    {
+        std::stringstream ss;
+        ss << "Unable to read " << first_gridname << " from " << filepath.string();
+        THROW(ss.str());
+    }
+
+    auto* meta_data = nano_handle.gridMetaData();
+    if (meta_data->isPointData())
+        THROW("NanoVDB Point Data cannot be handled by PRayGround.");
+    if (meta_data->isLevelSet())
+        THROW("NanoVDB Level Sets cannot be handled by PRayGround.");
+
+    ASSERT(nano_handle.size() != 0, "The size of grid data is zero.");
+
+    handle = std::move(nano_handle);
+}
+
+} // namespace prayground

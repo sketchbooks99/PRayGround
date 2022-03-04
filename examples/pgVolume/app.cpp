@@ -65,7 +65,7 @@ void App::setup()
     initResultBufferOnDevice();
 
     // Camera settings
-    camera.setOrigin(0, 0, -100);
+    camera.setOrigin(0, 0, -1000);
     camera.setLookat(0, 0, 0);
     camera.setUp(0, 1, 0);
     camera.setFarClip(5000);
@@ -104,6 +104,7 @@ void App::setup()
     uint32_t area_emitter_prg_id = setupCallable(DC_FUNC_STR("area_emitter"), "");
     
     textures.emplace("env", new FloatBitmapTexture("resources/image/sepulchral_chapel_rotunda_4k.exr", bitmap_prg_id));
+    //textures.emplace("env", new CheckerTexture(make_float3(0.8f), make_float3(0.3f), 20.0f, checker_prg_id));
 
     env = EnvironmentEmitter{ textures.at("env") };
     env.copyToDevice();
@@ -197,7 +198,7 @@ void App::setup()
 
     // Shapes
     shapes.emplace("floor", new Plane(make_float2(-0.5f), make_float2(0.5f)));
-    shapes.emplace("smoke", new GridMedium("resources/volume/smoke.nvdb", make_float3(0.8f), make_float3(0.2f), 0.5f));
+    shapes.emplace("smoke", new GridMedium("resources/volume/wdas_cloud_quarter.nvdb", make_float3(0.8f), make_float3(0.2f), 0.5f));
 
     // Floor
     Primitive floor{ shapes.at("floor"), materials.at("floor"), diffuse_sample_bsdf_id, diffuse_pdf_id };
@@ -262,7 +263,7 @@ void App::mouseDragged(float x, float y, int button)
 // ------------------------------------------------------------------
 void App::mouseReleased(float x, float y, int button)
 {
-    camera_update = true;
+    
 }
 
 // ------------------------------------------------------------------
@@ -274,7 +275,7 @@ void App::mouseMoved(float x, float y)
 // ------------------------------------------------------------------
 void App::mouseScrolled(float x, float y)
 {
-    
+    camera_update = true;
 }
 
 // ------------------------------------------------------------------

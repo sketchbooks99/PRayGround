@@ -12,7 +12,7 @@ namespace prayground {
 class Conductor final : public Material {
 public:
     struct Data {
-        Texture::Data tex_data;
+        Texture::Data texture;
         bool twosided;
     };
 

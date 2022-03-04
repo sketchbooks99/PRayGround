@@ -45,19 +45,7 @@ void App::handleCameraUpdate()
 
     RaygenRecord* rg_record = reinterpret_cast<RaygenRecord*>(sbt.raygenRecord());
     RaygenData rg_data;
-    rg_data.camera =
-    {
-        .origin = camera.origin(),
-        .lookat = camera.lookat(),
-        .U = U,
-        .V = V,
-        .W = W,
-        .fov = camera.fov(),
-        .aspect = camera.aspect(),
-        .aperture = camera.aperture(),
-        .focus_distance = camera.focusDistance(),
-        .farclip = camera.farClip()
-    };
+    rg_data.camera = camera.getData();
 
     CUDA_CHECK(cudaMemcpy(
         reinterpret_cast<void*>(&rg_record->data),
@@ -120,27 +108,13 @@ void App::setup()
     camera.setAperture(2.0f);
     camera.setFocusDistance(60);
     camera.enableTracking(pgGetCurrentWindow());
-    float3 U, V, W;
-    camera.UVWFrame(U, V, W);
 
     // Raygen program
     ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, raygen_module, "__raygen__pinhole");
     // Shader binding table data for raygen program
     RaygenRecord raygen_record;
     raygen_prg.recordPackHeader(&raygen_record);
-    raygen_record.data.camera =
-    {
-        .origin = camera.origin(),
-        .lookat = camera.lookat(),
-        .U = U, 
-        .V = V, 
-        .W = W,
-        .fov = camera.fov(),
-        .aspect = camera.aspect(),
-        .aperture = camera.aperture(), 
-        .focus_distance = camera.focusDistance(),
-        .farclip = camera.farClip()
-    };
+    raygen_record.data.camera = camera.getData();
     sbt.setRaygenRecord(raygen_record);
 
     auto setupCallable = [&](const Module& module, const std::string& dc, const std::string& cc)

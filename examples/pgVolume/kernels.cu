@@ -248,7 +248,7 @@ extern "C" __device__ float __direct_callable__pdf_diffuse(SurfaceInteraction* s
 
 extern "C" __device__ float __direct_callable__sample_HenyeyGreenstein(SurfaceInteraction * si, void* mat_data)
 {
-
+    
 }
 
 extern "C" __device__ float3 __continuation_callable__bsdf_medium(SurfaceInteraction * si, void* mat_data)
@@ -368,6 +368,29 @@ static inline __device__ float transmittanceHDDA(
     return transmittance;
 }
 
+template <typename AccT>
+static inline __device__ float rayMarching(
+    const nanovdb::Vec3f& ro, const nanovdb::Vec3f& rd,
+    const float tmin, const float tmax, uint32_t& seed, GridMedium::Data* grid)
+{
+    const nanovdb::FloatGrid* density = reinterpret_cast<const nanovdb::FloatGrid*>(grid->density);
+    const auto& tree = density->tree();
+    auto acc = tree.getAccessor();
+
+    nanovdb::Ray<float> ray(ro, rd, tmin, tmax);
+
+    // Sampling optical depth
+    float tau_s = -logf(1.0f - rnd(seed));
+    // Initialize free-path
+    float t = tmin;
+    float tau = 0.0f;
+    while (tau < tau_s)
+    {
+        float3 p = ro - t * rd;
+        
+    }
+}
+
 extern "C" __device__ void __intersection__grid()
 {
     const HitgroupData* data = reinterpret_cast<const HitgroupData*>(optixGetSbtDataPointer());
@@ -386,18 +409,10 @@ extern "C" __device__ void __intersection__grid()
     auto iRay = nanovdb::Ray<float>(reinterpret_cast<const nanovdb::Vec3f&>(ray.o),
         reinterpret_cast<const nanovdb::Vec3f&>(ray.d), t0, t1);
 
-    auto* si = getSurfaceInteraction();
-
-    uint32_t seed = si->seed;
-
     if (iRay.intersects(bbox, t0, t1))
     {
-        auto start = density->worldToIndexF(iRay(t0));
-        auto end = density->worldToIndexF(iRay(t1));
-        confine(bbox, start, end);
-        float transmittance = transmittanceHDDA(start, end, acc);
-        if (rnd(seed) > transmittance)
-            optixReportIntersection(t1, 0);
+        optixSetPayload_2(__float_as_uint(t1));
+        optixReportIntersection(fmaxf(t0, ray.tmin), 0);
     }
 }
 
@@ -410,8 +425,8 @@ extern "C" __device__ void __closesthit__grid()
     auto acc = tree.getAccessor();
 
     Ray ray = getWorldRay();
-    //const float t0 = optixGetRayTmax();
-    //const float t1 = __int_as_float(optixGetPayload_2());
+    const float t0 = optixGetRayTmax();
+    const float t1 = __int_as_float(getPayload<2>());
 
     //const auto nanoray = nanovdb::Ray<float>(reinterpret_cast<const nanovdb::Vec3f&>(ray.o), 
     //    reinterpret_cast<const nanovdb::Vec3f&>(ray.d));

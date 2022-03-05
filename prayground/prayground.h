@@ -51,6 +51,7 @@
 #include "math/matrix.h"
 #include "math/random.h"
 #include "math/noise.h"
+#include "math/vec.h"
 
 // shape include
 #include "shape/sphere.h"
@@ -81,12 +82,12 @@
 #include "medium/gridmedium.h"
 
 #ifdef __CUDACC__ // GPU only
+	#include "optix/cuda/device_util.cuh"
+
 	#include "core/ray.h"
 	#include "core/bsdf.h"
 	#include "core/interaction.h"
 	#include "core/onb.h"
-
-	#include "optix/cuda/device_util.cuh"
 #endif // __CUDACC__
 
 using namespace prayground;

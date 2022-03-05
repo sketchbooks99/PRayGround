@@ -37,12 +37,13 @@ template <typename T> INLINE HOSTDEVICE float4 operator*(const Matrix<T, 3>, con
 template <typename T> INLINE HOSTDEVICE float3 operator*(const Matrix<T, 4>, const float3& v);
  
 // Class definition
-template <typename T, unsigned int N>
+template <typename T, uint32_t N>
 class Matrix
 {
 public:
     using floatN = typename Vector<T, N>::Type;
     using TfloatN = typename Vector<T, N>::TransformType;
+    using Dim = N;
 
     HOSTDEVICE Matrix();
     HOSTDEVICE Matrix(const Matrix& m);

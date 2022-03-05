@@ -4,6 +4,10 @@
 #include <curand.h>
 #include <curand_kernel.h>
 
+#ifdef __CUDACC__
+#include <prayground/optix/cuda/device_util.cuh>
+#endif
+
 namespace prayground {
 
     enum class SurfaceType : unsigned int {
@@ -57,6 +61,11 @@ namespace prayground {
         uint32_t phase_func_id;
     };
 
+    struct MediumInterface {
+        MediumInfo outside;
+        MediumInfo inside;
+    };
+
     /// @note Currently \c spectrum is RGB representation, not spectrum. 
     /// @todo template <typename Spectrum>
     template <typename Spectrum>
@@ -89,7 +98,7 @@ namespace prayground {
             float3 dndu, dndv;
         } shading;
 
-        unsigned int seed;
+        uint32_t seed;
 
         SurfaceInfo surface_info;
 
@@ -105,7 +114,7 @@ namespace prayground {
 
         float t;
 
-
+        MediumInterface medium_interface;
     };
 
 } // ::prayground

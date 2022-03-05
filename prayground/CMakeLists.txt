@@ -30,6 +30,7 @@ set(sources
   # Math libraries ==========
   math/matrix.h
   math/noise.h
+  math/vec.h
   math/vec_math.h
   math/util.h
   math/random.h

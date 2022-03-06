@@ -44,6 +44,10 @@
 
 #include "core/spectrum.h"
 #include "core/aabb.h"
+#include "core/sampler.h"
+#include "core/bsdf.h"
+#include "core/interaction.h"
+#include "core/onb.h"
 
 // math utilities
 #include "math/util.h"
@@ -80,14 +84,12 @@
 // Medium include 
 #include "medium/atmosphere.h"
 #include "medium/gridmedium.h"
+#include "medium/vdbgrid.h"
 
 #ifdef __CUDACC__ // GPU only
 	#include "optix/cuda/device_util.cuh"
 
 	#include "core/ray.h"
-	#include "core/bsdf.h"
-	#include "core/interaction.h"
-	#include "core/onb.h"
 #endif // __CUDACC__
 
 using namespace prayground;

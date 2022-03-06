@@ -1,41 +1,72 @@
 #pragma once
 
 #include <vector_types.h>
+#include <vector_functions.h>
 #include <prayground/optix/macros.h>
 
 #ifndef __CUDACC__
 #include <iostream>
 #endif
 
-#define VEC_DECL_T(name)              \
-    using name##f  = name<float>;     \
-    using name##i  = name<int32_t>;   \
-    using name##c  = name<int8_t>;    \
-    using name##ui = name<uint32_t>;  \
-    using name##u  = name<uint8_t>;                     
+#define VEC_DECL_T(name)               \
+    using name##f   = name<float>;     \
+    using name##d   = name<double>;    \
+    using name##c   = name<int8_t>;    \
+    using name##s   = name<int16_t>;   \
+    using name##i   = name<int32_t>;   \
+    using name##ll  = name<int64_t>;   \
+    using name##u   = name<uint8_t>;   \
+    using name##us  = name<uint16_t>;  \
+    using name##ui  = name<uint32_t>;  \
+    using name##ull = name<uint64_t>;  
 
-namespace {
-    template <typename T> struct CUVec2 {};
-    template <> struct CUVec2<float> { using Type = float2; }
-    template <> struct CUVec2<int32_t> { using Type = int2; }
-    template <> struct CUVec2<int8_t> { using Type = char2; }
-    template <> struct CUVec2<uint32_t> { using Type = uint2; }
-    template <> struct CUVec2<uint8_t> { using Type = uchar2; }
+#define CUVEC2_DECL_ALIAS(vname, T) \
+    using Type = vname;             \
+    static constexpr vname (*makeV)(T, T) = &make_##vname;
 
-    template <typename T> struct CUVec3 {};
-    template <> struct CUVec3<float> { using Type = float3; }
-    template <> struct CUVec3<int32_t> { using Type = int3; }
-    template <> struct CUVec3<int8_t> { using Type = char3; }
-    template <> struct CUVec3<uint32_t> { using Type = uint3; }
-    template <> struct CUVec3<uint8_t> { using Type = uchar3; }
+#define CUVEC3_DECL_ALIAS(vname, T) \
+    using Type = vname;             \
+    static constexpr vname (*makeV)(T, T, T) = &make_##vname;
 
-    template <typename T> struct CUVec4 {};
-    template <> struct CUVec4<float> { using Type = float4; }
-    template <> struct CUVec4<int32_t> { using Type = int4; }
-    template <> struct CUVec4<int8_t> { using Type = char4; }
-    template <> struct CUVec4<uint32_t> { using Type = uint4; }
-    template <> struct CUVec4<uint8_t> { using Type = uchar4; }
-} // nonamed namespace
+#define CUVEC4_DECL_ALIAS(vname, T) \
+    using Type = vname;             \
+    static constexpr vname (*makeV)(T, T, T, T) = &make_##vname;
+
+template <typename T> struct CUVec2 {};
+template <> struct CUVec2<float>    { CUVEC2_DECL_ALIAS(float2, float) };
+template <> struct CUVec2<double>   { CUVEC2_DECL_ALIAS(double2, double) };
+template <> struct CUVec2<int8_t>   { CUVEC2_DECL_ALIAS(char2, signed char) };
+template <> struct CUVec2<int16_t>  { CUVEC2_DECL_ALIAS(short2, short) };
+template <> struct CUVec2<int32_t>  { CUVEC2_DECL_ALIAS(int2, int) };
+template <> struct CUVec2<int64_t>  { CUVEC2_DECL_ALIAS(longlong2, long long int) };
+template <> struct CUVec2<uint8_t>  { CUVEC2_DECL_ALIAS(uchar2, unsigned char) };
+template <> struct CUVec2<uint16_t> { CUVEC2_DECL_ALIAS(ushort2, unsigned short) };
+template <> struct CUVec2<uint32_t> { CUVEC2_DECL_ALIAS(uint2, unsigned int) };
+template <> struct CUVec2<uint64_t> { CUVEC2_DECL_ALIAS(ulonglong2, unsigned long long int) };
+
+template <typename T> struct CUVec3 {};
+template <> struct CUVec3<float>    { CUVEC3_DECL_ALIAS(float3, float) };
+template <> struct CUVec3<double>   { CUVEC3_DECL_ALIAS(double3, double) };
+template <> struct CUVec3<int8_t>   { CUVEC3_DECL_ALIAS(char3, signed char) };
+template <> struct CUVec3<int16_t>  { CUVEC3_DECL_ALIAS(short3, short) };
+template <> struct CUVec3<int32_t>  { CUVEC3_DECL_ALIAS(int3, int) };
+template <> struct CUVec3<int64_t>  { CUVEC3_DECL_ALIAS(longlong3, long long int) };
+template <> struct CUVec3<uint8_t>  { CUVEC3_DECL_ALIAS(uchar3, unsigned char) };
+template <> struct CUVec3<uint16_t> { CUVEC3_DECL_ALIAS(ushort3, unsigned short) };
+template <> struct CUVec3<uint32_t> { CUVEC3_DECL_ALIAS(uint3, unsigned int) };
+template <> struct CUVec3<uint64_t> { CUVEC3_DECL_ALIAS(ulonglong3, unsigned long long int) };
+
+template <typename T> struct CUVec4 {};
+template <> struct CUVec4<float>    { CUVEC4_DECL_ALIAS(float4, float) };
+template <> struct CUVec4<double>   { CUVEC4_DECL_ALIAS(double4, double) };
+template <> struct CUVec4<int8_t>   { CUVEC4_DECL_ALIAS(char4, signed char) };
+template <> struct CUVec4<int16_t>  { CUVEC4_DECL_ALIAS(short4, short) };
+template <> struct CUVec4<int32_t>  { CUVEC4_DECL_ALIAS(int4, int) };
+template <> struct CUVec4<int64_t>  { CUVEC4_DECL_ALIAS(longlong4, long long int) };
+template <> struct CUVec4<uint8_t>  { CUVEC4_DECL_ALIAS(uchar4, unsigned char) };
+template <> struct CUVec4<uint16_t> { CUVEC4_DECL_ALIAS(ushort4, unsigned short) };
+template <> struct CUVec4<uint32_t> { CUVEC4_DECL_ALIAS(uint4, unsigned int) };
+template <> struct CUVec4<uint64_t> { CUVEC4_DECL_ALIAS(ulonglong4, unsigned long long int) };
 
 namespace prayground {
 
@@ -44,14 +75,17 @@ namespace prayground {
     template <typename T> class Vec4;
 
     template <typename T>
-    class Vec2 {
+    class __align__(sizeof(T) * 2) Vec2 {
+    public:
         using CUVec = CUVec2<T>::Type;
         using Type = T;
-        using Dim = 2;
+        static constexpr uint32_t Dim = 2;
 
         Vec2(T x, T y) { e[0] = x; e[1] = y; }
-        Vec2(T t)      { e[0] = t; e[1] = t; }
+        Vec2(T t = T(0)) { e[0] = t; e[1] = t; }
         Vec2(const CUVec& v) { e[0] = v.x; e[1] = v.y; }
+
+        operator CUVec() const { return CUVec2<T>::makeV(e[0], e[1]); }
 
               T& operator[](int32_t i)       { return e[i]; }
         const T& operator[](int32_t i) const { return e[i]; }
@@ -92,6 +126,8 @@ namespace prayground {
         {
             return *this *= 1 / t;
         }
+
+        CUVec toCUVec() const { return CUVec2<T>::makeV(e[0], e[1], e[2]); }
         
     private:
         T e[2];
@@ -100,21 +136,24 @@ namespace prayground {
     template <typename T>
     class Vec3 {
     public:
-        using CUVec = CUVec3::Type;
+        using CUVec = CUVec3<T>::Type;
         using Type = T;
-        using Dim = 3;
+        static constexpr uint32_t Dim = 3;
 
         Vec3(T x, T y, T z) { e[0] = x; e[1] = y; e[2] = z;}
-        Vec3(T t) { e[0] = t; e[1] = t; e[2] = t; }
+        Vec3(T t = T(0)) { e[0] = t; e[1] = t; e[2] = t; }
 
         // From other dimension vector
         Vec3(const Vec2<T>& v, const T& z) { e[0] = v[0]; e[1] = v[1]; e[2] = z; }
         Vec3(const Vec4<T>& v) { e[0] = v[0]; e[1] = v[1]; e[2] = v[2]; }
 
         // From CUDA vector i.e. float3
-        Vec3(const CUVec2<T>::Type& v, const T& z) { e[0] = v.x; e[1] = v.y; e[2] = z; }
+        Vec3(const typename CUVec2<T>::Type& v, const T& z) { e[0] = v.x; e[1] = v.y; e[2] = z; }
         Vec3(const CUVec& v) { e[0] = v.x; e[1] = v.y; e[2] = v.z; }
-        Vec3(const CUVec4<T>::Type& v) { e[0] = v.x; e[1] = v.y; e[2] = v.z; }
+        Vec3(const typename CUVec4<T>::Type& v) { e[0] = v.x; e[1] = v.y; e[2] = v.z; }
+
+        // Implicit cast operator to CUVec
+        operator CUVec() const { return CUVec3<T>::makeV(e[0], e[1]); }
 
         T& operator[](int i) { return e[i]; }
         const T& operator[](int i) const { return e[i]; }
@@ -159,19 +198,21 @@ namespace prayground {
             return *this *= 1 / t;
         }
 
+        CUVec toCUVec() const { return CUVec3<T>::makeV(e[0], e[1], e[2]); }
+
     private:
         T e[3];
     };
 
     template <typename T>
-    class Vec4 {
+    class __align__(sizeof(T) * 4) Vec4 {
     public:
-        using CUVec = CUVec3::Type;
+        using CUVec = CUVec4<T>::Type;
         using Type = T;
-        using Dim = 3;
+        static constexpr uint32_t Dim = 4;
 
         Vec4(T x, T y, T z, T w) { e[0] = x; e[1] = y; e[2] = z; e[3] = w; }
-        Vec4(T t) { e[0] = t; e[1] = t; e[2] = t; e[3] = t; }
+        Vec4(T t = T(0)) { e[0] = t; e[1] = t; e[2] = t; e[3] = t; }
 
         // From other dimension vector
         Vec4(const Vec2<T>& v, const T& z, const T& w) { e[0] = v[0]; e[1] = v[1]; e[2] = z; e[3] = w; }
@@ -180,11 +221,13 @@ namespace prayground {
         Vec4(const Vec3<T>& v, const T& w) { e[0] = v[0]; e[1] = v[1]; e[2] = v[2]; e[3] = w; }
 
         // From CUDA vector i.e. float3
-        Vec4(const CUVec2<T>::Type& v, const T& z, const T& w) { e[0] = v.x; e[1] = v.y; e[2] = z; e[3] = w; }
-        Vec4(const CUVec2<T>::Type& xy, const CUVec2<T>& zw) { e[0] = xy.x; e[1] = xy.y; e[2] = zw.x; e[3] = zw.y; }
-        Vec4(const CUVec3<T>::Type& v) { e[0] = v.x; e[1] = v.y; e[2] = v.z; e[3] = T(1); }
-        Vec4(const CUVec3<T>::Type& v, const T& w) { e[0] = v.x; e[1] = v.y; e[2] = v.z; e[3] = w; }
+        Vec4(const typename CUVec2<T>::Type& v, const T& z, const T& w) { e[0] = v.x; e[1] = v.y; e[2] = z; e[3] = w; }
+        Vec4(const typename CUVec2<T>::Type& xy, const typename CUVec2<T>& zw) { e[0] = xy.x; e[1] = xy.y; e[2] = zw.x; e[3] = zw.y; }
+        Vec4(const typename CUVec3<T>::Type& v) { e[0] = v.x; e[1] = v.y; e[2] = v.z; e[3] = T(1); }
+        Vec4(const typename CUVec3<T>::Type& v, const T& w) { e[0] = v.x; e[1] = v.y; e[2] = v.z; e[3] = w; }
         Vec4(const CUVec& v) { e[0] = v.x; e[1] = v.y; e[2] = v.z; e[3] = v.w; }
+
+        operator CUVec() const { return CUVec4<T>::makeV(e[0], e[1], e[2], e[3]); }
 
         T& operator[](int i) { return e[i]; }
         const T& operator[](int i) const { return e[i]; }
@@ -231,6 +274,8 @@ namespace prayground {
         {
             return *this *= 1 / t;
         }
+
+        CUVec toCUVec() const { return CUVec4<T>::makeV(e[0], e[1], e[2], e[3]); }
     private:
         T e[4];
     };
@@ -238,6 +283,14 @@ namespace prayground {
     // ----------------------------------------------------------------------
     // Utilities for Vec2
     // ----------------------------------------------------------------------
+#ifndef __CUDACC__
+    template <typename T>
+    inline std::ostream& operator<<(std::ostream& out, const Vec2<T>& v)
+    {
+        return out << v.x() << ' ' << v.y();
+    }
+#endif
+
     template <typename T> 
     inline HOSTDEVICE Vec2<T> operator+(const Vec2<T>& v1, const Vec2<T>& v2)
     {
@@ -245,9 +298,21 @@ namespace prayground {
     }
 
     template <typename T>
+    inline HOSTDEVICE Vec2<T> operator+(const Vec2<T>& v, const T& t)
+    {
+        return Vec2<T>{v[0] + t, v[1] + t};
+    }
+
+    template <typename T>
     inline HOSTDEVICE Vec2<T> operator-(const Vec2<T>& v1, const Vec2<T>& v2)
     {
         return Vec2<T>{v1[0] - v2[0], v1[1] - v2[1]};
+    }
+
+    template <typename T>
+    inline HOSTDEVICE Vec2<T> operator-(const Vec2<T>& v, const T& t)
+    {
+        return Vec2<T>{v[0] - t, v[1] - t};
     }
 
     template <typename T> 
@@ -293,13 +358,13 @@ namespace prayground {
     }
 
     template <typename T>
-    inline HOSTDEVICE Vec2<T> length(const Vec2<T>& v)
+    inline HOSTDEVICE T length(const Vec2<T>& v)
     {
         return sqrtf(lengthSquared(v));
     }
 
     template <typename T>
-    inline HOSTDEVICE Vec2<T> lengthSquared(const Vec2<T>& v)
+    inline HOSTDEVICE T lengthSquared(const Vec2<T>& v)
     {
         return dot(v, v);
     }
@@ -310,9 +375,23 @@ namespace prayground {
         return v / length(v);
     }
 
+    template <typename T>
+    inline HOSTDEVICE Vec2<T> clamp(const Vec2<T>& v, const T a, const T b)
+    {
+        return Vec2<T>{clamp(v[0], a, b), clamp(v[0], a, b)};
+    }
+
     // ----------------------------------------------------------------------
     // Utilities for Vec3
     // ----------------------------------------------------------------------
+#ifndef __CUDACC__
+    template <typename T>
+    inline std::ostream& operator<<(std::ostream& out, const Vec3<T>& v)
+    {
+        return out << v.x() << ' ' << v.y() << ' ' << v.z();
+    }
+#endif
+
     template <typename T>
     inline HOSTDEVICE Vec3<T> operator+(const Vec3<T>& v1, const Vec3<T>& v2)
     {
@@ -320,9 +399,21 @@ namespace prayground {
     }
 
     template <typename T>
+    inline HOSTDEVICE Vec3<T> operator+(const Vec3<T>& v, const T& t)
+    {
+        return Vec2<T>{v[0] - t, v[1] - t};
+    }
+
+    template <typename T>
     inline HOSTDEVICE Vec3<T> operator-(const Vec3<T>& v1, const Vec3<T>& v2)
     {
         return Vec3<T>{v1[0] - v2[0], v1[1] - v2[1], v1[1] - v2[2]};
+    }
+
+    template <typename T>
+    inline HOSTDEVICE Vec3<T> operator-(const Vec3<T>& v, const T& t)
+    {
+        return Vec2<T>{v[0] - t, v[1] - t};
     }
 
     template <typename T>
@@ -362,7 +453,7 @@ namespace prayground {
     }
 
     template <typename T>
-    inline HOSTDEVICE T cross(const Vec3<T>& v1, const Vec3<T>& v2)
+    inline HOSTDEVICE Vec3<T> cross(const Vec3<T>& v1, const Vec3<T>& v2)
     {
         return Vec3<T>{
             v1[1] * v2[2] - v1[2] * v2[1],
@@ -372,13 +463,13 @@ namespace prayground {
     }
 
     template <typename T>
-    inline HOSTDEVICE Vec3<T> length(const Vec3<T>& v)
+    inline HOSTDEVICE T length(const Vec3<T>& v)
     {
         return sqrtf(lengthSquared(v));
     }
 
     template <typename T>
-    inline HOSTDEVICE Vec3<T> lengthSquared(const Vec3<T>& v)
+    inline HOSTDEVICE T lengthSquared(const Vec3<T>& v)
     {
         return dot(v, v);
     }
@@ -389,9 +480,23 @@ namespace prayground {
         return v / length(v);
     }
 
+    template <typename T>
+    inline HOSTDEVICE Vec3<T> clamp(const Vec3<T>& v, const T a, const T b)
+    {
+        return Vec3<T>{clamp(v[0], a, b), clamp(v[0], a, b), clamp(v[0], a, b)};
+    }
+
     // ----------------------------------------------------------------------
     // Utilities for Vec4
     // ----------------------------------------------------------------------
+#ifndef __CUDACC__
+    template <typename T>
+    inline std::ostream& operator<<(std::ostream& out, const Vec4<T>& v)
+    {
+        return out << v.x() << ' ' << v.y() << ' ' << v.z() << ' ' << v.w();
+    }
+#endif
+
     template <typename T>
     inline HOSTDEVICE Vec4<T> operator+(const Vec4<T>& v1, const Vec4<T>& v2)
     {
@@ -399,9 +504,21 @@ namespace prayground {
     }
 
     template <typename T>
+    inline HOSTDEVICE Vec4<T> operator+(const Vec4<T>& v, const T& t)
+    {
+        return Vec4<T>(v[0] + t, v[1] + t, v[2] + t, v[3] + t);
+    }
+
+    template <typename T>
     inline HOSTDEVICE Vec4<T> operator-(const Vec4<T>& v1, const Vec4<T>& v2)
     {
         return Vec4<T>{v1[0] - v2[0], v1[1] - v2[1], v1[2] - v2[2], v1[3] - v2[3]};
+    }
+    
+    template <typename T>
+    inline HOSTDEVICE Vec4<T> operator-(const Vec4<T>& v, const T& t)
+    {
+        return Vec4<T>(v[0] - t, v[1] - t, v[2] - t, v[3] - t);
     }
 
     template <typename T>
@@ -441,7 +558,7 @@ namespace prayground {
     }
 
     template <typename T>
-    inline HOSTDEVICE T cross(const Vec4<T>& v1, const Vec4<T>& v2)
+    inline HOSTDEVICE Vec4<T> cross(const Vec4<T>& v1, const Vec4<T>& v2)
     {
         return Vec4<T>{
             v1[1] * v2[2] - v1[2] * v2[1],
@@ -452,13 +569,13 @@ namespace prayground {
     }
 
     template <typename T>
-    inline HOSTDEVICE Vec4<T> length(const Vec4<T>& v)
+    inline HOSTDEVICE T length(const Vec4<T>& v)
     {
         return sqrtf(lengthSquared(v));
     }
 
     template <typename T>
-    inline HOSTDEVICE Vec4<T> lengthSquared(const Vec4<T>& v)
+    inline HOSTDEVICE T lengthSquared(const Vec4<T>& v)
     {
         return dot(v, v);
     }
@@ -469,6 +586,11 @@ namespace prayground {
         return v / length(v);
     }
 
+    template <typename T>
+    inline HOSTDEVICE Vec4<T> clamp(const Vec4<T>& v, const T a, const T b)
+    {
+        return Vec4<T>{clamp(v[0], a, b), clamp(v[0], a, b), clamp(v[0], a, b), clamp(v[0], a, b)};
+    }
 
     VEC_DECL_T(Vec2)
     VEC_DECL_T(Vec3)

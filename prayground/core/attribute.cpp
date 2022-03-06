@@ -45,19 +45,19 @@ void Attributes::addFloat(const std::string& name, std::unique_ptr<float[]> valu
     m_floats.emplace_back(new AttribItem<float>(name, std::move(values), n));
 }
 
-void Attributes::addFloat2(const std::string& name, std::unique_ptr<float2[]> values, int n)
+void Attributes::addVec2f(const std::string& name, std::unique_ptr<Vec2f[]> values, int n)
 {
-    m_float2s.emplace_back(new AttribItem<float2>(name, std::move(values), n));
+    m_Vec2fs.emplace_back(new AttribItem<Vec2f>(name, std::move(values), n));
 }
 
-void Attributes::addFloat3(const std::string& name, std::unique_ptr<float3[]> values, int n)
+void Attributes::addVec3f(const std::string& name, std::unique_ptr<Vec3f[]> values, int n)
 {
-    m_float3s.emplace_back(new AttribItem<float3>(name, std::move(values), n));
+    m_Vec3fs.emplace_back(new AttribItem<Vec3f>(name, std::move(values), n));
 }
 
-void Attributes::addFloat4(const std::string& name, std::unique_ptr<float4[]> values, int n)
+void Attributes::addVec4f(const std::string& name, std::unique_ptr<Vec4f[]> values, int n)
 {
-    m_float4s.emplace_back(new AttribItem<float4>(name, std::move(values), n));
+    m_Vec4fs.emplace_back(new AttribItem<Vec4f>(name, std::move(values), n));
 }
 
 void Attributes::addString(const std::string& name, std::unique_ptr<std::string[]> values, int n)
@@ -96,34 +96,34 @@ float Attributes::findOneFloat(const std::string& name, const float& d) const
     FIND_ONE(m_floats);
 }
 
-const float2* Attributes::findFloat2(const std::string& name, int* n) const
+const Vec2f* Attributes::findVec2f(const std::string& name, int* n) const
 {
-    FIND_PTR(m_float2s);
+    FIND_PTR(m_Vec2fs);
 }
 
-float2 Attributes::findOneFloat2(const std::string& name, const float2& d) const
+Vec2f Attributes::findOneVec2f(const std::string& name, const Vec2f& d) const
 {
-    FIND_ONE(m_float2s)
+    FIND_ONE(m_Vec2fs)
 }
 
-const float3* Attributes::findFloat3(const std::string& name, int* n) const
+const Vec3f* Attributes::findVec3f(const std::string& name, int* n) const
 {
-    FIND_PTR(m_float3s);
+    FIND_PTR(m_Vec3fs);
 }
 
-float3 Attributes::findOneFloat3(const std::string& name, const float3& d) const
+Vec3f Attributes::findOneVec3f(const std::string& name, const Vec3f& d) const
 {
-    FIND_ONE(m_float3s);
+    FIND_ONE(m_Vec3fs);
 }
 
-const float4* Attributes::findFloat4(const std::string& name, int* n) const
+const Vec4f* Attributes::findVec4f(const std::string& name, int* n) const
 {
-    FIND_PTR(m_float4s);
+    FIND_PTR(m_Vec4fs);
 }
 
-float4 Attributes::findOneFloat4(const std::string& name, const float4& d) const
+Vec4f Attributes::findOneVec4f(const std::string& name, const Vec4f& d) const
 {
-    FIND_ONE(m_float4s);
+    FIND_ONE(m_Vec4fs);
 }
 
 const std::string* Attributes::findString(const std::string& name, int* n) const

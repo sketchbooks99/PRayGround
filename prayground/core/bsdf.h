@@ -15,7 +15,7 @@
 
 #pragma once
 
-#include <prayground/math/vec_math.h>
+#include <prayground/math/vec.h>
 #include <prayground/math/util.h>
 #include <prayground/math/random.h>
 #include <prayground/core/util.h>
@@ -23,7 +23,7 @@
 
 namespace prayground {
 
-HOSTDEVICE INLINE float3 randomSampleToSphere(unsigned int& seed, const float radius, const float distance_squared)
+HOSTDEVICE INLINE Vec3f randomSampleToSphere(unsigned int& seed, const float radius, const float distance_squared)
 {
     const float r1 = rnd(seed);
     const float r2 = rnd(seed);
@@ -32,37 +32,37 @@ HOSTDEVICE INLINE float3 randomSampleToSphere(unsigned int& seed, const float ra
     const float phi = 2.0f * math::pi * r1;
     const float x = cosf(phi) * sqrtf(1.0f - z * z);
     const float y = sinf(phi) * sqrtf(1.0f - z * z);
-    return make_float3(x, y, z);
+    return Vec3f(x, y, z);
 }
 
-HOSTDEVICE INLINE float3 randomSampleInUnitDisk(unsigned int& seed)
+HOSTDEVICE INLINE Vec3f randomSampleInUnitDisk(unsigned int& seed)
 {
     const float theta = rnd(seed) * math::two_pi;
     const float r = rnd(seed);
-    return make_float3(r * cos(theta), r * sin(theta), 0);
+    return Vec3f(r * cos(theta), r * sin(theta), 0);
 }
 
-HOSTDEVICE INLINE float3 randomSampleHemisphere(unsigned int& seed)
+HOSTDEVICE INLINE Vec3f randomSampleHemisphere(unsigned int& seed)
 {
     float a = rnd(seed) * 2.0f * math::pi;
     float z = sqrtf(rnd(seed));
     float r = sqrtf(fmaxf(0.0f, 1.0f - z * z));
-    return make_float3(r * cosf(a), r * sinf(a), z);
+    return Vec3f(r * cosf(a), r * sinf(a), z);
 }
 
-HOSTDEVICE INLINE float3 cosineSampleHemisphere(const float u1, const float u2)
+HOSTDEVICE INLINE Vec3f cosineSampleHemisphere(const float u1, const float u2)
 {
     const float r = sqrtf(u2);
     const float phi = math::two_pi * u1;
     const float x = r * cosf(phi);
     const float y = r * sinf(phi);
     const float z = sqrtf(1.0f - u2);
-    return make_float3(x, y, z);
+    return Vec3f(x, y, z);
 }
 
-HOSTDEVICE INLINE float3 sampleGGX(const float u1, const float u2, const float roughness)
+HOSTDEVICE INLINE Vec3f sampleGGX(const float u1, const float u2, const float roughness)
 {
-    float3 p;
+    Vec3f p;
     const float a = fmaxf(0.001f, roughness);
     const float phi = 2.0f * math::pi * u1;
     const float cos_theta = sqrtf((1.0f - u2) / (1.0f + (a*a - 1.0f) * u2));
@@ -75,26 +75,26 @@ HOSTDEVICE INLINE float3 sampleGGX(const float u1, const float u2, const float r
 }
 
 /// @ref: https://jcgt.org/published/0007/04/01/
-HOSTDEVICE INLINE float3 sampleGGXAniso(const float3& v, const float ax, const float ay, const float u0, const float u1)
+HOSTDEVICE INLINE Vec3f sampleGGXAniso(const Vec3f& v, const float ax, const float ay, const float u0, const float u1)
 {
-    const float3 Vh = normalize(make_float3(ax * v.x, ay * v.y, v.z));
+    const Vec3f Vh = normalize(Vec3f(ax * v.x, ay * v.y, v.z));
     const float lensq = Vh.x * Vh.x + Vh.y * Vh.y;
-    const float3 T1 = lensq > 0 ? make_float3(-Vh.y, Vh.x, 0) * inverseSqrt(lensq) : make_float3(1.0f, 0.0f, 0.0);
-    const float3 T2 = cross(Vh, T1);
+    const Vec3f T1 = lensq > 0 ? Vec3f(-Vh.y, Vh.x, 0) * inverseSqrt(lensq) : Vec3f(1.0f, 0.0f, 0.0);
+    const Vec3f T2 = cross(Vh, T1);
     const float r = sqrt(u0);
     const float phi = math::two_pi * u1;
     float t1 = r * cosf(phi); 
     float t2 = r * sinf(phi);
     float s = 0.5f * (1.0f + Vh.z);
     t2 = (1.0f - s) * sqrtf(1.0f - t1 * t1) + s * t2;
-    const float3 Nh = t1 * T1 + t2 * T2 + sqrtf(fmaxf(0.0f, 1.0f - t1 * t1 - t2 * t2)) * Vh;
-    const float3 Ne = normalize(make_float3(ax * Nh.x, ay * Nh.y, fmaxf(0.0f, Nh.z)));
+    const Vec3f Nh = t1 * T1 + t2 * T2 + sqrtf(fmaxf(0.0f, 1.0f - t1 * t1 - t2 * t2)) * Vh;
+    const Vec3f Ne = normalize(Vec3f(ax * Nh.x, ay * Nh.y, fmaxf(0.0f, Nh.z)));
     return Ne;
 }
 
-HOSTDEVICE INLINE float3 sampleGTR1(const float u1, const float u2, const float roughness)
+HOSTDEVICE INLINE Vec3f sampleGTR1(const float u1, const float u2, const float roughness)
 {
-    float3 p;
+    Vec3f p;
     const float a = roughness * roughness;
     const float phi = 2.0f * math::pi * u1;
     const float cos_theta = 1.0f;
@@ -190,22 +190,44 @@ HOSTDEVICE INLINE float smithG_GGX_aniso(float NdotV, float VdotX, float VdotY, 
     return 1 / (NdotV + sqrt(math::sqr(VdotX * ax) + math::sqr(VdotY * ay) + math::sqr(NdotV)));
 }
 
-HOSTDEVICE INLINE float3 refract(const float3& v, const float3& n, float ior) {
-    float3 nv = normalize(v);
-    float cos_i = dot(-nv, n);
+HOSTDEVICE INLINE Vec3f refract(const Vec3f& wo, const Vec3f& n, float ior) {
+    float cos_theta = dot(-normalize(wo), n);
     
-    float3 r_out_perp = ior * (nv + cos_i*n);
-    /// \note dot(v,v) = |v*v|*cos(0) = |v^2|
-    float3 r_out_parallel = -sqrt(fabs(1.0f - dot(r_out_perp, r_out_perp))) * n;
+    Vec3f r_out_perp = ior * (wo + cos_theta*n);
+    Vec3f r_out_parallel = -sqrt(fabs(1.0f - dot(r_out_perp, r_out_perp))) * n;
     return r_out_perp + r_out_parallel;
 }
 
 /** \ref: https://knzw.tech/raytracing/?page_id=478 */
-HOSTDEVICE INLINE float3 refract(const float3& wi, const float3& n, float cos_i, float ni, float nt) {
+HOSTDEVICE INLINE Vec3f refract(const Vec3f& wo, const Vec3f& n, float cos_theta, float ni, float nt) {
     float nt_ni = nt / ni;
     float ni_nt = ni / nt;
-    float D = sqrtf(nt_ni*nt_ni - (1.0f-cos_i*cos_i)) - cos_i;
-    return ni_nt * (wi - D * n);
+    float D = sqrtf(nt_ni*nt_ni - (1.0f-cos_theta*cos_theta)) - cos_theta;
+    return ni_nt * (wo - D * n);
+}
+
+/* Phase function by Henyey and Greenstein */
+HOSTDEVICE INLINE float phaseHenyeyGreenstein(float cos_theta, float g)
+{
+    const float denom = 1.0f + g * g + 2.0f * g * cos_theta;
+    return (1.0f / (4.0f * math::pi)) * (1.0f - g * g) / (denom * sqrtf(denom));
+}
+
+HOSTDEVICE INLINE Vec3f sampleHenyeyGreenstein(const Vec2f& u, float g)
+{
+    float cos_theta = 0.0f;
+    if (fabs(g) < math::eps)
+        cos_theta = 1.0f - 2.0 * u[0];
+    else
+    {
+        float sqr_term = (1.0f - g * g) / (1.0f + g - 2.0f * g * u[0]);
+        cos_theta = -(1.0f + g * g - sqr_term * sqr_term) / (2.0f * g);
+    }
+
+    // Compute wi
+    const float sin_theta = sqrtf(fmaxf(0.0f, 1.0f - cos_theta * cos_theta));
+    const float phi = 2 * math::pi * u[1];
+    return Vec3f(cosf(phi) * sin_theta, sinf(phi) * sin_theta, cos_theta);
 }
 
 }

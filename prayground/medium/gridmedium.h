@@ -8,7 +8,7 @@
 
 namespace prayground {
 
-    template <Subscriptable Spectrum>
+    template <typename Spectrum>
     class GridMedium_ : public Shape {
     public:
         struct Data {
@@ -17,11 +17,11 @@ namespace prayground {
             float sigma_t;
             float g;
             int nx;
-            int ny; 
+            int ny;
             int nz;
             float* density;
         };
-
+#ifndef __CUDACC__
         GridMedium_(const Spectrum& sigma_a, const Spectrum& sigma_s, float g, 
                     int nx, int ny, int nz, const float* density)
             : m_sigma_a(sigma_a), m_sigma_s(sigma_s), 
@@ -57,7 +57,7 @@ namespace prayground {
         AABB bound() const override 
         {
             return AABB {
-
+                
             };
         }
 
@@ -87,6 +87,7 @@ namespace prayground {
         int m_nx, m_ny, m_nz;
         std::unique_ptr<float[]> m_density;
         float* d_density;
+#endif
     };
 
 } // namespace prayground

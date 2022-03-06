@@ -43,7 +43,7 @@ class Matrix
 public:
     using floatN = typename Vector<T, N>::Type;
     using TfloatN = typename Vector<T, N>::TransformType;
-    using Dim = N;
+    static constexpr uint32_t Dim = N;
 
     HOSTDEVICE Matrix();
     HOSTDEVICE Matrix(const Matrix& m);

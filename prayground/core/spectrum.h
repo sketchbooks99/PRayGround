@@ -547,14 +547,14 @@ namespace prayground {
     }
 
     /* Conversion from linear to sRGB color, vice versa */
-    HOSTDEVICE INLINE float3 linearToSRGB(const float3& c)
+    HOSTDEVICE INLINE Vec3f linearToSRGB(const Vec3f& c)
     {
         float invGamma = 1.0f / 2.4f;
-        float3 powed = make_float3(powf(c.x, invGamma), powf(c.y, invGamma), powf(c.z, invGamma));
+        Vec3f powed = make_float3(powf(c.x(), invGamma), powf(c.y(), invGamma), powf(c.z(), invGamma));
         return make_float3(
-            c.x < 0.0031308f ? 12.92f * c.x : 1.055f * powed.x - 0.055f,
-            c.y < 0.0031308f ? 12.92f * c.y : 1.055f * powed.y - 0.055f,
-            c.z < 0.0031308f ? 12.92f * c.z : 1.055f * powed.z - 0.055f
+            c.x() < 0.0031308f ? 12.92f * c.x() : 1.055f * powed.x() - 0.055f,
+            c.y() < 0.0031308f ? 12.92f * c.y() : 1.055f * powed.y() - 0.055f,
+            c.z() < 0.0031308f ? 12.92f * c.z() : 1.055f * powed.z() - 0.055f
         );
     }
 
@@ -610,13 +610,13 @@ namespace prayground {
     }
 
     /* Conversion from float to 1 byte color considering gamma correction */
-    HOSTDEVICE INLINE uchar3 make_color(const float3& c, bool gamma_enalbed)
+    HOSTDEVICE INLINE Vec3u make_color(const Vec3f& c, bool gamma_enalbed)
     {
         // first apply gamma, then convert to unsigned char
-        float3 rgb = c;
+        Vec3f rgb = c;
         if (gamma_enalbed)
             rgb = linearToSRGB(clamp(c, 0.0f, 1.0f));
-        return make_uchar3(quantizeUnsigned8Bits(rgb.x), quantizeUnsigned8Bits(rgb.y), quantizeUnsigned8Bits(rgb.z));
+        return Vec3u(quantizeUnsigned8Bits(rgb.x()), quantizeUnsigned8Bits(rgb.y()), quantizeUnsigned8Bits(rgb.z()));
     }
 
     HOSTDEVICE INLINE uchar4 make_color(const float4& c, bool gamma_enabled)

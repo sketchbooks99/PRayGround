@@ -7,8 +7,8 @@ void App::initResultBufferOnDevice()
     result_bmp.allocateDevicePtr();
     accum_bmp.allocateDevicePtr();
 
-    params.result_buffer = reinterpret_cast<uchar4*>(result_bmp.devicePtr());
-    params.accum_buffer = reinterpret_cast<float4*>(accum_bmp.devicePtr());
+    params.result_buffer = reinterpret_cast<Vec4u*>(result_bmp.devicePtr());
+    params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bmp.devicePtr());
 }
 
 void App::handleCameraUpdate()
@@ -104,7 +104,6 @@ void App::setup()
     uint32_t area_emitter_prg_id = setupCallable(DC_FUNC_STR("area_emitter"), "");
     
     textures.emplace("env", new FloatBitmapTexture("resources/image/sepulchral_chapel_rotunda_4k.exr", bitmap_prg_id));
-    //textures.emplace("env", new CheckerTexture(make_float3(0.8f), make_float3(0.3f), 20.0f, checker_prg_id));
 
     env = EnvironmentEmitter{ textures.at("env") };
     env.copyToDevice();
@@ -190,15 +189,15 @@ void App::setup()
     };
 
     // Textures
-    textures.emplace("floor", new CheckerTexture(make_float3(0.8f), make_float3(0.3f), 10, checker_prg_id));
-    textures.emplace("white", new ConstantTexture(make_float3(1.0f), constant_prg_id));
+    textures.emplace("floor", new CheckerTexture(Vec3f(0.8f), Vec3f(0.3f), 10, checker_prg_id));
+    textures.emplace("white", new ConstantTexture(Vec3f(1.0f), constant_prg_id));
 
     // Materials
     materials.emplace("floor", new Diffuse(textures.at("floor")));
 
     // Shapes
-    shapes.emplace("floor", new Plane(make_float2(-0.5f), make_float2(0.5f)));
-    shapes.emplace("smoke", new GridMedium("resources/volume/wdas_cloud_quarter.nvdb", make_float3(0.8f), make_float3(0.2f), 0.5f));
+    shapes.emplace("floor", new Plane(Vec2f(-0.5f), Vec2f(0.5f)));
+    shapes.emplace("smoke", new VDBGrid("resources/volume/wdas_cloud_quarter.nvdb", Vec3f(0.8f), Vec3f(0.2f), 0.5f));
 
     // Floor
     Primitive floor{ shapes.at("floor"), materials.at("floor"), diffuse_sample_bsdf_id, diffuse_pdf_id };

@@ -55,8 +55,8 @@ void Cylinder::free()
 AABB Cylinder::bound() const 
 {
     return AABB( 
-        -make_float3(m_radius, m_height / 2.0f, m_radius),
-         make_float3(m_radius, m_height / 2.0f, m_radius)
+        -Vec3f(m_radius, m_height / 2.0f, m_radius),
+         Vec3f(m_radius, m_height / 2.0f, m_radius)
     );
 }
 

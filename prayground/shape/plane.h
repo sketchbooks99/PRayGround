@@ -11,13 +11,13 @@ namespace prayground {
 class Plane final : public Shape {
 public:
     struct Data {
-        float2 min; 
-        float2 max;
+        Vec2f min; 
+        Vec2f max;
     };
 
 #ifndef __CUDACC__
     Plane();
-    Plane(const float2& min, const float2& max);
+    Plane(const Vec2f& min, const Vec2f& max);
 
     constexpr ShapeType type() override;
 
@@ -30,7 +30,7 @@ public:
 
     Data getData() const;
 private:
-    float2 m_min, m_max;
+    Vec2f m_min, m_max;
     CUdeviceptr d_aabb_buffer{ 0 };
 
 #endif

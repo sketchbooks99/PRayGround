@@ -5,7 +5,7 @@
 
 extern "C" { __constant__ LaunchParams params; }
 
-using SurfaceInteraction = SurfaceInteraction_<float3>;
+using SurfaceInteraction = SurfaceInteraction_<Vec3f>;
 
 static __forceinline__ __device__ SurfaceInteraction* getSurfaceInteraction()
 {
@@ -16,7 +16,7 @@ static __forceinline__ __device__ SurfaceInteraction* getSurfaceInteraction()
 
 static __forceinline__ __device__ void trace(
     OptixTraversableHandle handle,
-    const float3& ro, const float3& rd,
+    const Vec3f& ro, const Vec3f& rd,
     float tmin, float tmax,
     unsigned int ray_type,
     SurfaceInteraction* si
@@ -26,7 +26,7 @@ static __forceinline__ __device__ void trace(
     packPointer(si, u0, u1);
     optixTrace(
         handle,
-        ro, rd,
+        ro.toCUVec(), rd.toCUVec(),
         tmin, tmax, 0.0f,
         OptixVisibilityMask(1),
         OPTIX_RAY_FLAG_NONE,
@@ -41,7 +41,7 @@ static __forceinline__ __device__ void trace(
 static __forceinline__ __device__ void getCameraRay(
     const Camera::Data& camera,
     const float& x, const float& y,
-    float3& ro, float3& rd)
+    Vec3f& ro, Vec3f& rd)
 {
     rd = normalize(x * camera.U + y * camera.V + camera.W);
     ro = camera.origin;
@@ -52,32 +52,32 @@ extern "C" __device__ void __raygen__medium()
     const RaygenData* raygen = reinterpret_cast<RaygenData*>(optixGetSbtDataPointer());
 
     const int frame = params.frame;
-    const uint3 idx = optixGetLaunchIndex();
-    unsigned int seed = tea<4>(idx.x * params.width + idx.y, frame);
+    const Vec3ui idx = optixGetLaunchIndex();
+    unsigned int seed = tea<4>(idx.x() * params.width + idx.y(), frame);
 
-    float3 result = make_float3(0.0f);
-    float3 albedo = make_float3(0.0f);
+    Vec3f result = Vec3f(0.0f);
+    Vec3f albedo = Vec3f(0.0f);
 
     int i = params.samples_per_launch;
 
     do
     {
-        const float2 subpixel_jitter = make_float2(rnd(seed) - 0.5f, rnd(seed) - 0.5f);
+        const Vec2f subpixel_jitter = Vec2f(rnd(seed) - 0.5f, rnd(seed) - 0.5f);
 
-        const float2 d = 2.0f * make_float2(
-            (static_cast<float>(idx.x) + subpixel_jitter.x) / static_cast<float>(params.width),
-            (static_cast<float>(idx.y) + subpixel_jitter.y) / static_cast<float>(params.height)
+        const Vec2f d = 2.0f * Vec2f(
+            (static_cast<float>(idx.x()) + subpixel_jitter.x()) / static_cast<float>(params.width),
+            (static_cast<float>(idx.y()) + subpixel_jitter.y()) / static_cast<float>(params.height)
         ) - 1.0f;
 
-        float3 ro, rd;
-        getCameraRay(raygen->camera, d.x, d.y, ro, rd);
+        Vec3f ro, rd;
+        getCameraRay(raygen->camera, d.x(), d.y(), ro, rd);
 
-        float3 throughput = make_float3(1.0f);
+        Vec3f throughput = Vec3f(1.0f);
 
         SurfaceInteraction si;
         si.seed = seed;
-        si.emission = make_float3(0.0f);
-        si.albedo = make_float3(0.0f);
+        si.emission = Vec3f(0.0f);
+        si.albedo = Vec3f(0.0f);
         si.trace_terminate = false;
         si.radiance_evaled = false;
 
@@ -118,7 +118,7 @@ extern "C" __device__ void __raygen__medium()
                     );
 
                 // Evaluate bsdf
-                float3 bsdf_val = optixContinuationCall<float3, SurfaceInteraction*, void*>(
+                Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
                     si.surface_info.bsdf_id,
                     &si,
                     si.surface_info.data
@@ -143,7 +143,7 @@ extern "C" __device__ void __raygen__medium()
                     );
 
                 // Evaluate BSDF
-                float3 bsdf_val = optixContinuationCall<float3, SurfaceInteraction*, void*>(
+                Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
                     si.surface_info.bsdf_id,
                     &si,
                     si.surface_info.data
@@ -160,23 +160,23 @@ extern "C" __device__ void __raygen__medium()
     } while (--i);
 
     const uint3 launch_index = optixGetLaunchIndex();
-    const unsigned int image_index = launch_index.y * params.width + launch_index.x;
+    const unsigned int image_index = launch_index.y() * params.width + launch_index.x();
 
-    if (result.x != result.x) result.x = 0.0f;
-    if (result.y != result.y) result.y = 0.0f;
-    if (result.z != result.z) result.z = 0.0f;
+    if (result.x() != result.x()) result.x() = 0.0f;
+    if (result.y() != result.y()) result.y() = 0.0f;
+    if (result.z() != result.z()) result.z() = 0.0f;
 
-    float3 accum_color = result / static_cast<float>(params.samples_per_launch);
+    Vec3f accum_color = result / static_cast<float>(params.samples_per_launch);
 
     if (frame > 0)
     {
         const float a = 1.0f / static_cast<float>(frame + 1);
-        const float3 accum_color_prev = make_float3(params.accum_buffer[image_index]);
-        accum_color = lerp(accum_color_prev, accum_color, a);
+        const Vec3f accum_color_prev = Vec3f(params.accum_buffer[image_index]);
+        accum_color = math::lerp(accum_color_prev, accum_color, a);
     }
-    params.accum_buffer[image_index] = make_float4(accum_color, 1.0f);
-    uchar3 color = make_color(accum_color);
-    params.result_buffer[image_index] = make_uchar4(color.x, color.y, color.z, 255);
+    params.accum_buffer[image_index] = Vec4f(accum_color, 1.0f);
+    Vec3u color = make_color(accum_color, true);
+    params.result_buffer[image_index] = Vec4u(color.x(), color.y(), color.z(), 255);
 }
 
 /* Miss function */
@@ -197,68 +197,71 @@ extern "C" __device__ void __miss__envmap()
     float sqrtD = sqrtf(D);
     float t = (-half_b + sqrtD) / a;
 
-    const float3 p = normalize(ray.at(t));
+    const Vec3f p = normalize(ray.at(t));
 
-    const float phi = atan2(p.z, p.x);
-    const float theta = asin(p.y);
+    const float phi = atan2(p.z(), p.x());
+    const float theta = asin(p.y());
     const float u = 1.0f - (phi + math::pi) / (2.0f * math::pi);
     const float v = 1.0f - (theta + math::pi / 2.0f) / math::pi;
-    si->uv = make_float2(u, v);
+    si->uv = Vec2f(u, v);
     si->trace_terminate = true;
     si->surface_info.type = SurfaceType::None;
-    si->emission = optixDirectCall<float3, const float2&, void*>(
+    si->emission = optixDirectCall<Vec3f, const Vec2f&, void*>(
         env->texture.prg_id, si->uv, env->texture.data
     );
     si->albedo = si->emission;
 }
 
 /* Material functions */
-extern "C" __device__ void __direct_callable__sample_diffuse(SurfaceInteraction* si, void* mat_data) {
+extern "C" __device__ Vec3f __direct_callable__sample_diffuse(SurfaceInteraction* si, void* mat_data, float& pdf) {
     const Diffuse::Data* diffuse = reinterpret_cast<Diffuse::Data*>(mat_data);
 
     if (diffuse->twosided)
         si->shading.n = faceforward(si->shading.n, -si->wo, si->shading.n);
 
+    // Sampling scattering direction 
     si->trace_terminate = false;
     uint32_t seed = si->seed;
     const float z0 = rnd(seed);
     const float z1 = rnd(seed);
-    float3 wi = cosineSampleHemisphere(z0, z1);
+    Vec3f wi = cosineSampleHemisphere(z0, z1);
     Onb onb(si->shading.n);
     onb.inverseTransform(wi);
     si->wi = normalize(wi);
     si->seed = seed;
-}
 
-extern "C" __device__ float3 __continuation_callable__bsdf_diffuse(SurfaceInteraction* si, void* mat_data)
-{
-    const Diffuse::Data* diffuse = reinterpret_cast<Diffuse::Data*>(mat_data);
-    const float3 albedo = optixDirectCall<float3, const float2&, void*>(diffuse->texture.prg_id, si->uv, diffuse->texture.data);
+    // Get albedo from texture
+    const Vec3f albedo = optixDirectCall<Vec3f, const Vec2f&, void*>(
+        diffuse->texture.prg_id, si->uv, diffuse->texture.data);
     si->albedo = albedo;
-    si->emission = make_float3(0.0f);
+    si->emission = Vec3f(0.0f);
+
     const float cosine = fmaxf(0.0f, dot(si->shading.n, si->wi));
+    pdf = cosine / math::pi;
     return albedo * (cosine / math::pi);
 }
 
-extern "C" __device__ float __direct_callable__pdf_diffuse(SurfaceInteraction* si, void* mat_data)
+extern "C" __device__ Vec3f __direct_callable__sample_medium(SurfaceInteraction* si, void* mat_data, float& pdf)
 {
-    const float cosine = fmaxf(0.0f, dot(si->shading.n, si->wi));
-    return cosine / math::pi;
-}
+    const VDBGrid::Data* grid = reinterpret_cast<const VDBGrid::Data*>(mat_data);
+    const float g = grid->g;
+    const float sigma_s = grid->sigma_s;
+    const float sigma_t = grid->sigma_t;
+    si->trace_terminate = false;
+    uint32_t seed = si->seed;
+    Vec2f u = UniformSampler::get2D<Vec2f>(seed);
 
-extern "C" __device__ float __direct_callable__sample_HenyeyGreenstein(SurfaceInteraction * si, void* mat_data)
-{
-    
-}
+    // Sampling scattering direction from Henyey--Greenstein phase function
+    Vec3f wi = sampleHenyeyGreenstein(u, g);
+    Onb onb(si->wo);
+    onb.inverseTransform(wi);
+    si->wi = wi;
 
-extern "C" __device__ float3 __continuation_callable__bsdf_medium(SurfaceInteraction * si, void* mat_data)
-{
-
-}
-
-extern "C" __device__ float __direct_callable__pdf_medium(SurfaceInteraction * si, void* mat_data)
-{
-    
+    si->albedo = sigma_s;
+    const float d = sigma_t * si->t;
+    const float Tr = expf(-d);
+    pdf = d;
+    return sigma_s * Tr / pdf;
 }
 
 extern "C" __device__ void __direct_callable__area_emitter(SurfaceInteraction* si, void* surface_data)
@@ -269,7 +272,7 @@ extern "C" __device__ void __direct_callable__area_emitter(SurfaceInteraction* s
     if (!area->twosided)
         is_emitted = dot(si->wo, si->shading.n) < 0.0f ? 1.0f : 0.0f;
     
-    const float3 base = optixDirectCall<float3, const float2&, void*>(
+    const Vec3f base = optixDirectCall<Vec3f, const Vec2f&, void*>(
         area->texture.prg_id, si->uv, area->texture.data);
     si->albedo = base;
     si->emission = base * area->intensity * is_emitted;
@@ -281,20 +284,20 @@ extern "C" __device__ void __intersection__plane()
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
     const Plane::Data* plane = reinterpret_cast<Plane::Data*>(data->shape_data);
 
-    const float2 min = plane->min;
-    const float2 max = plane->max;
+    const Vec2f min = plane->min;
+    const Vec2f max = plane->max;
 
     Ray ray = getLocalRay();
 
-    const float t = -ray.o.y / ray.d.y;
+    const float t = -ray.o.y() / ray.d.y();
 
-    const float x = ray.o.x + t * ray.d.x;
-    const float z = ray.o.z + t * ray.d.z;
+    const float x = ray.o.x() + t * ray.d.x();
+    const float z = ray.o.z() + t * ray.d.z();
 
-    float2 uv = make_float2((x - min.x) / (max.x - min.x), (z - min.y) / (max.y - min.y));
+    Vec2f uv((x - min.x()) / (max.x() - min.x()), (z - min.y()) / (max.y() - min.y()));
 
-    if (min.x < x && x < max.x && min.y < z && z < max.y && ray.tmin < t && t < ray.tmax)
-        optixReportIntersection(t, 0, float2_as_ints(uv));
+    if (min.x() < x && x < max.x() && min.y() < z && z < max.y() && ray.tmin < t && t < ray.tmax)
+        optixReportIntersection(t, 0, Vec2f_as_ints(uv));
 }
 
 extern "C" __device__ void __closesthit__plane()
@@ -303,9 +306,9 @@ extern "C" __device__ void __closesthit__plane()
 
     Ray ray = getWorldRay();
 
-    float3 local_n = make_float3(0, 1, 0);
-    const float3 world_n = normalize(optixTransformNormalFromObjectToWorldSpace(local_n));
-    const float2 uv = getFloat2FromAttribute<0>();
+    Vec3f local_n = Vec3f(0, 1, 0);
+    const Vec3f world_n = normalize(optixTransformNormalFromObjectToWorldSpace(local_n));
+    const Vec2f uv = getVec2fFromAttribute<0>();
 
     SurfaceInteraction* si = getSurfaceInteraction();
 
@@ -315,8 +318,8 @@ extern "C" __device__ void __closesthit__plane()
     si->wo = ray.d;
     si->uv = uv;
     si->surface_info = data->surface_info;
-    si->shading.dpdu = optixTransformNormalFromObjectToWorldSpace(make_float3(1.0f, 0.0f, 0.0f));
-    si->shading.dpdv = optixTransformNormalFromObjectToWorldSpace(make_float3(0.0f, 0.0f, 1.0f));
+    si->shading.dpdu = optixTransformNormalFromObjectToWorldSpace(Vec3f(1.0f, 0.0f, 0.0f));
+    si->shading.dpdv = optixTransformNormalFromObjectToWorldSpace(Vec3f(0.0f, 0.0f, 1.0f));
 }
 
 static inline __device__ void confine(const nanovdb::BBox<nanovdb::Coord>& bbox, nanovdb::Vec3f& ivec)
@@ -371,30 +374,40 @@ static inline __device__ float transmittanceHDDA(
 template <typename AccT>
 static inline __device__ float rayMarching(
     const nanovdb::Vec3f& ro, const nanovdb::Vec3f& rd,
-    const float tmin, const float tmax, uint32_t& seed, GridMedium::Data* grid)
+    const float tmin, const float tmax, uint32_t& seed, VDBGrid::Data* grid)
 {
     const nanovdb::FloatGrid* density = reinterpret_cast<const nanovdb::FloatGrid*>(grid->density);
     const auto& tree = density->tree();
     auto acc = tree.getAccessor();
 
     nanovdb::Ray<float> ray(ro, rd, tmin, tmax);
+    nanovdb::Coord ijk = nanovdb::RoundDown<nanovdb::Coord>(ray.start());
+
+    nanovdb::HDDA<nanovdb::Ray<float>> hdda(ray, acc.getDim(ijk, ray));
 
     // Sampling optical depth
     float tau_s = -logf(1.0f - rnd(seed));
     // Initialize free-path
-    float t = tmin;
+    float t = 0.0f;
     float tau = 0.0f;
-    while (tau < tau_s)
+    float density = acc.getValue(ijk);
+    while (tau < tau_s && hdda.step())
     {
-        float3 p = ro - t * rd;
-        
+        float dt = hdda.time() - t;
+        float sigma_e = density * grid->sigma_t;
+        tau += sigma_e * dt;
+        t = hdda.time();
+        ijk = hdda.voxel();
+
+        density = acc.getValue(ijk);
+        hdda.update(ray, acc.getDim());
     }
 }
 
 extern "C" __device__ void __intersection__grid()
 {
     const HitgroupData* data = reinterpret_cast<const HitgroupData*>(optixGetSbtDataPointer());
-    const GridMedium::Data* grid = reinterpret_cast<const GridMedium::Data*>(data->shape_data);
+    const VDBGrid::Data* grid = reinterpret_cast<const VDBGrid::Data*>(data->shape_data);
     const nanovdb::FloatGrid* density = reinterpret_cast<const nanovdb::FloatGrid*>(grid->density);
     assert(density);
 
@@ -419,58 +432,77 @@ extern "C" __device__ void __intersection__grid()
 extern "C" __device__ void __closesthit__grid()
 {
     const HitgroupData* data = reinterpret_cast<const HitgroupData*>(optixGetSbtDataPointer());
-    const GridMedium::Data* grid = reinterpret_cast<const GridMedium::Data*>(data->shape_data);
-    const nanovdb::FloatGrid* density = reinterpret_cast<const nanovdb::FloatGrid*>(grid->density);
-    const auto& tree = density->tree();
+    const VDBGrid::Data* medium = reinterpret_cast<const VDBGrid::Data*>(data->shape_data);
+    const nanovdb::FloatGrid* grid = reinterpret_cast<const nanovdb::FloatGrid*>(medium->grid);
+    const auto& tree = grid->tree();
     auto acc = tree.getAccessor();
+
+    const float sigma_t = medium->sigma_t;
 
     Ray ray = getWorldRay();
     const float t0 = optixGetRayTmax();
     const float t1 = __int_as_float(getPayload<2>());
 
-    //const auto nanoray = nanovdb::Ray<float>(reinterpret_cast<const nanovdb::Vec3f&>(ray.o), 
-    //    reinterpret_cast<const nanovdb::Vec3f&>(ray.d));
-    //auto start = density->worldToIndexF(nanoray(t0));
-    //auto end = density->worldToIndexF(nanoray(t1));
+    const auto nanoray = nanovdb::Ray<float>(reinterpret_cast<const nanovdb::Vec3f&>(ray.o), 
+        reinterpret_cast<const nanovdb::Vec3f&>(ray.d), t0, t1);
+    //auto start = grid->worldToIndexF(nanoray(t0));
+    //auto end = grid->worldToIndexF(nanoray(t1));
 
-    //auto bbox = density->indexBBox();
+    //auto bbox = grid->indexBBox();
     //confine(bbox, start, end);
-
-    //float transmittance = transmittanceHDDA(start, end, acc);
 
     SurfaceInteraction* si = getSurfaceInteraction();
 
-    si->p = ray.at(ray.tmax);
-    si->t = ray.tmax;
-    si->wo = ray.d;
-    si->surface_info = data->surface_info;
-    si->surface_info.type = SurfaceType::None;
+    nanovdb::Coord ijk = nanovdb::RoundDown<nanovdb::Coord>(nanoray.start());
+    nanovdb::HDDA<nanovdb::Ray<float>> hdda(nanoray, acc.getDim(ijk, nanoray));
 
-    //uint32_t seed = si->seed;
-    //if (transmittance > 0.0f)
-    //    si->trace_terminate = true;
-    //else
-    //    si->trace_terminate = false;
+    float t = t0;
+    while (hdda.step())
+    {
+        if (t > t1) break;
+        const float density = acc.getValue(ijk);
+        if (density > UniformSampler::get1D(si->seed))
+        {
+            si->t = t;
+            si->p = ray.at(t);
+            si->shading.n = Vec3f(0,1,0);   // arbitrary
+            si->wo = ray.d;
+            si->surface_info = data->surface_info;
+            si->uv = Vec2f(0.5f);           // arbitrary
+            return;
+        }
+
+        t = hdda.time();
+        hdda.update(nanoray, acc.getDim(ijk, nanoray));
+    }
+
+    // No scattering is accepted
+    si->t = t1;
+    si->p = ray.o;
+    si->shading.n = Vec3f(0, 1, 0); 
+    si->wo = ray.d;
+    si->surface_info.type = SurfaceType::None;
+    si->uv = Vec2f(0.5f);
 }
 
 /* Texture functions */
-extern "C" __device__ float3 __direct_callable__bitmap(const float2& uv, void* tex_data)
+extern "C" __device__ Vec3f __direct_callable__bitmap(const Vec2f& uv, void* tex_data)
 {
     const BitmapTexture::Data* image = reinterpret_cast<BitmapTexture::Data*>(tex_data);
-    float4 c = tex2D<float4>(image->texture, uv.x, uv.y);
-    return make_float3(c.x, c.y, c.z);
+    Vec4f c = tex2D<float4>(image->texture, uv.x(), uv.y());
+    return Vec3f(c.x(), c.y(), c.z());
 }
 
-extern "C" __device__ float3 __direct_callable__constant(const float2& uv, void* tex_data)
+extern "C" __device__ Vec3f __direct_callable__constant(const Vec2f& uv, void* tex_data)
 {
     const ConstantTexture::Data* constant = reinterpret_cast<ConstantTexture::Data*>(tex_data);
     return constant->color;
 }
 
-extern "C" __device__ float3 __direct_callable__checker(const float2& uv, void* tex_data)
+extern "C" __device__ Vec3f __direct_callable__checker(const Vec2f& uv, void* tex_data)
 {
     const CheckerTexture::Data* checker = reinterpret_cast<CheckerTexture::Data*>(tex_data);
-    const bool is_odd = sinf(uv.x * math::pi * checker->scale) * sinf(uv.y * math::pi * checker->scale) < 0;
+    const bool is_odd = sinf(uv.x() * math::pi * checker->scale) * sinf(uv.y() * math::pi * checker->scale) < 0;
     return is_odd ? checker->color1 : checker->color2;
 }
 

@@ -3,7 +3,6 @@
 #include <prayground/optix/macros.h>
 #include <prayground/math/vec.h>
 #include <prayground/math/random.h>
-#include <vector_types.h>
 
 namespace prayground {
 
@@ -21,6 +20,8 @@ namespace prayground {
                 return make_float2(rnd(prev), rnd(prev));
             else if constexpr (std::is_same_v<V2, Vec2f>())
                 return Vec2f{rnd(prev), rnd(prev)};
+            else 
+                static_assert(false);
         }
 
         template <typename V3>
@@ -30,6 +31,8 @@ namespace prayground {
                 return make_float3(rnd(prev), rnd(prev), rnd(prev));
             else if constexpr (std::is_same_v<V3, Vec3f>())
                 return Vec3f{rnd(prev), rnd(prev), rnd(prev)};
+            else
+                static_assert(false);
         }
     };
 

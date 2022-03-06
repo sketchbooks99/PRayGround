@@ -7,7 +7,7 @@ namespace prayground {
 
 // ------------------------------------------------------------------
 Box::Box()
-: m_min(make_float3(-1.0f)), m_max(make_float3(1.0f))
+: m_min(Vec3f(-1.0f)), m_max(Vec3f(1.0f))
 {
 
 }

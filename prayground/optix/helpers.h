@@ -52,3 +52,7 @@ HOSTDEVICE INLINE unsigned char quantizeUnsigned8Bits( float x )
 #define float3_as_ints( u ) __float_as_int( u.x ), __float_as_int( u.y ), __float_as_int( u.z )
 
 #define float2_as_ints( u ) __float_as_int( u.x ), __float_as_int( u.y )
+
+#define Vec3f_as_ints(u) __float_as_int(u.x()), __float_as_int(u.y()), __float_as_int(u.z())
+
+#define Vec2f_as_ints(u) __float_as_int(u.x()), __float_as_int(u.y())

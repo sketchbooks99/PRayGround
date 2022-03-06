@@ -9,9 +9,9 @@
 
 using namespace prayground;
 
-using ConstantTexture = ConstantTexture_<float3>;
-using CheckerTexture = CheckerTexture_<float3>;
-using GridMedium = GridMedium_<float3>;
+using ConstantTexture = ConstantTexture_<Vec3f>;
+using CheckerTexture = CheckerTexture_<Vec3f>;
+using VDBGrid = VDBGrid_<Vec3f>;
 
 struct LaunchParams 
 {
@@ -20,8 +20,8 @@ struct LaunchParams
     unsigned int samples_per_launch;
     unsigned int max_depth;
     int frame;
-    uchar4* result_buffer;
-    float4* accum_buffer;
+    Vec4u* result_buffer;
+    Vec4f* accum_buffer;
     OptixTraversableHandle handle;
 };
 

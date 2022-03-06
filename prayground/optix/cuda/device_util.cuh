@@ -6,6 +6,7 @@
 #include <prayground/optix/helpers.h>
 #include <prayground/optix/macros.h>
 #include <prayground/math/util.h>
+#include <prayground/math/vec.h>
 
 #ifdef __CUDACC__
 #if !defined(int8_t)
@@ -144,18 +145,18 @@ namespace prayground {
     }
 
     template <uint32_t Base> 
-    INLINE DEVICE float2 getFloat2FromAttribute()
+    INLINE DEVICE Vec2f getVec2fFromAttribute()
     {
-        return make_float2(
+        return Vec2f(
             __int_as_float(getAttribute<Base + 0>()), 
             __int_as_float(getAttribute<Base + 1>())
         );
     }
 
     template <uint32_t Base>
-    INLINE DEVICE float3 getFloat3FromAttribute()
+    INLINE DEVICE Vec3f getVec3fFromAttribute()
     {
-        return make_float3(
+        return Vec3f(
             __int_as_float(getAttribute<Base + 0>()), 
             __int_as_float(getAttribute<Base + 1>()), 
             __int_as_float(getAttribute<Base + 2>())
@@ -163,9 +164,9 @@ namespace prayground {
     }
 
     template <uint32_t Base>
-    INLINE DEVICE float4 getFloat4FromAttribute()
+    INLINE DEVICE Vec4f getVec4fFromAttribute()
     {
-        return make_float4(
+        return Vec4f(
             __int_as_float(getAttribute<Base + 0>()),
             __int_as_float(getAttribute<Base + 1>()),
             __int_as_float(getAttribute<Base + 2>()),

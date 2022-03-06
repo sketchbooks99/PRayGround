@@ -6,13 +6,13 @@
 namespace prayground {
 
 struct Ray {
-    HOSTDEVICE INLINE float3 at(const float time) { return o + d*time; }
+    HOSTDEVICE INLINE Vec3f at(const float time) { return o + d*time; }
 
     /* Position of ray origin in world coordinates. */
-    float3 o;
+    Vec3f o;
 
     /* Direction of out-going ray from origin. */
-    float3 d;
+    Vec3f d;
 
     /* Time of ray. It is mainly used for realizing motion blur. */
     float tmin;
@@ -22,16 +22,16 @@ struct Ray {
 
 struct pRay {
     /** @todo Polarized ray */
-    HOSTDEVICE INLINE float3 at(const float time) { return o + d*time; }
+    HOSTDEVICE INLINE Vec3f at(const float time) { return o + d*time; }
 
     /* Position of ray origin in world coordinates. */
-    float3 o;
+    Vec3f o;
 
     /* Direction of out-going ray from origin. */
-    float3 d; 
+    Vec3f d; 
 
     /* Tangent vector along with ray direction */
-    float3 tangent;
+    Vec3f tangent;
 
     /* Time of ray. It is mainly used for realizing motion blur. */
     float tmin; 

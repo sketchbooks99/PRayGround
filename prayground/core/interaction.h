@@ -1,6 +1,7 @@
 #pragma once
 
-#include <prayground/math/vec_math.h>
+//#include <prayground/math/vec_math.h>
+#include <prayground/math/vec.h>
 #include <curand.h>
 #include <curand_kernel.h>
 
@@ -33,6 +34,9 @@ namespace prayground {
 
         // Emitter 
         AreaEmitter     = 1u << 5,
+
+        // Medium
+        Medium          = 1u << 6
     };
 
     constexpr SurfaceType  operator|(SurfaceType t1, SurfaceType t2)    { return static_cast<SurfaceType>(  (unsigned int)t1 | (unsigned int)t2 ); }
@@ -71,11 +75,11 @@ namespace prayground {
     template <typename Spectrum>
     struct SurfaceInteraction_ {
         /** Position of intersection point in world coordinates. */
-        float3 p;
+        Vec3f p;
 
         /** Incident and outgoing directions at a surface. */
-        float3 wi;
-        float3 wo;
+        Vec3f wi;
+        Vec3f wo;
 
         /** ray time */
         float t;
@@ -85,17 +89,17 @@ namespace prayground {
         Spectrum emission;
 
         /** UV coordinate at an intersection point. */
-        float2 uv;
+        Vec2f uv;
  
         struct {
             /** Surface normal */
-            float3 n;
+            Vec3f n;
 
             /** Partial derivative on intersection point */
-            float3 dpdu, dpdv;
+            Vec3f dpdu, dpdv;
 
             /** Partial derivative on surface normal */
-            float3 dndu, dndv;
+            Vec3f dndu, dndv;
         } shading;
 
         uint32_t seed;
@@ -107,10 +111,10 @@ namespace prayground {
     };
 
     struct MediumInteraction {
-        float3 p;
+        Vec3f p;
 
-        float3 wi;
-        float3 wo;
+        Vec3f wi;
+        Vec3f wo;
 
         float t;
 

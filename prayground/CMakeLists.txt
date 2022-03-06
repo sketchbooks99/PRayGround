@@ -19,6 +19,7 @@ set(sources
   core/material.h 
   core/onb.h 
   core/ray.h 
+  core/sampler.h
   core/shape.h 
   core/shape.cpp
   core/stream_helpers.h 
@@ -114,7 +115,8 @@ set(sources
   texture/constant.h  
 
   # Medium ==========
-  medium/gridmedium.h 
+  medium/gridmedium.h
+  medium/vdbgrid.h 
   medium/atmosphere.h
 
   # Emitter ==========

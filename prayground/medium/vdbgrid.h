@@ -50,6 +50,9 @@ namespace prayground {
             }
             else 
                 THROW("GridMedium can only load NanoVDB file");
+
+            auto root = m_handle.grid<float>()->tree().root();
+            pgLog("Maximum density: ", root.maximum());
         }
 
         constexpr ShapeType type() override

@@ -159,8 +159,7 @@ extern "C" __device__ void __raygen__medium()
         }
     } while (--i);
 
-    const uint3 launch_index = optixGetLaunchIndex();
-    const unsigned int image_index = launch_index.y() * params.width + launch_index.x();
+    const uint32_t image_index = idx.y() * params.width + idx.x();
 
     if (result.x() != result.x()) result.x() = 0.0f;
     if (result.y() != result.y()) result.y() = 0.0f;
@@ -172,7 +171,7 @@ extern "C" __device__ void __raygen__medium()
     {
         const float a = 1.0f / static_cast<float>(frame + 1);
         const Vec3f accum_color_prev = Vec3f(params.accum_buffer[image_index]);
-        accum_color = math::lerp(accum_color_prev, accum_color, a);
+        accum_color = lerp(accum_color_prev, accum_color, a);
     }
     params.accum_buffer[image_index] = Vec4f(accum_color, 1.0f);
     Vec3u color = make_color(accum_color, true);
@@ -245,11 +244,11 @@ extern "C" __device__ Vec3f __direct_callable__sample_medium(SurfaceInteraction*
 {
     const VDBGrid::Data* grid = reinterpret_cast<const VDBGrid::Data*>(mat_data);
     const float g = grid->g;
-    const float sigma_s = grid->sigma_s;
+    const Vec3f sigma_s = grid->sigma_s;
     const float sigma_t = grid->sigma_t;
     si->trace_terminate = false;
     uint32_t seed = si->seed;
-    Vec2f u = UniformSampler::get2D<Vec2f>(seed);
+    Vec2f u = UniformSampler::get2D(seed);
 
     // Sampling scattering direction from Henyey--Greenstein phase function
     Vec3f wi = sampleHenyeyGreenstein(u, g);
@@ -307,7 +306,7 @@ extern "C" __device__ void __closesthit__plane()
     Ray ray = getWorldRay();
 
     Vec3f local_n = Vec3f(0, 1, 0);
-    const Vec3f world_n = normalize(optixTransformNormalFromObjectToWorldSpace(local_n));
+    const Vec3f world_n = normalize(optixTransformNormalFromObjectToWorldSpace(local_n.toCUVec()));
     const Vec2f uv = getVec2fFromAttribute<0>();
 
     SurfaceInteraction* si = getSurfaceInteraction();
@@ -318,8 +317,8 @@ extern "C" __device__ void __closesthit__plane()
     si->wo = ray.d;
     si->uv = uv;
     si->surface_info = data->surface_info;
-    si->shading.dpdu = optixTransformNormalFromObjectToWorldSpace(Vec3f(1.0f, 0.0f, 0.0f));
-    si->shading.dpdv = optixTransformNormalFromObjectToWorldSpace(Vec3f(0.0f, 0.0f, 1.0f));
+    si->shading.dpdu = optixTransformNormalFromObjectToWorldSpace({1.0f, 0.0f, 0.0f});
+    si->shading.dpdv = optixTransformNormalFromObjectToWorldSpace({0.0f, 0.0f, 1.0f});
 }
 
 static inline __device__ void confine(const nanovdb::BBox<nanovdb::Coord>& bbox, nanovdb::Vec3f& ivec)
@@ -433,7 +432,7 @@ extern "C" __device__ void __closesthit__grid()
 {
     const HitgroupData* data = reinterpret_cast<const HitgroupData*>(optixGetSbtDataPointer());
     const VDBGrid::Data* medium = reinterpret_cast<const VDBGrid::Data*>(data->shape_data);
-    const nanovdb::FloatGrid* grid = reinterpret_cast<const nanovdb::FloatGrid*>(medium->grid);
+    const nanovdb::FloatGrid* grid = reinterpret_cast<const nanovdb::FloatGrid*>(medium->density);
     const auto& tree = grid->tree();
     auto acc = tree.getAccessor();
 

@@ -77,7 +77,7 @@ private:
     {
         for (int i = n-1; i > 0; i--)
         {
-            int target = rnd_int(seed, 0, i);
+            int target = rndInt(seed, 0, i);
             int tmp = p[i];
             p[i] = p[target];
             p[target] = tmp;

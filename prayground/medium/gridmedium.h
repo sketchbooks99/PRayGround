@@ -27,13 +27,13 @@ namespace prayground {
             : m_sigma_a(sigma_a), m_sigma_s(sigma_s), 
               m_g(g), 
               m_nx(nx), m_ny(ny), m_nz(nz), 
-              m_density(new Float[nx * ny * nz])
+              m_density(new float[nx * ny * nz])
         {
             m_sigma_t = (sigma_a + sigma_s)[0];
             memcpy(m_density.get(), density, sizeof(float) * nx * ny * nz);
         }
 
-        constexpr ShapeType() type() override 
+        constexpr ShapeType type() override 
         {
             return ShapeType::Custom;
         }

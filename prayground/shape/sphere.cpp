@@ -11,7 +11,7 @@ Sphere::Sphere()
 
 }
 
-Sphere::Sphere(const float3& c, float r)
+Sphere::Sphere(const Vec3f& c, float r)
 : m_center(c), m_radius(r)
 {
 
@@ -47,8 +47,8 @@ OptixBuildInput Sphere::createBuildInput()
 // ------------------------------------------------------------------
 AABB Sphere::bound() const 
 { 
-    return AABB( m_center - make_float3(m_radius),
-                 m_center + make_float3(m_radius) );
+    return AABB( m_center - Vec3f(m_radius),
+                 m_center + Vec3f(m_radius) );
 }
 
 // ------------------------------------------------------------------

@@ -2,7 +2,8 @@
 
 #include <optix.h>
 #include <vector_types.h>
-#include <prayground/math/vec_math.h>
+// #include <prayground/math/vec_math.h>
+#include <prayground/math/vec.h>
 #include <prayground/optix/macros.h>
 #include <prayground/optix/helpers.h>
 #include <prayground/core/util.h>
@@ -63,26 +64,26 @@ namespace prayground {
     // Forward declaration
     class RGBSpectrum;
     class SampledSpectrum;
-    HOSTDEVICE float3 XYZToSRGB(const float3& xyz);
+    HOSTDEVICE Vec3f XYZToSRGB(const Vec3f& xyz);
     HOSTDEVICE void XYZToSRGB(float xyz2rgb[3]);
-    HOSTDEVICE float3 sRGBToXYZ(const float3& rgb);
+    HOSTDEVICE Vec3f sRGBToXYZ(const Vec3f& rgb);
     HOSTDEVICE void sRGBToXYZ(float rgb2xyz[3]);
-    HOSTDEVICE float3 linearToSRGB(const float3& c);
+    HOSTDEVICE Vec3f linearToSRGB(const Vec3f& c);
     HOSTDEVICE RGBSpectrum linearToSRGB(const RGBSpectrum& c);
-    HOSTDEVICE float3 sRGBToLinear(const float3& c);
+    HOSTDEVICE Vec3f sRGBToLinear(const Vec3f& c);
     HOSTDEVICE RGBSpectrum sRGBToLinear(const RGBSpectrum& c);
-    HOSTDEVICE float4 color2float(const uchar4& c);
-    HOSTDEVICE float3 color2float(const uchar3& c);
-    HOSTDEVICE uchar3 make_color(const float3& c, bool gamma_enabled=true);
-    HOSTDEVICE uchar4 make_color(const float4& c, bool gamma_enabled=true);
-    HOSTDEVICE float luminance(const float3& c);
+    HOSTDEVICE Vec4f color2float(const Vec4u& c);
+    HOSTDEVICE Vec3f color2float(const Vec3u& c);
+    HOSTDEVICE Vec3u make_color(const Vec3f& c, bool gamma_enabled=true);
+    HOSTDEVICE Vec4u make_color(const Vec4f& c, bool gamma_enabled=true);
+    HOSTDEVICE float luminance(const Vec3f& c);
     static HOSTDEVICE float gauss(const float& x, const float& mu, const float& sigma1, const float& sigma2);
     HOSTDEVICE float CIE_X(const float& lambda);
     HOSTDEVICE float CIE_Y(const float& lambda);
     HOSTDEVICE float CIE_Z(const float& lambda);
     static HOSTDEVICE float averageSpectrumSamples(const float* lambda, const float* v, int n, const float& lambda_start, const float& lambda_end);
     HOSTDEVICE float linearInterpSpectrumSamples(const float* lambda, const float* v, int n, const float& l);
-    HOSTDEVICE SampledSpectrum reconstructSpectrumFromRGB(const float3& rgb,
+    HOSTDEVICE SampledSpectrum reconstructSpectrumFromRGB(const Vec3f& rgb,
         const SampledSpectrum& white, const SampledSpectrum& cyan, const SampledSpectrum& magenta, const SampledSpectrum& yellow,
         const SampledSpectrum& red, const SampledSpectrum& green, const SampledSpectrum& blue);
     HOSTDEVICE SampledSpectrum reconstructSpectrumFromRGB(const RGBSpectrum& rgb,
@@ -101,9 +102,9 @@ namespace prayground {
             c[0] = t; c[1] = t; c[2] = t;
         }
 
-        RGBSpectrum(const float3& rgb)
+        RGBSpectrum(const Vec3f& rgb)
         {
-            c[0] = rgb.x; c[1] = rgb.y; c[2] = rgb.z;
+            c[0] = rgb[0]; c[1] = rgb[1]; c[2] = rgb[2];
         }
 
         float& operator[](int i)
@@ -183,14 +184,14 @@ namespace prayground {
             return true;
         }
 
-        float3 toXYZ() const 
+        Vec3f toXYZ() const 
         {
-            return sRGBToXYZ(make_float3(c[0], c[1], c[2]));
+            return sRGBToXYZ(Vec3f(c[0], c[1], c[2]));
         }
 
-        float3 toRGB() const 
+        Vec3f toRGB() const 
         {
-            return make_float3(c[0], c[1], c[2]);
+            return Vec3f(c[0], c[1], c[2]);
         }
 
         friend RGBSpectrum sqrtf(const RGBSpectrum& s)
@@ -410,24 +411,24 @@ namespace prayground {
             return true;
         }
 
-        float3 toXYZ() const 
+        Vec3f toXYZ() const 
         {
-            float3 ret{0.0f, 0.0f, 0.0f};
+            Vec3f ret{0.0f, 0.0f, 0.0f};
             for (int i = 0; i < nSpectrumSamples; i++)
             {
                 const float lambda = lerp(min_lambda, max_lambda, float(i) / nSpectrumSamples);
-                ret.x += c[i] * CIE_X(lambda);
-                ret.y += c[i] * CIE_Y(lambda);
-                ret.z += c[i] * CIE_Z(lambda);                
+                ret[0] += c[i] * CIE_X(lambda);
+                ret[1] += c[i] * CIE_Y(lambda);
+                ret[2] += c[i] * CIE_Z(lambda);                
             }
             const float scale = float(max_lambda - min_lambda) / (CIE_Y_integral * nSpectrumSamples);
 
             return ret * scale;
         }
 
-        float3 toRGB() const 
+        Vec3f toRGB() const 
         {
-            float3 xyz = toXYZ();
+            Vec3f xyz = toXYZ();
             return XYZToSRGB(xyz);
         }
 
@@ -508,12 +509,12 @@ namespace prayground {
 #endif
 
     /* Conversion from XYZ to RGB color space, vice versa */
-    HOSTDEVICE INLINE float3 XYZToSRGB(const float3& xyz)
+    HOSTDEVICE INLINE Vec3f XYZToSRGB(const Vec3f& xyz)
     {
-        return make_float3(
-            3.2410f * xyz.x - 1.5374f * xyz.y - 0.4986f * xyz.z,
-            -0.9692f * xyz.x + 1.8760f * xyz.y + 0.0416f * xyz.z,
-            0.0556f * xyz.x - 0.2040f * xyz.y + 1.0507f * xyz.z
+        return Vec3f(
+            3.2410f * xyz[0] - 1.5374f * xyz[1] - 0.4986f * xyz[2],
+            -0.9692f * xyz[0] + 1.8760f * xyz[1] + 0.0416f * xyz[2],
+            0.0556f * xyz[0] - 0.2040f * xyz[1] + 1.0507f * xyz[2]
         );
     }
 
@@ -527,12 +528,12 @@ namespace prayground {
         xyz2rgb[2] = 0.0556f * x - 0.2040f * y + 1.0507f * z;
     }
 
-    HOSTDEVICE INLINE float3 sRGBToXYZ(const float3& rgb)
+    HOSTDEVICE INLINE Vec3f sRGBToXYZ(const Vec3f& rgb)
     {
-        return make_float3(
-            0.4124f * rgb.x + 0.3576f * rgb.y + 0.1805f * rgb.z,
-            0.2126f * rgb.x + 0.7152f * rgb.y + 0.0722f * rgb.z,
-            0.0193f * rgb.x + 0.1192f * rgb.y + 0.9505f * rgb.z
+        return Vec3f(
+            0.4124f * rgb[0] + 0.3576f * rgb[1] + 0.1805f * rgb[2],
+            0.2126f * rgb[0] + 0.7152f * rgb[1] + 0.0722f * rgb[2],
+            0.0193f * rgb[0] + 0.1192f * rgb[1] + 0.9505f * rgb[2]
         );
     }
 
@@ -550,8 +551,8 @@ namespace prayground {
     HOSTDEVICE INLINE Vec3f linearToSRGB(const Vec3f& c)
     {
         float invGamma = 1.0f / 2.4f;
-        Vec3f powed = make_float3(powf(c.x(), invGamma), powf(c.y(), invGamma), powf(c.z(), invGamma));
-        return make_float3(
+        Vec3f powed = Vec3f(powf(c.x(), invGamma), powf(c.y(), invGamma), powf(c.z(), invGamma));
+        return Vec3f(
             c.x() < 0.0031308f ? 12.92f * c.x() : 1.055f * powed.x() - 0.055f,
             c.y() < 0.0031308f ? 12.92f * c.y() : 1.055f * powed.y() - 0.055f,
             c.z() < 0.0031308f ? 12.92f * c.z() : 1.055f * powed.z() - 0.055f
@@ -569,13 +570,13 @@ namespace prayground {
         return ret;
     }
 
-    HOSTDEVICE INLINE float3 sRGBToLinear(const float3& c)
+    HOSTDEVICE INLINE Vec3f sRGBToLinear(const Vec3f& c)
     {
         const float gamma = 2.4f;
-        return make_float3(
-            c.x < 0.0404482f ? c.x / 12.92 : powf((c.x + 0.055f) / 1.055f, gamma),
-            c.y < 0.0404482f ? c.y / 12.92 : powf((c.y + 0.055f) / 1.055f, gamma),
-            c.z < 0.0404482f ? c.z / 12.92 : powf((c.z + 0.055f) / 1.055f, gamma)
+        return Vec3f(
+            c[0] < 0.0404482f ? c[0] / 12.92 : powf((c[0] + 0.055f) / 1.055f, gamma),
+            c[1] < 0.0404482f ? c[1] / 12.92 : powf((c[1] + 0.055f) / 1.055f, gamma),
+            c[2] < 0.0404482f ? c[2] / 12.92 : powf((c[2] + 0.055f) / 1.055f, gamma)
         );
     }
 
@@ -590,22 +591,22 @@ namespace prayground {
     }
 
     /* 1 bit color to 4 bit float color */
-    HOSTDEVICE INLINE float4 color2float(const uchar4& c)
+    HOSTDEVICE INLINE Vec4f color2float(const Vec4u& c)
     {
-        return make_float4(
-            static_cast<float>(c.x) / 255.0f,
-            static_cast<float>(c.y) / 255.0f,
-            static_cast<float>(c.z) / 255.0f,
-            static_cast<float>(c.w) / 255.0f
+        return Vec4f(
+            static_cast<float>(c[0]) / 255.0f,
+            static_cast<float>(c[1]) / 255.0f,
+            static_cast<float>(c[2]) / 255.0f,
+            static_cast<float>(c[3]) / 255.0f
         );
     }
 
-    HOSTDEVICE INLINE float3 color2float(const uchar3& c)
+    HOSTDEVICE INLINE Vec3f color2float(const Vec3u& c)
     {
-        return make_float3(
-            static_cast<float>(c.x) / 255.0f,
-            static_cast<float>(c.y) / 255.0f,
-            static_cast<float>(c.z) / 255.0f
+        return Vec3f(
+            static_cast<float>(c[0]) / 255.0f,
+            static_cast<float>(c[1]) / 255.0f,
+            static_cast<float>(c[2]) / 255.0f
         );
     }
 
@@ -619,16 +620,16 @@ namespace prayground {
         return Vec3u(quantizeUnsigned8Bits(rgb.x()), quantizeUnsigned8Bits(rgb.y()), quantizeUnsigned8Bits(rgb.z()));
     }
 
-    HOSTDEVICE INLINE uchar4 make_color(const float4& c, bool gamma_enabled)
+    HOSTDEVICE INLINE Vec4u make_color(const Vec4f& c, bool gamma_enabled)
     {
-        uchar3 rgb = make_color(make_float3(c.x, c.y, c.z), gamma_enabled);
-        return make_uchar4(rgb.x, rgb.y, rgb.z, (unsigned char)(clamp(c.w, 0.0f, 1.0f) * 255.0f));
+        Vec3u rgb = make_color(Vec3f(c[0], c[1], c[2]), gamma_enabled);
+        return Vec4u(rgb[0], rgb[1], rgb[2], (unsigned char)(clamp(c[3], 0.0f, 1.0f) * 255.0f));
     }
 
     /* Luminance of RGB color */
-    HOSTDEVICE INLINE float luminance(const float3& c)
+    HOSTDEVICE INLINE float luminance(const Vec3f& c)
     {
-        return 0.2126f * c.x + 0.7152f * c.y + 0.0722f * c.z;
+        return 0.2126f * c[0] + 0.7152f * c[1] + 0.0722f * c[2];
     }
 
     /* Approximation of CIE 1931 XYZ curve */
@@ -710,7 +711,7 @@ namespace prayground {
         return lerp(v[offset], v[offset + 1], t);
     }
 
-    HOSTDEVICE INLINE SampledSpectrum reconstructSpectrumFromRGB(const float3& rgb,
+    HOSTDEVICE INLINE SampledSpectrum reconstructSpectrumFromRGB(const Vec3f& rgb,
         const SampledSpectrum& white, const SampledSpectrum& cyan, const SampledSpectrum& magenta, const SampledSpectrum& yellow,
         const SampledSpectrum& red, const SampledSpectrum& green, const SampledSpectrum& blue)
     {

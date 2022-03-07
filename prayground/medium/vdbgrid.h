@@ -51,8 +51,7 @@ namespace prayground {
             else 
                 THROW("GridMedium can only load NanoVDB file");
 
-            auto root = m_handle.grid<float>()->tree().root();
-            pgLog("Maximum density: ", root.maximum());
+            pgLog("Maximum:", m_handle.grid<float>()->tree().root().maximum());
         }
 
         constexpr ShapeType type() override
@@ -84,12 +83,12 @@ namespace prayground {
             nanovdb::Coord bounds_min(bbox.min());
             nanovdb::Coord bounds_max(bbox.max() + nanovdb::Coord(1));
 
-            float3 min = {
+            Vec3f min{
                 static_cast<float>(bounds_min[0]),
                 static_cast<float>(bounds_min[1]),
                 static_cast<float>(bounds_min[2])
             };
-            float3 max = {
+            Vec3f max{
                 static_cast<float>(bounds_max[0]),
                 static_cast<float>(bounds_max[1]),
                 static_cast<float>(bounds_max[2])

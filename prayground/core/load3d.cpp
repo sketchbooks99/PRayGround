@@ -52,7 +52,7 @@ void loadObj(
             {
                 // access to vertex
                 tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
-                setByIndex(face.vertex_id, (int)v, idx.vertex_index);
+                face.vertex_id[v] = idx.vertex_index;
                 tinyobj::real_t vx = attrib.vertices[3 * size_t(idx.vertex_index) + 0];
                 tinyobj::real_t vy = attrib.vertices[3 * size_t(idx.vertex_index) + 1];
                 tinyobj::real_t vz = attrib.vertices[3 * size_t(idx.vertex_index) + 2];
@@ -61,7 +61,7 @@ void loadObj(
                 // Normals if exists
                 if (idx.normal_index >= 0)
                 {
-                    setByIndex(face.normal_id, (int)v, idx.normal_index);
+                    face.normal_id[v] = idx.normal_index;
                     tinyobj::real_t nx = attrib.normals[3 * size_t(idx.normal_index) + 0];
                     tinyobj::real_t ny = attrib.normals[3 * size_t(idx.normal_index) + 1];
                     tinyobj::real_t nz = attrib.normals[3 * size_t(idx.normal_index) + 2];
@@ -71,7 +71,7 @@ void loadObj(
                 // Texcoords if exists
                 if (idx.texcoord_index >= 0)
                 {
-                    setByIndex(face.texcoord_id, (int)v, idx.texcoord_index);
+                    face.texcoord_id[v] = idx.texcoord_index;
                     tinyobj::real_t tx = attrib.texcoords[2 * size_t(idx.texcoord_index) + 0];
                     tinyobj::real_t ty = attrib.texcoords[2 * size_t(idx.texcoord_index) + 1];
                     texcoords[idx.texcoord_index] = Vec2f(tx, ty);
@@ -138,7 +138,7 @@ void loadObjWithMtl(
             {
                 // access to vertex
                 tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
-                setByIndex(face.vertex_id, (int)v, idx.vertex_index);
+                face.vertex_id[v] = idx.vertex_index;
                 tinyobj::real_t vx = attrib.vertices[3 * size_t(idx.vertex_index) + 0];
                 tinyobj::real_t vy = attrib.vertices[3 * size_t(idx.vertex_index) + 1];
                 tinyobj::real_t vz = attrib.vertices[3 * size_t(idx.vertex_index) + 2];
@@ -147,7 +147,7 @@ void loadObjWithMtl(
                 // Normals if exists
                 if (idx.normal_index >= 0)
                 {
-                    setByIndex(face.normal_id, (int)v, idx.normal_index);
+                    face.normal_id[v] = idx.normal_index;
                     tinyobj::real_t nx = attrib.normals[3 * size_t(idx.normal_index) + 0];
                     tinyobj::real_t ny = attrib.normals[3 * size_t(idx.normal_index) + 1];
                     tinyobj::real_t nz = attrib.normals[3 * size_t(idx.normal_index) + 2];
@@ -157,7 +157,7 @@ void loadObjWithMtl(
                 // Texcoords if exists
                 if (idx.texcoord_index >= 0)
                 {
-                    setByIndex(face.texcoord_id, (int)v, idx.texcoord_index);
+                    face.texcoord_id[v] = idx.texcoord_index;
                     tinyobj::real_t tx = attrib.texcoords[2 * size_t(idx.texcoord_index) + 0];
                     tinyobj::real_t ty = attrib.texcoords[2 * size_t(idx.texcoord_index) + 1];
                     texcoords[idx.texcoord_index] = Vec2f(tx, ty);
@@ -324,9 +324,9 @@ void loadPly(
     std::transform(ply_faces.begin(), ply_faces.end(), std::back_inserter(faces), 
         [&](const std::vector<size_t>& f) { 
             return Face{
-                make_int3(f[0], f[1], f[2]), // vertex_id
-                make_int3(f[0], f[1], f[2]), // normal_id
-                make_int3(f[0], f[1], f[2])  // texcoord_id
+                Vec3i(f[0], f[1], f[2]), // vertex_id
+                Vec3i(f[0], f[1], f[2]), // normal_id
+                Vec3i(f[0], f[1], f[2])  // texcoord_id
             }; 
         } );
 }

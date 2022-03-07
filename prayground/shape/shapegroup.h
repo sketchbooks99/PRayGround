@@ -59,7 +59,7 @@ public:
 
             bi.type = static_cast<OptixBuildInputType>(Type);
             bi.triangleArray.vertexFormat = OPTIX_VERTEX_FORMAT_FLOAT3;
-            bi.triangleArray.vertexStrideInBytes = sizeof(float3);
+            bi.triangleArray.vertexStrideInBytes = sizeof(Vec3f);
             bi.triangleArray.numVertices = m_mesh_input.num_vertices;
             bi.triangleArray.vertexBuffers = m_mesh_input.d_vertices;
             bi.triangleArray.flags = triangle_input_flags.data();
@@ -118,9 +118,9 @@ public:
     {
         if constexpr (Type == ShapeType::Mesh)
         {
-            std::vector<float3> vertices;
-            std::vector<float3> normals;
-            std::vector<float2> texcoords;
+            std::vector<Vec3f> vertices;
+            std::vector<Vec3f> normals;
+            std::vector<Vec2f> texcoords;
             std::vector<Face> faces;
             int32_t num_verts = 0;
             int32_t num_normals = 0;
@@ -132,9 +132,9 @@ public:
                 std::copy(mesh.texcoords().begin(), mesh.texcoords().end(), std::back_inserter(texcoords));
                 std::transform(mesh.faces().begin(), mesh.faces().end(), std::back_inserter(faces),
                     [&](Face face) { return Face{
-                        .vertex_id = face.vertex_id + make_int3(num_verts),
-                        .normal_id = face.normal_id + make_int3(num_normals),
-                        .texcoord_id = face.texcoord_id + make_int3(num_texcoords),
+                        .vertex_id = face.vertex_id + Vec3i(num_verts),
+                        .normal_id = face.normal_id + Vec3i(num_normals),
+                        .texcoord_id = face.texcoord_id + Vec3i(num_texcoords)
                     };  });
                 
                 num_verts += (uint32_t)mesh.vertices().size();

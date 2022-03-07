@@ -188,8 +188,8 @@ void Camera::mouseDragged(float x, float y, int button)
         float cam_length = length(this->origin() - this->lookat());
         Vec3f cam_dir = normalize(this->origin() - this->lookat());
 
-        float theta = acosf(cam_dir.y);
-        float phi = atan2(cam_dir.z, cam_dir.x);
+        float theta = acosf(cam_dir.y());
+        float phi = atan2(cam_dir.z(), cam_dir.x());
 
         theta = clamp(theta - math::radians(deltaY * 0.25f), math::eps, math::pi - math::eps);
         phi += math::radians(deltaX * 0.25f);

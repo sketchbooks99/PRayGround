@@ -402,7 +402,7 @@ add_subdirectory(examples/pgVolume)
 # 
 # Please add your custom applications to build :-)
 ################################################################
-add_subdirectory(apps/empty_app)
+# add_subdirectory(apps/empty_app)
 
 ################################################################
 # Unit test

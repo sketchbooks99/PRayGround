@@ -10,7 +10,7 @@ Plane::Plane()
 
 }
 
-Plane::Plane(const float2& min, const float2& max)
+Plane::Plane(const Vec2f& min, const Vec2f& max)
 : m_min{ min }, m_max{ max }
 {
 
@@ -53,7 +53,7 @@ void Plane::free()
 // ------------------------------------------------------------------
 AABB Plane::bound() const 
 {
-    AABB box{make_float3(m_min.x, -0.01f, m_min.y), make_float3(m_max.x, 0.01f, m_max.y)};
+    AABB box{Vec3f(m_min.x(), -0.01f, m_min.y()), Vec3f(m_max.x(), 0.01f, m_max.y())};
     return box;
 }
 

@@ -7,13 +7,13 @@ namespace prayground {
 class Box final : public Shape {
 public:
     struct Data {
-        float3 min; 
-        float3 max;
+        Vec3f min; 
+        Vec3f max;
     };
 
 #ifndef __CUDACC__
     Box();
-    Box(const float3& min, const float3& max);
+    Box(const Vec3f& min, const Vec3f& max);
 
     constexpr ShapeType type() override;
 
@@ -24,13 +24,13 @@ public:
 
     AABB bound() const override;
 
-    const float3& min() const;
-    const float3& max() const;
+    const Vec3f& min() const;
+    const Vec3f& max() const;
 
     Data getData() const;
 private:
-    float3 m_min;
-    float3 m_max;
+    Vec3f m_min;
+    Vec3f m_max;
     CUdeviceptr d_aabb_buffer{ 0 };
 
 #endif

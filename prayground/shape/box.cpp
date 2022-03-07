@@ -12,7 +12,7 @@ Box::Box()
 
 }
 
-Box::Box(const float3& min, const float3& max)
+Box::Box(const Vec3f& min, const Vec3f& max)
 : m_min(min), m_max(max)
 {
 
@@ -55,11 +55,11 @@ AABB Box::bound() const
     return AABB(m_min, m_max);
 }
 
-const float3& Box::min() const
+const Vec3f& Box::min() const
 {
     return m_min;
 }
-const float3& Box::max() const
+const Vec3f& Box::max() const
 {
     return m_max;
 }

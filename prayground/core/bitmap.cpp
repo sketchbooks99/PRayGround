@@ -299,10 +299,12 @@ void Bitmap_<float>::write(const std::filesystem::path& filepath, int quality) c
                 int idx = (i * m_height + j) * m_channels;
 
                 // Convert float data to uint8_t to write image using stb_image
-                float4 tmp{0.0f, 0.0f, 0.0f, 1.0f};
-                memcpy(&tmp, &data[idx], sizeof(float)*m_channels);
-                uchar4 ucolor = make_color(tmp, false);
-                memcpy(&uc_data[idx], &ucolor, m_channels);
+                Vec4f tmp{data[idx + 0], data[idx + 1], data[idx + 2], data[idx + 3]};
+                Vec4u ucolor = make_color(tmp, false);
+                uc_data[idx + 0] = ucolor[0];
+                uc_data[idx + 1] = ucolor[1];
+                uc_data[idx + 2] = ucolor[2];
+                uc_data[idx + 3] = ucolor[3];
             }
         }
 

@@ -68,37 +68,38 @@ HOSTDEVICE INLINE Vec3f sampleGGX(const float u1, const float u2, const float ro
     const float cos_theta = sqrtf((1.0f - u2) / (1.0f + (a*a - 1.0f) * u2));
     const float sin_theta = sqrtf(1.0f - cos_theta * cos_theta);
 
-    p.x = cosf(phi) * sin_theta;
-    p.y = sinf(phi) * sin_theta;
-    p.z = cos_theta;
+    p[0] = cosf(phi) * sin_theta;
+    p[1] = sinf(phi) * sin_theta;
+    p[2] = cos_theta;
     return p;
 }
 
 /// @ref: https://jcgt.org/published/0007/04/01/
 HOSTDEVICE INLINE Vec3f sampleGGXAniso(const Vec3f& v, const float ax, const float ay, const float u0, const float u1)
 {
-    const Vec3f Vh = normalize(Vec3f(ax * v.x, ay * v.y, v.z));
-    const float lensq = Vh.x * Vh.x + Vh.y * Vh.y;
-    const Vec3f T1 = lensq > 0 ? Vec3f(-Vh.y, Vh.x, 0) * inverseSqrt(lensq) : Vec3f(1.0f, 0.0f, 0.0);
+    const Vec3f Vh = normalize(Vec3f(ax * v[0], ay * v[1], v[2]));
+    const float lensq = Vh[0] * Vh[0] + Vh[1] * Vh[1];
+    const Vec3f T1 = lensq > 0 ? Vec3f(-Vh[1], Vh[0], 0) * inverseSqrt(lensq) : Vec3f(1.0f, 0.0f, 0.0);
     const Vec3f T2 = cross(Vh, T1);
     const float r = sqrt(u0);
     const float phi = math::two_pi * u1;
     float t1 = r * cosf(phi); 
     float t2 = r * sinf(phi);
-    float s = 0.5f * (1.0f + Vh.z);
+    float s = 0.5f * (1.0f + Vh[2]);
     t2 = (1.0f - s) * sqrtf(1.0f - t1 * t1) + s * t2;
     const Vec3f Nh = t1 * T1 + t2 * T2 + sqrtf(fmaxf(0.0f, 1.0f - t1 * t1 - t2 * t2)) * Vh;
-    const Vec3f Ne = normalize(Vec3f(ax * Nh.x, ay * Nh.y, fmaxf(0.0f, Nh.z)));
+    const Vec3f Ne = normalize(Vec3f(ax * Nh[0], ay * Nh[1], fmaxf(0.0f, Nh[2])));
     return Ne;
 }
 
-HOSTDEVICE INLINE Vec3f sampleGTR1(const float u1, const float u2, const float roughness)
-{
-    Vec3f p;
-    const float a = roughness * roughness;
-    const float phi = 2.0f * math::pi * u1;
-    const float cos_theta = 1.0f;
-}
+/// @todo : Implement
+// HOSTDEVICE INLINE Vec3f sampleGTR1(const float u1, const float u2, const float roughness)
+// {
+//     Vec3f p;
+//     const float a = pow2(roughness);
+//     const float phi = 2.0f * math::pi * u1;
+//     const float cos_theta = 1.0f;
+// }
 
 /** 
  * @ref: http://www.pbr-book.org/3ed-2018/Reflection_Models/Specular_Reflection_and_Transmission.html
@@ -175,7 +176,7 @@ HOSTDEVICE INLINE float GTR2(float NdotH, float a)
 
 HOSTDEVICE INLINE float GTR2_aniso(float NdotH, float HdotX, float HdotY, float ax, float ay)
 {
-    return 1.0f / ( math::pi * ax * ay * math::sqr( math::sqr(HdotX / ax) + math::sqr(HdotY / ay) + NdotH * NdotH) );
+    return 1.0f / ( math::pi * ax * ay * pow2( pow2(HdotX / ax) + pow2(HdotY / ay) + NdotH * NdotH) );
 }
 
 HOSTDEVICE INLINE float smithG_GGX(float NdotV, float alphaG)
@@ -187,7 +188,7 @@ HOSTDEVICE INLINE float smithG_GGX(float NdotV, float alphaG)
 
 HOSTDEVICE INLINE float smithG_GGX_aniso(float NdotV, float VdotX, float VdotY, float ax, float ay)
 {
-    return 1 / (NdotV + sqrt(math::sqr(VdotX * ax) + math::sqr(VdotY * ay) + math::sqr(NdotV)));
+    return 1 / (NdotV + sqrt(pow2(VdotX * ax) + pow2(VdotY * ay) + pow2(NdotV)));
 }
 
 HOSTDEVICE INLINE Vec3f refract(const Vec3f& wo, const Vec3f& n, float ior) {

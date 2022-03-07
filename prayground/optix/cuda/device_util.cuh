@@ -48,9 +48,9 @@
 #define PG_MAX_NUM_ATTRIBUTES_STR "8"
 #define PG_MAX_NUM_PAYLOADS_STR "8"
 
-#ifdef __CUDACC__
-
 namespace prayground {
+
+#ifdef __CUDACC__
 
     template <uint32_t i>
     INLINE DEVICE uint32_t getAttribute()
@@ -222,6 +222,6 @@ namespace prayground {
             payloads...);
     }
 
-} // ::prayground
-
 #endif // __CUDACC__
+
+} // namespace prayground

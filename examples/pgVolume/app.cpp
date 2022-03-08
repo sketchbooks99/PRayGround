@@ -60,7 +60,7 @@ void App::setup()
     params.width = result_bmp.width();
     params.height = result_bmp.height();
     params.samples_per_launch = 1;
-    params.max_depth = 10;
+    params.max_depth = 40;
 
     initResultBufferOnDevice();
 
@@ -195,7 +195,7 @@ void App::setup()
 
     // Shapes
     shapes.emplace("floor", new Plane(Vec2f(-0.5f), Vec2f(0.5f)));
-    shapes.emplace("smoke", new VDBGrid("resources/volume/wdas_cloud_quarter.nvdb", Vec3f(0.8f), Vec3f(0.2f), 0.5f));
+    shapes.emplace("smoke", new VDBGrid("resources/volume/wdas_cloud_quarter.nvdb", Vec3f(0.8f), Vec3f(1.0f), 0.5f));
 
     // Floor
     Primitive floor{ shapes.at("floor"), materials.at("floor"), diffuse_prg_id };

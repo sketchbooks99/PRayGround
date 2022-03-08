@@ -23,12 +23,6 @@
     using name##ui  = name<uint32_t>;  \
     using name##ull = name<uint64_t>;  
 
-#define CUVEC2_DECL_ALIAS(vname, T) using Type = vname;             
-
-#define CUVEC3_DECL_ALIAS(vname, T) using Type = vname;             
-
-#define CUVEC4_DECL_ALIAS(vname, T) using Type = vname;             
-
 namespace prayground {
 
     // Forward declaration
@@ -41,40 +35,40 @@ namespace prayground {
     VEC_DECL_T(Vec4)
 
     template <typename T> struct CUVec2 {};
-    template <> struct CUVec2<float>    { CUVEC2_DECL_ALIAS(float2, float) };
-    template <> struct CUVec2<double>   { CUVEC2_DECL_ALIAS(double2, double) };
-    template <> struct CUVec2<int8_t>   { CUVEC2_DECL_ALIAS(char2, signed char) };
-    template <> struct CUVec2<int16_t>  { CUVEC2_DECL_ALIAS(short2, short) };
-    template <> struct CUVec2<int32_t>  { CUVEC2_DECL_ALIAS(int2, int) };
-    template <> struct CUVec2<int64_t>  { CUVEC2_DECL_ALIAS(longlong2, long long int) };
-    template <> struct CUVec2<uint8_t>  { CUVEC2_DECL_ALIAS(uchar2, unsigned char) };
-    template <> struct CUVec2<uint16_t> { CUVEC2_DECL_ALIAS(ushort2, unsigned short) };
-    template <> struct CUVec2<uint32_t> { CUVEC2_DECL_ALIAS(uint2, unsigned int) };
-    template <> struct CUVec2<uint64_t> { CUVEC2_DECL_ALIAS(ulonglong2, unsigned long long int) };
+    template <> struct CUVec2<float>    { using Type = float2; };
+    template <> struct CUVec2<double>   { using Type = double2; };
+    template <> struct CUVec2<int8_t>   { using Type = char2; };
+    template <> struct CUVec2<int16_t>  { using Type = short2; };
+    template <> struct CUVec2<int32_t>  { using Type = int2; };
+    template <> struct CUVec2<int64_t>  { using Type = longlong2; };
+    template <> struct CUVec2<uint8_t>  { using Type = uchar2; };
+    template <> struct CUVec2<uint16_t> { using Type = ushort2; };
+    template <> struct CUVec2<uint32_t> { using Type = uint2; };
+    template <> struct CUVec2<uint64_t> { using Type = ulonglong2; };
 
     template <typename T> struct CUVec3 {};
-    template <> struct CUVec3<float>    { CUVEC3_DECL_ALIAS(float3, float) };
-    template <> struct CUVec3<double>   { CUVEC3_DECL_ALIAS(double3, double) };
-    template <> struct CUVec3<int8_t>   { CUVEC3_DECL_ALIAS(char3, signed char) };
-    template <> struct CUVec3<int16_t>  { CUVEC3_DECL_ALIAS(short3, short) };
-    template <> struct CUVec3<int32_t>  { CUVEC3_DECL_ALIAS(int3, int) };
-    template <> struct CUVec3<int64_t>  { CUVEC3_DECL_ALIAS(longlong3, long long int) };
-    template <> struct CUVec3<uint8_t>  { CUVEC3_DECL_ALIAS(uchar3, unsigned char) };
-    template <> struct CUVec3<uint16_t> { CUVEC3_DECL_ALIAS(ushort3, unsigned short) };
-    template <> struct CUVec3<uint32_t> { CUVEC3_DECL_ALIAS(uint3, unsigned int) };
-    template <> struct CUVec3<uint64_t> { CUVEC3_DECL_ALIAS(ulonglong3, unsigned long long int) };
+    template <> struct CUVec3<float>    { using Type = float3; };
+    template <> struct CUVec3<double>   { using Type = double3; };
+    template <> struct CUVec3<int8_t>   { using Type = char3; };
+    template <> struct CUVec3<int16_t>  { using Type = short3; };
+    template <> struct CUVec3<int32_t>  { using Type = int3; };
+    template <> struct CUVec3<int64_t>  { using Type = longlong3; };
+    template <> struct CUVec3<uint8_t>  { using Type = uchar3; };
+    template <> struct CUVec3<uint16_t> { using Type = ushort3; };
+    template <> struct CUVec3<uint32_t> { using Type = uint3; };
+    template <> struct CUVec3<uint64_t> { using Type = ulonglong3; };
 
     template <typename T> struct CUVec4 {};
-    template <> struct CUVec4<float>    { CUVEC4_DECL_ALIAS(float4, float) };
-    template <> struct CUVec4<double>   { CUVEC4_DECL_ALIAS(double4, double) };
-    template <> struct CUVec4<int8_t>   { CUVEC4_DECL_ALIAS(char4, signed char) };
-    template <> struct CUVec4<int16_t>  { CUVEC4_DECL_ALIAS(short4, short) };
-    template <> struct CUVec4<int32_t>  { CUVEC4_DECL_ALIAS(int4, int) };
-    template <> struct CUVec4<int64_t>  { CUVEC4_DECL_ALIAS(longlong4, long long int) };
-    template <> struct CUVec4<uint8_t>  { CUVEC4_DECL_ALIAS(uchar4, unsigned char) };
-    template <> struct CUVec4<uint16_t> { CUVEC4_DECL_ALIAS(ushort4, unsigned short) };
-    template <> struct CUVec4<uint32_t> { CUVEC4_DECL_ALIAS(uint4, unsigned int) };
-    template <> struct CUVec4<uint64_t> { CUVEC4_DECL_ALIAS(ulonglong4, unsigned long long int) };
+    template <> struct CUVec4<float>    { using Type = float4; };
+    template <> struct CUVec4<double>   { using Type = double4; };
+    template <> struct CUVec4<int8_t>   { using Type = char4; };
+    template <> struct CUVec4<int16_t>  { using Type = short4; };
+    template <> struct CUVec4<int32_t>  { using Type = int4; };
+    template <> struct CUVec4<int64_t>  { using Type = longlong4; };
+    template <> struct CUVec4<uint8_t>  { using Type = uchar4; };
+    template <> struct CUVec4<uint16_t> { using Type = ushort4; };
+    template <> struct CUVec4<uint32_t> { using Type = uint4; };
+    template <> struct CUVec4<uint64_t> { using Type = ulonglong4; };
 
     template <typename T>
     class __align__(sizeof(T) * 2) Vec2 {

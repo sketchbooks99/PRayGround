@@ -240,8 +240,9 @@ extern "C" __device__ Vec3f __direct_callable__sample_medium(SurfaceInteraction*
     si->albedo = sigma_s;
     const float d = sigma_t * si->t;
     const float Tr = expf(-d);
+    const Vec3f val = sigma_s * Tr;
     pdf = d;
-    return sigma_s * Tr / pdf;
+    return sigma_s * pdf;
 }
 
 extern "C" __device__ void __direct_callable__area_emitter(SurfaceInteraction* si, void* surface_data)
@@ -387,16 +388,18 @@ static inline __device__ float rayMarching(
 extern "C" __device__ void __intersection__grid()
 {
     const HitgroupData* data = reinterpret_cast<const HitgroupData*>(optixGetSbtDataPointer());
-    const VDBGrid::Data* grid = reinterpret_cast<const VDBGrid::Data*>(data->shape_data);
-    const nanovdb::FloatGrid* density = reinterpret_cast<const nanovdb::FloatGrid*>(grid->density);
-    assert(density);
+    const VDBGrid::Data* medium = reinterpret_cast<const VDBGrid::Data*>(data->shape_data);
+    const nanovdb::FloatGrid* grid = reinterpret_cast<const nanovdb::FloatGrid*>(medium->density);
+    assert(grid);
 
-    const auto& tree = density->tree();
+    const auto& tree = grid->tree();
     auto acc = tree.getAccessor();
 
     Ray ray = getLocalRay();
 
-    auto bbox = density->indexBBox();
+    auto* si = getSurfaceInteraction();
+
+    auto bbox = grid->indexBBox();
     float t0 = ray.tmin;
     float t1 = ray.tmax;
     auto iRay = nanovdb::Ray<float>(reinterpret_cast<const nanovdb::Vec3f&>(ray.o),
@@ -404,8 +407,35 @@ extern "C" __device__ void __intersection__grid()
 
     if (iRay.intersects(bbox, t0, t1))
     {
-        optixSetPayload_2(__float_as_uint(t1));
-        optixReportIntersection(fmaxf(t0, ray.tmin), 0);
+        t0 = fminf(t0, ray.tmin);
+        auto start = iRay(t0);
+        auto end = iRay(t1);
+
+        confine(bbox, start, end);
+
+        const auto dir = end - start;
+        const auto len = dir.length();
+        // Ray inside volume that starts from near-side of bbox and ends up at far-side of bbox
+        nanovdb::Ray<float> volume_ray(start, dir / len, 0.0f, len);
+        nanovdb::Coord ijk = nanovdb::RoundDown<nanovdb::Coord>(volume_ray.start());
+        nanovdb::HDDA<nanovdb::Ray<float>> hdda(volume_ray, acc.getDim(ijk, volume_ray));
+
+        float t = 0.0f;
+        float density = acc.getValue(ijk);
+        while (hdda.step())
+        {
+            const float dt = hdda.time() - t;
+            if (density * 0.1f > UniformSampler::get1D(si->seed))
+            {
+                optixReportIntersection(t, 0);
+                return;
+            }
+
+            t = hdda.time();
+            ijk = hdda.voxel();
+            density = acc.getValue(ijk);
+            hdda.update(volume_ray, acc.getDim(ijk, volume_ray));
+        }
     }
 }
 
@@ -420,46 +450,14 @@ extern "C" __device__ void __closesthit__grid()
     const float sigma_t = medium->sigma_t;
 
     Ray ray = getWorldRay();
-    const float t0 = optixGetRayTmax();
-    const float t1 = __int_as_float(getPayload<2>());
-
-    const auto nanoray = nanovdb::Ray<float>(reinterpret_cast<const nanovdb::Vec3f&>(ray.o), 
-        reinterpret_cast<const nanovdb::Vec3f&>(ray.d), t0, t1);
-
-    SurfaceInteraction* si = getSurfaceInteraction();
-
-    nanovdb::Coord ijk = nanovdb::RoundDown<nanovdb::Coord>(nanoray.start());
-    nanovdb::HDDA<nanovdb::Ray<float>> hdda(nanoray, acc.getDim(ijk, nanoray));
-
-    float t = t0;
-    while (hdda.step())
-    {
-        //if (t > t1) break;
-        const float density = acc.getValue(ijk);
-        if (density > UniformSampler::get1D(si->seed))
-        {
-            si->t = t;
-            si->p = ray.at(t);
-            si->shading.n = Vec3f(0,1,0);   // arbitrary
-            si->wo = ray.d;
-            si->surface_info = SurfaceInfo{ data->shape_data, data->surface_info.sample_id, SurfaceType::Medium };
-            si->uv = Vec2f(0.5f);           // arbitrary
-            return;
-        }
-
-        t = hdda.time();
-        hdda.update(nanoray, acc.getDim(ijk, nanoray));
-    }
-
-    // No scattering is accepted
-    si->t = t1;
-    si->p = ray.o;
-    si->trace_terminate = true;
-    si->shading.n = Vec3f(0, 1, 0);
-    si->emission = Vec3f(0);
+    auto* si = getSurfaceInteraction();
+    
+    si->t = ray.tmax;
+    si->p = ray.at(ray.tmax);
+    si->shading.n = Vec3f(0,1,0);   // arbitrary
     si->wo = ray.d;
-    si->surface_info.type = SurfaceType::None;
-    si->uv = Vec2f(0.5f);
+    si->surface_info = SurfaceInfo{ data->shape_data, data->surface_info.sample_id, SurfaceType::Medium };
+    si->uv = Vec2f(0.5f);           // arbitrary
 }
 
 /* Texture functions */

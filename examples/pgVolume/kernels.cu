@@ -41,7 +41,7 @@ static __forceinline__ __device__ void trace(
 static __forceinline__ __device__ void getCameraRay(
     const Camera::Data& camera,
     const float& x, const float& y,
-    Vec3f& ro, Vec3f& rd)
+    Vec3f& ro, Vec3f& rd, uint32_t& seed)
 {
     rd = normalize(x * camera.U + y * camera.V + camera.W);
     ro = camera.origin;
@@ -53,7 +53,7 @@ extern "C" __device__ void __raygen__medium()
 
     const int frame = params.frame;
     const Vec3ui idx = optixGetLaunchIndex();
-    unsigned int seed = tea<4>(idx.x() * params.width + idx.y(), frame);
+    uint32_t seed = tea<4>(idx.x() * params.width + idx.y(), frame);
 
     Vec3f result = Vec3f(0.0f);
     Vec3f albedo = Vec3f(0.0f);
@@ -70,7 +70,7 @@ extern "C" __device__ void __raygen__medium()
         ) - 1.0f;
 
         Vec3f ro, rd;
-        getCameraRay(raygen->camera, d.x(), d.y(), ro, rd);
+        getCameraRay(raygen->camera, d.x(), d.y(), ro, rd, seed);
 
         Vec3f throughput = Vec3f(1.0f);
 
@@ -98,10 +98,7 @@ extern "C" __device__ void __raygen__medium()
             {
                 // Evaluating emission from emitter
                 optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.bsdf_id,
-                    &si,
-                    si.surface_info.data
-                    );
+                    si.surface_info.sample_id, &si, si.surface_info.data);
                 result += si.emission * throughput;
 
                 if (si.trace_terminate)
@@ -111,45 +108,29 @@ extern "C" __device__ void __raygen__medium()
             else if (+(si.surface_info.type & SurfaceType::Delta))
             {
                 // Sampling scattered direction
-                optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.sample_id,
-                    &si,
-                    si.surface_info.data
-                    );
-
-                // Evaluate bsdf
-                Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
-                    si.surface_info.bsdf_id,
-                    &si,
-                    si.surface_info.data
-                    );
-                throughput *= bsdf_val;
+                float pdf;
+                Vec3f bsdf = optixDirectCall<Vec3f, SurfaceInteraction*, void*, float&>(
+                    si.surface_info.sample_id, &si, si.surface_info.data, pdf);
+                throughput *= bsdf / pdf;
             }
             // Rough surface sampling with applying MIS
             else if (+(si.surface_info.type & (SurfaceType::Rough | SurfaceType::Diffuse)))
             {
+                float pdf;
                 // Importance sampling according to the BSDF
-                optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.sample_id,
-                    &si,
-                    si.surface_info.data
-                    );
+                Vec3f bsdf = optixDirectCall<Vec3f, SurfaceInteraction*, void*, float&>(
+                    si.surface_info.sample_id, &si, si.surface_info.data, pdf);
 
-                // Evaluate PDF depends on BSDF
-                float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*>(
-                    si.surface_info.pdf_id,
-                    &si,
-                    si.surface_info.data
-                    );
+                throughput *= bsdf / pdf;
+            }
+            // Medium sampling 
+            else if (si.surface_info.type == SurfaceType::Medium)
+            {
+                float pdf;
+                Vec3f bsdf = optixDirectCall<Vec3f, SurfaceInteraction*, void*, float&>(
+                    si.surface_info.sample_id, &si, si.surface_info.data, pdf);
 
-                // Evaluate BSDF
-                Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
-                    si.surface_info.bsdf_id,
-                    &si,
-                    si.surface_info.data
-                    );
-
-                throughput *= bsdf_val / bsdf_pdf;
+                throughput *= bsdf / pdf;
             }
 
             ro = si.p;
@@ -161,9 +142,9 @@ extern "C" __device__ void __raygen__medium()
 
     const uint32_t image_index = idx.y() * params.width + idx.x();
 
-    if (result.x() != result.x()) result.x() = 0.0f;
-    if (result.y() != result.y()) result.y() = 0.0f;
-    if (result.z() != result.z()) result.z() = 0.0f;
+    if (result[0] != result[0]) result[0] = 0.0f;
+    if (result[1] != result[1]) result[1] = 0.0f;
+    if (result[2] != result[2]) result[2] = 0.0f;
 
     Vec3f accum_color = result / static_cast<float>(params.samples_per_launch);
 
@@ -266,7 +247,6 @@ extern "C" __device__ Vec3f __direct_callable__sample_medium(SurfaceInteraction*
 extern "C" __device__ void __direct_callable__area_emitter(SurfaceInteraction* si, void* surface_data)
 {
     const AreaEmitter::Data* area = reinterpret_cast<AreaEmitter::Data*>(surface_data);
-    si->trace_terminate = true;
     float is_emitted = 1.0f;
     if (!area->twosided)
         is_emitted = dot(si->wo, si->shading.n) < 0.0f ? 1.0f : 0.0f;
@@ -275,6 +255,7 @@ extern "C" __device__ void __direct_callable__area_emitter(SurfaceInteraction* s
         area->texture.prg_id, si->uv, area->texture.data);
     si->albedo = base;
     si->emission = base * area->intensity * is_emitted;
+    si->trace_terminate = true;
 }
 
 /* Hitgroup functions */
@@ -444,11 +425,6 @@ extern "C" __device__ void __closesthit__grid()
 
     const auto nanoray = nanovdb::Ray<float>(reinterpret_cast<const nanovdb::Vec3f&>(ray.o), 
         reinterpret_cast<const nanovdb::Vec3f&>(ray.d), t0, t1);
-    //auto start = grid->worldToIndexF(nanoray(t0));
-    //auto end = grid->worldToIndexF(nanoray(t1));
-
-    //auto bbox = grid->indexBBox();
-    //confine(bbox, start, end);
 
     SurfaceInteraction* si = getSurfaceInteraction();
 
@@ -458,7 +434,7 @@ extern "C" __device__ void __closesthit__grid()
     float t = t0;
     while (hdda.step())
     {
-        if (t > t1) break;
+        //if (t > t1) break;
         const float density = acc.getValue(ijk);
         if (density > UniformSampler::get1D(si->seed))
         {
@@ -466,7 +442,7 @@ extern "C" __device__ void __closesthit__grid()
             si->p = ray.at(t);
             si->shading.n = Vec3f(0,1,0);   // arbitrary
             si->wo = ray.d;
-            si->surface_info = data->surface_info;
+            si->surface_info = SurfaceInfo{ data->shape_data, data->surface_info.sample_id, SurfaceType::Medium };
             si->uv = Vec2f(0.5f);           // arbitrary
             return;
         }
@@ -478,7 +454,9 @@ extern "C" __device__ void __closesthit__grid()
     // No scattering is accepted
     si->t = t1;
     si->p = ray.o;
-    si->shading.n = Vec3f(0, 1, 0); 
+    si->trace_terminate = true;
+    si->shading.n = Vec3f(0, 1, 0);
+    si->emission = Vec3f(0);
     si->wo = ray.d;
     si->surface_info.type = SurfaceType::None;
     si->uv = Vec2f(0.5f);

@@ -8,7 +8,6 @@ namespace prayground {
 
     class UniformSampler {
     public:
-
         static HOSTDEVICE float get1D(uint32_t& prev)
         {
             return rnd(prev);
@@ -41,8 +40,6 @@ namespace prayground {
         {
             return Vec3f{rnd(prev), rnd(prev), rnd(prev)};
         }
-    private:
-        
     };
 
 } // namespace prayground

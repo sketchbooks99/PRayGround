@@ -2,17 +2,14 @@
 
 #include <vector_types.h>
 #include <vector_functions.h>
-#include <prayground/optix/macros.h>
+#include <prayground/core/util.h>
+#include <prayground/math/util.h>
 
 #ifndef __CUDACC__
 #include <iostream>
 #include <cmath>
 #include <cstdlib>
 #endif // __CUDACC__
-
-#ifdef __CUDACC__
-#include <prayground/optix/cuda/device_util.cuh>
-#endif
 
 #define VEC_DECL_T(name)               \
     using name##f   = name<float>;     \
@@ -26,19 +23,22 @@
     using name##ui  = name<uint32_t>;  \
     using name##ull = name<uint64_t>;  
 
-#define CUVEC2_DECL_ALIAS(vname, T) \
-    using Type = vname;             \
-    static constexpr vname (*makeV)(T, T) = &make_##vname;
+#define CUVEC2_DECL_ALIAS(vname, T) using Type = vname;             
 
-#define CUVEC3_DECL_ALIAS(vname, T) \
-    using Type = vname;             \
-    static constexpr vname (*makeV)(T, T, T) = &make_##vname;
+#define CUVEC3_DECL_ALIAS(vname, T) using Type = vname;             
 
-#define CUVEC4_DECL_ALIAS(vname, T) \
-    using Type = vname;             \
-    static constexpr vname (*makeV)(T, T, T, T) = &make_##vname;
+#define CUVEC4_DECL_ALIAS(vname, T) using Type = vname;             
 
 namespace prayground {
+
+    // Forward declaration
+    template <typename T> class Vec2;
+    template <typename T> class Vec3;
+    template <typename T> class Vec4;
+
+    VEC_DECL_T(Vec2)
+    VEC_DECL_T(Vec3)
+    VEC_DECL_T(Vec4)
 
     template <typename T> struct CUVec2 {};
     template <> struct CUVec2<float>    { CUVEC2_DECL_ALIAS(float2, float) };
@@ -75,10 +75,6 @@ namespace prayground {
     template <> struct CUVec4<uint16_t> { CUVEC4_DECL_ALIAS(ushort4, unsigned short) };
     template <> struct CUVec4<uint32_t> { CUVEC4_DECL_ALIAS(uint4, unsigned int) };
     template <> struct CUVec4<uint64_t> { CUVEC4_DECL_ALIAS(ulonglong4, unsigned long long int) };
-
-    template <typename T> class Vec2;
-    template <typename T> class Vec3;
-    template <typename T> class Vec4;
 
     template <typename T>
     class __align__(sizeof(T) * 2) Vec2 {
@@ -131,7 +127,7 @@ namespace prayground {
             return *this *= 1 / t;
         }
 
-        CUVec toCUVec() const { return CUVec2<T>::makeV(e[0], e[1]); }
+        CUVec toCUVec() const { return CUVec{ e[0], e[1] }; }
         
     private:
         T e[2];
@@ -199,7 +195,7 @@ namespace prayground {
             return *this *= 1 / t;
         }
 
-        CUVec toCUVec() const { return CUVec3<T>::makeV(e[0], e[1], e[2]); }
+        CUVec toCUVec() const { return CUVec{e[0], e[1], e[2]}; }
 
     private:
         T e[3];
@@ -274,7 +270,7 @@ namespace prayground {
             return *this *= 1 / t;
         }
 
-        CUVec toCUVec() const { return CUVec4<T>::makeV(e[0], e[1], e[2], e[3]); }
+        CUVec toCUVec() const { return CUVec{e[0], e[1], e[2], e[3]}; }
     private:
         T e[4];
     };
@@ -375,9 +371,9 @@ namespace prayground {
     }
 
     template <typename T>
-    INLINE HOSTDEVICE Vec2<T> clamp(const Vec2<T>& v, const T a, const T b)
+    INLINE HOSTDEVICE Vec2<T> clamp(const Vec2<T>& v, const float a, const float b)
     {
-        return Vec2<T>{clamp(v[0], a, b), clamp(v[0], a, b)};
+        return Vec2<T>{clamp(v[0], a, b), clamp(v[1], a, b)};
     }
 
     template <typename T>
@@ -412,7 +408,7 @@ namespace prayground {
     template <typename T>
     INLINE HOSTDEVICE Vec3<T> operator-(const Vec3<T>& v1, const Vec3<T>& v2)
     {
-        return Vec3<T>{v1[0] - v2[0], v1[1] - v2[1], v1[1] - v2[2]};
+        return Vec3<T>{v1[0] - v2[0], v1[1] - v2[1], v1[2] - v2[2]};
     }
 
     template <typename T>
@@ -488,7 +484,7 @@ namespace prayground {
     template <typename T>
     INLINE HOSTDEVICE Vec3<T> clamp(const Vec3<T>& v, const T a, const T b)
     {
-        return Vec3<T>{clamp(v[0], a, b), clamp(v[0], a, b), clamp(v[0], a, b)};
+        return Vec3<T>{clamp(v[0], a, b), clamp(v[1], a, b), clamp(v[2], a, b)};
     }
 
     template <typename T>
@@ -600,7 +596,7 @@ namespace prayground {
     template <typename T>
     INLINE HOSTDEVICE Vec4<T> clamp(const Vec4<T>& v, const float a, const float b)
     {
-        return Vec4<T>{clamp(v[0], a, b), clamp(v[0], a, b), clamp(v[0], a, b), clamp(v[0], a, b)};
+        return Vec4<T>{clamp(v[0], a, b), clamp(v[1], a, b), clamp(v[2], a, b), clamp(v[3], a, b)};
     }
 
     template <typename T>
@@ -608,8 +604,4 @@ namespace prayground {
     {
         return n * copysignf(1.0f, dot(i, nref));
     }
-
-    VEC_DECL_T(Vec2)
-    VEC_DECL_T(Vec3)
-    VEC_DECL_T(Vec4)
 }

@@ -2,7 +2,7 @@
 
 void App::initResultBufferOnDevice()
 {
-    params.frame = 0u;
+    params.frame = 0;
 
     result_bmp.allocateDevicePtr();
     accum_bmp.allocateDevicePtr();
@@ -18,7 +18,7 @@ void App::handleCameraUpdate()
     camera_update = false;
 
     RaygenRecord* rg_record = reinterpret_cast<RaygenRecord*>(sbt.raygenRecord());
-    RaygenData rg_data = { camera.getData() };
+    RaygenData rg_data = { .camera = camera.getData() };
     CUDA_CHECK(cudaMemcpy(
         reinterpret_cast<void*>(&rg_record->data),
         &rg_data, sizeof(RaygenData),
@@ -98,8 +98,9 @@ void App::setup()
 
     // Callable programs for materials
     // Diffuse
-    uint32_t diffuse_sample_bsdf_id = setupCallable(DC_FUNC_STR("sample_diffuse"), CC_FUNC_STR("bsdf_diffuse"));
-    uint32_t diffuse_pdf_id = setupCallable(DC_FUNC_STR("pdf_diffuse"), "");
+    uint32_t diffuse_prg_id = setupCallable(DC_FUNC_STR("sample_diffuse"), "");
+    // Medium
+    uint32_t medium_prg_id = setupCallable(DC_FUNC_STR("sample_medium"), "");
     // Area emitter
     uint32_t area_emitter_prg_id = setupCallable(DC_FUNC_STR("area_emitter"), "");
     
@@ -126,8 +127,7 @@ void App::setup()
     {
         shared_ptr<Shape> shape;
         shared_ptr<Material> material;
-        uint32_t sample_bsdf_id;
-        uint32_t pdf_id;
+        uint32_t sample_id;
     };
 
     uint32_t sbt_idx = 0;
@@ -135,7 +135,7 @@ void App::setup()
     uint32_t instance_id = 0;
 
     using SurfaceP = variant<shared_ptr<Material>, shared_ptr<AreaEmitter>>;
-    auto addHitgroupRecord = [&](ProgramGroup& prg, shared_ptr<Shape> shape, SurfaceP surface, uint32_t sample_bsdf_id, uint32_t pdf_id)
+    auto addHitgroupRecord = [&](ProgramGroup& prg, shared_ptr<Shape> shape, SurfaceP surface, uint32_t sample_id)
     {
         const bool is_mat = holds_alternative<shared_ptr<Material>>(surface);
 
@@ -156,9 +156,7 @@ void App::setup()
             .surface_info =
             {
                 .data = is_mat ? std::get<shared_ptr<Material>>(surface)->devicePtr() : std::get<shared_ptr<AreaEmitter>>(surface)->devicePtr(),
-                .sample_id = sample_bsdf_id,
-                .bsdf_id = sample_bsdf_id,
-                .pdf_id = pdf_id,
+                .sample_id = sample_id,
                 .type = is_mat ? std::get<shared_ptr<Material>>(surface)->surfaceType() : SurfaceType::AreaEmitter,
             }
         };
@@ -184,7 +182,7 @@ void App::setup()
 
     auto setupPrimitive = [&](ProgramGroup& prg, const Primitive& p, const Matrix4f& transform)
     {
-        addHitgroupRecord(prg, p.shape, p.material, p.sample_bsdf_id, p.pdf_id);
+        addHitgroupRecord(prg, p.shape, p.material, p.sample_id);
         createGAS(p.shape, transform);
     };
 
@@ -200,11 +198,11 @@ void App::setup()
     shapes.emplace("smoke", new VDBGrid("resources/volume/wdas_cloud_quarter.nvdb", Vec3f(0.8f), Vec3f(0.2f), 0.5f));
 
     // Floor
-    Primitive floor{ shapes.at("floor"), materials.at("floor"), diffuse_sample_bsdf_id, diffuse_pdf_id };
+    Primitive floor{ shapes.at("floor"), materials.at("floor"), diffuse_prg_id };
     setupPrimitive(plane_prg, floor, Matrix4f::translate(0, -5, 0) * Matrix4f::scale(100));
 
     // Smoke
-    Primitive smoke{ shapes.at("smoke"), materials.at("floor"), 0, 0 };
+    Primitive smoke{ shapes.at("smoke"), materials.at("floor"), medium_prg_id };
     setupPrimitive(grid_prg, smoke, Matrix4f::identity());
 
     CUDA_CHECK(cudaStreamCreate(&stream));

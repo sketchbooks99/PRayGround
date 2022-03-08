@@ -152,7 +152,7 @@ Camera::Data Camera::getData() const
         m_up, 
         U, 
         V, 
-        W, 
+        W,
         m_fov, 
         m_aspect, 
         m_nearclip, 
@@ -172,21 +172,21 @@ void Camera::mouseDragged(float x, float y, int button)
     if (is_slide) {
         float deltaX = x - pgGetPreviousMousePosition().x;
         float deltaY = y - pgGetPreviousMousePosition().y;
-        Vec3f cam_dir = normalize(this->origin() - this->lookat());
+        Vec3f cam_dir = normalize(m_origin - m_lookat);
         Vec3f cam_side = normalize(cross(cam_dir, this->up()));
         Vec3f cam_up = normalize(cross(cam_dir, cam_side));
 
         Vec3f offset = cam_side * deltaX + cam_up * deltaY;
         
-        this->setOrigin(this->origin() + offset * 0.1f);
-        this->setLookat(this->lookat() + offset * 0.1f);
+        this->setOrigin(m_origin + offset * 0.1f);
+        this->setLookat(m_lookat + offset * 0.1f);
     }
     else 
     {
         float deltaX = x - pgGetPreviousMousePosition().x;
         float deltaY = y - pgGetPreviousMousePosition().y;
-        float cam_length = length(this->origin() - this->lookat());
-        Vec3f cam_dir = normalize(this->origin() - this->lookat());
+        float cam_length = length(m_origin - m_lookat);
+        Vec3f cam_dir = normalize(m_origin - m_lookat);
 
         float theta = acosf(cam_dir.y());
         float phi = atan2(cam_dir.z(), cam_dir.x());

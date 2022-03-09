@@ -2,6 +2,7 @@
 #include "params.h"
 #include <prayground/ext/nanovdb/util/Ray.h>
 #include <prayground/ext/nanovdb/util/HDDA.h>
+#include <prayground/ext/nanovdb/util/SampleFromVoxels.h>
 
 extern "C" { __constant__ LaunchParams params; }
 
@@ -104,32 +105,13 @@ extern "C" __device__ void __raygen__medium()
                 if (si.trace_terminate)
                     break;
             }
-            // Specular sampling
-            else if (+(si.surface_info.type & SurfaceType::Delta))
+            // Material and medium sampling
+            else if (+(si.surface_info.type & (SurfaceType::Material | SurfaceType::Medium)))
             {
                 // Sampling scattered direction
                 float pdf;
                 Vec3f bsdf = optixDirectCall<Vec3f, SurfaceInteraction*, void*, float&>(
                     si.surface_info.sample_id, &si, si.surface_info.data, pdf);
-                throughput *= bsdf / pdf;
-            }
-            // Rough surface sampling with applying MIS
-            else if (+(si.surface_info.type & (SurfaceType::Rough | SurfaceType::Diffuse)))
-            {
-                float pdf;
-                // Importance sampling according to the BSDF
-                Vec3f bsdf = optixDirectCall<Vec3f, SurfaceInteraction*, void*, float&>(
-                    si.surface_info.sample_id, &si, si.surface_info.data, pdf);
-
-                throughput *= bsdf / pdf;
-            }
-            // Medium sampling 
-            else if (si.surface_info.type == SurfaceType::Medium)
-            {
-                float pdf;
-                Vec3f bsdf = optixDirectCall<Vec3f, SurfaceInteraction*, void*, float&>(
-                    si.surface_info.sample_id, &si, si.surface_info.data, pdf);
-
                 throughput *= bsdf / pdf;
             }
 
@@ -238,11 +220,11 @@ extern "C" __device__ Vec3f __direct_callable__sample_medium(SurfaceInteraction*
     si->wi = wi;
 
     si->albedo = sigma_s;
-    const float d = sigma_t * si->t;
-    const float Tr = expf(-d);
-    const Vec3f val = sigma_s * Tr;
-    pdf = d;
-    return sigma_s * pdf;
+    const float cos_theta = fmaxf(dot(si->wo, si->wi), 0.0f);
+    const float phase = phaseHenyeyGreenstein(cos_theta, g);
+    const Vec3f val = phase * (sigma_s / sigma_t);
+    pdf = phase;
+    return val;
 }
 
 extern "C" __device__ void __direct_callable__area_emitter(SurfaceInteraction* si, void* surface_data)
@@ -303,87 +285,157 @@ extern "C" __device__ void __closesthit__plane()
     si->shading.dpdv = optixTransformNormalFromObjectToWorldSpace({0.0f, 0.0f, 1.0f});
 }
 
-static inline __device__ void confine(const nanovdb::BBox<nanovdb::Coord>& bbox, nanovdb::Vec3f& ivec)
-{
-    auto imin = nanovdb::Vec3f( bbox.min() );
-    auto imax = nanovdb::Vec3f( bbox.max() ) + nanovdb::Vec3f( 1.0f );
-
-    if (ivec[0] < imin[0]) ivec[0] = imin[0];
-    if (ivec[1] < imin[1]) ivec[1] = imin[1];
-    if (ivec[2] < imin[2]) ivec[2] = imin[2];
-    if (ivec[0] >= imax[0]) ivec[0] = imax[0] - fmaxf(1.0f, fabsf(ivec[0])) * math::eps;
-    if (ivec[1] >= imax[1]) ivec[1] = imax[1] - fmaxf(1.0f, fabsf(ivec[1])) * math::eps;
-    if (ivec[2] >= imax[2]) ivec[2] = imax[2] - fmaxf(1.0f, fabsf(ivec[2])) * math::eps;
+static __forceinline__ __device__ Vec2f getSphereUV(const Vec3f& p) {
+    float phi = atan2(p.z(), p.x());
+    float theta = asin(p.y());
+    float u = 1.0f - (phi + math::pi) / (2.0f * math::pi);
+    float v = 1.0f - (theta + math::pi / 2.0f) / math::pi;
+    return Vec2f(u, v);
 }
 
-static inline __device__ void confine(const nanovdb::BBox<nanovdb::Coord> &bbox, nanovdb::Vec3f& istart, nanovdb::Vec3f& iend)
+extern "C" __device__ void __intersection__sphere()
 {
-    confine(bbox, istart);
-    confine(bbox, iend);
-}
+    const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
+    const Sphere::Data* sphere = reinterpret_cast<Sphere::Data*>(data->shape_data);
 
-template <typename AccT>
-static inline __device__ float transmittanceHDDA(
-    const nanovdb::Vec3f& start, 
-    const nanovdb::Vec3f& end, 
-    AccT& acc)
-{
-    float transmittance = 1.0f;
-    auto dir = end - start;
-    auto len = dir.length();
-    nanovdb::Ray<float> ray(start, dir / len, 0.0f, len);
-    nanovdb::Coord ijk = nanovdb::RoundDown<nanovdb::Coord>(ray.start());
+    const Vec3f center = sphere->center;
+    const float radius = sphere->radius;
 
-    nanovdb::HDDA<nanovdb::Ray<float>> hdda(ray, acc.getDim(ijk, ray));
+    Ray ray = getLocalRay();
 
-    float t = 0.0f;
-    float density = acc.getValue(ijk);
-    while (hdda.step())
-    {
-        float dt = hdda.time() - t;
-        transmittance *= expf(-density * dt);
-        t = hdda.time();
-        ijk = hdda.voxel();
+    const Vec3f oc = ray.o - center;
+    const float a = dot(ray.d, ray.d);
+    const float half_b = dot(oc, ray.d);
+    const float c = dot(oc, oc) - radius * radius;
+    const float discriminant = half_b * half_b - a * c;
 
-        density = acc.getValue(ijk);
-        hdda.update(ray, acc.getDim(ijk, ray));
+    if (discriminant > 0.0f) {
+        float sqrtd = sqrtf(discriminant);
+        float t1 = (-half_b - sqrtd) / a;
+        bool check_second = true;
+        if (t1 > ray.tmin && t1 < ray.tmax) {
+            Vec3f normal = normalize((ray.at(t1) - center) / radius);
+            check_second = false;
+            optixReportIntersection(t1, 0, Vec3f_as_ints(normal));
+        }
+
+        if (check_second) {
+            float t2 = (-half_b + sqrtd) / a;
+            if (t2 > ray.tmin && t2 < ray.tmax) {
+                Vec3f normal = normalize((ray.at(t2) - center) / radius);
+                optixReportIntersection(t2, 0, Vec3f_as_ints(normal));
+            }
+        }
     }
-
-    return transmittance;
 }
 
-template <typename AccT>
-static inline __device__ float rayMarching(
-    const nanovdb::Vec3f& ro, const nanovdb::Vec3f& rd,
-    const float tmin, const float tmax, uint32_t& seed, VDBGrid::Data* grid)
+extern "C" __device__ void __closesthit__sphere()
 {
-    const nanovdb::FloatGrid* density = reinterpret_cast<const nanovdb::FloatGrid*>(grid->density);
-    const auto& tree = density->tree();
+    const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
+    const Sphere::Data* sphere_data = reinterpret_cast<Sphere::Data*>(data->shape_data);
+
+    Ray ray = getWorldRay();
+
+    Vec3f local_n = getVec3fFromAttribute<0>();
+    const Vec3f world_n = normalize(optixTransformNormalFromObjectToWorldSpace(local_n.toCUVec()));
+
+    SurfaceInteraction* si = getSurfaceInteraction();
+    si->p = ray.at(ray.tmax);
+    si->shading.n = world_n;
+    si->t = ray.tmax;
+    si->wo = ray.d;
+    si->uv = getSphereUV(local_n);
+    si->surface_info = data->surface_info;
+
+    float phi = atan2(local_n.z(), local_n.x());
+    if (phi < 0) phi += 2.0f * math::pi;
+    const float theta = acos(local_n.y());
+    const Vec3f dpdu = Vec3f(-math::two_pi * local_n.z(), 0, math::two_pi * local_n.x());
+    const Vec3f dpdv = math::pi * Vec3f(local_n.y() * cos(phi), -sin(theta), local_n.y() * sin(phi));
+    si->shading.dpdu = normalize(optixTransformVectorFromObjectToWorldSpace(dpdu.toCUVec()));
+    si->shading.dpdv = normalize(optixTransformVectorFromObjectToWorldSpace(dpdv.toCUVec()));
+}
+
+static __forceinline__ __device__ float deltaTracking(
+    const VDBGrid::Data* medium,
+    const nanovdb::Vec3f& ro, const nanovdb::Vec3f& rd, 
+    const float tmin, const float tmax, uint32_t& seed)
+{
+    const nanovdb::FloatGrid* grid = reinterpret_cast<const nanovdb::FloatGrid*>(medium->density);
+    assert(grid);
+
+    const auto& tree = grid->tree();
     auto acc = tree.getAccessor();
 
-    nanovdb::Ray<float> ray(ro, rd, tmin, tmax);
-    nanovdb::Coord ijk = nanovdb::RoundDown<nanovdb::Coord>(ray.start());
+    /// Extinction coefficient
+    /// @todo Be sure to satisfy sigma_t >= (density at x', x': a point inside medium) 
+    const float sigma_t = medium->sigma_t;
+    const Vec3f sigma_s = medium->sigma_s;
+    using AccT = decltype(acc);
+    nanovdb::SampleFromVoxels<AccT, 1, false> sample_from_voxels(acc);
 
-    nanovdb::HDDA<nanovdb::Ray<float>> hdda(ray, acc.getDim(ijk, ray));
+    const auto ray = nanovdb::Ray<float>(ro, rd);
 
-    // Sampling optical depth
-    float tau_s = -logf(1.0f - rnd(seed));
-    // Initialize free-path
-    float t = 0.0f;
-    float tau = 0.0f;
-    float density = acc.getValue(ijk);
-    while (tau < tau_s && hdda.step())
+    float t = tmin;
+    while (true)
     {
-        float dt = hdda.time() - t;
-        float sigma_e = density * grid->sigma_t;
-        tau += sigma_e * dt;
-        t = hdda.time();
-        ijk = hdda.voxel();
+        Vec2f u = UniformSampler::get2D(seed);
+        t -= logf(1.0f - u[0]) / sigma_t;
+        if (t >= tmax) break;
 
-        density = acc.getValue(ijk);
-        hdda.update(ray, acc.getDim());
+        nanovdb::Coord ijk = nanovdb::RoundDown<nanovdb::Coord>(ray(t));
+        const float density = sample_from_voxels(ijk) * sigma_s[0] * (1.0f - params.cloud_opacity);
+        if (u[1] < (density / sigma_t))
+            break;
     }
+
+    return t;
 }
+
+/// Stochastic evaluation of transmittance.
+/// @note Does this work under only monte-carlo simulation?
+static __forceinline__ __device__ float deltaTrackingTransmittance(
+    const VDBGrid::Data* medium, 
+    const nanovdb::Vec3f& ro, const nanovdb::Vec3f& rd, 
+    const float tmin, const float tmax, uint32_t& seed)
+{
+    const float t = deltaTracking(medium, ro, rd, tmin, tmax, seed);
+    return static_cast<float>(t > tmax);
+}
+
+static __forceinline__ __device__ float ratioTrackingTransmittance(
+    const VDBGrid::Data* medium, 
+    const nanovdb::Vec3f& ro, const nanovdb::Vec3f& rd, 
+    const float tmin, const float tmax, uint32_t& seed)
+{
+    const nanovdb::FloatGrid* grid = reinterpret_cast<const nanovdb::FloatGrid*>(medium->density);
+    assert(grid);
+
+    const auto& tree = grid->tree();
+    auto acc = tree.getAccessor();
+    using AccT = decltype(acc);
+    nanovdb::SampleFromVoxels<AccT, 1, false> sample_from_voxels(acc);
+
+    const float sigma_t = medium->sigma_t;
+
+    float Tr = 1.0f; // transmittance
+    float t = tmin;
+
+    const auto ray = nanovdb::Ray<float>(ro, rd, tmin, tmax);
+    while (true)
+    {
+        t -= logf(1.0f - UniformSampler::get1D(seed)) / sigma_t;
+        if (t > tmax) break;
+
+        // Current position
+        nanovdb::Coord ijk = nanovdb::RoundDown<nanovdb::Coord>(ray(t));
+        // Get density from grid
+        const float density = sample_from_voxels(ijk);
+        // Update transmittance according to the ray
+        Tr *= (1.0f - (density / sigma_t));
+    }
+    return Tr;
+}    
 
 extern "C" __device__ void __intersection__grid()
 {
@@ -392,49 +444,27 @@ extern "C" __device__ void __intersection__grid()
     const nanovdb::FloatGrid* grid = reinterpret_cast<const nanovdb::FloatGrid*>(medium->density);
     assert(grid);
 
-    const auto& tree = grid->tree();
-    auto acc = tree.getAccessor();
-
     Ray ray = getLocalRay();
 
-    auto* si = getSurfaceInteraction();
+    nanovdb::Vec3f ro(ray.o[0], ray.o[1], ray.o[2]);
+    nanovdb::Vec3f rd(ray.d[0], ray.d[1], ray.d[2]);
 
-    auto bbox = grid->indexBBox();
     float t0 = ray.tmin;
     float t1 = ray.tmax;
-    auto iRay = nanovdb::Ray<float>(reinterpret_cast<const nanovdb::Vec3f&>(ray.o),
-        reinterpret_cast<const nanovdb::Vec3f&>(ray.d), t0, t1);
+    nanovdb::Ray<float> iray(ro, rd, t0, t1);
+    auto bbox = grid->indexBBox();
 
-    if (iRay.intersects(bbox, t0, t1))
+    auto* si = getSurfaceInteraction();
+    uint32_t seed = si->seed;
+    if (iray.intersects(bbox, t0, t1))
     {
-        t0 = fminf(t0, ray.tmin);
-        auto start = iRay(t0);
-        auto end = iRay(t1);
+        t0 = fmaxf(t0, ray.tmin);
 
-        confine(bbox, start, end);
+        const float t = deltaTracking(medium, ro, rd, t0, t1, seed);
 
-        const auto dir = end - start;
-        const auto len = dir.length();
-        // Ray inside volume that starts from near-side of bbox and ends up at far-side of bbox
-        nanovdb::Ray<float> volume_ray(start, dir / len, 0.0f, len);
-        nanovdb::Coord ijk = nanovdb::RoundDown<nanovdb::Coord>(volume_ray.start());
-        nanovdb::HDDA<nanovdb::Ray<float>> hdda(volume_ray, acc.getDim(ijk, volume_ray));
-
-        float t = 0.0f;
-        float density = acc.getValue(ijk);
-        while (hdda.step())
-        {
-            const float dt = hdda.time() - t;
-            if (density * 0.1f > UniformSampler::get1D(si->seed))
-            {
-                optixReportIntersection(t, 0);
-                return;
-            }
-
-            t = hdda.time();
-            ijk = hdda.voxel();
-            density = acc.getValue(ijk);
-            hdda.update(volume_ray, acc.getDim(ijk, volume_ray));
+        if (t < t1) {
+            si->seed = seed;
+            optixReportIntersection(t, 0);
         }
     }
 }

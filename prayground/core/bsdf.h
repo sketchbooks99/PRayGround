@@ -222,11 +222,11 @@ HOSTDEVICE INLINE Vec3f sampleHenyeyGreenstein(const Vec2f& u, float g)
     else
     {
         float sqr_term = (1.0f - g * g) / (1.0f + g - 2.0f * g * u[0]);
-        cos_theta = -(1.0f + g * g - sqr_term * sqr_term) / (2.0f * g);
+        cos_theta = -(1.0f + g * g - pow2(sqr_term)) / (2.0f * g);
     }
 
     // Compute wi
-    const float sin_theta = sqrtf(fmaxf(0.0f, 1.0f - cos_theta * cos_theta));
+    const float sin_theta = sqrtf(fmaxf(0.0f, 1.0f - pow2(cos_theta)));
     const float phi = 2 * math::pi * u[1];
     return Vec3f(cosf(phi) * sin_theta, sinf(phi) * sin_theta, cos_theta);
 }

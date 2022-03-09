@@ -23,6 +23,8 @@ struct LaunchParams
     Vec4u* result_buffer;
     Vec4f* accum_buffer;
     OptixTraversableHandle handle;
+
+    float cloud_opacity;
 };
 
 struct RaygenData

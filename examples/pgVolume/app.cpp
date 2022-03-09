@@ -61,11 +61,12 @@ void App::setup()
     params.height = result_bmp.height();
     params.samples_per_launch = 1;
     params.max_depth = 40;
+    params.cloud_opacity = 0.1f;
 
     initResultBufferOnDevice();
 
     // Camera settings
-    camera.setOrigin(0, 0, -1000);
+    camera.setOrigin(750, 200, 750);
     camera.setLookat(0, 0, 0);
     camera.setUp(0, 1, 0);
     camera.setFarClip(5000);
@@ -104,7 +105,8 @@ void App::setup()
     // Area emitter
     uint32_t area_emitter_prg_id = setupCallable(DC_FUNC_STR("area_emitter"), "");
     
-    textures.emplace("env", new FloatBitmapTexture("resources/image/sepulchral_chapel_rotunda_4k.exr", bitmap_prg_id));
+    textures.emplace("env", new FloatBitmapTexture("resources/image/drackenstein_quarry_4k.exr", bitmap_prg_id));
+    //textures.emplace("env", new ConstantTexture(Vec3f(0.1f), constant_prg_id));
 
     env = EnvironmentEmitter{ textures.at("env") };
     env.copyToDevice();
@@ -120,13 +122,16 @@ void App::setup()
     // Hitgroup programs
     // Plane
     auto plane_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("plane"), IS_FUNC_STR("plane"));
+    // Sphere
+    auto sphere_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("sphere"), IS_FUNC_STR("sphere"));
     // Grid medium
     auto grid_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("grid"), IS_FUNC_STR("grid"));
-
+    
+    using SurfaceP = variant<shared_ptr<Material>, shared_ptr<AreaEmitter>>;
     struct Primitive
     {
         shared_ptr<Shape> shape;
-        shared_ptr<Material> material;
+        SurfaceP surface;
         uint32_t sample_id;
     };
 
@@ -134,7 +139,6 @@ void App::setup()
     uint32_t sbt_offset = 0;
     uint32_t instance_id = 0;
 
-    using SurfaceP = variant<shared_ptr<Material>, shared_ptr<AreaEmitter>>;
     auto addHitgroupRecord = [&](ProgramGroup& prg, shared_ptr<Shape> shape, SurfaceP surface, uint32_t sample_id)
     {
         const bool is_mat = holds_alternative<shared_ptr<Material>>(surface);
@@ -182,28 +186,35 @@ void App::setup()
 
     auto setupPrimitive = [&](ProgramGroup& prg, const Primitive& p, const Matrix4f& transform)
     {
-        addHitgroupRecord(prg, p.shape, p.material, p.sample_id);
+        addHitgroupRecord(prg, p.shape, p.surface, p.sample_id);
         createGAS(p.shape, transform);
     };
 
     // Textures
     textures.emplace("floor", new CheckerTexture(Vec3f(0.8f), Vec3f(0.3f), 10, checker_prg_id));
     textures.emplace("white", new ConstantTexture(Vec3f(1.0f), constant_prg_id));
+    textures.emplace("blue", new ConstantTexture(Vec3f(0.5f, 0.5f, 0.9f), constant_prg_id));
 
     // Materials
     materials.emplace("floor", new Diffuse(textures.at("floor")));
 
     // Shapes
     shapes.emplace("floor", new Plane(Vec2f(-0.5f), Vec2f(0.5f)));
-    shapes.emplace("smoke", new VDBGrid("resources/volume/wdas_cloud_quarter.nvdb", Vec3f(0.8f), Vec3f(1.0f), 0.5f));
+    shapes.emplace("smoke", new VDBGrid("resources/volume/wdas_cloud_quarter.nvdb", Vec3f(0.2f), Vec3f(0.8f), 0.5f));
+    shapes.emplace("sphere", new Sphere(Vec3f(0.0f), 50.0f));
 
     // Floor
-    Primitive floor{ shapes.at("floor"), materials.at("floor"), diffuse_prg_id };
-    setupPrimitive(plane_prg, floor, Matrix4f::translate(0, -5, 0) * Matrix4f::scale(100));
+    // Primitive floor{ shapes.at("floor"), materials.at("floor"), diffuse_prg_id };
+    // setupPrimitive(plane_prg, floor, Matrix4f::translate(0, -5, 0) * Matrix4f::scale(100));
 
     // Smoke
     Primitive smoke{ shapes.at("smoke"), materials.at("floor"), medium_prg_id };
     setupPrimitive(grid_prg, smoke, Matrix4f::identity());
+
+    // Emitted sphere located in Cloud
+    // auto emitter = make_shared<AreaEmitter>(textures.at("blue"), 1000.0f);
+    // Primitive sphere{ shapes.at("sphere"), emitter, area_emitter_prg_id };
+    // setupPrimitive(sphere_prg, sphere, Matrix4f::identity());
 
     CUDA_CHECK(cudaStreamCreate(&stream));
     ias.build(context, stream);
@@ -211,6 +222,16 @@ void App::setup()
     d_params.allocate(sizeof(LaunchParams));
     sbt.createOnDevice();
     pipeline.create(context);
+
+    // GUI settings
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+    const char* glsl_version = "#version 150";
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(pgGetCurrentWindow()->windowPtr(), true);
+    ImGui_ImplOpenGL3_Init(glsl_version);
 }
 
 // ------------------------------------------------------------------
@@ -241,7 +262,40 @@ void App::update()
 // ------------------------------------------------------------------
 void App::draw()
 {
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    ImGui::Begin("pgVolume");
+
+    auto vdbgrid = std::static_pointer_cast<VDBGrid>(shapes.at("smoke"));
+    float g = vdbgrid->g();
+    ImGui::SliderFloat("G", &g, 0.0f, 0.99f);
+    if (g != vdbgrid->g())
+    {
+        vdbgrid->setG(g);
+        vdbgrid->copyToDevice();
+        camera_update = true;
+    }
+
+    const float prev_opacity = params.cloud_opacity;
+    ImGui::SliderFloat("Cloud opacity", &params.cloud_opacity, 0.01f, 1.0f);
+    if (params.cloud_opacity != prev_opacity)
+        camera_update = true;
+    
+    ImGui::Text("Frame rate: %.3f ms/frame (%.2f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+    ImGui::Text("Render frame: %d", params.frame);
+
+    ImGui::End();
+
+    ImGui::Render();
+
     result_bmp.draw(0, 0);
+
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+    if (params.frame == 4096)
+        result_bmp.write(pgPathJoin(pgAppDir(), "pgVolume.png"));
 }
 
 // ------------------------------------------------------------------

@@ -32,7 +32,7 @@ namespace prayground {
             const Spectrum& sigma_a, const Spectrum& sigma_s, float g)
             : m_sigma_a(sigma_a), m_sigma_s(sigma_s), m_g(g)
         {
-            m_sigma_t = (sigma_a + sigma_s)[0];
+            m_sigma_t = sigma_a[0] + sigma_s[0];;
             load(filename);
         }
 
@@ -118,6 +118,15 @@ namespace prayground {
                 .density = d_density
             };
         }
+
+        void setSigmaA(const Spectrum& sigma_a) { m_sigma_a = sigma_a; m_sigma_t = m_sigma_a[0] + m_sigma_s[0]; }
+        const Spectrum& sigmaA() const { return m_sigma_a; }
+
+        void setSigmaS(const Spectrum& sigma_s) { m_sigma_s = sigma_s; m_sigma_t = m_sigma_a[0] + m_sigma_s[0]; }
+        const Spectrum& sigmaS() const { return m_sigma_s; }
+
+        void setG(const float g) { m_g = g; }
+        const float& g() const { return m_g; }
     private:
         Spectrum m_sigma_a, m_sigma_s;
         float m_sigma_t;

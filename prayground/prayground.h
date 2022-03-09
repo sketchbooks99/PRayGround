@@ -51,7 +51,6 @@
 
 // math utilities
 #include "math/util.h"
-#include "math/vec_math.h"
 #include "math/matrix.h"
 #include "math/random.h"
 #include "math/noise.h"

@@ -7,8 +7,8 @@ void App::initResultBufferOnDevice()
     result_bitmap.allocateDevicePtr();
     accum_bitmap.allocateDevicePtr();
 
-    params.result_buffer = reinterpret_cast<uchar4*>(result_bitmap.devicePtr());
-    params.accum_buffer = reinterpret_cast<float4*>(accum_bitmap.devicePtr());
+    params.result_buffer = reinterpret_cast<Vec4u*>(result_bitmap.devicePtr());
+    params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bitmap.devicePtr());
 
     CUDA_SYNC_CHECK();
 }
@@ -19,24 +19,9 @@ void App::handleCameraUpdate()
         return;
     camera_update = false;
 
-    float3 U, V, W;
-    camera.UVWFrame(U, V, W);
-
     RaygenRecord* rg_record = reinterpret_cast<RaygenRecord*>(sbt.raygenRecord());
     RaygenData rg_data;
-    rg_data.camera =
-    {
-        .origin = camera.origin(),
-        .lookat = camera.lookat(),
-        .U = U,
-        .V = V,
-        .W = W,
-        .fov = camera.fov(),
-        .aspect = camera.aspect(),
-        .aperture = camera.aperture(),
-        .focus_distance = camera.focusDistance(),
-        .farclip = camera.farClip()
-    };
+    rg_data.camera = camera.getData();
 
     CUDA_CHECK(cudaMemcpy(
         reinterpret_cast<void*>(&rg_record->data),
@@ -83,6 +68,7 @@ void App::setup()
     params.max_depth = 8;
     params.white = 5.0f;
 
+    // Copy SPD data to convert RGB to spectrum by Smits's method (1999)
     constexpr size_t spd_size = sizeof(SampledSpectrum);
     CUDA_CHECK(cudaMalloc(&params.white_spd, spd_size));
     CUDA_CHECK(cudaMemcpy(params.white_spd, &SampledSpectrum::rgb2spectrum_spd_white, spd_size, cudaMemcpyHostToDevice));
@@ -101,7 +87,7 @@ void App::setup()
 
     initResultBufferOnDevice();
 
-    // カメラの設定
+    // Camera settings
     camera.setOrigin(-0.5, 0.842760, 2.73f);
     camera.setLookat(0.0f, -0.3f, 0.0f);
     camera.setUp(0.0f, 1.0f, 0.0f);
@@ -110,31 +96,17 @@ void App::setup()
     camera.setAperture(0.04f);
     camera.setAspect(1.0f);
     camera.setFocusDistance(2.5f);
-    float3 U, V, W;
-    camera.UVWFrame(U, V, W);
     camera.enableTracking(pgGetCurrentWindow());
 
-    // Raygenプログラム
+    // Raygen program
     ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, module, "__raygen__spectrum");
-    // Raygenプログラム用のShader Binding Tableデータ
+    // Shader binding table for raygen
     RaygenRecord raygen_record;
     raygen_prg.recordPackHeader(&raygen_record);
-    raygen_record.data.camera =
-    {
-        .origin = camera.origin(),
-        .lookat = camera.lookat(),
-        .U = U,
-        .V = V,
-        .W = W,
-        .fov = camera.fov(),
-        .aspect = camera.aspect(),
-        .aperture = camera.aperture(), 
-        .focus_distance = camera.focusDistance(),
-        .farclip = camera.farClip()
-    };
+    raygen_record.data.camera = camera.getData();
     sbt.setRaygenRecord(raygen_record);
 
-    // Callable関数とShader Binding TableにCallable関数用のデータを登録するLambda関数
+    // Lambda function to bind data and callables function to SBT
     auto setupCallable = [&](const Module& module, const std::string& dc, const std::string& cc)
     {
         EmptyRecord callable_record = {};
@@ -144,17 +116,15 @@ void App::setup()
         return id;
     };
 
-    // テクスチャ用のCallableプログラム
+    // Callables programs for texture
     uint32_t constant_prg_id = setupCallable(module, DC_FUNC_STR("constant"), "");
     uint32_t bitmap_prg_id = setupCallable(module, DC_FUNC_STR("bitmap"), "");
 
-    // Surface用のCallableプログラム 
+    // Callables programs for surfaces
     // Diffuse
-    uint32_t diffuse_sample_bsdf_prg_id = setupCallable(module, DC_FUNC_STR("sample_diffuse"), CC_FUNC_STR("bsdf_diffuse"));
-    uint32_t diffuse_pdf_prg_id = setupCallable(module, DC_FUNC_STR("pdf_diffuse"), "");
+    uint32_t diffuse_prg_id = setupCallable(module, DC_FUNC_STR("sample_diffuse"), "");
     // Dielectric
-    uint32_t dielectric_sample_bsdf_prg_id = setupCallable(module, DC_FUNC_STR("sample_dielectric"), CC_FUNC_STR("bsdf_dielectric"));
-    uint32_t dielectric_pdf_prg_id = setupCallable(module, DC_FUNC_STR("pdf_dielectric"), "");
+    uint32_t dielectric_prg_id = setupCallable(module, DC_FUNC_STR("sample_dielectric", "");
     // AreaEmitter
     uint32_t area_emitter_prg_id = setupCallable(module, DC_FUNC_STR("area_emitter"), "");
 
@@ -188,7 +158,6 @@ void App::setup()
         shared_ptr<Shape> shape;
         shared_ptr<Material> material;
         uint32_t sample_bsdf_id;
-        uint32_t pdf_id;
     };
 
     uint32_t sbt_idx = 0;
@@ -196,6 +165,7 @@ void App::setup()
     uint32_t instance_id = 0;
     // ShapeとMaterialのデータをGPU上に準備しHitgroup用のSBTデータを追加するLambda関数
     auto setupPrimitive = [&](ProgramGroup& prg, const Primitive& primitive, const Matrix4f& transform)
+        -> void
     {
         // データをGPU側に用意
         primitive.shape->copyToDevice();
@@ -212,8 +182,6 @@ void App::setup()
             {
                 .data = primitive.material->devicePtr(),
                 .sample_id = primitive.sample_bsdf_id,
-                .bsdf_id = primitive.sample_bsdf_id,
-                .pdf_id = primitive.pdf_id,
                 .type = primitive.material->surfaceType()
             }
         };
@@ -243,8 +211,8 @@ void App::setup()
         ProgramGroup& prg,
         shared_ptr<Shape> shape,
         AreaEmitter area, Matrix4f transform, 
-        uint32_t sample_pdf_id
-    )
+        uint32_t sample_id) 
+        -> void
     {
         // Plane or Sphereにキャスト可能かチェック
         ASSERT(dynamic_pointer_cast<Plane>(shape) || dynamic_pointer_cast<Sphere>(shape), "The shape of area emitter must be a plane or sphere.");
@@ -262,8 +230,6 @@ void App::setup()
             {
                 .data = area.devicePtr(),
                 .sample_id = sample_pdf_id,
-                .bsdf_id = area_emitter_prg_id,
-                .pdf_id = sample_pdf_id,
                 .type = SurfaceType::AreaEmitter
             }
         };
@@ -290,7 +256,6 @@ void App::setup()
             .objToWorld = transform,
             .worldToObj = transform.inverse(), 
             .sample_id = sample_pdf_id, 
-            .pdf_id = sample_pdf_id,
             .gas_handle = instance.handle()
         };
         area_emitter_infos.push_back(area_emitter_info);
@@ -339,7 +304,7 @@ void App::setup()
     auto tex_red = createConstantTextureFromSPD(red);
     auto tex_green = createConstantTextureFromSPD(green);
     auto yellow = reconstructSpectrumFromRGB(
-        make_float3(0.9f, 0.5f, 0.3f), SampledSpectrum::rgb2spectrum_spd_white,
+        Vec3f(0.7f, 0.7f, 0.3f), SampledSpectrum::rgb2spectrum_spd_white,
         SampledSpectrum::rgb2spectrum_spd_cyan, SampledSpectrum::rgb2spectrum_spd_magenta, SampledSpectrum::rgb2spectrum_spd_yellow,
         SampledSpectrum::rgb2spectrum_spd_red, SampledSpectrum::rgb2spectrum_spd_green, SampledSpectrum::rgb2spectrum_spd_blue
     );
@@ -351,8 +316,8 @@ void App::setup()
     for (int i = 0; i < 15; i++)
     {
         const float scale = rnd(seed, 0.2f, 0.3f);
-        const float3 axis = normalize(make_float3(rnd(seed, -0.4, 0.4f), rnd(seed, -1.0f, 1.0f), rnd(seed, -0.4f, 0.4f)));
-        const float3 pos = make_float3(rnd(seed, -2.0f, 2.0f), scale * 0.9f, rnd(seed, -2.0f, 2.0f));
+        const Vec3f axis = normalize(Vec3f(rnd(seed, -0.4, 0.4f), rnd(seed, -1.0f, 1.0f), rnd(seed, -0.4f, 0.4f)));
+        const Vec3f pos = Vec3f(rnd(seed, -2.0f, 2.0f), scale * 0.9f, rnd(seed, -2.0f, 2.0f));
         const float rad = rnd(seed, 0.0f, math::pi);
         auto transform = Matrix4f::translate(pos) * Matrix4f::rotate(rad, axis) * Matrix4f::scale(scale);
         auto mat = make_shared<Dielectric>(tex_white, 2.41f);
@@ -365,7 +330,7 @@ void App::setup()
     {
         auto plane = make_shared<TriangleMesh>("resources/model/plane.obj");
         auto diffuse = make_shared<Diffuse>(tex_grid);
-        auto transform = Matrix4f::identity() * Matrix4f::scale(3.0f);
+        auto transform = Matrix4f::scale(3.0f);
         Primitive floor{ plane, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
         setupPrimitive(mesh_prg, floor, transform);
     }
@@ -403,10 +368,10 @@ void App::setup()
     // Ceiling light
     {
         // Shape
-        auto plane_light = make_shared<Plane>(make_float2(-2.0f, -0.2f), make_float2(2.0f, 0.2f));
+        auto plane_light = make_shared<Plane>(Vec2f(-2.0f, -0.2f), Vec2f(2.0f, 0.2f));
         // Area emitter
         auto plane_area_emitter = AreaEmitter(tex_yellow, 20.0f);
-        Matrix4f transform = Matrix4f::translate({0.0f, 3.0f, 0.0f});
+        Matrix4f transform = Matrix4f::translate(0.0f, 3.0f, 0.0f);
         setupAreaEmitter(plane_prg, plane_light, plane_area_emitter, transform, plane_sample_pdf_prg_id);
     }
 
@@ -451,8 +416,7 @@ void App::update()
         &sbt.sbt(),
         params.width,
         params.height,
-        1
-    );
+        1);
 
     CUDA_CHECK(cudaStreamSynchronize(stream));
     CUDA_SYNC_CHECK();

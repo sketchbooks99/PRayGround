@@ -1,7 +1,7 @@
 #pragma once 
 
 #include <optix.h>
-#include <prayground/math/vec_math.h>
+#include <prayground/math/vec.h>
 #include <prayground/math/matrix.h>
 #include <prayground/optix/sbt.h>
 #include <prayground/core/interaction.h>
@@ -19,20 +19,19 @@ struct AreaEmitterInfo
     Matrix4f objToWorld;
     Matrix4f worldToObj;
 
-    unsigned int sample_id;
-    unsigned int pdf_id;
+    uint32_t sample_id;
     
     OptixTraversableHandle gas_handle;
 };
 
 struct LaunchParams 
 {
-    unsigned int width, height;
-    unsigned int samples_per_launch;
-    unsigned int max_depth;
-    int subframe_index;
-    uchar4* result_buffer;
-    float4* accum_buffer;
+    uint32_t width, height;
+    uint32_t samples_per_launch;
+    uint32_t max_depth;
+    int frame;
+    Vec4u* result_buffer;
+    Vec4f* accum_buffer;
     OptixTraversableHandle handle;
 
     AreaEmitterInfo* lights;
@@ -45,27 +44,11 @@ struct LaunchParams
     SampledSpectrum* red_spd;
     SampledSpectrum* green_spd;
     SampledSpectrum* blue_spd;
-
-    float white;
-};
-
-struct CameraData 
-{
-    float3 origin; 
-    float3 lookat;
-    float3 U; 
-    float3 V; 
-    float3 W;
-    float fov;
-    float aspect;
-    float aperture;
-    float focus_distance;
-    float farclip;
 };
 
 struct RaygenData
 {
-    CameraData camera;
+    Camera::Data camera;
 };
 
 struct HitgroupData

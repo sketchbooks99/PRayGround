@@ -83,9 +83,9 @@ extern "C" __global__ void __raygen__spectrum()
 {
     const RaygenData* raygen = reinterpret_cast<RaygenData*>(optixGetSbtDataPointer());
 
-    const int subframe_index = params.subframe_index;
+    const int frame = params.frame;
     const auto idx = Vec3u(optixGetLaunchIndex());
-    unsigned int seed = tea<4>(idx.x() * params.width + idx.y(), subframe_index);
+    unsigned int seed = tea<4>(idx.x() * params.width + idx.y(), frame);
 
     float radiance;
 
@@ -176,7 +176,7 @@ extern "C" __global__ void __raygen__spectrum()
     }
     params.accum_buffer[image_idx] = Vec4f(accum_color, 1.0f);
     Vec3u ucolor = make_color(accum_color);
-    params.result_buffer[image_idx] = Vec4u(ucolor.x, ucolor.y, ucolor.z, 255);
+    params.result_buffer[image_idx] = Vec4u(ucolor, 255);
 }
 
 // Miss ------------------------------------------------------------------------------
@@ -194,8 +194,8 @@ extern "C" __device__ void __miss__envmap()
     const float half_b = dot(ray.o, ray.d);
     const float c = dot(ray.o, ray.o) - 1e8f*1e8f;
     const float D = half_b * half_b - a * c;
-    float sqrtD = sqrtf(D);
-    float t = (-half_b + sqrtD) / a;
+    const float sqrtD = sqrtf(D);
+    const float t = (-half_b + sqrtD) / a;
     const Vec3f p = normalize(ray.at(t));
 
     // Get texture coordinates in sphere
@@ -340,7 +340,7 @@ static __forceinline__ __device__ float disneyBRDF(
     const float lumi = base_spectrum.y() / CIE_Y_integral;
     const float rho_tint = base / lumi;
     const float rho_sheen = lerp(1.0f, rho_tint, disney->sheen_tint);
-    const float f_sheen = disney->sheen * rho_sheen * pow5(1.0f - LdotH, 5.0f);
+    const float f_sheen = disney->sheen * rho_sheen * pow5(1.0f - LdotH);
 
     // Specular term (specular, clearcoat) ============================
     // Spcular
@@ -466,8 +466,8 @@ extern "C" __device__ Spectrum __direct_callable__checker(SurfaceInteraction* si
 extern "C" __device__ Spectrum __direct_callable__bitmap(SurfaceInteraction* si, void* tex_data)
 {
     const BitmapTexture::Data* image = reinterpret_cast<BitmapTexture::Data*>(tex_data);
-    float4 c = tex2D<float4>(image->texture, si->uv.x, si->uv.y);
-    return reconstructSpectrumFromRGB(Vec3f(c.x, c.y, c.z),
+    Vec4f c = tex2D<float4>(image->texture, si->uv.x, si->uv.y);
+    return reconstructSpectrumFromRGB(Vec3f(c),
         *params.white_spd, *params.cyan_spd, *params.magenta_spd, *params.yellow_spd, 
         *params.red_spd, *params.green_spd, *params.blue_spd
     );
@@ -596,11 +596,11 @@ extern "C" __device__ void __closesethit__sphere()
     si->uv = getSphereUV(local_n);
     si->surface_info = data->surface_info;
 
-    float phi = atan2(local_n.z, local_n.x);
+    float phi = atan2(local_n.z(), local_n.x());
     if (phi < 0) phi += 2.0f * math::pi;
-    const float theta = acos(local_n.y);
-    const Vec3f dpdu = Vec3f(-math::two_pi * local_n.z, 0, math::two_pi * local_n.x);
-    const Vec3f dpdv = math::pi * Vec3f(local_n.y * cos(phi), -sin(theta), local_n.y * sin(phi));
+    const float theta = acos(local_n.y());
+    const Vec3f dpdu = Vec3f(-math::two_pi * local_n.z(), 0, math::two_pi * local_n.x());
+    const Vec3f dpdv = math::pi * Vec3f(local_n.y() * cos(phi), -sin(theta), local_n.y() * sin(phi));
     si->shading.dpdu = normalize(optixTransformVectorFromObjectToWorldSpace(dpdu));
     si->shading.dpdv = normalize(optixTransformVectorFromObjectToWorldSpace(dpdv));
 }
@@ -660,7 +660,7 @@ extern "C" __device__ Vec3f DC_FUNC(rnd_sample_plane)(const AreaEmitterInfo& are
     const Vec3f local_p = area_info.worldToObj.pointMul(si->p);
     unsigned int seed = si->seed;
     // 平面光源上のランダムな点を取得
-    const Vec3f rnd_p = Vec3f(rnd(seed, plane_data->min.x, plane_data->max.x), 0.0f, rnd(seed, plane_data->min.y, plane_data->max.y));
+    const Vec3f rnd_p = Vec3f(rnd(seed, plane_data->min.x(), plane_data->max.x()), 0.0f, rnd(seed, plane_data->min.y(), plane_data->max.y()));
     Vec3f to_light = rnd_p - local_p;
     to_light = area_info.objToWorld.vectorMul(to_light);
     si->seed = seed;
@@ -677,14 +677,16 @@ extern "C" __device__ void IS_FUNC(plane)()
 
     Ray ray = getLocalRay();
 
-    const float t = -ray.o.y / ray.d.y;
+    const float t = -ray.o.y() / ray.d.y();
 
-    const float x = ray.o.x + t * ray.d.x;
-    const float z = ray.o.z + t * ray.d.z;
+    const float x = ray.o.x() + t * ray.d.x();
+    const float z = ray.o.z() + t * ray.d.z();
 
-    Vec2f uv = Vec2f((x - min.x) / (max.x - min.x), (z - min.y) / (max.y - min.y));
+    Vec2f uv = Vec2f((x - min.x()) / (max.x() - min.x()), (z - min.y()) / (max.y() - min.y()));
 
-    if (min.x < x && x < max.x && min.y < z && z < max.y && ray.tmin < t && t < ray.tmax)
+    if (min.x() < x && x < max.x() && 
+        min.y() < z && z < max.y() && 
+        ray.tmin < t && t < ray.tmax)
         optixReportIntersection(t, 0, Vec2f_as_ints(uv));
 }
 
@@ -695,7 +697,7 @@ extern "C" __device__ void CH_FUNC(plane)()
     Ray ray = getWorldRay();
 
     Vec3f local_n = Vec3f(0, 1, 0);
-    const Vec3f world_n = normalize(optixTransformNormalFromObjectToWorldSpace(local_n));
+    const Vec3f world_n = normalize(optixTransformNormalFromObjectToWorldSpace(local_n.toCUVec()));
     const Vec2f uv = getVec2fFromAttribute<0>();
 
     SurfaceInteraction* si = getSurfaceInteraction();
@@ -706,6 +708,6 @@ extern "C" __device__ void CH_FUNC(plane)()
     si->wo = ray.d;
     si->uv = uv;
     si->surface_info = data->surface_info;
-    si->shading.dpdu = optixTransformNormalFromObjectToWorldSpace(Vec3f(1.0f, 0.0f, 0.0f));
-    si->shading.dpdv = optixTransformNormalFromObjectToWorldSpace(Vec3f(0.0f, 0.0f, 1.0f));
+    si->shading.dpdu = optixTransformNormalFromObjectToWorldSpace({1.0f, 0.0f, 0.0f});
+    si->shading.dpdv = optixTransformNormalFromObjectToWorldSpace({0.0f, 0.0f, 1.0f});
 }

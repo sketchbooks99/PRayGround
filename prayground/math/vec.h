@@ -7,8 +7,6 @@
 
 #ifndef __CUDACC__
 #include <iostream>
-#include <cmath>
-#include <cstdlib>
 #endif // __CUDACC__
 
 #define VEC_DECL_T(name)               \

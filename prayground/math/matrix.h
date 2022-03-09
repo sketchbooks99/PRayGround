@@ -206,7 +206,7 @@ INLINE HOSTDEVICE Matrix<T, N> operator/(const Matrix<T, N>& m1, const float t)
 template <typename T, uint32_t N>
 INLINE HOSTDEVICE typename Vector<T, N>::Type operator*(const Matrix<T, N>& m, const typename Matrix<T, N>::VecT& v)
 {
-    Matrix<T, N>::VecT ret;
+    typename Matrix<T, N>::VecT ret;
 
     for (uint32_t row = 0; row < N; row++)
     {

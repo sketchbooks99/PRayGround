@@ -1,5 +1,12 @@
 #pragma once
 
+#include <vector_functions.h>
+
+#ifndef __CUDACC__
+    #include <cmath>
+    #include <cstdlib>
+#endif
+
 namespace prayground {
 
 enum class Axis {

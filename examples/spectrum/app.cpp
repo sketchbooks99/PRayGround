@@ -2,7 +2,7 @@
 
 void App::initResultBufferOnDevice()
 {
-    params.subframe_index = 0;
+    params.frame = 0;
 
     result_bitmap.allocateDevicePtr();
     accum_bitmap.allocateDevicePtr();
@@ -66,7 +66,6 @@ void App::setup()
     params.height = result_bitmap.height();
     params.samples_per_launch = 1;
     params.max_depth = 8;
-    params.white = 5.0f;
 
     // Copy SPD data to convert RGB to spectrum by Smits's method (1999)
     constexpr size_t spd_size = sizeof(SampledSpectrum);
@@ -124,7 +123,7 @@ void App::setup()
     // Diffuse
     uint32_t diffuse_prg_id = setupCallable(module, DC_FUNC_STR("sample_diffuse"), "");
     // Dielectric
-    uint32_t dielectric_prg_id = setupCallable(module, DC_FUNC_STR("sample_dielectric", "");
+    uint32_t dielectric_prg_id = setupCallable(module, DC_FUNC_STR("sample_dielectric"), "");
     // AreaEmitter
     uint32_t area_emitter_prg_id = setupCallable(module, DC_FUNC_STR("area_emitter"), "");
 
@@ -157,7 +156,7 @@ void App::setup()
     {
         shared_ptr<Shape> shape;
         shared_ptr<Material> material;
-        uint32_t sample_bsdf_id;
+        uint32_t sample_id;
     };
 
     uint32_t sbt_idx = 0;
@@ -181,7 +180,7 @@ void App::setup()
             .surface_info = 
             {
                 .data = primitive.material->devicePtr(),
-                .sample_id = primitive.sample_bsdf_id,
+                .sample_id = primitive.sample_id,
                 .type = primitive.material->surfaceType()
             }
         };
@@ -210,13 +209,13 @@ void App::setup()
     auto setupAreaEmitter = [&](
         ProgramGroup& prg,
         shared_ptr<Shape> shape,
-        AreaEmitter area, Matrix4f transform, 
-        uint32_t sample_id) 
+        AreaEmitter& area, const Matrix4f& transform, 
+        uint32_t sample_pdf_id) 
         -> void
     {
         // Plane or Sphereにキャスト可能かチェック
         ASSERT(dynamic_pointer_cast<Plane>(shape) || dynamic_pointer_cast<Sphere>(shape), "The shape of area emitter must be a plane or sphere.");
-        
+
         shape->copyToDevice();
         shape->setSbtIndex(sbt_idx);
         area.copyToDevice();
@@ -229,7 +228,7 @@ void App::setup()
             .surface_info = 
             {
                 .data = area.devicePtr(),
-                .sample_id = sample_pdf_id,
+                .sample_id = area_emitter_prg_id,
                 .type = SurfaceType::AreaEmitter
             }
         };
@@ -322,7 +321,7 @@ void App::setup()
         auto transform = Matrix4f::translate(pos) * Matrix4f::rotate(rad, axis) * Matrix4f::scale(scale);
         auto mat = make_shared<Dielectric>(tex_white, 2.41f);
         mat->setSellmeierType(Sellmeier::Diamond);
-        Primitive p{ diamond, mat, dielectric_sample_bsdf_prg_id, dielectric_pdf_prg_id };
+        Primitive p{ diamond, mat, dielectric_prg_id };
         setupPrimitive(mesh_prg, p, transform);
     }
 
@@ -331,7 +330,7 @@ void App::setup()
         auto plane = make_shared<TriangleMesh>("resources/model/plane.obj");
         auto diffuse = make_shared<Diffuse>(tex_grid);
         auto transform = Matrix4f::scale(3.0f);
-        Primitive floor{ plane, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
+        Primitive floor{ plane, diffuse, diffuse_prg_id };
         setupPrimitive(mesh_prg, floor, transform);
     }
 
@@ -341,7 +340,7 @@ void App::setup()
         mesh->smooth();
         auto diffuse = make_shared<Diffuse>(tex_red);
         auto transform = Matrix4f::translate(-0.5, -0.07f, 0.0f) * Matrix4f::scale(2.0f);
-        Primitive p{ mesh, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
+        Primitive p{ mesh, diffuse, diffuse_prg_id };
         setupPrimitive(mesh_prg, p, transform);
     }
 
@@ -351,7 +350,7 @@ void App::setup()
         mesh->smooth();
         auto diffuse = make_shared<Diffuse>(tex_green);
         auto transform = Matrix4f::translate(-0.2f, 0.15f, -0.5f) * Matrix4f::rotate(math::pi * 7/6, {0,1,0}) * Matrix4f::scale(0.003f);
-        Primitive p{ mesh, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
+        Primitive p{ mesh, diffuse, diffuse_prg_id };
         setupPrimitive(mesh_prg, p, transform);
     }
 
@@ -361,7 +360,7 @@ void App::setup()
         mesh->smooth();
         auto diffuse = make_shared<Diffuse>(tex_yellow);
         auto transform = Matrix4f::translate(0.5f, 0.13f, 0.7f) * Matrix4f::rotate(math::pi/3, {0,1,0}) * Matrix4f::scale(0.4f);
-        Primitive p{ mesh, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
+        Primitive p{ mesh, diffuse, diffuse_prg_id };
         setupPrimitive(mesh_prg, p, transform);
     }
 
@@ -404,7 +403,7 @@ void App::update()
 {
     handleCameraUpdate();
 
-    params.subframe_index++;
+    params.frame++;
     d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);
 
     // OptiX レイトレーシングカーネルの起動
@@ -434,11 +433,10 @@ void App::draw()
 
     ImGui::Begin("Spectrum");
 
-    ImGui::SliderFloat("White", &params.white, 1.0f, 1000.0f);
     ImGui::Text("Camera info:");
-    ImGui::Text("Origin: %f %f %f", camera.origin().x, camera.origin().y, camera.origin().z);
-    ImGui::Text("Lookat: %f %f %f", camera.lookat().x, camera.lookat().y, camera.lookat().z);
-    ImGui::Text("Up: %f %f %f", camera.up().x, camera.up().y, camera.up().z);
+    ImGui::Text("Origin: %f %f %f", camera.origin().x(), camera.origin().y(), camera.origin().z());
+    ImGui::Text("Lookat: %f %f %f", camera.lookat().x(), camera.lookat().y(), camera.lookat().z());
+    ImGui::Text("Up: %f %f %f", camera.up().x(), camera.up().y(), camera.up().z());
 
     float farclip = camera.farClip();
     ImGui::SliderFloat("far clip", &farclip, 500.0f, 10000.0f);
@@ -462,7 +460,7 @@ void App::draw()
     }
 
     ImGui::Text("Frame rate: %.3f ms/frame (%.2f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-    ImGui::Text("Subframe index: %d", params.subframe_index);
+    ImGui::Text("Subframe index: %d", params.frame);
 
     ImGui::End();
 
@@ -472,7 +470,7 @@ void App::draw()
 
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-    if (params.subframe_index == 4096) {
+    if (params.frame == 4096) {
         result_bitmap.write(pgPathJoin(pgAppDir(), "spectrum.jpg"));
         pgExit();
     }

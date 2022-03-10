@@ -170,8 +170,8 @@ void Camera::mouseDragged(float x, float y, int button)
     bool is_slide = pgGetKey() != Key::Unknown && +(pgGetKey() & (Key::LeftShift | Key::RightShift));
 
     if (is_slide) {
-        float deltaX = x - pgGetPreviousMousePosition().x;
-        float deltaY = y - pgGetPreviousMousePosition().y;
+        float deltaX = x - pgGetPreviousMousePosition().x();
+        float deltaY = y - pgGetPreviousMousePosition().y();
         Vec3f cam_dir = normalize(m_origin - m_lookat);
         Vec3f cam_side = normalize(cross(cam_dir, this->up()));
         Vec3f cam_up = normalize(cross(cam_dir, cam_side));
@@ -183,8 +183,8 @@ void Camera::mouseDragged(float x, float y, int button)
     }
     else 
     {
-        float deltaX = x - pgGetPreviousMousePosition().x;
-        float deltaY = y - pgGetPreviousMousePosition().y;
+        float deltaX = x - pgGetPreviousMousePosition().x();
+        float deltaY = y - pgGetPreviousMousePosition().y();
         float cam_length = length(m_origin - m_lookat);
         Vec3f cam_dir = normalize(m_origin - m_lookat);
 

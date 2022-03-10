@@ -39,22 +39,14 @@
 
 #include <vector_functions.h>
 #include <vector_types.h>
+#include <prayground/math/util.h>
 #include <prayground/optix/macros.h>
+
+using prayground::clamp;
 
 #if !defined(__CUDACC_RTC__)
 #include <cmath>
 #include <cstdlib>
-#endif
-
-/* scalar functions used in vector functions */
-#ifndef M_PIf
-#define M_PIf       3.14159265358979323846f
-#endif
-#ifndef M_PI_2f
-#define M_PI_2f     1.57079632679489661923f
-#endif
-#ifndef M_1_PIf
-#define M_1_PIf     0.318309886183790671538f
 #endif
 
 INLINE HOSTDEVICE int max(int a, int b)
@@ -95,35 +87,6 @@ INLINE HOSTDEVICE unsigned long long max(unsigned long long a, unsigned long lon
 INLINE HOSTDEVICE unsigned long long min(unsigned long long a, unsigned long long b)
 {
     return a < b ? a : b;
-}
-
-/** lerp */
-#ifdef __CUDACC__
-INLINE HOSTDEVICE float lerp(const float a, const float b, const float t)
-{
-    return a + t*(b-a);
-}
-#else 
-    using std::lerp;
-#endif
-
-/** bilerp */
-INLINE HOSTDEVICE float bilerp(const float x00, const float x10, const float x01, const float x11,
-                                         const float u, const float v)
-{
-    return lerp( lerp( x00, x10, u ), lerp( x01, x11, u ), v );
-}
-
-template <typename IntegerType>
-INLINE HOSTDEVICE IntegerType roundUp(IntegerType x, IntegerType y)
-{
-    return ( ( x + y - 1 ) / y ) * y;
-}
-
-/** clamp */
-INLINE HOSTDEVICE float clamp( const float f, const float a, const float b )
-{
-    return fmaxf( a, fminf( f, b ) );
 }
 
 INLINE HOSTDEVICE float inverseSqrt(float x)
@@ -2621,6 +2584,7 @@ INLINE HOSTDEVICE float4 make_float4(const float2& v0, const float v1, const flo
 INLINE HOSTDEVICE float4 make_float4(const float v0, const float3& v1) { return make_float4( v0, v1.x, v1.y, v1.z ); }
 INLINE HOSTDEVICE float4 make_float4(const float3& v0, const float v1) { return make_float4( v0.x, v0.y, v0.z, v1 ); }
 INLINE HOSTDEVICE float4 make_float4(const float2& v0, const float2& v1) { return make_float4( v0.x, v0.y, v1.x, v1.y ); }
+
 /** @} */
 
 

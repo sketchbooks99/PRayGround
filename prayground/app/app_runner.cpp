@@ -18,30 +18,30 @@ namespace { // nonamed-namespace
 
 float pgGetMouseX()
 {
-    return g_state.runner->window()->events().inputStates.mousePosition.x;
+    return g_state.runner->window()->events().inputStates.mousePosition.x();
 }
 
 float pgGetMouseY()
 {
-    return g_state.runner->window()->events().inputStates.mousePosition.y;
+    return g_state.runner->window()->events().inputStates.mousePosition.y();
 }
 
 float pgGetPreviousMouseX()
 {
-    return g_state.runner->window()->events().inputStates.mousePreviousPosition.x;
+    return g_state.runner->window()->events().inputStates.mousePreviousPosition.x();
 }
 
 float pgGetPreviousMouseY()
 {
-    return g_state.runner->window()->events().inputStates.mousePreviousPosition.y;
+    return g_state.runner->window()->events().inputStates.mousePreviousPosition.y();
 }
 
-float2 pgGetMousePosition()
+Vec2f pgGetMousePosition()
 {
     return g_state.runner->window()->events().inputStates.mousePosition;
 }
 
-float2  pgGetPreviousMousePosition()
+Vec2f  pgGetPreviousMousePosition()
 {
     return g_state.runner->window()->events().inputStates.mousePreviousPosition;
 }

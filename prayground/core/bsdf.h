@@ -60,18 +60,25 @@ HOSTDEVICE INLINE Vec3f cosineSampleHemisphere(const float u1, const float u2)
     return Vec3f(x, y, z);
 }
 
+HOSTDEVICE INLINE Vec3f sampleGTR1(const float u1, const float u2, const float roughness)
+{
+    const float a = fmaxf(0.001f, roughness);
+    const float a2 = a * a;
+    const float cos_theta = sqrtf(fmaxf(0.0f, (1.0f - powf(a2, 1.0f - u1) / (1.0f - a2))));
+    const float sin_theta = sqrtf(1.0f - pow2(cos_theta));
+    const float phi = math::two_pi * u2;
+
+    return (cosf(phi) * sin_theta, sinf(phi) * sin_theta, cos_theta);
+}
+
 HOSTDEVICE INLINE Vec3f sampleGGX(const float u1, const float u2, const float roughness)
 {
-    Vec3f p;
     const float a = fmaxf(0.001f, roughness);
-    const float phi = 2.0f * math::pi * u1;
+    const float phi = math::two_pi * u1;
     const float cos_theta = sqrtf((1.0f - u2) / (1.0f + (a*a - 1.0f) * u2));
-    const float sin_theta = sqrtf(1.0f - cos_theta * cos_theta);
+    const float sin_theta = sqrtf(1.0f - pow2(cos_theta));
 
-    p[0] = cosf(phi) * sin_theta;
-    p[1] = sinf(phi) * sin_theta;
-    p[2] = cos_theta;
-    return p;
+    return Vec3f(cosf(phi) * sin_theta, sinf(phi) * sin_theta, cos_theta);
 }
 
 /// @ref: https://jcgt.org/published/0007/04/01/
@@ -79,7 +86,8 @@ HOSTDEVICE INLINE Vec3f sampleGGXAniso(const Vec3f& v, const float ax, const flo
 {
     const Vec3f Vh = normalize(Vec3f(ax * v[0], ay * v[1], v[2]));
     const float lensq = Vh[0] * Vh[0] + Vh[1] * Vh[1];
-    const Vec3f T1 = lensq > 0 ? Vec3f(-Vh[1], Vh[0], 0) * inverseSqrt(lensq) : Vec3f(1.0f, 0.0f, 0.0);
+    const float inv_sqrt_lensq = 1.0f / sqrtf(lensq);
+    const Vec3f T1 = lensq > 0 ? Vec3f(-Vh[1], Vh[0], 0) * inv_sqrt_lensq : Vec3f(1.0f, 0.0f, 0.0);
     const Vec3f T2 = cross(Vh, T1);
     const float r = sqrt(u0);
     const float phi = math::two_pi * u1;
@@ -189,6 +197,11 @@ HOSTDEVICE INLINE float smithG_GGX(float NdotV, float alphaG)
 HOSTDEVICE INLINE float smithG_GGX_aniso(float NdotV, float VdotX, float VdotY, float ax, float ay)
 {
     return 1 / (NdotV + sqrt(pow2(VdotX * ax) + pow2(VdotY * ay) + pow2(NdotV)));
+}
+
+HOSTDEVICE INLINE Vec3f reflect(const Vec3f& wo, const Vec3f& n)
+{
+    return wo - 2.0f * dot(wo, n) * n;
 }
 
 HOSTDEVICE INLINE Vec3f refract(const Vec3f& wo, const Vec3f& n, float ior) {

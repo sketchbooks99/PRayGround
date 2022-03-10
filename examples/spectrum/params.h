@@ -48,7 +48,7 @@ struct LaunchParams
 
 struct RaygenData
 {
-    Camera::Data camera;
+    LensCamera::Data camera;
 };
 
 struct HitgroupData

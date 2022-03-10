@@ -7,7 +7,7 @@
 #endif
 
 #include <prayground/core/shape.h>
-#include <prayground/math/vec_math.h>
+#include <prayground/math/vec.h>
 #include <prayground/math/util.h>
 
 namespace prayground {

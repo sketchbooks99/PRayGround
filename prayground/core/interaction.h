@@ -1,6 +1,5 @@
 #pragma once
 
-//#include <prayground/math/vec_math.h>
 #include <prayground/math/vec.h>
 #include <curand.h>
 #include <curand_kernel.h>

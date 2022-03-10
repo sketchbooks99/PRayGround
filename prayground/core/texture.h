@@ -1,7 +1,6 @@
 #pragma once 
 
 #include <prayground/core/util.h>
-#include <prayground/math/vec_math.h>
 
 #ifndef __CUDACC__
     #include <map>

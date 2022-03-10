@@ -86,9 +86,9 @@
 #include "medium/vdbgrid.h"
 
 #ifdef __CUDACC__ // GPU only
-	#include "optix/cuda/device_util.cuh"
-
-	#include "core/ray.h"
+#include "optix/cuda/device_util.cuh"
+#include "math/vec_math.h"
+#include "core/ray.h"
 #endif // __CUDACC__
 
 using namespace prayground;

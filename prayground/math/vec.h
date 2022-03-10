@@ -394,7 +394,7 @@ namespace prayground {
     template <typename T>
     INLINE HOSTDEVICE Vec3<T> operator+(const Vec3<T>& v, const T& t)
     {
-        return Vec2<T>{v[0] - t, v[1] - t};
+        return Vec3<T>{v[0] + t, v[1] + t, v[2] + t};
     }
 
     template <typename T>
@@ -406,7 +406,7 @@ namespace prayground {
     template <typename T>
     INLINE HOSTDEVICE Vec3<T> operator-(const Vec3<T>& v, const T& t)
     {
-        return Vec2<T>{v[0] - t, v[1] - t};
+        return Vec3<T>{v[0] - t, v[1] - t, v[2] - t};
     }
 
     template <typename T>

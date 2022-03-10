@@ -1,10 +1,8 @@
 #pragma once
 
 #include <cuda_runtime.h>
-#include <optix.h>
-#include <prayground/math/vec_math.h>
 #include <prayground/core/interaction.h>
-#include <prayground/core/util.h>
+#include <prayground/optix/macros.h>
 
 #ifndef __CUDACC__
     #include <map>

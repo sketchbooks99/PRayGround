@@ -1,7 +1,7 @@
 #pragma once
 
 #include <prayground/core/attribute.h>
-#include <prayground/math/vec_math.h>
+#include <prayground/math/vec.h>
 #include <prayground/shape/trianglemesh.h>
 #include <prayground/ext/nanovdb/util/GridHandle.h>
 #include <filesystem>

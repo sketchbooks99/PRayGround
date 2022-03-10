@@ -47,7 +47,7 @@ static __forceinline__ __device__ void traceSpectrum(
 
 // Raygen ------------------------------------------------------------------------------
 static __forceinline__ __device__ void getCameraRay(
-    const CameraData& camera, 
+    const LensCamera::Data& camera, 
     const float& x, const float& y, 
     Vec3f& ro, Vec3f& rd)
 {
@@ -55,10 +55,10 @@ static __forceinline__ __device__ void getCameraRay(
     ro = camera.origin;
 }
 
-static __forceinline__ __device__ void getLensCameraRay(const CameraData& camera, const float x, const float y, Vec3f& ro, Vec3f& rd, uint32_t& seed)
+static __forceinline__ __device__ void getLensCameraRay(const LensCamera::Data& camera, const float x, const float y, Vec3f& ro, Vec3f& rd, uint32_t& seed)
 {
     Vec3f _rd = (camera.aperture / 2.0f) * randomSampleInUnitDisk(seed);
-    Vec3f offset = normalize(camera.U) * _rd.x + normalize(camera.V) * _rd.y;
+    Vec3f offset = normalize(camera.U) * _rd.x() + normalize(camera.V) * _rd.y();
 
     const float theta = math::radians(camera.fov);
     const float h = tan(theta / 2.0f);
@@ -84,7 +84,7 @@ extern "C" __global__ void __raygen__spectrum()
     const RaygenData* raygen = reinterpret_cast<RaygenData*>(optixGetSbtDataPointer());
 
     const int frame = params.frame;
-    const auto idx = Vec3u(optixGetLaunchIndex());
+    const Vec3ui idx(optixGetLaunchIndex());
     unsigned int seed = tea<4>(idx.x() * params.width + idx.y(), frame);
 
     float radiance;
@@ -98,12 +98,12 @@ extern "C" __global__ void __raygen__spectrum()
     {
         const Vec2f subpixel_jitter = Vec2f(rnd(seed) - 0.5f, rnd(seed) - 0.5f);
         const Vec2f d = 2.0f * Vec2f(
-            (static_cast<float>(idx.x) + subpixel_jitter.x) / static_cast<float>(params.width), 
-            (static_cast<float>(idx.y) + subpixel_jitter.y) / static_cast<float>(params.height)
+            (static_cast<float>(idx.x()) + subpixel_jitter.x()) / static_cast<float>(params.width), 
+            (static_cast<float>(idx.y()) + subpixel_jitter.y()) / static_cast<float>(params.height)
         ) - 1.0f;
 
         Vec3f ro, rd;
-        getLensCameraRay(raygen->camera, d.x, d.y, ro, rd, seed);
+        getLensCameraRay(raygen->camera, d.x(), d.y(), ro, rd, seed);
         
         float throughput = 1.0f;
 
@@ -133,7 +133,7 @@ extern "C" __global__ void __raygen__spectrum()
             {
                 // Evaluating emission from emitter
                 optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.bsdf_id,
+                    si.surface_info.sample_id,
                     &si, 
                     si.surface_info.data
                 );
@@ -146,7 +146,7 @@ extern "C" __global__ void __raygen__spectrum()
             {
                 float pdf;
                 float bsdf = optixDirectCall<float, const float&, SurfaceInteraction*, void*, float&>(
-                    surface_info.sample_id, lambda, &si, surface_info.data, pdf);
+                    si.surface_info.sample_id, lambda, &si, si.surface_info.data, pdf);
                 throughput *= bsdf / pdf;
             }
 
@@ -168,9 +168,9 @@ extern "C" __global__ void __raygen__spectrum()
 
     Vec3f accum_color = color / static_cast<float>(params.samples_per_launch);
 
-    if (subframe_index > 0)
+    if (frame > 0)
     {
-        const float a = 1.0f / static_cast<float>(subframe_index + 1);
+        const float a = 1.0f / static_cast<float>(frame + 1);
         const Vec3f accum_color_prev = Vec3f(params.accum_buffer[image_idx]);
         accum_color = lerp(accum_color_prev, accum_color, a);
     }
@@ -199,8 +199,8 @@ extern "C" __device__ void __miss__envmap()
     const Vec3f p = normalize(ray.at(t));
 
     // Get texture coordinates in sphere
-    const float phi = atan2(p.z, p.x);
-    const float theta = asin(p.y);
+    const float phi = atan2(p.z(), p.x());
+    const float theta = asin(p.y());
     const float u = 1.0f - (phi + math::pi) / (2.0f * math::pi);
     const float v = 1.0f - (theta + math::pi / 2.0f) / math::pi;
     
@@ -282,7 +282,7 @@ extern "C" __device__ float __direct_callable__sample_dielectric(const float& la
 }
 
 // Diffuse 
-extern "C" __device__ void __direct_callable__sample_diffuse(const float& lambda, SurfaceInteraction* si, void* mat_data, float& pdf)
+extern "C" __device__ float __direct_callable__sample_diffuse(const float& lambda, SurfaceInteraction* si, void* mat_data, float& pdf)
 {
     const Diffuse::Data* diffuse = reinterpret_cast<Diffuse::Data*>(mat_data);
 
@@ -311,17 +311,13 @@ extern "C" __device__ void __direct_callable__sample_diffuse(const float& lambda
 
 // Disney
 static __forceinline__ __device__ float disneyBRDF(
-    const Disney::Data* disney, 
+    const Disney::Data* disney, const Spectrum& base_spectrum, const float base,  
     const Vec3f& V, const Vec3f& L, const Vec3f& N, const Vec3f& H, 
     const float NdotV, const float NdotL, const float NdotH, const float LdotH, 
     const Vec3f& X, const Vec3f& Y)
 {
     if (NdotV <= 0.0f || NdotL <= 0.0f)
         return 0.0f;
-
-    const Spectrum base_spectrum = optixDirectCall<Spectrum, SurfaceInteraction*, void*>(
-        disney->base.prg_id, si, disney->base.data);
-    const float base = base_spectrum.getSpectrumFromWavelength(lambda);
 
     // Diffuse term (diffuse, subsurface, sheen) ======================
     // Diffuse
@@ -367,7 +363,7 @@ static __forceinline__ __device__ float disneyBRDF(
     return out * clamp(NdotL, 0.0f, 1.0f);
 }
 
-static __forceinline__ __device__ float disneyPDF(const Disney::Data* disney, const float NdotH)
+static __forceinline__ __device__ float disneyPDF(const Disney::Data* disney, const float NdotH, const float NdotL)
 {
     const float diffuse_ratio = 0.5f * (1.0f - disney->metallic);
     const float specular_ratio = 1.0f - diffuse_ratio;
@@ -384,7 +380,7 @@ static __forceinline__ __device__ float disneyPDF(const Disney::Data* disney, co
     return diffuse_ratio * pdf_diffuse + specular_ratio * pdf_specular;
 }
 
-extern "C" __device__ void __direct_callable__sample_disney(const float& lambda, SurfaceInteraction* si, void* mat_data, float& pdf)
+extern "C" __device__ float __direct_callable__sample_disney(const float& lambda, SurfaceInteraction* si, void* mat_data, float& pdf)
 {
     const Disney::Data* disney = reinterpret_cast<Disney::Data*>(mat_data);
     if (disney->twosided)
@@ -428,10 +424,15 @@ extern "C" __device__ void __direct_callable__sample_disney(const float& lambda,
     const float LdotH /* = VdotH */ = dot(L, H);
 
     // PDF evaluation
-    pdf = disneyPDF(disney, NdotH);
+    pdf = disneyPDF(disney, NdotH, NdotL);
 
     // BSDF evaluation
-    return disneyBRDF(disney, V, L, N, H, NdotV, NdotL, NdotH, LdotH, si->shading.dpdu, si->shading.dpdv);
+    const Spectrum base_spectrum = optixDirectCall<Spectrum, SurfaceInteraction*, void*>(
+        disney->base.prg_id, si, disney->base.data);
+    const float base = base_spectrum.getSpectrumFromWavelength(lambda);
+    return disneyBRDF(disney, base_spectrum, base, 
+        V, L, N, H, NdotV, NdotL, NdotH, LdotH, 
+        si->shading.dpdu, si->shading.dpdv);
 }
 
 // Area emitter
@@ -459,14 +460,14 @@ extern "C" __device__ Spectrum __direct_callable__constant(SurfaceInteraction* s
 extern "C" __device__ Spectrum __direct_callable__checker(SurfaceInteraction* si, void* tex_data)
 {
     const CheckerTexture::Data* checker = reinterpret_cast<CheckerTexture::Data*>(tex_data);
-    const bool is_odd = sinf(si->uv.x * math::pi * checker->scale) * sinf(si->uv.y * math::pi * checker->scale);
+    const bool is_odd = sinf(si->uv.x() * math::pi * checker->scale) * sinf(si->uv.y() * math::pi * checker->scale);
     return is_odd ? checker->color1 : checker->color2;
 }
 
 extern "C" __device__ Spectrum __direct_callable__bitmap(SurfaceInteraction* si, void* tex_data)
 {
     const BitmapTexture::Data* image = reinterpret_cast<BitmapTexture::Data*>(tex_data);
-    Vec4f c = tex2D<float4>(image->texture, si->uv.x, si->uv.y);
+    Vec4f c = tex2D<float4>(image->texture, si->uv.x(), si->uv.y());
     return reconstructSpectrumFromRGB(Vec3f(c),
         *params.white_spd, *params.cyan_spd, *params.magenta_spd, *params.yellow_spd, 
         *params.red_spd, *params.green_spd, *params.blue_spd
@@ -578,7 +579,7 @@ extern "C" __device__ void __intersection__sphere()
     }
 }
 
-extern "C" __device__ void __closesethit__sphere()
+extern "C" __device__ void __closesthit__sphere()
 {
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
     const Sphere::Data* sphere_data = reinterpret_cast<Sphere::Data*>(data->shape_data);
@@ -601,8 +602,8 @@ extern "C" __device__ void __closesethit__sphere()
     const float theta = acos(local_n.y());
     const Vec3f dpdu = Vec3f(-math::two_pi * local_n.z(), 0, math::two_pi * local_n.x());
     const Vec3f dpdv = math::pi * Vec3f(local_n.y() * cos(phi), -sin(theta), local_n.y() * sin(phi));
-    si->shading.dpdu = normalize(optixTransformVectorFromObjectToWorldSpace(dpdu));
-    si->shading.dpdv = normalize(optixTransformVectorFromObjectToWorldSpace(dpdv));
+    si->shading.dpdu = normalize(optixTransformVectorFromObjectToWorldSpace(dpdu.toCUVec()));
+    si->shading.dpdv = normalize(optixTransformVectorFromObjectToWorldSpace(dpdv.toCUVec()));
 }
 
 static __forceinline__ __device__ bool hitPlane(
@@ -640,9 +641,9 @@ extern "C" __device__ float __continuation_callable__pdf_plane(const AreaEmitter
     if (!hitPlane(plane_data, local_o, local_d, 0.01f, 1e16f, si))
         return 0.0f;
 
-    const Vec3f corner0 = area_info.objToWorld.pointMul(Vec3f(plane_data->min.x, 0.0f, plane_data->min.y));
-    const Vec3f corner1 = area_info.objToWorld.pointMul(Vec3f(plane_data->max.x, 0.0f, plane_data->min.y));
-    const Vec3f corner2 = area_info.objToWorld.pointMul(Vec3f(plane_data->min.x, 0.0f, plane_data->max.y));
+    const Vec3f corner0 = area_info.objToWorld.pointMul(Vec3f(plane_data->min.x(), 0.0f, plane_data->min.y()));
+    const Vec3f corner1 = area_info.objToWorld.pointMul(Vec3f(plane_data->max.x(), 0.0f, plane_data->min.y()));
+    const Vec3f corner2 = area_info.objToWorld.pointMul(Vec3f(plane_data->min.x(), 0.0f, plane_data->max.y()));
     si.shading.n = normalize(area_info.objToWorld.vectorMul(si.shading.n));
     const float area = length(cross(corner1 - corner0, corner2 - corner0));
     const float distance_squared = si.t * si.t;
@@ -667,13 +668,13 @@ extern "C" __device__ Vec3f DC_FUNC(rnd_sample_plane)(const AreaEmitterInfo& are
     return to_light;
 }
 
-extern "C" __device__ void IS_FUNC(plane)()
+extern "C" __device__ void __intersection__plane()
 {
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
-    const Plane::Data* plane_data = reinterpret_cast<Plane::Data*>(data->shape_data);
+    const Plane::Data* plane = reinterpret_cast<Plane::Data*>(data->shape_data);
 
-    const Vec2f min = plane_data->min;
-    const Vec2f max = plane_data->max;
+    const Vec2f min = plane->min;
+    const Vec2f max = plane->max;
 
     Ray ray = getLocalRay();
 
@@ -682,17 +683,16 @@ extern "C" __device__ void IS_FUNC(plane)()
     const float x = ray.o.x() + t * ray.d.x();
     const float z = ray.o.z() + t * ray.d.z();
 
-    Vec2f uv = Vec2f((x - min.x()) / (max.x() - min.x()), (z - min.y()) / (max.y() - min.y()));
+    Vec2f uv((x - min.x()) / (max.x() - min.x()), (z - min.y()) / (max.y() - min.y()));
 
-    if (min.x() < x && x < max.x() && 
-        min.y() < z && z < max.y() && 
-        ray.tmin < t && t < ray.tmax)
+    if (min.x() < x && x < max.x() && min.y() < z && z < max.y() && ray.tmin < t && t < ray.tmax)
         optixReportIntersection(t, 0, Vec2f_as_ints(uv));
 }
 
-extern "C" __device__ void CH_FUNC(plane)()
+extern "C" __device__ void __closesthit__plane()
 {
-    HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
+    const HitgroupData* data = reinterpret_cast<const HitgroupData*>(optixGetSbtDataPointer());
+    const Plane::Data* plane = reinterpret_cast<Plane::Data*>(data->shape_data);
 
     Ray ray = getWorldRay();
 

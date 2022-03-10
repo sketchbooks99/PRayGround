@@ -18,11 +18,7 @@ void App::setup()
     pipeline.setNumAttributes(5);
 
     // Create modules
-    Module raygen_module, miss_module, hitgroups_module, textures_module, surfaces_module;
-    raygen_module = pipeline.createModuleFromCudaFile(context, "cuda/raygen.cu");
-    miss_module = pipeline.createModuleFromCudaFile(context, "cuda/miss.cu");
-    hitgroups_module = pipeline.createModuleFromCudaFile(context, "cuda/hitgroups.cu");
-    textures_module = pipeline.createModuleFromCudaFile(context, "cuda/textures.cu");
+    Module module = pipeline.createModuleFromCudaFile(context, "kernels.cu");
 
     // Prepare bitmap to store rendered results.
     result_bitmap.allocate(PixelFormat::RGBA, pgGetWidth(), pgGetHeight());
@@ -31,34 +27,24 @@ void App::setup()
     params.height = result_bitmap.height();
     params.samples_per_launch = 1;
     params.max_depth = 10;
-    params.subframe_index = 0;
-    params.result_buffer = reinterpret_cast<uchar4*>(result_bitmap.devicePtr());
+    params.frame = 0;
+    params.result_buffer = reinterpret_cast<Vec4u*>(result_bitmap.devicePtr());
 
-    camera.setOrigin(make_float3(0.0f, 0.0f, 0.75f));
-    camera.setLookat(make_float3(0.0f, 0.0f, 0.0f));
-    camera.setUp(make_float3(0.0f, 1.0f, 0.0f));
+    camera.setOrigin(0.0f, 0.0f, 0.75f);
+    camera.setLookat(0.0f, 0.0f, 0.0f);
+    camera.setUp(0.0f, 1.0f, 0.0f);
     camera.setFov(40.0f);
     camera.setFovAxis(Camera::FovAxis::Vertical);
 
-    float3 U, V, W;
-    camera.UVWFrame(U, V, W);
-
     // Create raygen program and bind record;
-    ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, raygen_module, "__raygen__pinhole");
+    ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, module, "__raygen__pinhole");
     RaygenRecord raygen_record;
     raygen_prg.recordPackHeader(&raygen_record);
-    raygen_record.data.camera = 
-    {
-        .origin = camera.origin(), 
-        .lookat = camera.lookat(), 
-        .U = U,
-        .V = V,
-        .W = W
-    };
+    raygen_record.data.camera = camera.getData();
     sbt.setRaygenRecord(raygen_record);
 
     // Callable関数とShader Binding TableにCallable関数用のデータを登録するLambda関数
-    auto setupCallable = [&](const Module& module, const std::string& dc, const std::string& cc)
+    auto setupCallable = [&](const std::string& dc, const std::string& cc)
     {
         EmptyRecord callable_record = {};
         auto [prg, id] = pipeline.createCallablesProgram(context, module, dc, cc);
@@ -68,22 +54,22 @@ void App::setup()
     };
     
     // Creating texture programs
-    uint32_t checker_prg_id = setupCallable(textures_module, "__direct_callable__checker", "");
+    uint32_t checker_prg_id = setupCallable("__direct_callable__checker", "");
 
     // Prepare environment 
-    env_texture = make_shared<CheckerTexture>(make_float3(0.9f), make_float3(0.3f), 10.0f, checker_prg_id);
+    env_texture = make_shared<CheckerTexture>(Vec3f(0.9f), Vec3f(0.3f), 10.0f, checker_prg_id);
     env_texture->copyToDevice();
     env = make_shared<EnvironmentEmitter>(env_texture);
     env->copyToDevice();
 
-    ProgramGroup miss_prg = pipeline.createMissProgram(context, miss_module, "__miss__envmap");
+    ProgramGroup miss_prg = pipeline.createMissProgram(context, module, "__miss__envmap");
     MissRecord miss_record;
     miss_prg.recordPackHeader(&miss_record);
     miss_record.data.env_data = env->devicePtr();
     sbt.setMissRecord(miss_record);
 
     // Preparing textures
-    checker_texture = make_shared<CheckerTexture>(make_float3(1.0f), make_float3(0.3f), 15, checker_prg_id);
+    checker_texture = make_shared<CheckerTexture>(Vec3f(1.0f), Vec3f(0.3f), 15, checker_prg_id);
     checker_texture->copyToDevice();
 
     // Preparing materials and program id
@@ -95,18 +81,14 @@ void App::setup()
     bunny->setSbtIndex(0);
     bunny->copyToDevice();
 
-    ProgramGroup mesh_prg = pipeline.createHitgroupProgram(context, hitgroups_module, "__closesthit__mesh");
+    ProgramGroup mesh_prg = pipeline.createHitgroupProgram(context, module, "__closesthit__mesh");
 
     HitgroupRecord bunny_record;
     mesh_prg.recordPackHeader(&bunny_record);
     bunny_record.data = 
     {
         .shape_data = bunny->devicePtr(),
-        .tex_data = 
-        {
-            .data = checker_texture->devicePtr(), 
-            .prg_id = checker_prg_id
-        }
+        .texture = checker_texture->getData()
     };
     sbt.addHitgroupRecord(bunny_record);
     

@@ -13,7 +13,7 @@ using HitgroupRecord = Record<HitgroupData>;
 using MissRecord = Record<MissData>;
 using EmptyRecord = Record<EmptyData>;
 
-using RtRestLifeSBT = ShaderBindingTable<RaygenRecord, MissRecord, HitgroupRecord, EmptyRecord, EmptyRecord, 1>;
+using SBT = ShaderBindingTable<RaygenRecord, MissRecord, HitgroupRecord, EmptyRecord, EmptyRecord, 1>;
 
 class App : public BaseApp
 {
@@ -35,7 +35,7 @@ private:
     Pipeline pipeline;
     Context context;
     CUstream stream;
-    RtRestLifeSBT sbt;
+    SBT sbt;
     InstanceAccel scene_ias;
 
     Bitmap result_bitmap;

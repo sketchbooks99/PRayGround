@@ -52,6 +52,8 @@ namespace prayground {
 
         // BSDFの重点サンプリングと評価関数用のCallables関数へのID
         uint32_t sample_id;
+        uint32_t bsdf_id;
+        uint32_t pdf_id;
     
         SurfaceType type;
     };

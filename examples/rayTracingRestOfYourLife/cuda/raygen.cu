@@ -139,7 +139,7 @@ extern "C" __device__ void __raygen__pinhole()
                         light,
                         &si
                         );
-                    si.wo = normalize(to_light);
+                    si.wi = normalize(to_light);
                 }
 
                 for (int i = 0; i < params.num_lights; i++)

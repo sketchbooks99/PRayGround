@@ -385,13 +385,13 @@ add_subdirectory(prayground)
 # 
 # Please uncomment the target you'd like to build
 ################################################################
-# add_subdirectory(examples/single_gas)
+add_subdirectory(examples/single_gas)
 # add_subdirectory(examples/dynamic_update)
 # add_subdirectory(examples/motion_blur)
 # add_subdirectory(examples/pathtracing)
 # add_subdirectory(examples/objscene)
 # add_subdirectory(examples/rayTracingNextWeek)
-# add_subdirectory(examples/rayTracingRestOfYourLife)
+add_subdirectory(examples/rayTracingRestOfYourLife)
 # add_subdirectory(examples/denoiser)
 # add_subdirectory(examples/thumbnail)
 add_subdirectory(examples/spectrum)

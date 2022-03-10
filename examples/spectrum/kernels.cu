@@ -354,7 +354,7 @@ static __forceinline__ __device__ float disneyBRDF(
 
     // Clearcoat
     const float Fcc = fresnelSchlickR(LdotH, 0.04f);
-    const float alpha_cc = lerp(disney->clearcoat_gloss, 0.001f, 0.1f);
+    const float alpha_cc = lerp(0.001f, 0.1f, disney->clearcoat_gloss);
     const float Dcc = GTR1(NdotH, alpha_cc);
     const float Gcc = smithG_GGX(NdotV, 0.25f);
     const float f_clearcoat = 0.25f * disney->clearcoat * Fcc * Dcc * Gcc;
@@ -369,12 +369,12 @@ static __forceinline__ __device__ float disneyPDF(const Disney::Data* disney, co
     const float specular_ratio = 1.0f - diffuse_ratio;
 
     const float alpha = fmaxf(0.001f, disney->roughness);
-    const float alpha_cc = lerp(disney->clearcoat_gloss, 0.001f, 0.1f);
+    const float alpha_cc = lerp(0.001f, 0.1f, disney->clearcoat_gloss);
 
     const float pdf_Ds = GTR2(NdotH, alpha);
     const float pdf_Dcc = GTR1(NdotH, alpha_cc);
     const float ratio = 1.0f / (1.0f + disney->clearcoat);
-    const float pdf_specular = (pdf_Dcc + ratio * (pdf_Ds - pdf_Dcc));
+    const float pdf_specular = lerp(pdf_Dcc, pdf_Ds, ratio);
     const float pdf_diffuse = NdotL * math::inv_pi;
 
     return diffuse_ratio * pdf_diffuse + specular_ratio * pdf_specular;

@@ -285,9 +285,15 @@ namespace prayground {
     }
 
     template <typename T>
-    INLINE HOSTDEVICE Vec2<T> operator+(const Vec2<T>& v, const T& t)
+    INLINE HOSTDEVICE Vec2<T> operator+(const Vec2<T>& v, const float t)
     {
         return Vec2<T>{v[0] + t, v[1] + t};
+    }
+
+    template <typename T>
+    INLINE HOSTDEVICE Vec2<T> operator+(const float t, const Vec2<T>& v)
+    {
+        return Vec2<T>{t + v[0], t + v[1]};
     }
 
     template <typename T>
@@ -297,9 +303,15 @@ namespace prayground {
     }
 
     template <typename T>
-    INLINE HOSTDEVICE Vec2<T> operator-(const Vec2<T>& v, const T& t)
+    INLINE HOSTDEVICE Vec2<T> operator-(const Vec2<T>& v, const float t)
     {
         return Vec2<T>{v[0] - t, v[1] - t};
+    }
+
+    template <typename T>
+    INLINE HOSTDEVICE Vec2<T> operator-(const float t, const Vec2<T>& v)
+    {
+        return Vec2<T>{t - v[0], t - v[1]};
     }
 
     template <typename T> 
@@ -398,15 +410,27 @@ namespace prayground {
     }
 
     template <typename T>
+    INLINE HOSTDEVICE Vec3<T> operator+(const float t, const Vec3<T>& v)
+    {
+        return Vec3<T>{t + v[0], t + v[1], t + v[2]};
+    }
+
+    template <typename T>
     INLINE HOSTDEVICE Vec3<T> operator-(const Vec3<T>& v1, const Vec3<T>& v2)
     {
         return Vec3<T>{v1[0] - v2[0], v1[1] - v2[1], v1[2] - v2[2]};
     }
 
     template <typename T>
-    INLINE HOSTDEVICE Vec3<T> operator-(const Vec3<T>& v, const T& t)
+    INLINE HOSTDEVICE Vec3<T> operator-(const Vec3<T>& v, const float t)
     {
         return Vec3<T>{v[0] - t, v[1] - t, v[2] - t};
+    }
+
+    template <typename T>
+    INLINE HOSTDEVICE Vec3<T> operator-(const float t, const Vec3<T>& v)
+    {
+        return Vec3<T>{t - v[0], t - v[1], t - v[2]};
     }
 
     template <typename T>
@@ -509,15 +533,27 @@ namespace prayground {
     }
 
     template <typename T>
+    INLINE HOSTDEVICE Vec4<T> operator+(const float t, const Vec4<T>& v)
+    {
+        return Vec4<T>{t + v[0], t + v[1], t + v[2], t + v[3]};
+    }
+
+    template <typename T>
     INLINE HOSTDEVICE Vec4<T> operator-(const Vec4<T>& v1, const Vec4<T>& v2)
     {
         return Vec4<T>{v1[0] - v2[0], v1[1] - v2[1], v1[2] - v2[2], v1[3] - v2[3]};
     }
     
     template <typename T>
-    INLINE HOSTDEVICE Vec4<T> operator-(const Vec4<T>& v, const T& t)
+    INLINE HOSTDEVICE Vec4<T> operator-(const Vec4<T>& v, const float& t)
     {
         return Vec4<T>(v[0] - t, v[1] - t, v[2] - t, v[3] - t);
+    }
+
+    template <typename T>
+    INLINE HOSTDEVICE Vec4<T> operator-(const float t, const Vec4<T>& v)
+    {
+        return Vec4<T>{t - v[0], t - v[1], t - v[2], t - v[3]};
     }
 
     template <typename T>

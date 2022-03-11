@@ -56,7 +56,7 @@ HOSTDEVICE INLINE Vec3f cosineSampleHemisphere(const float u1, const float u2)
     const float phi = math::two_pi * u1;
     const float x = r * cosf(phi);
     const float y = r * sinf(phi);
-    const float z = sqrtf(1.0f - u2);
+    const float z = sqrtf(fmaxf(0.0f, 1.0f - x * x - y * y));
     return Vec3f(x, y, z);
 }
 

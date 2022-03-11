@@ -279,9 +279,9 @@ namespace prayground {
 #endif
 
     template <typename T> 
-    INLINE HOSTDEVICE Vec2<T> operator+(const Vec2<T>& v1, const Vec2<T>& v2)
+    INLINE HOSTDEVICE Vec2<T> operator+(const Vec2<T>& a, const Vec2<T>& b)
     {
-        return Vec2<T>{v1[0] + v2[0], v1[1] + v2[1]};
+        return Vec2<T>{a[0] + b[0], a[1] + b[1]};
     }
 
     template <typename T>
@@ -297,9 +297,9 @@ namespace prayground {
     }
 
     template <typename T>
-    INLINE HOSTDEVICE Vec2<T> operator-(const Vec2<T>& v1, const Vec2<T>& v2)
+    INLINE HOSTDEVICE Vec2<T> operator-(const Vec2<T>& a, const Vec2<T>& b)
     {
-        return Vec2<T>{v1[0] - v2[0], v1[1] - v2[1]};
+        return Vec2<T>{a[0] - b[0], a[1] - b[1]};
     }
 
     template <typename T>
@@ -315,9 +315,9 @@ namespace prayground {
     }
 
     template <typename T> 
-    INLINE HOSTDEVICE Vec2<T> operator*(const Vec2<T>& v1, const Vec2<T>& v2)
+    INLINE HOSTDEVICE Vec2<T> operator*(const Vec2<T>& a, const Vec2<T>& b)
     {
-        return Vec2<T>{v1[0] * v2[0], v1[1] * v2[1]};
+        return Vec2<T>{a[0] * b[0], a[1] * b[1]};
     }
 
     template <typename T> 
@@ -333,9 +333,9 @@ namespace prayground {
     }
 
     template <typename T> 
-    INLINE HOSTDEVICE Vec2<T> operator/(const Vec2<T>& v1, const Vec2<T>& v2)
+    INLINE HOSTDEVICE Vec2<T> operator/(const Vec2<T>& a, const Vec2<T>& b)
     {
-        return Vec2<T>{v1[0] / v2[0], v1[1] / v2[1]};
+        return Vec2<T>{a[0] / b[0], a[1] / b[1]};
     }
 
     template <typename T>
@@ -345,15 +345,15 @@ namespace prayground {
     }
 
     template <typename T> 
-    INLINE HOSTDEVICE T dot(const Vec2<T>& v1, const Vec2<T>& v2)
+    INLINE HOSTDEVICE T dot(const Vec2<T>& a, const Vec2<T>& b)
     {
-        return v1[0] * v2[0] + v1[1] * v2[1];
+        return a[0] * b[0] + a[1] * b[1];
     }
 
     template <typename T> 
-    INLINE HOSTDEVICE T cross(const Vec2<T>& v1, const Vec2<T>& v2)
+    INLINE HOSTDEVICE T cross(const Vec2<T>& a, const Vec2<T>& b)
     {
-        return v1[0] * v2[1] - v1[1] * v2[0];
+        return a[0] * b[1] - a[1] * b[0];
     }
 
     template <typename T>
@@ -398,13 +398,13 @@ namespace prayground {
 #endif
 
     template <typename T>
-    INLINE HOSTDEVICE Vec3<T> operator+(const Vec3<T>& v1, const Vec3<T>& v2)
+    INLINE HOSTDEVICE Vec3<T> operator+(const Vec3<T>& a, const Vec3<T>& b)
     {
-        return Vec3<T>{v1[0] + v2[0], v1[1] + v2[1], v1[2] + v2[2]};
+        return Vec3<T>{a[0] + b[0], a[1] + b[1], a[2] + b[2]};
     }
 
     template <typename T>
-    INLINE HOSTDEVICE Vec3<T> operator+(const Vec3<T>& v, const T& t)
+    INLINE HOSTDEVICE Vec3<T> operator+(const Vec3<T>& v, const float t)
     {
         return Vec3<T>{v[0] + t, v[1] + t, v[2] + t};
     }
@@ -416,9 +416,9 @@ namespace prayground {
     }
 
     template <typename T>
-    INLINE HOSTDEVICE Vec3<T> operator-(const Vec3<T>& v1, const Vec3<T>& v2)
+    INLINE HOSTDEVICE Vec3<T> operator-(const Vec3<T>& a, const Vec3<T>& b)
     {
-        return Vec3<T>{v1[0] - v2[0], v1[1] - v2[1], v1[2] - v2[2]};
+        return Vec3<T>{a[0] - b[0], a[1] - b[1], a[2] - b[2]};
     }
 
     template <typename T>
@@ -434,9 +434,9 @@ namespace prayground {
     }
 
     template <typename T>
-    INLINE HOSTDEVICE Vec3<T> operator*(const Vec3<T>& v1, const Vec3<T>& v2)
+    INLINE HOSTDEVICE Vec3<T> operator*(const Vec3<T>& a, const Vec3<T>& b)
     {
-        return Vec3<T>{v1[0] * v2[0], v1[1] * v2[1], v1[2] * v2[2]};
+        return Vec3<T>{a[0] * b[0], a[1] * b[1], a[2] * b[2]};
     }
 
     template <typename T>
@@ -452,9 +452,9 @@ namespace prayground {
     }
 
     template <typename T>
-    INLINE HOSTDEVICE Vec3<T> operator/(const Vec3<T>& v1, const Vec3<T>& v2)
+    INLINE HOSTDEVICE Vec3<T> operator/(const Vec3<T>& a, const Vec3<T>& b)
     {
-        return Vec3<T>{v1[0] / v2[0], v1[1] / v2[1], v1[2] / v2[2]};
+        return Vec3<T>{a[0] / b[0], a[1] / b[1], a[2] / b[2]};
     }
 
     template <typename T>
@@ -464,18 +464,18 @@ namespace prayground {
     }
 
     template <typename T>
-    INLINE HOSTDEVICE T dot(const Vec3<T>& v1, const Vec3<T>& v2)
+    INLINE HOSTDEVICE T dot(const Vec3<T>& a, const Vec3<T>& b)
     {
-        return v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2];
+        return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
     }
 
     template <typename T>
-    INLINE HOSTDEVICE Vec3<T> cross(const Vec3<T>& v1, const Vec3<T>& v2)
+    INLINE HOSTDEVICE Vec3<T> cross(const Vec3<T>& a, const Vec3<T>& b)
     {
         return Vec3<T>{
-            v1[1] * v2[2] - v1[2] * v2[1],
-            v1[2] * v2[0] - v1[0] * v2[2],
-            v1[0] * v2[1] - v1[1] * v2[0]
+            a[1] * b[2] - a[2] * b[1],
+            a[2] * b[0] - a[0] * b[2],
+            a[0] * b[1] - a[1] * b[0]
         };
     }
 
@@ -521,9 +521,9 @@ namespace prayground {
 #endif
 
     template <typename T>
-    INLINE HOSTDEVICE Vec4<T> operator+(const Vec4<T>& v1, const Vec4<T>& v2)
+    INLINE HOSTDEVICE Vec4<T> operator+(const Vec4<T>& a, const Vec4<T>& b)
     {
-        return Vec4<T>{v1[0] + v2[0], v1[1] + v2[1], v1[2] + v2[2], v1[3] + v2[3]};
+        return Vec4<T>{a[0] + b[0], a[1] + b[1], a[2] + b[2], a[3] + b[3]};
     }
 
     template <typename T>
@@ -539,9 +539,9 @@ namespace prayground {
     }
 
     template <typename T>
-    INLINE HOSTDEVICE Vec4<T> operator-(const Vec4<T>& v1, const Vec4<T>& v2)
+    INLINE HOSTDEVICE Vec4<T> operator-(const Vec4<T>& a, const Vec4<T>& b)
     {
-        return Vec4<T>{v1[0] - v2[0], v1[1] - v2[1], v1[2] - v2[2], v1[3] - v2[3]};
+        return Vec4<T>{a[0] - b[0], a[1] - b[1], a[2] - b[2], a[3] - b[3]};
     }
     
     template <typename T>
@@ -557,9 +557,9 @@ namespace prayground {
     }
 
     template <typename T>
-    INLINE HOSTDEVICE Vec4<T> operator*(const Vec4<T>& v1, const Vec4<T>& v2)
+    INLINE HOSTDEVICE Vec4<T> operator*(const Vec4<T>& a, const Vec4<T>& b)
     {
-        return Vec4<T>{v1[0] * v2[0], v1[1] * v2[1], v1[2] * v2[2], v1[3] * v2[3]};
+        return Vec4<T>{a[0] * b[0], a[1] * b[1], a[2] * b[2], a[3] * b[3]};
     }
 
     template <typename T>
@@ -575,9 +575,9 @@ namespace prayground {
     }
 
     template <typename T>
-    INLINE HOSTDEVICE Vec4<T> operator/(const Vec4<T>& v1, const Vec4<T>& v2)
+    INLINE HOSTDEVICE Vec4<T> operator/(const Vec4<T>& a, const Vec4<T>& b)
     {
-        return Vec4<T>{v1[0] / v2[0], v1[1] / v2[1], v1[2] / v2[2], v1[3] / v2[3]};
+        return Vec4<T>{a[0] / b[0], a[1] / b[1], a[2] / b[2], a[3] / b[3]};
     }
 
     template <typename T>
@@ -587,18 +587,18 @@ namespace prayground {
     }
 
     template <typename T>
-    INLINE HOSTDEVICE T dot(const Vec4<T>& v1, const Vec4<T>& v2)
+    INLINE HOSTDEVICE T dot(const Vec4<T>& a, const Vec4<T>& b)
     {
-        return v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2];
+        return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
     }
 
     template <typename T>
-    INLINE HOSTDEVICE Vec4<T> cross(const Vec4<T>& v1, const Vec4<T>& v2)
+    INLINE HOSTDEVICE Vec4<T> cross(const Vec4<T>& a, const Vec4<T>& b)
     {
         return Vec4<T>{
-            v1[1] * v2[2] - v1[2] * v2[1],
-            v1[2] * v2[0] - v1[0] * v2[2],
-            v1[0] * v2[1] - v1[1] * v2[0], 
+            a[1] * b[2] - a[2] * b[1],
+            a[2] * b[0] - a[0] * b[2],
+            a[0] * b[1] - a[1] * b[0], 
             1.0f
         };
     }

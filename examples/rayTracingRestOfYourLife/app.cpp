@@ -410,8 +410,10 @@ void App::draw()
 
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-    if (params.frame == 4096)
-        result_bitmap.write(pgPathJoin(pgAppDir(), "rtRestOfYourLife.jpg"));
+    if (params.frame == 20000) {
+        result_bitmap.write(pgPathJoin(pgAppDir(), "pt_debug.jpg"));
+        pgExit();
+    }
 }
 
 // ----------------------------------------------------------------

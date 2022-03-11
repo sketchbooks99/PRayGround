@@ -24,6 +24,19 @@ struct AreaEmitterInfo
     OptixTraversableHandle gas_handle;
 };
 
+struct LightInteraction
+{
+    // A surface point on the light source in world coordinates
+    Vec3f p;
+    // Surface normal on the light source in world coordinates
+    Vec3f n;
+    // Area of light source
+    float area;
+    // PDF of light source
+    float pdf;
+};
+
+
 struct LaunchParams 
 {
     uint32_t width;

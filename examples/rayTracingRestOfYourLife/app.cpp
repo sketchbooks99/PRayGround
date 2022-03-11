@@ -127,10 +127,16 @@ void App::setup()
     // Hitgroupプログラム
     // Plane
     auto plane_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("plane"), IS_FUNC_STR("plane"));
+    auto plane_shadow_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("shadow"), IS_FUNC_STR("plane"));
+    auto plane_light_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("plane_light"), IS_FUNC_STR("plane"));
     // Sphere
     auto sphere_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("sphere"), IS_FUNC_STR("sphere"));
+    auto sphere_shadow_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("shadow"), IS_FUNC_STR("plane"));
+    auto sphere_light_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("sphere_shadow"), IS_FUNC_STR("plane"));
     // Triangle mesh
     auto mesh_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("mesh"));
+    auto mesh_shadow_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("shadow"));
+    auto mesh_light_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("mesh_light"));
 
     struct Primitive
     {
@@ -144,7 +150,7 @@ void App::setup()
     uint32_t sbt_offset = 0;
     uint32_t instance_id = 0;
     // ShapeとMaterialのデータをGPU上に準備しHitgroup用のSBTデータを追加するLambda関数
-    auto setupPrimitive = [&](ProgramGroup& prg, const Primitive& primitive, const Matrix4f& transform)
+    auto setupPrimitive = [&](ProgramGroup& prg, ProgramGroup& shadow_prg, const Primitive& primitive, const Matrix4f& transform)
     {
         // データをGPU側に用意
         primitive.shape->copyToDevice();
@@ -166,9 +172,13 @@ void App::setup()
                 .type = primitive.material->surfaceType()
             }
         };
-
-        sbt.addHitgroupRecord(record);
         sbt_idx++;
+
+        HitgroupRecord shadow_record{};
+        shadow_prg.recordPackHeader(&shadow_record);
+        sbt_idx++;
+
+        sbt.addHitgroupRecord(record, shadow_record);
 
         // GASをビルドし、IASに追加
         ShapeInstance instance{primitive.shape->type(), primitive.shape, transform};
@@ -189,7 +199,7 @@ void App::setup()
     // 行列情報をAreaEmitterInfoに一緒に設定しておく
     // ついでにShapeInstanceによって光源用のGASも追加
     auto setupAreaEmitter = [&](
-        ProgramGroup& prg,
+        ProgramGroup& prg, ProgramGroup& shadow_prg,
         shared_ptr<Shape> shape,
         AreaEmitter area, Matrix4f transform, 
         uint32_t sample_pdf_id
@@ -204,22 +214,27 @@ void App::setup()
 
         HitgroupRecord record;
         prg.recordPackHeader(&record);
+
+        SurfaceInfo surface_info = {
+            .data = area.devicePtr(), 
+            .sample_id = sample_pdf_id, 
+            .bsdf_id = area_emitter_prg_id, 
+            .pdf_id = sample_pdf_id, 
+            .type = SurfaceType::AreaEmitter
+        };
+
         record.data = 
         {
             .shape_data = shape->devicePtr(), 
-            .surface_info = 
-            {
-                .data = area.devicePtr(),
-                .sample_id = sample_pdf_id,
-                .bsdf_id = area_emitter_prg_id,
-                .pdf_id = sample_pdf_id,
-                .type = SurfaceType::AreaEmitter
-            }
+            .surface_info = surface_info
         };
-
         sbt_idx++;
 
-        sbt.addHitgroupRecord(record);
+        HitgroupRecord shadow_record{};
+        shadow_prg.recordPackHeader(&shadow_record);
+        sbt_idx++;
+
+        sbt.addHitgroupRecord(record, shadow_record);
 
         // GASをビルドし、IASに追加
         ShapeInstance instance{shape->type(), shape, transform};
@@ -236,11 +251,11 @@ void App::setup()
         AreaEmitterInfo area_emitter_info = 
         {
             .shape_data = shape->devicePtr(), 
+            .surface_info = surface_info,
             .objToWorld = transform,
             .worldToObj = transform.inverse(), 
             .sample_id = sample_pdf_id, 
             .pdf_id = sample_pdf_id,
-            .gas_handle = instance.handle()
         };
         area_emitter_infos.push_back(area_emitter_info);
     };
@@ -256,7 +271,7 @@ void App::setup()
         auto diffuse = make_shared<Diffuse>(white);
         auto transform = Matrix4f::translate(0.0f, 555.0f, 0.0f);
         Primitive ceiling{plane, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id};
-        setupPrimitive(plane_prg, ceiling, transform);
+        setupPrimitive(plane_prg, plane_shadow_prg, ceiling, transform);
     }
 
     // Red wall
@@ -265,7 +280,7 @@ void App::setup()
         auto diffuse = make_shared<Diffuse>(red);
         auto transform = Matrix4f::rotate(math::pi / 2.0f, {0.0f, 0.0f, 1.0f});
         Primitive left_wall{plane, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id};
-        setupPrimitive(plane_prg, left_wall, transform);
+        setupPrimitive(plane_prg, plane_shadow_prg, left_wall, transform);
     }
 
     // Green wall
@@ -274,7 +289,7 @@ void App::setup()
         auto diffuse = make_shared<Diffuse>(green);
         auto transform = Matrix4f::translate(555.0f, 0.0f, 0.0f) * Matrix4f::rotate(math::pi / 2.0f, {0.0f, 0.0f, 1.0f});
         Primitive right_wall{plane, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id};
-        setupPrimitive(plane_prg, right_wall, transform);
+        setupPrimitive(plane_prg, plane_shadow_prg, right_wall, transform);
     }
 
     // Back
@@ -283,7 +298,7 @@ void App::setup()
         auto diffuse = make_shared<Diffuse>(white);
         auto transform = Matrix4f::translate(0.0f, 555.0f, 555.0f) * Matrix4f::rotate(math::pi / 2.0f, {1.0f, 0.0f, 0.0f});
         Primitive back{plane, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id};
-        setupPrimitive(plane_prg, back, transform);
+        setupPrimitive(plane_prg, plane_shadow_prg, back, transform);
     }
 
     // Floor
@@ -292,7 +307,7 @@ void App::setup()
         auto diffuse = make_shared<Diffuse>(white);
         auto transform = Matrix4f::translate(0.0f, 0.0f, 0.0f);
         Primitive floor{plane, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id};
-        setupPrimitive(plane_prg, floor, transform);
+        setupPrimitive(plane_prg, plane_shadow_prg, floor, transform);
     }
 
     // Cube
@@ -301,7 +316,7 @@ void App::setup()
         auto diffuse = make_shared<Diffuse>(white);
         auto transform = Matrix4f::translate(347.5f, 165, 377.5f) * Matrix4f::rotate(math::radians(15.0f), {0.0f, 1.0f, 0.0f}) * Matrix4f::scale({82.5f, 165.0f, 82.5f});
         Primitive cube{mesh, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id};
-        setupPrimitive(mesh_prg, cube, transform);
+        setupPrimitive(mesh_prg, mesh_shadow_prg, cube, transform);
     }
 
     // Glass sphere
@@ -310,7 +325,7 @@ void App::setup()
         auto glass = make_shared<Dielectric>(white, 1.5f);
         auto transform = Matrix4f::identity();
         Primitive glass_sphere{sphere, glass, dielectric_sample_bsdf_prg_id, dielectric_pdf_prg_id};
-        setupPrimitive(sphere_prg, glass_sphere, transform);
+        setupPrimitive(sphere_prg, sphere_shadow_prg, glass_sphere, transform);
     }
 
     // Ceiling light
@@ -323,7 +338,7 @@ void App::setup()
         // Area emitter
         auto plane_area_emitter = AreaEmitter(light_white, 20.0f);
         Matrix4f transform = Matrix4f::translate(0.0f, 554.0f, 0.0f);
-        setupAreaEmitter(plane_prg, plane_light, plane_area_emitter, transform, plane_sample_pdf_prg_id);
+        setupAreaEmitter(plane_prg, plane_shadow_prg, plane_light, plane_area_emitter, transform, plane_sample_pdf_prg_id);
     }
 
     // 光源データをGPU側にコピー
@@ -410,7 +425,7 @@ void App::draw()
 
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-    if (params.frame == 20000) {
+    if (params.frame == 100) {
         result_bitmap.write(pgPathJoin(pgAppDir(), "pt_debug.jpg"));
         pgExit();
     }

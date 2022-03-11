@@ -52,8 +52,8 @@ HOSTDEVICE INLINE Vec3f randomSampleHemisphere(unsigned int& seed)
 
 HOSTDEVICE INLINE Vec3f cosineSampleHemisphere(const float u1, const float u2)
 {
-    const float r = sqrtf(u2);
-    const float phi = math::two_pi * u1;
+    const float r = sqrtf(u1);
+    const float phi = math::two_pi * u2;
     const float x = r * cosf(phi);
     const float y = r * sinf(phi);
     const float z = sqrtf(fmaxf(0.0f, 1.0f - x * x - y * y));

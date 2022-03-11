@@ -12,16 +12,23 @@ using namespace prayground;
 using ConstantTexture = ConstantTexture_<Vec3f>;
 using CheckerTexture = CheckerTexture_<Vec3f>;
 
+enum class RayType : uint32_t
+{
+    RADIANCE = 0,
+    SHADOW = 1,
+    N_RAY = 2
+};
+
 struct AreaEmitterInfo
 {
     void* shape_data;
+    SurfaceInfo surface_info;
+
     Matrix4f objToWorld;
     Matrix4f worldToObj;
 
-    unsigned int sample_id;
-    unsigned int pdf_id;
-    
-    OptixTraversableHandle gas_handle;
+    uint32_t sample_id;
+    uint32_t pdf_id;
 };
 
 struct LightInteraction

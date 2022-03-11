@@ -15,27 +15,29 @@ INLINE DEVICE SurfaceInteraction* getSurfaceInteraction()
 }
 
 static INLINE DEVICE void trace(
-    OptixTraversableHandle handle,
-    const Vec3f& ro, const Vec3f& rd,
-    float tmin, float tmax,
-    uint32_t ray_type,
-    SurfaceInteraction* si) 
+    OptixTraversableHandle handle, const Vec3f& ro, const Vec3f& rd,
+    float tmin, float tmax, SurfaceInteraction* si) 
 {
     uint32_t u0, u1;
     packPointer( si, u0, u1 );
-    optixTrace(
-        handle,
-        ro.toCUVec(),
-        rd.toCUVec(),
-        tmin,
-        tmax,
-        0.0f,                // rayTime
-        OptixVisibilityMask( 1 ),
-        OPTIX_RAY_FLAG_NONE,
-        ray_type,        
-        1,           
-        ray_type,        
+    optixTrace(handle, ro.toCUVec(), rd.toCUVec(),
+        tmin, tmax, 0.0f,
+        OptixVisibilityMask( 1 ), OPTIX_RAY_FLAG_NONE,
+        (uint32_t)RayType::RADIANCE, (uint32_t)RayType::N_RAY, (uint32_t)RayType::RADIANCE,
         u0, u1 );
+}
+
+static INLINE DEVICE bool shadowTrace(
+    OptixTraversableHandle handle, const Vec3f& ro, const Vec3f& rd,
+    float tmin, float tmax)
+{
+    uint32_t hit = 0;
+    optixTrace(handle, ro.toCUVec(), rd.toCUVec(),
+        tmin, tmax, 0.0f,
+        OptixVisibilityMask(1), OPTIX_RAY_FLAG_NONE,
+        (uint32_t)RayType::RADIANCE, (uint32_t)RayType::N_RAY, (uint32_t)RayType::RADIANCE,
+        hit);
+    return static_cast<bool>(hit);
 }
 
 // Raygen ----------------------------------------------------------------
@@ -57,9 +59,10 @@ static __forceinline__ __device__ float powerHeuristic(const float pdf1, const f
     return (pdf1 * pdf1) / (pdf1 * pdf1 + pdf2 * pdf2);
 }
 
-#define MIS1 1
+#define MIS1 0
 #define MIS2 0
-#define PT 0
+#define MIS3 0
+#define PT 1
 extern "C" __device__ void __raygen__pinhole()
 {
     const RaygenData* raygen = reinterpret_cast<RaygenData*>(optixGetSbtDataPointer());
@@ -101,7 +104,7 @@ extern "C" __device__ void __raygen__pinhole()
             if ( depth >= params.max_depth )
 				break;
 
-            trace(params.handle, ro, rd, 0.01f, tmax, 0, &si);
+            trace(params.handle, ro, rd, 0.01f, tmax, &si);
 
             if (si.trace_terminate) {
                 result += si.emission * throughput;
@@ -140,11 +143,11 @@ extern "C" __device__ void __raygen__pinhole()
                 }
 
                 float pdf = 0.0f;
-#if MIS1
-                float weight = 0.0f;
                 // BSDF sampling
                 Vec3f scattered = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
                     si.surface_info.sample_id, &si, si.surface_info.data);
+#if MIS1
+                float weight = 0.0f;
 
                 float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*, const Vec3f&>(
                     si.surface_info.pdf_id, &si, si.surface_info.data, scattered);
@@ -178,10 +181,6 @@ extern "C" __device__ void __raygen__pinhole()
                     }
                 }
 #elif MIS2
-                // Importance sampling according to the BSDF
-                Vec3f scattered = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
-                    si.surface_info.sample_id, &si, si.surface_info.data);
-
                 const float weight = 1.0f / (params.num_lights + 1);
                 if (params.num_lights > 0) {
                     // Light sampling
@@ -205,10 +204,35 @@ extern "C" __device__ void __raygen__pinhole()
                     si.surface_info.pdf_id, &si, si.surface_info.data, si.wi);
 
                 pdf += weight * bsdf_pdf;
+#elif MIS3      
+                Vec3f surface_throughput(1.0f);
+                if (params.num_lights > 0)
+                {
+                    LightInteraction li;
+                    // Sampling light point
+                    optixDirectCall<void, const AreaEmitterInfo&, const Vec3f&, LightInteraction&, uint32_t&>(
+                        light.sample_id, light, si.p, li, seed);
+                    Vec3f to_light = li.p - si.p;
+
+                    // For light pdf
+                    {
+                        const float t_light = length(to_light) - 1e-3f;
+                        const bool hit_object = shadowTrace(
+                            params.handle, si.p, normalize(to_light), 1e-3f, t_light);
+
+                        // Next Event Estimation
+                        if (!hit_obejct)
+                        {
+
+                        }
+                    }
+
+                    // For bsdf pdf
+                    {
+
+                    }
+                }
 #elif PT
-                // Importance sampling according to the BSDF
-                Vec3f scattered = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
-                    si.surface_info.sample_id, &si, si.surface_info.data);
                 si.wi = scattered;
 
                 // Evaluate PDF depends on BSDF
@@ -359,7 +383,9 @@ extern "C" __device__ void __direct_callable__sample_light_plane(
     const auto* plane = (Plane::Data*)area_info.shape_data;
 
     // Sample local point on the area emitter
-    Vec3f rnd_p(rnd(seed, plane->min.x(), plane->max.x()), 0.0f, rnd(seed, plane->min.y(), plane->max.y()));
+    const float x = rnd(seed, plane->min.x(), plane->max.x());
+    const float z = rnd(seed, plane->min.y(), plane->max.y());
+    Vec3f rnd_p(x, 0.0f, z);
     rnd_p = area_info.objToWorld.pointMul(rnd_p);
     li.p = rnd_p;
     li.n = normalize(area_info.objToWorld.vectorMul(Vec3f(0, 1, 0)));
@@ -724,6 +750,12 @@ extern "C" __device__ void __closesthit__mesh()
     }
     si->shading.dpdu = normalize(optixTransformNormalFromObjectToWorldSpace(dpdu.toCUVec()));
     si->shading.dpdv = normalize(optixTransformNormalFromObjectToWorldSpace(dpdv.toCUVec()));
+}
+
+extern "C" __device__ void __closesthit__shadow()
+{
+    // Hit to surface
+    setPayload<0>(1);
 }
 
 // Surfaces -------------------------------------------------------------------------------

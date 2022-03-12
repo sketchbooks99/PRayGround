@@ -37,6 +37,8 @@ struct LightInteraction
     Vec3f p;
     // Surface normal on the light source in world coordinates
     Vec3f n;
+    // Texture coordinates on light source
+    Vec2f uv;
     // Area of light source
     float area;
     // PDF of light source

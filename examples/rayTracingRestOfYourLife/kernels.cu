@@ -31,11 +31,11 @@ static INLINE DEVICE bool shadowTrace(
     OptixTraversableHandle handle, const Vec3f& ro, const Vec3f& rd,
     float tmin, float tmax)
 {
-    uint32_t hit = 0;
+    uint32_t hit = 0u;
     optixTrace(handle, ro.toCUVec(), rd.toCUVec(),
         tmin, tmax, 0.0f,
-        OptixVisibilityMask(1), OPTIX_RAY_FLAG_NONE,
-        (uint32_t)RayType::RADIANCE, (uint32_t)RayType::N_RAY, (uint32_t)RayType::RADIANCE,
+        OptixVisibilityMask(1), OPTIX_RAY_FLAG_TERMINATE_ON_FIRST_HIT,
+        (uint32_t)RayType::SHADOW, (uint32_t)RayType::N_RAY, (uint32_t)RayType::SHADOW,
         hit);
     return static_cast<bool>(hit);
 }
@@ -61,8 +61,8 @@ static __forceinline__ __device__ float powerHeuristic(const float pdf1, const f
 
 #define MIS1 0
 #define MIS2 0
-#define MIS3 0
-#define PT 1
+#define MIS3 1
+#define PT 0
 extern "C" __device__ void __raygen__pinhole()
 {
     const RaygenData* raygen = reinterpret_cast<RaygenData*>(optixGetSbtDataPointer());
@@ -205,7 +205,6 @@ extern "C" __device__ void __raygen__pinhole()
 
                 pdf += weight * bsdf_pdf;
 #elif MIS3      
-                Vec3f surface_throughput(1.0f);
                 if (params.num_lights > 0)
                 {
                     LightInteraction li;
@@ -213,23 +212,62 @@ extern "C" __device__ void __raygen__pinhole()
                     optixDirectCall<void, const AreaEmitterInfo&, const Vec3f&, LightInteraction&, uint32_t&>(
                         light.sample_id, light, si.p, li, seed);
                     Vec3f to_light = li.p - si.p;
+                    const float dist_to_light = length(to_light);
 
                     // For light pdf
                     {
-                        const float t_light = length(to_light) - 1e-3f;
+                        const float t_shadow = dist_to_light - 1e-3f;
+                        // Trace shadow ray
                         const bool hit_object = shadowTrace(
-                            params.handle, si.p, normalize(to_light), 1e-3f, t_light);
+                            params.handle, si.p, normalize(to_light), 1e-3f, t_shadow);
 
                         // Next Event Estimation
-                        if (!hit_obejct)
+                        if (!hit_object)
                         {
+                            const Vec3f unit_wi = normalize(to_light);
+                            const Vec3f bsdf = optixContinuationCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
+                                si.surface_info.bsdf_id, &si, si.surface_info.data, unit_wi);
 
+                            float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*, const Vec3f&>(
+                                si.surface_info.pdf_id, &si, si.surface_info.data, unit_wi);
+
+                            // convert unit of bsdf_pdf from [sr^-1] to [m^-2]
+                            const float cos_theta = dot(-unit_wi, li.n);
+                            bsdf_pdf *= pow2(dist_to_light) / cos_theta;
+                            
+                            const float light_pdf = li.pdf;
+
+                            // Calculate MIS weight
+                            const float weight = powerHeuristic(light_pdf, bsdf_pdf);
+                            SurfaceInteraction light_si;
+                            light_si.uv = li.uv;
+                            light_si.shading.n = li.n;
+                            light_si.wo = unit_wi;
+                            light_si.surface_info = light.surface_info;
+
+                            optixDirectCall<void, SurfaceInteraction*, void*>(
+                                light_si.surface_info.bsdf_id, &light_si, light_si.surface_info.data);
+                            
+                            result += weight * light_si.emission * bsdf * throughput / li.pdf;
                         }
                     }
 
                     // For bsdf pdf
                     {
+                        si.wi = scattered;
+                        const Vec3f bsdf = optixContinuationCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
+                            si.surface_info.bsdf_id, &si, si.surface_info.data, si.wi);
+                        
+                        float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*, const Vec3f&>(
+                            si.surface_info.pdf_id, &si, si.surface_info.data, si.wi);
+                        const float cos_theta = dot(-si.wi, li.n);
+                        const float sample_bsdf_pdf = bsdf_pdf * pow2(dist_to_light) / cos_theta;
 
+                        const float light_pdf = optixContinuationCall<float, const AreaEmitterInfo&, const Vec3f&, const Vec3f&, LightInteraction&>(
+                            light.sample_id, light, si.p, si.wi, li);
+
+                        const float weight = powerHeuristic(sample_bsdf_pdf, light_pdf);
+                        throughput *= weight * bsdf / bsdf_pdf;
                     }
                 }
 #elif PT
@@ -239,14 +277,15 @@ extern "C" __device__ void __raygen__pinhole()
                 float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*, const Vec3f&>(
                     si.surface_info.pdf_id, &si, si.surface_info.data, si.wi);
                 pdf = bsdf_pdf;
-
-                pdf = fmaxf(pdf, math::eps);
 #endif
+
+#if !MIS3
                 // Evaluate BSDF
                 Vec3f bsdf = optixContinuationCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
                     si.surface_info.bsdf_id, &si, si.surface_info.data, si.wi);
 
                 throughput *= bsdf / pdf;
+#endif
                 si.seed = seed;
             }
 
@@ -307,6 +346,11 @@ extern "C" __device__ void __miss__envmap()
     si->surface_info.type = SurfaceType::None;
     si->emission = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
         env->texture.prg_id, si, env->texture.data);
+}
+
+extern "C" __device__ void __miss__shadow()
+{
+    setPayload<0>(0);
 }
 
 // Hitgroups -------------------------------------------------------------------------------
@@ -389,6 +433,7 @@ extern "C" __device__ void __direct_callable__sample_light_plane(
     rnd_p = area_info.objToWorld.pointMul(rnd_p);
     li.p = rnd_p;
     li.n = normalize(area_info.objToWorld.vectorMul(Vec3f(0, 1, 0)));
+    li.uv = Vec2f((x - plane->min.x()) / (plane->max.x() - plane->min.x()), (z - plane->min.y()) / (plane->max.y() - plane->min.y()));
 
     const Vec3f corner0 = area_info.objToWorld.pointMul(Vec3f(plane->min.x(), 0.0f, plane->min.y()));
     const Vec3f corner1 = area_info.objToWorld.pointMul(Vec3f(plane->max.x(), 0.0f, plane->min.y()));
@@ -555,140 +600,6 @@ extern "C" __device__ Vec3f __direct_callable__sample_light_sphere(
     Vec3f to_light = randomSampleToSphere(seed, sphere->radius, distance_squared);
     onb.inverseTransform(to_light);
     return normalize(area_info.objToWorld.vectorMul(to_light));
-}
-
-// Cylinder -------------------------------------------------------------------------------
-static INLINE DEVICE Vec2f getCylinderUV(
-    const Vec3f& p, const float radius, const float height, const bool hit_disk)
-{
-    if (hit_disk)
-    {
-        const float r = sqrtf(p.x()*p.x() + p.z()*p.z()) / radius;
-        const float theta = atan2(p.z(), p.x());
-        float u = 1.0f - (theta + math::pi / 2.0f) * math::inv_pi;
-        return Vec2f(u, r);
-    } 
-    else
-    {
-        float phi = atan2(p.z(), p.x());
-        if (phi < 0.0f) phi += math::two_pi;
-        const float u = phi / math::two_pi;
-        const float v = (p.y() + height / 2.0f) / height;
-        return Vec2f(u, v);
-    }
-}
-
-extern "C" __device__ void __intersection__cylinder()
-{
-    const auto* data = (HitgroupData*)optixGetSbtDataPointer();
-    const auto* cylinder = (Cylinder::Data*)data->shape_data;
-
-    const float radius = cylinder->radius;
-    const float height = cylinder->height;
-
-    Ray ray = getLocalRay();
-    auto* si = getSurfaceInteraction();
-    
-    const float a = dot(ray.d, ray.d) - ray.d.y() * ray.d.y();
-    const float half_b = (ray.o.x() * ray.d.x() + ray.o.z() * ray.d.z());
-    const float c = dot(ray.o, ray.o) - ray.o.y() * ray.o.y() - radius*radius;
-    const float discriminant = half_b*half_b - a*c;
-
-    if (discriminant > 0.0f)
-    {
-        const float sqrtd = sqrtf(discriminant);
-        const float side_t1 = (-half_b - sqrtd) / a;
-        const float side_t2 = (-half_b + sqrtd) / a;
-
-        const float side_tmin = fmin( side_t1, side_t2 );
-        const float side_tmax = fmax( side_t1, side_t2 );
-
-        if ( side_tmin > ray.tmax || side_tmax < ray.tmin )
-            return;
-
-        const float upper = height / 2.0f;
-        const float lower = -height / 2.0f;
-        const float y_tmin = fmin( (lower - ray.o.y()) / ray.d.y(), (upper - ray.o.y()) / ray.d.y() );
-        const float y_tmax = fmax( (lower - ray.o.y()) / ray.d.y(), (upper - ray.o.y()) / ray.d.y() );
-
-        float t1 = fmax(y_tmin, side_tmin);
-        float t2 = fmin(y_tmax, side_tmax);
-        if (t1 > t2 || (t2 < ray.tmin) || (t1 > ray.tmax))
-            return;
-        
-        bool check_second = true;
-        if (ray.tmin < t1 && t1 < ray.tmax)
-        {
-            Vec3f P = ray.at(t1);
-            bool hit_disk = y_tmin > side_tmin;
-            Vec3f normal = hit_disk 
-                          ? normalize(P - Vec3f(P.x(), 0.0f, P.z()))   // Hit at disk
-                          : normalize(P - Vec3f(0.0f, P.y(), 0.0f));   // Hit at side
-            Vec2f uv = getCylinderUV(P, radius, height, hit_disk);
-            if (hit_disk)
-            {
-                const float rHit = sqrtf(P.x()*P.x() + P.z()*P.z());
-                si->shading.dpdu = Vec3f(-math::two_pi * P.y(), 0.0f, math::two_pi * P.z());
-                si->shading.dpdv = Vec3f(P.x(), 0.0f, P.z()) * radius / rHit;
-            }
-            else 
-            {
-                si->shading.dpdu = Vec3f(-math::two_pi * P.z(), 0.0f, math::two_pi * P.x());
-                si->shading.dpdv = Vec3f(0.0f, height, 0.0f);
-            }
-            optixReportIntersection(t1, 0, Vec3f_as_ints(normal), Vec2f_as_ints(uv));
-            check_second = false;
-        }
-        
-        if (check_second)
-        {
-            if (ray.tmin < t2 && t2 < ray.tmax)
-            {
-                Vec3f P = ray.at(t2);
-                bool hit_disk = y_tmax < side_tmax;
-                Vec3f normal = hit_disk
-                            ? normalize(P - Vec3f(P.x(), 0.0f, P.z()))   // Hit at disk
-                            : normalize(P - Vec3f(0.0f, P.y(), 0.0f));   // Hit at side
-                Vec2f uv = getCylinderUV(P, radius, height, hit_disk);
-                if (hit_disk)
-                {
-                    const float rHit = sqrtf(P.x()*P.x() + P.z()*P.z());
-                    si->shading.dpdu = Vec3f(-math::two_pi * P.y(), 0.0f, math::two_pi * P.z());
-                    si->shading.dpdv = Vec3f(P.x(), 0.0f, P.z()) * radius / rHit;
-                }
-                else 
-                {
-                    si->shading.dpdu = Vec3f(-math::two_pi * P.z(), 0.0f, math::two_pi * P.x());
-                    si->shading.dpdv = Vec3f(0.0f, height, 0.0f);
-                }
-                optixReportIntersection(t2, 0, Vec3f_as_ints(normal), Vec2f_as_ints(uv));
-            }
-        }
-    }
-}
-
-extern "C" __device__ void __closesthit__cylinder()
-{
-    const auto* data = (HitgroupData*)optixGetSbtDataPointer();
-
-    Ray ray = getWorldRay();
-
-    Vec3f local_n = getVec3fFromAttribute<0>();
-    Vec2f uv = getVec2fFromAttribute<3>();
-
-    Vec3f world_n = optixTransformNormalFromObjectToWorldSpace(local_n.toCUVec());
-
-    auto* si = getSurfaceInteraction();
-    si->p = ray.at(ray.tmax);
-    si->shading.n = normalize(world_n);
-    si->t = ray.tmax;
-    si->wo = ray.d;
-    si->uv = uv;
-    si->surface_info = data->surface_info;
-
-    // dpdu and dpdv are calculated in intersection shader
-    si->shading.dpdu = normalize(optixTransformVectorFromObjectToWorldSpace(si->shading.dpdu.toCUVec()));
-    si->shading.dpdv = normalize(optixTransformVectorFromObjectToWorldSpace(si->shading.dpdv.toCUVec()));
 }
 
 // Triangle mesh -------------------------------------------------------------------------------

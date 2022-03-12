@@ -117,26 +117,27 @@ void App::setup()
     env.copyToDevice();
 
     // Missプログラム
-    ProgramGroup miss_prg = pipeline.createMissProgram(context, module, MS_FUNC_STR("envmap"));
+    ProgramGroup miss_prg = pipeline.createMissProgram(context, module, "__miss__envmap");
+    ProgramGroup miss_shadow_prg = pipeline.createMissProgram(context, module, "__miss__shadow");
     // Missプログラム用のShader Binding Tableデータ
-    MissRecord miss_record;
+    MissRecord miss_record, miss_shadow_record;
     miss_prg.recordPackHeader(&miss_record);
     miss_record.data.env_data = env.devicePtr();
-    sbt.setMissRecord(miss_record);
+    
+    miss_shadow_prg.recordPackHeader(&miss_shadow_record);
+
+    sbt.setMissRecord(miss_record, miss_shadow_record);
 
     // Hitgroupプログラム
     // Plane
     auto plane_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("plane"), IS_FUNC_STR("plane"));
     auto plane_shadow_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("shadow"), IS_FUNC_STR("plane"));
-    auto plane_light_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("plane_light"), IS_FUNC_STR("plane"));
     // Sphere
     auto sphere_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("sphere"), IS_FUNC_STR("sphere"));
-    auto sphere_shadow_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("shadow"), IS_FUNC_STR("plane"));
-    auto sphere_light_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("sphere_shadow"), IS_FUNC_STR("plane"));
+    auto sphere_shadow_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("shadow"), IS_FUNC_STR("sphere"));
     // Triangle mesh
     auto mesh_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("mesh"));
     auto mesh_shadow_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("shadow"));
-    auto mesh_light_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("mesh_light"));
 
     struct Primitive
     {
@@ -160,10 +161,10 @@ void App::setup()
         // Shader Binding Table へのデータの登録
         HitgroupRecord record;
         prg.recordPackHeader(&record);
-        record.data = 
+        HitgroupData record_data = 
         {
-            .shape_data = primitive.shape->devicePtr(), 
-            .surface_info = 
+            .shape_data = primitive.shape->devicePtr(),
+            .surface_info =
             {
                 .data = primitive.material->devicePtr(),
                 .sample_id = primitive.sample_bsdf_id,
@@ -172,13 +173,14 @@ void App::setup()
                 .type = primitive.material->surfaceType()
             }
         };
-        sbt_idx++;
+        record.data = record_data;
 
-        HitgroupRecord shadow_record{};
+        HitgroupRecord shadow_record;
         shadow_prg.recordPackHeader(&shadow_record);
-        sbt_idx++;
+        shadow_record.data = record_data;
 
         sbt.addHitgroupRecord(record, shadow_record);
+        sbt_idx += SBT::NRay;
 
         // GASをビルドし、IASに追加
         ShapeInstance instance{primitive.shape->type(), primitive.shape, transform};
@@ -223,16 +225,13 @@ void App::setup()
             .type = SurfaceType::AreaEmitter
         };
 
-        record.data = 
-        {
-            .shape_data = shape->devicePtr(), 
-            .surface_info = surface_info
-        };
-        sbt_idx++;
+        HitgroupData record_data = { shape->devicePtr(), surface_info };
+        record.data = record_data;
 
         HitgroupRecord shadow_record{};
         shadow_prg.recordPackHeader(&shadow_record);
-        sbt_idx++;
+        shadow_record.data = record_data;
+        sbt_idx += SBT::NRay;
 
         sbt.addHitgroupRecord(record, shadow_record);
 

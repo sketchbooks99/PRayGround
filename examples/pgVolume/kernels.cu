@@ -368,7 +368,7 @@ static __forceinline__ __device__ float deltaTracking(
     auto acc = tree.getAccessor();
 
     /// Extinction coefficient
-    /// @todo Be sure to satisfy sigma_t >= (density at x', x': a point inside medium) 
+    /// @todo Be sure to satisfy sigma_t >= density at x' (x': a point inside medium)
     const float sigma_t = medium->sigma_t;
     const Vec3f sigma_s = medium->sigma_s;
     using AccT = decltype(acc);

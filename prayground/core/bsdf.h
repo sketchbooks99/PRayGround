@@ -68,7 +68,7 @@ HOSTDEVICE INLINE Vec3f sampleGTR1(const float u1, const float u2, const float r
     const float sin_theta = sqrtf(1.0f - pow2(cos_theta));
     const float phi = math::two_pi * u2;
 
-    return (cosf(phi) * sin_theta, sinf(phi) * sin_theta, cos_theta);
+    return Vec3f(cosf(phi) * sin_theta, sinf(phi) * sin_theta, cos_theta);
 }
 
 HOSTDEVICE INLINE Vec3f sampleGGX(const float u1, const float u2, const float roughness)

@@ -233,7 +233,7 @@ extern "C" __device__ void __raygen__pinhole()
 
                             // convert unit of bsdf_pdf from [sr^-1] to [m^-2]
                             const float cos_theta = dot(-unit_wi, li.n);
-                            bsdf_pdf *= pow2(dist_to_light) / cos_theta;
+                            // bsdf_pdf *= pow2(dist_to_light) / cos_theta;
                             
                             const float light_pdf = li.pdf;
 
@@ -266,7 +266,8 @@ extern "C" __device__ void __raygen__pinhole()
                         const float light_pdf = optixContinuationCall<float, const AreaEmitterInfo&, const Vec3f&, const Vec3f&, LightInteraction&>(
                             light.sample_id, light, si.p, si.wi, li);
 
-                        const float weight = powerHeuristic(sample_bsdf_pdf, light_pdf);
+                        const float weight = powerHeuristic(bsdf_pdf, light_pdf);
+                        // const float weight = powerHeuristic(sample_bsdf_pdf, light_pdf);
                         throughput *= weight * bsdf / bsdf_pdf;
                     }
                 }

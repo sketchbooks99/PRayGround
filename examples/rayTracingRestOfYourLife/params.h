@@ -6,6 +6,8 @@
 #include <prayground/optix/sbt.h>
 #include <prayground/core/camera.h>
 #include <prayground/core/interaction.h>
+#include <prayground/texture/constant.h>
+#include <prayground/texture/checker.h>
 
 using namespace prayground;
 

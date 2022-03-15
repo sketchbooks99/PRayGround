@@ -8,8 +8,8 @@ namespace prayground {
 
 struct BoxMediumData
 {
-    float3 min; 
-    float3 max; 
+    Vec3f min; 
+    Vec3f max; 
     float density;
 };
 
@@ -19,7 +19,7 @@ public:
     using DataType = BoxMediumData;
 
     BoxMedium();
-    BoxMedium(const float3& min, const float3& max, const float density);
+    BoxMedium(const Vec3f& min, const Vec3f& max, const float density);
 
     constexpr ShapeType type() override;
 
@@ -30,13 +30,13 @@ public:
 
     AABB bound() const override;
 
-    const float3& min() const;
-    const float3& max() const;
+    const Vec3f& min() const;
+    const Vec3f& max() const;
 
     DataType deviceData() const;
 private:
-    float3 m_min; 
-    float3 m_max; 
+    Vec3f m_min; 
+    Vec3f m_max; 
     float m_density;
     CUdeviceptr d_aabb_buffer{ 0 };
 };

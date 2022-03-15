@@ -5,7 +5,7 @@
 namespace prayground {
 
 template <typename T>
-class Isotropic final : public Material {
+class Isotropic_ final : public Material {
 public:
     using ColorT = T;
     struct Data {

@@ -3,12 +3,12 @@
 namespace prayground {
 
 BoxMedium::BoxMedium()
-: m_min(make_float3(-1.0f)), m_max(make_float3(1.0f)), m_density(0.001f)
+: m_min(Vec3f(-1.0f)), m_max(Vec3f(1.0f)), m_density(0.001f)
 {
 
 }
 
-BoxMedium::BoxMedium(const float3& min, const float3& max, const float density)
+BoxMedium::BoxMedium(const Vec3f& min, const Vec3f& max, const float density)
 : m_min(min), m_max(max), m_density(density)
 {
 
@@ -46,12 +46,12 @@ AABB BoxMedium::bound() const
     return AABB(m_min, m_max);
 }
 
-const float3& BoxMedium::min() const
+const Vec3f& BoxMedium::min() const
 {
     return m_min;
 }
 
-const float3& BoxMedium::max() const
+const Vec3f& BoxMedium::max() const
 {
     return m_max;
 }

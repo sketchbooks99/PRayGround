@@ -3,12 +3,12 @@
 namespace prayground {
 
 SphereMedium::SphereMedium()
-: m_center(make_float3(0.0f)), m_radius(1.0f), m_density(0.001f)
+: m_center(Vec3f(0.0f)), m_radius(1.0f), m_density(0.001f)
 {
 
 }
 
-SphereMedium::SphereMedium(const float3& center, const float radius, const float density)
+SphereMedium::SphereMedium(const Vec3f& center, const float radius, const float density)
 : m_center(center), m_radius(radius), m_density(density)
 {
 
@@ -47,7 +47,7 @@ AABB SphereMedium::bound() const
     return AABB(m_center - m_radius, m_center + m_radius);
 }
 
-const float3& SphereMedium::center() const
+const Vec3f& SphereMedium::center() const
 {
     return m_center;
 }

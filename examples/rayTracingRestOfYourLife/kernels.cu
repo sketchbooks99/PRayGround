@@ -59,9 +59,8 @@ static __forceinline__ __device__ float powerHeuristic(const float pdf1, const f
     return (pdf1 * pdf1) / (pdf1 * pdf1 + pdf2 * pdf2);
 }
 
-#define MIS1 0
-#define MIS2 0
-#define MIS3 1
+#define NEE 0
+#define MIS 1
 #define PT 0
 extern "C" __device__ void __raygen__pinhole()
 {
@@ -146,7 +145,7 @@ extern "C" __device__ void __raygen__pinhole()
                 // BSDF sampling
                 Vec3f scattered = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
                     si.surface_info.sample_id, &si, si.surface_info.data);
-#if MIS1
+#if NEE
                 float weight = 0.0f;
 
                 float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*, const Vec3f&>(
@@ -157,54 +156,54 @@ extern "C" __device__ void __raygen__pinhole()
 
                 if (params.num_lights > 0)
                 {
-                    // Light sampling
-                    /// @note to_light is not normalized
                     LightInteraction li;
+                    // Sampling light point
                     optixDirectCall<void, const AreaEmitterInfo&, const Vec3f&, LightInteraction&, uint32_t&>(
                         light.sample_id, light, si.p, li, seed);
-
                     Vec3f to_light = li.p - si.p;
+                    const float dist_to_light = length(to_light);
 
-                    li.pdf *= (float)(dot(si.shading.n, to_light) <= 0);
-
-                    const float cos_theta = dot(-scattered, li.n);
-
-                    // Conversion from [sr^-1] to [m^-2] unit
-                    float sample_bsdf_pdf = bsdf_pdf * lengthSquared(to_light) / cos_theta;
-                    sample_bsdf_pdf *= (float)(cos_theta < 0.0f);
-                    if (li.pdf > 0.0f && sample_bsdf_pdf > 0.0f)
+                    // For light pdf
                     {
-                        const float bsdf_weight = powerHeuristic(sample_bsdf_pdf, li.pdf);
-                        if (UniformSampler::get1D(seed) > bsdf_weight)
-                            si.wi = normalize(to_light);
-                        pdf = bsdf_weight * bsdf_pdf + (1.0f - bsdf_weight) * li.pdf;
+                        const float t_shadow = dist_to_light - 1e-3f;
+                        // Trace shadow ray
+                        const bool hit_object = shadowTrace(
+                            params.handle, si.p, normalize(to_light), 1e-3f, t_shadow);
+
+                        // Next Event Estimation
+                        if (!hit_object)
+                        {
+                            const Vec3f unit_wi = normalize(to_light);
+                            const Vec3f bsdf = optixContinuationCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
+                                si.surface_info.bsdf_id, &si, si.surface_info.data, unit_wi);
+
+                            // Calculate MIS weight
+                            SurfaceInteraction light_si;
+                            light_si.uv = li.uv;
+                            light_si.shading.n = li.n;
+                            light_si.wo = unit_wi;
+                            light_si.surface_info = light.surface_info;
+
+                            optixDirectCall<void, SurfaceInteraction*, void*>(
+                                light_si.surface_info.bsdf_id, &light_si, light_si.surface_info.data);
+
+                            result += light_si.emission * bsdf * throughput / li.pdf;
+                        }
+                    }
+
+                    // For bsdf pdf
+                    {
+                        si.wi = scattered;
+                        const Vec3f bsdf = optixContinuationCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
+                            si.surface_info.bsdf_id, &si, si.surface_info.data, si.wi);
+
+                        float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*, const Vec3f&>(
+                            si.surface_info.pdf_id, &si, si.surface_info.data, si.wi);
+
+                        throughput *= bsdf / bsdf_pdf;
                     }
                 }
-#elif MIS2
-                const float weight = 1.0f / (params.num_lights + 1);
-                if (params.num_lights > 0) {
-                    // Light sampling
-                    LightInteraction li;
-                    optixDirectCall<void, const AreaEmitterInfo&, const Vec3f&, LightInteraction&, uint32_t&>(
-                        light.sample_id, light, si.p, li, seed);
-
-                    if (UniformSampler::get1D(seed) < weight * params.num_lights)
-                        si.wi = normalize(li.p - si.p);
-                    else
-                        si.wi = scattered;
-
-                    const float light_pdf = optixContinuationCall<float, const AreaEmitterInfo&, const Vec3f&, const Vec3f&, LightInteraction&>(
-                        light.sample_id, light, si.p, si.wi, li);
-
-                    pdf += (weight * params.num_lights) * light_pdf;
-                }
-
-                // Evaluate PDF depends on BSDF
-                float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*, const Vec3f&>(
-                    si.surface_info.pdf_id, &si, si.surface_info.data, si.wi);
-
-                pdf += weight * bsdf_pdf;
-#elif MIS3      
+#elif MIS      
                 if (params.num_lights > 0)
                 {
                     LightInteraction li;
@@ -267,7 +266,6 @@ extern "C" __device__ void __raygen__pinhole()
                             light.sample_id, light, si.p, si.wi, li);
 
                         const float weight = powerHeuristic(bsdf_pdf, light_pdf);
-                        // const float weight = powerHeuristic(sample_bsdf_pdf, light_pdf);
                         throughput *= weight * bsdf / bsdf_pdf;
                     }
                 }
@@ -277,15 +275,12 @@ extern "C" __device__ void __raygen__pinhole()
                 // Evaluate PDF depends on BSDF
                 float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*, const Vec3f&>(
                     si.surface_info.pdf_id, &si, si.surface_info.data, si.wi);
-                pdf = bsdf_pdf;
-#endif
 
-#if !MIS3
                 // Evaluate BSDF
                 Vec3f bsdf = optixContinuationCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
                     si.surface_info.bsdf_id, &si, si.surface_info.data, si.wi);
 
-                throughput *= bsdf / pdf;
+                throughput *= bsdf / bsdf_pdf;
 #endif
                 si.seed = seed;
             }
@@ -695,13 +690,13 @@ extern "C" __device__ Vec3f __continuation_callable__bsdf_diffuse(SurfaceInterac
         diffuse->texture.prg_id, si, diffuse->texture.data);
     si->albedo = albedo;
     si->emission = Vec3f(0.0f);
-    const float cosine = fmaxf(math::eps, dot(si->shading.n, wi));
+    const float cosine = fmaxf(0.0f, dot(si->shading.n, wi));
     return albedo * cosine * math::inv_pi;
 }
 
 extern "C" __device__ float __direct_callable__pdf_diffuse(SurfaceInteraction* si, void* mat_data, const Vec3f& wi)
 {
-    const float cosine = fmaxf(math::eps, dot(si->shading.n, wi));
+    const float cosine = fmaxf(0.0f, dot(si->shading.n, wi));
     return cosine * math::inv_pi;
 }
 

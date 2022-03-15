@@ -55,12 +55,15 @@ int main()
     cout << is_trivial_v<Vec4f> << endl;
 
     vector<Vec3f> coords;
-    for (int i = 0; i < 10; i++) coords.emplace_back(Vec3f{ (float)i * 3.0f, (float)i * 3 + 1.0f, (float)i * 3 + 2.0f });
+    for (int i = 0; i < 10; i++) 
+        coords.emplace_back(Vec3f{ (float)i * 3.0f, (float)i * 3 + 1.0f, (float)i * 3 + 2.0f });
     float* data = (float*)coords.data();
-    for (int i = 0; i < 30; i++) cout << data[i] << ' ';
+    for (int i = 0; i < 30; i++) 
+        cout << data[i] << ' ';
     cout << endl;
 
     Vec3f* raw_coords = reinterpret_cast<Vec3f*>(data);
-    for (int i = 0; i < 10; i++) cout << raw_coords[i] << ' ';
+    for (int i = 0; i < 10; i++) 
+        cout << raw_coords[i] << ' ';
     cout << endl;
 }

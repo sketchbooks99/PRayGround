@@ -79,6 +79,8 @@ namespace prayground {
         Vec2(T t = T(0)) { e[0] = t; e[1] = t; }
         Vec2(const CUVec& v) { e[0] = v.x; e[1] = v.y; }
 
+        operator CUVec() const { return CUVec{ e[0], e[1] }; }
+
               T& operator[](int32_t i)       { return e[i]; }
         const T& operator[](int32_t i) const { return e[i]; }
 
@@ -143,6 +145,8 @@ namespace prayground {
         Vec3(const typename CUVec2<T>::Type& v, const T& z) { e[0] = v.x; e[1] = v.y; e[2] = z; }
         Vec3(const CUVec& v) { e[0] = v.x; e[1] = v.y; e[2] = v.z; }
         Vec3(const typename CUVec4<T>::Type& v) { e[0] = v.x; e[1] = v.y; e[2] = v.z; }
+
+        operator CUVec() const { return CUVec{ e[0], e[1], e[2]}; }
 
         T& operator[](int i) { return e[i]; }
         const T& operator[](int i) const { return e[i]; }
@@ -215,6 +219,8 @@ namespace prayground {
         Vec4(const typename CUVec3<T>::Type& v) { e[0] = v.x; e[1] = v.y; e[2] = v.z; e[3] = T(1); }
         Vec4(const typename CUVec3<T>::Type& v, const T& w) { e[0] = v.x; e[1] = v.y; e[2] = v.z; e[3] = w; }
         Vec4(const CUVec& v) { e[0] = v.x; e[1] = v.y; e[2] = v.z; e[3] = v.w; }
+
+        operator CUVec() const { return CUVec{ e[0], e[1], e[2], e[3] }; }
 
         T& operator[](int i) { return e[i]; }
         const T& operator[](int i) const { return e[i]; }

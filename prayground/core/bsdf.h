@@ -44,10 +44,10 @@ HOSTDEVICE INLINE Vec3f randomSampleInUnitDisk(unsigned int& seed)
 
 HOSTDEVICE INLINE Vec3f randomSampleHemisphere(unsigned int& seed)
 {
-    float a = rnd(seed) * 2.0f * math::pi;
+    float phi = math::two_pi * rnd(seed);
     float z = sqrtf(rnd(seed));
     float r = sqrtf(fmaxf(0.0f, 1.0f - z * z));
-    return Vec3f(r * cosf(a), r * sinf(a), z);
+    return Vec3f(r * cosf(phi), r * sinf(phi), z);
 }
 
 HOSTDEVICE INLINE Vec3f cosineSampleHemisphere(const float u1, const float u2)

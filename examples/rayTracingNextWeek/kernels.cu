@@ -1,4 +1,6 @@
 #include <prayground/prayground.h>
+#include "box_medium.h"
+#include "sphere_medium.h"
 #include "params.h"
 
 // Utilities 
@@ -21,7 +23,7 @@ static INLINE DEVICE void trace(
     uint32_t u0, u1;
     packPointer(si, u0, u1);
     optixTrace(
-        handle, ro.toCUVec(), rd.toCUVec(), 
+        handle, ro, rd, 
         tmin, tmax, ray_time, 
         OptixVisibilityMask(1), OPTIX_RAY_FLAG_NONE, 
         0, 1, 0, 
@@ -60,7 +62,7 @@ extern "C" __device__ void __raygen__pinhole()
     {
         const Vec2f subpixel_jitter = UniformSampler::get2D(seed) - 0.5f;
 
-        const Vec2f d = 2.0f * make_float2(
+        const Vec2f d = 2.0f * Vec2f(
             (static_cast<float>(idx.x()) + subpixel_jitter.x()) / params.width,
             (static_cast<float>(idx.y()) + subpixel_jitter.y()) / params.height
         ) - 1.0f;
@@ -197,20 +199,41 @@ extern "C" __device__ void __miss__envmap()
 
 // Hitgroups ------------------------------------------------------------------------------------------
 // Plane
+static __forceinline__ __device__ bool hitPlane(
+    const Plane::Data* plane, const Vec3f& o, const Vec3f& v, const float tmin, const float tmax, SurfaceInteraction& si)
+{
+    const Vec2f min = plane->min;
+    const Vec2f max = plane->max;
+    
+    const float t = -o.y() / v.y();
+    const float x = o.x() + t * v.x();
+    const float z = o.z() + t * v.z();
+
+    if (min.x() < x && x < max.x() && min.y() < z && z < max.y() && tmin < t && t < tmax)
+    {
+        si.uv = Vec2f((x - min.x()) / (max.x() - min.x()), (z - min.y()) / max.y() - min.y());
+        si.shading.n = Vec3f(0, 1, 0);
+        si.t = t;
+        si.p = o + t*v;
+        return true;
+    }
+    return false;
+}
+
 extern "C" __device__ void __intersection__plane()
 {
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
-    const Plane::Data* plane_data = reinterpret_cast<Plane::Data*>(data->shape_data);
+    const Plane::Data* plane = reinterpret_cast<Plane::Data*>(data->shape_data);
 
-    const Vec2f min = plane_data->min;
-    const Vec2f max = plane_data->max;
+    const Vec2f min = plane->min;
+    const Vec2f max = plane->max;
 
     Ray ray = getLocalRay();
 
-    const float t = -ray.o.y / ray.d.y;
+    const float t = -ray.o.y() / ray.d.y();
 
-    const float x = ray.o.x + t * ray.d.x;
-    const float z = ray.o.z + t * ray.d.z;
+    const float x = ray.o.x() + t * ray.d.x();
+    const float z = ray.o.z() + t * ray.d.z();
 
     Vec2f uv(x / (max.x() - min.x()), z / (max.y() - min.y()));
 
@@ -234,12 +257,51 @@ extern "C" __device__ void __closesthit__plane()
     si->p = ray.at(ray.tmax);
     si->shading.n = world_n;
     si->t = ray.tmax;
-    si->wi = ray.d;
+    si->wo = ray.d;
     si->uv = uv;
     si->surface_info = data->surface_info;
 
     si->shading.dpdu = optixTransformNormalFromObjectToWorldSpace(Vec3f(1, 0, 0));
     si->shading.dpdv = optixTransformNormalFromObjectToWorldSpace(Vec3f(0, 0, 1));
+}
+
+extern "C" __device__ float __continuation_callable__pdf_plane(
+    const AreaEmitterInfo& area_info, const Vec3f& origin, const Vec3f& direction)
+{
+    const Plane::Data* plane = reinterpret_cast<Plane::Data*>(area_info.shape_data);
+
+    SurfaceInteraction si;
+    const Vec3f local_o = area_info.worldToObj.pointMul(origin);
+    const Vec3f local_d = area_info.worldToObj.vectorMul(direction);
+
+    if (!hitPlane(plane, local_o, local_d, 0.01f, 1e16f, si))
+        return 0.0f;
+
+    const Vec3f corner0 = area_info.objToWorld.pointMul(Vec3f(plane->min.x(), 0.0f, plane->min.y()));
+    const Vec3f corner1 = area_info.objToWorld.pointMul(Vec3f(plane->max.x(), 0.0f, plane->min.y()));
+    const Vec3f corner2 = area_info.objToWorld.pointMul(Vec3f(plane->min.x(), 0.0f, plane->max.y()));
+    si.shading.n = normalize(area_info.objToWorld.vectorMul(si.shading.n));
+    const float area = length(cross(corner1 - corner0, corner2 - corner0));
+    const float distance_squared = si.t * si.t;
+    const float cosine = fabs(dot(si.shading.n, direction));
+    if (cosine < math::eps)
+        return 0.0f;
+    return distance_squared / (cosine * area);
+}
+
+// グローバル空間における si.p -> 光源上の点 のベクトルを返す
+extern "C" __device__ Vec3f __direct_callable__rnd_sample_plane(const AreaEmitterInfo& area_info, SurfaceInteraction* si)
+{
+    const Plane::Data* plane = reinterpret_cast<Plane::Data*>(area_info.shape_data);
+    // サーフェスの原点をローカル空間に移す
+    const Vec3f local_p = area_info.worldToObj.pointMul(si->p);
+    unsigned int seed = si->seed;
+    // 平面光源上のランダムな点を取得
+    const Vec3f rnd_p(rnd(seed, plane->min.x(), plane->max.x()), 0.0f, rnd(seed, plane->min.y(), plane->max.y()));
+    Vec3f to_light = rnd_p - local_p;
+    to_light = area_info.objToWorld.vectorMul(to_light);
+    si->seed = seed;
+    return to_light;
 }
 
 // Sphere -------------------------------------------------------------------------------
@@ -248,16 +310,16 @@ static __forceinline__ __device__ Vec2f getSphereUV(const Vec3f& p) {
     if (phi < 0) phi += math::two_pi;
     float theta = acos(p.y());
     float u = phi / math::two_pi;
-    float v = theta / math::pi;
+    float v = theta * math::inv_pi;
     return Vec2f(u, v);
 }
 
 static __forceinline__ __device__ bool hitSphere(
-    const Sphere::Data* sphere_data, const Vec3f& o, const Vec3f& v,
+    const Sphere::Data* sphere, const Vec3f& o, const Vec3f& v,
     const float tmin, const float tmax, SurfaceInteraction* si)
 {
-    const Vec3f center = sphere_data->center;
-    const float radius = sphere_data->radius;
+    const Vec3f center = sphere->center;
+    const float radius = sphere->radius;
 
     const Vec3f oc = o - center;
     const float a = dot(v, v);
@@ -265,7 +327,7 @@ static __forceinline__ __device__ bool hitSphere(
     const float c = dot(oc, oc) - radius * radius;
     const float discriminant = half_b * half_b - a * c;
 
-    if (discriminant <= 0.0f) 
+    if (discriminant <= 0.0f)
         return false;
 
     const float sqrtd = sqrtf(discriminant);
@@ -289,12 +351,12 @@ extern "C" __device__ void __intersection__sphere()
 {
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
     const int prim_id = optixGetPrimitiveIndex();
-    Sphere::Data sphere_data = (reinterpret_cast<Sphere::Data*>(data->shape_data))[prim_id];
+    Sphere::Data sphere = (reinterpret_cast<Sphere::Data*>(data->shape_data))[prim_id];
 
     Ray ray = getLocalRay();
 
     SurfaceInteraction si;
-    if (hitSphere(&sphere_data, ray.o, ray.d, ray.tmin, ray.tmax, &si))
+    if (hitSphere(&sphere, ray.o, ray.d, ray.tmin, ray.tmax, &si))
         optixReportIntersection(si.t, 0, Vec3f_as_ints(si.shading.n), Vec2f_as_ints(si.uv));
 }
 
@@ -304,21 +366,21 @@ extern "C" __device__ void __intersection__sphere_medium()
 {
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
     const int prim_id = optixGetPrimitiveIndex();
-    SphereMedium::Data sphere_medium_data = reinterpret_cast<SphereMedium::Data*>(data->shape_data)[prim_id];
-    SphereData sphere_data;
-    sphere_data.center = sphere_medium_data.center;
-    sphere_data.radius = sphere_medium_data.radius;
-    const float density = sphere_medium_data.density;
+    SphereMedium::Data sphere_medium = reinterpret_cast<SphereMedium::Data*>(data->shape_data)[prim_id];
+    Sphere::Data sphere;
+    sphere.center = sphere_medium.center;
+    sphere.radius = sphere_medium.radius;
+    const float density = sphere_medium.density;
 
     Ray ray = getLocalRay();
 
     SurfaceInteraction* global_si = getSurfaceInteraction();
-    unsigned int seed = global_si->seed;
+    uint32_t seed = global_si->seed;
 
     SurfaceInteraction si1, si2;
-    if (!hitSphere(&sphere_data, ray.o, ray.d, -1e16f, 1e16f, &si1))
+    if (!hitSphere(&sphere, ray.o, ray.d, -1e16f, 1e16f, &si1))
         return;
-    if (!hitSphere(&sphere_data, ray.o, ray.d, si1.t + math::eps, 1e16f, &si2))
+    if (!hitSphere(&sphere, ray.o, ray.d, si1.t + math::eps, 1e16f, &si2))
         return;
 
     if (si1.t < ray.tmin) si1.t = ray.tmin;
@@ -330,7 +392,7 @@ extern "C" __device__ void __intersection__sphere_medium()
     if (si1.t < 0.0f)
         si1.t = 0.0f;
 
-    const float neg_inv_density = -1.0f / sphere_medium_data.density;
+    const float neg_inv_density = -1.0f / density;
     const float ray_length = length(ray.d);
     const float distance_inside_boundary = (si2.t - si1.t) * ray_length;
     const float hit_distance = neg_inv_density * logf(rnd(seed));
@@ -340,7 +402,7 @@ extern "C" __device__ void __intersection__sphere_medium()
         return;
 
     const float t = si1.t + hit_distance / ray_length;
-    optixReportIntersection(t, 0, float3_as_ints(si1.n), float2_as_ints(si1.uv));
+    optixReportIntersection(t, 0, Vec3f_as_ints(si1.shading.n), Vec2f_as_ints(si1.uv));
 }
 
 extern "C" __device__ void __closesthit__sphere() {
@@ -348,53 +410,49 @@ extern "C" __device__ void __closesthit__sphere() {
 
     Ray ray = getWorldRay();
 
-    float3 local_n = getFloat3FromAttribute<0>();
-    float2 uv = getFloat2FromAttribute<3>();
-    float3 world_n = optixTransformNormalFromObjectToWorldSpace(local_n);
+    Vec3f local_n = getVec3fFromAttribute<0>();
+    Vec2f uv = getVec2fFromAttribute<3>();
+    Vec3f world_n = optixTransformNormalFromObjectToWorldSpace(local_n);
     world_n = normalize(world_n);
 
     SurfaceInteraction* si = getSurfaceInteraction();
     si->p = ray.at(ray.tmax);
-    si->n = world_n;
+    si->shading.n = world_n;
     si->t = ray.tmax;
-    si->wi = ray.d;
+    si->wo = ray.d;
     si->uv = getSphereUV(local_n);
     si->surface_info = data->surface_info;
 
     // Calculate partial derivative on texture coordinates
-    float phi = atan2(local_n.z, local_n.x);
-    if (phi < 0) phi += 2.0f * math::pi;
-    const float theta = acos(local_n.y);
-    const float3 dpdu = make_float3(-math::two_pi * local_n.z, 0, math::two_pi * local_n.x);
-    const float3 dpdv = math::pi * make_float3(local_n.y * cos(phi), -sin(theta), local_n.y * sin(phi));
-    si->dpdu = normalize(optixTransformVectorFromObjectToWorldSpace(dpdu));
-    si->dpdv = normalize(optixTransformVectorFromObjectToWorldSpace(dpdv));
+    float phi = atan2(local_n.z(), local_n.x());
+    if (phi < 0) phi += math::two_pi;
+    const float theta = acos(local_n.y());
+    const Vec3f dpdu = Vec3f(-math::two_pi * local_n.z(), 0, math::two_pi * local_n.x());
+    const Vec3f dpdv = math::pi * Vec3f(local_n.y() * cosf(phi), -sinf(theta), local_n.y() * sinf(phi));
+    si->shading.dpdu = normalize(optixTransformVectorFromObjectToWorldSpace(dpdu));
+    si->shading.dpdv = normalize(optixTransformVectorFromObjectToWorldSpace(dpdv));
 }
 
 // Box -------------------------------------------------------------------------------
-static INLINE DEVICE float2 getBoxUV(const float3& p, const float3& min, const float3& max, const int axis)
+static INLINE DEVICE Vec2f getBoxUV(const Vec3f& p, const Vec3f& min, const Vec3f& max, const int axis)
 {
-    float2 uv;
     int u_axis = (axis + 1) % 3;
     int v_axis = (axis + 2) % 3;
 
     // axisがYの時は (u: Z, v: X) -> (u: X, v: Z)へ順番を変える
     if (axis == 1) swap(u_axis, v_axis);
-
-    uv.x = (getByIndex(p, u_axis) - getByIndex(min, u_axis)) / (getByIndex(max, u_axis) - getByIndex(min, u_axis));
-    uv.y = (getByIndex(p, v_axis) - getByIndex(min, v_axis)) / (getByIndex(max, v_axis) - getByIndex(min, v_axis));
+    
+    Vec2f uv((p[u_axis] - min[u_axis]) / (max[u_axis] - min[u_axis]), (p[v_axis] - min[v_axis]) / (max[v_axis] - min[v_axis]));
 
     return clamp(uv, 0.0f, 1.0f);
 }
 
 static INLINE DEVICE int hitBox(
-    const BoxData* box_data,
-    const float3& o, const float3& v,
-    const float tmin, const float tmax,
-    SurfaceInteraction& si)
+    const Box::Data* box, const Vec3f& o, const Vec3f& v,
+    const float tmin, const float tmax, SurfaceInteraction& si)
 {
-    float3 min = box_data->min;
-    float3 max = box_data->max;
+    const Vec3f min = box->min;
+    const Vec3f max = box->max;
 
     float _tmin = tmin, _tmax = tmax;
     int min_axis = -1, max_axis = -1;
@@ -404,15 +462,13 @@ static INLINE DEVICE int hitBox(
         float t0, t1;
         if (getByIndex(v, i) == 0.0f)
         {
-            t0 = fminf(getByIndex(min, i) - getByIndex(o, i), getByIndex(max, i) - getByIndex(o, i));
-            t1 = fmaxf(getByIndex(min, i) - getByIndex(o, i), getByIndex(max, i) - getByIndex(o, i));
+            t0 = fminf(min[i] - o[i], max[i] - o[i]);
+            t1 = fmaxf(min[i] - o[i], max[i] - o[i]);
         }
         else
         {
-            t0 = fminf((getByIndex(min, i) - getByIndex(o, i)) / getByIndex(v, i),
-                (getByIndex(max, i) - getByIndex(o, i)) / getByIndex(v, i));
-            t1 = fmaxf((getByIndex(min, i) - getByIndex(o, i)) / getByIndex(v, i),
-                (getByIndex(max, i) - getByIndex(o, i)) / getByIndex(v, i));
+            t0 = fminf((min[i] - o[i]) / v[i], (max[i] - o[i]) / v[i]);
+            t1 = fmaxf((min[i] - o[i]) / v[i], (max[i] - o[i]) / v[i]);
         }
         min_axis = t0 > _tmin ? i : min_axis;
         max_axis = t1 < _tmax ? i : max_axis;
@@ -424,16 +480,16 @@ static INLINE DEVICE int hitBox(
             return -1;
     }
 
-    float3 center = (min + max) / 2.0f;
+    Vec3f center = (min + max) / 2.0f;
     if ((tmin < _tmin && _tmin < tmax) && (-1 < min_axis && min_axis < 3))
     {
-        float3 p = o + _tmin * v;
-        float3 center_axis = p;
-        setByIndex(center_axis, min_axis, getByIndex(center, min_axis));
-        float3 normal = normalize(p - center_axis);
-        float2 uv = getBoxUV(p, min, max, min_axis);
+        Vec3f p = o + _tmin * v;
+        Vec3f center_axis = p;
+        center_axis[min_axis] = center[min_axis];
+        Vec3f normal = normalize(p - center_axis);
+        Vec2f uv = getBoxUV(p, min, max, min_axis);
         si.p = p;
-        si.n = normal;
+        si.shading.n = normal;
         si.uv = uv;
         si.t = _tmin;
         return min_axis;
@@ -441,13 +497,13 @@ static INLINE DEVICE int hitBox(
 
     if ((tmin < _tmax && _tmax < tmax) && (-1 < max_axis && max_axis < 3))
     {
-        float3 p = o + _tmax * v;
-        float3 center_axis = p;
-        setByIndex(center_axis, max_axis, getByIndex(center, max_axis));
-        float3 normal = normalize(p - center_axis);
-        float2 uv = getBoxUV(p, min, max, max_axis);
+        Vec3f p = o + _tmax * v;
+        Vec3f center_axis = p;
+        center_axis[max_axis] = center[max_axis];
+        Vec3f normal = normalize(p - center_axis);
+        Vec2f uv = getBoxUV(p, min, max, max_axis);
         si.p = p;
-        si.n = normal;
+        si.shading.n = normal;
         si.uv = uv;
         si.t = _tmax;
         return max_axis;
@@ -459,15 +515,14 @@ extern "C" __device__ void __intersection__box()
 {
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
     const int prim_id = optixGetPrimitiveIndex();
-    BoxData box_data = reinterpret_cast<BoxData*>(data->shape_data)[prim_id];
+    Box::Data box = reinterpret_cast<Box::Data*>(data->shape_data)[prim_id];
 
     Ray ray = getLocalRay();
 
     SurfaceInteraction si;
-    int hit_axis = hitBox(&box_data, ray.o, ray.d, ray.tmin, ray.tmax, si);
-    if (hit_axis >= 0) {
-        optixReportIntersection(si.t, 0, float3_as_ints(si.n), float2_as_ints(si.uv), hit_axis);
-    }
+    int hit_axis = hitBox(&box, ray.o, ray.d, ray.tmin, ray.tmax, si);
+    if (hit_axis >= 0)
+        optixReportIntersection(si.t, 0, Vec3f_as_ints(si.shading.n), Vec2f_as_ints(si.uv), hit_axis);
 }
 
 /// From "Ray Tracing: The Next Week" by Peter Shirley
@@ -476,10 +531,10 @@ extern "C" __device__ void __intersection__box_medium()
 {
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
     const int prim_id = optixGetPrimitiveIndex();
-    BoxMediumData box_medium_data = reinterpret_cast<BoxMediumData*>(data->shape_data)[prim_id];
-    BoxData box_data;
-    box_data.min = box_medium_data.min;
-    box_data.max = box_medium_data.max;
+    BoxMedium::Data box_medium = reinterpret_cast<BoxMedium::Data*>(data->shape_data)[prim_id];
+    Box::Data box;
+    box.min = box_medium.min;
+    box.max = box_medium.max;
 
     Ray ray = getLocalRay();
 
@@ -487,9 +542,9 @@ extern "C" __device__ void __intersection__box_medium()
     unsigned int seed = global_si->seed;
 
     SurfaceInteraction si1, si2;
-    if (hitBox(&box_data, ray.o, ray.d, -1e16f, 1e16f, si1) < 0)
+    if (hitBox(&box, ray.o, ray.d, -1e16f, 1e16f, si1) < 0)
         return;
-    if (hitBox(&box_data, ray.o, ray.d, si1.t + math::eps, 1e16f, si2) < 0)
+    if (hitBox(&box, ray.o, ray.d, si1.t + math::eps, 1e16f, si2) < 0)
         return;
 
     if (si1.t < ray.tmin) si1.t = ray.tmin;
@@ -501,7 +556,7 @@ extern "C" __device__ void __intersection__box_medium()
     if (si1.t < 0.0f)
         si1.t = 0.0f;
 
-    const float neg_inv_density = -1.0f / box_medium_data.density;
+    const float neg_inv_density = -1.0f / box_medium.density;
     const float ray_length = length(ray.d);
     const float distance_inside_boundary = (si2.t - si1.t) * ray_length;
     const float hit_distance = neg_inv_density * logf(rnd(seed));
@@ -511,7 +566,7 @@ extern "C" __device__ void __intersection__box_medium()
         return;
 
     const float t = si1.t + hit_distance / ray_length;
-    optixReportIntersection(t, 0, float3_as_ints(si1.n), float2_as_ints(si1.uv), 0);
+    optixReportIntersection(t, 0, Vec3f_as_ints(si1.shading.n), Vec2f_as_ints(si1.uv), 0);
 }
 
 extern "C" __device__ void __closesthit__box()
@@ -520,55 +575,48 @@ extern "C" __device__ void __closesthit__box()
 
     Ray ray = getWorldRay();
 
-    float3 local_n = make_float3(
-        int_as_float(optixGetAttribute_0()),
-        int_as_float(optixGetAttribute_1()),
-        int_as_float(optixGetAttribute_2())
-    );
-    float2 uv = make_float2(
-        int_as_float(optixGetAttribute_3()),
-        int_as_float(optixGetAttribute_4())
-    );
+    Vec3f local_n = getVec3fFromAttribute<0>();
+    Vec2f uv = getVec2fFromAttribute<3>();
 
-    float3 world_n = optixTransformNormalFromObjectToWorldSpace(local_n);
+    Vec3f world_n = optixTransformNormalFromObjectToWorldSpace(local_n);
     world_n = normalize(world_n);
 
     SurfaceInteraction* si = getSurfaceInteraction();
 
     si->p = ray.at(ray.tmax);
-    si->n = world_n;
+    si->shading.n = world_n;
     si->t = ray.tmax;
-    si->wi = ray.d;
+    si->wo = ray.d;
     si->uv = uv;
     si->surface_info = data->surface_info;
 
     uint32_t hit_axis = getAttribute<5>();
-    float3 dpdu, dpdv;
+    Vec3f dpdu, dpdv;
     // x
     if (hit_axis == 0)
     {
-        dpdu = make_float3(0.0f, 0.0f, 1.0f);
-        dpdv = make_float3(0.0f, 1.0f, 0.0f);
+        dpdu = Vec3f(0.0f, 0.0f, 1.0f);
+        dpdv = Vec3f(0.0f, 1.0f, 0.0f);
     }
     else if (hit_axis == 1)
     {
-        dpdu = make_float3(1.0f, 0.0f, 0.0f);
-        dpdv = make_float3(0.0f, 0.0f, 1.0f);
+        dpdu = Vec3f(1.0f, 0.0f, 0.0f);
+        dpdv = Vec3f(0.0f, 0.0f, 1.0f);
     }
     else if (hit_axis == 2)
     {
-        dpdu = make_float3(1.0f, 0.0f, 0.0f);
-        dpdv = make_float3(0.0f, 1.0f, 0.0f);
+        dpdu = Vec3f(1.0f, 0.0f, 0.0f);
+        dpdv = Vec3f(0.0f, 1.0f, 0.0f);
     }
-    si->dpdu = normalize(optixTransformVectorFromObjectToWorldSpace(dpdu));
-    si->dpdv = normalize(optixTransformVectorFromObjectToWorldSpace(dpdv));
+    si->shading.dpdu = normalize(optixTransformVectorFromObjectToWorldSpace(dpdu));
+    si->shading.dpdv = normalize(optixTransformVectorFromObjectToWorldSpace(dpdv));
 }
 
 // Triangle mesh -------------------------------------------------------------------------------
 extern "C" __device__ void __closesthit__mesh()
 {
     HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
-    const MeshData* mesh_data = reinterpret_cast<MeshData*>(data->shape_data);
+    const TriangleMesh::Data* mesh_data = reinterpret_cast<TriangleMesh::Data*>(data->shape_data);
 
     Ray ray = getWorldRay();
 
@@ -577,54 +625,54 @@ extern "C" __device__ void __closesthit__mesh()
     const float u = optixGetTriangleBarycentrics().x;
     const float v = optixGetTriangleBarycentrics().y;
 
-    const float3 p0 = mesh_data->vertices[face.vertex_id.x];
-    const float3 p1 = mesh_data->vertices[face.vertex_id.y];
-    const float3 p2 = mesh_data->vertices[face.vertex_id.z];
+    const Vec3f p0 = mesh_data->vertices[face.vertex_id.x()];
+    const Vec3f p1 = mesh_data->vertices[face.vertex_id.y()];
+    const Vec3f p2 = mesh_data->vertices[face.vertex_id.z()];
 
-    const float2 texcoord0 = mesh_data->texcoords[face.texcoord_id.x];
-    const float2 texcoord1 = mesh_data->texcoords[face.texcoord_id.y];
-    const float2 texcoord2 = mesh_data->texcoords[face.texcoord_id.z];
-    const float2 texcoords = (1 - u - v) * texcoord0 + u * texcoord1 + v * texcoord2;
+    const Vec2f texcoord0 = mesh_data->texcoords[face.texcoord_id.x()];
+    const Vec2f texcoord1 = mesh_data->texcoords[face.texcoord_id.y()];
+    const Vec2f texcoord2 = mesh_data->texcoords[face.texcoord_id.z()];
+    const Vec2f texcoords = (1 - u - v) * texcoord0 + u * texcoord1 + v * texcoord2;
 
-    float3 n0 = mesh_data->normals[face.normal_id.x];
-    float3 n1 = mesh_data->normals[face.normal_id.y];
-    float3 n2 = mesh_data->normals[face.normal_id.z];
+    const Vec3f n0 = mesh_data->normals[face.normal_id.x()];
+    const Vec3f n1 = mesh_data->normals[face.normal_id.y()];
+    const Vec3f n2 = mesh_data->normals[face.normal_id.z()];
 
     // Linear interpolation of normal by barycentric coordinates.
-    float3 local_n = (1.0f - u - v) * n0 + u * n1 + v * n2;
-    float3 world_n = optixTransformNormalFromObjectToWorldSpace(local_n);
+    Vec3f local_n = (1.0f - u - v) * n0 + u * n1 + v * n2;
+    Vec3f world_n = optixTransformNormalFromObjectToWorldSpace(local_n);
     world_n = normalize(world_n);
 
     SurfaceInteraction* si = getSurfaceInteraction();
     si->p = ray.at(ray.tmax);
-    si->n = world_n;
+    si->shading.n = world_n;
     si->t = ray.tmax;
-    si->wi = ray.d;
+    si->wo = ray.d;
     si->uv = texcoords;
     si->surface_info = data->surface_info;
 
     // Calculate partial derivative on texture coordinates
-    float3 dpdu, dpdv;
-    const float2 duv02 = texcoord0 - texcoord2, duv12 = texcoord1 - texcoord2;
-    const float3 dp02 = p0 - p2, dp12 = p1 - p2;
-    const float D = duv02.x * duv12.y - duv02.y * duv12.x;
+    Vec3f dpdu, dpdv;
+    const Vec2f duv02 = texcoord0 - texcoord2, duv12 = texcoord1 - texcoord2;
+    const Vec3f dp02 = p0 - p2, dp12 = p1 - p2;
+    const float D = duv02.x() * duv12.y() - duv02.y() * duv12.x();
     bool degenerateUV = abs(D) < 1e-8f;
     if (!degenerateUV)
     {
         const float invD = 1.0f / D;
-        dpdu = (duv12.y * dp02 - duv02.y * dp12) * invD;
-        dpdv = (-duv12.x * dp02 + duv02.x * dp12) * invD;
+        dpdu = (duv12.y() * dp02 - duv02.y() * dp12) * invD;
+        dpdv = (-duv12.x() * dp02 + duv02.x() * dp12) * invD;
     }
     if (degenerateUV || length(cross(dpdu, dpdv)) == 0.0f)
     {
         /// @note Is it OK with n = world_n? 
-        const float3 n = normalize(cross(p2 - p0, p1 - p0));
+        const Vec3f n = normalize(cross(p2 - p0, p1 - p0));
         Onb onb(n);
         dpdu = onb.tangent;
         dpdv = onb.bitangent;
     }
-    si->dpdu = normalize(optixTransformNormalFromObjectToWorldSpace(dpdu));
-    si->dpdv = normalize(optixTransformNormalFromObjectToWorldSpace(dpdv));
+    si->shading.dpdu = normalize(optixTransformNormalFromObjectToWorldSpace(dpdu));
+    si->shading.dpdv = normalize(optixTransformNormalFromObjectToWorldSpace(dpdv));
 }
 
 // Surfaces ------------------------------------------------------------------------------------------
@@ -731,7 +779,7 @@ extern "C" __device__ float __direct_callable__pdf_conductor(SurfaceInteraction*
 // Disney BRDF ------------------------------------------------------------------------------------------
 extern "C" __device__ void __direct_callable__sample_disney(SurfaceInteraction* si, void* mat_data)
 {
-    const Disney::Data* disney = reinterpret_cast<Disney::Data*>(mat_data);
+    const auto* disney = (Disney::Data*)mat_data;
 
     if (disney->twosided)
         si->shading.n = faceforward(si->shading.n, -si->wo, si->shading.n);
@@ -741,7 +789,7 @@ extern "C" __device__ void __direct_callable__sample_disney(SurfaceInteraction* 
     const float diffuse_ratio = 0.5f * (1.0f - disney->metallic);
     Onb onb(si->shading.n);
 
-    if (rnd(seed) < diffuse_ratio)
+    if (UniformSampler::get1D(seed) < diffuse_ratio)
     {
         Vec3f wi = cosineSampleHemisphere(u[0], u[1]);
         onb.inverseTransform(wi);
@@ -752,10 +800,11 @@ extern "C" __device__ void __direct_callable__sample_disney(SurfaceInteraction* 
         float gtr2_ratio = 1.0f / (1.0f + disney->clearcoat);
         Vec3f h;
         const float alpha = fmaxf(0.001f, disney->roughness);
-        if (rnd(seed) < gtr2_ratio)
+        const float alpha_cc = lerp(0.1f, 0.001f, disney->clearcoat);
+        if (UniformSampler::get1D(seed) < gtr2_ratio)
             h = sampleGGX(u[0], u[1], alpha);
         else
-            h = sampleGTR1(u[0], u[1], alpha);
+            h = sampleGTR1(u[0], u[1], alpha_cc);
         onb.inverseTransform(h);
         si->wi = normalize(reflect(si->wo, h));
     }
@@ -766,27 +815,27 @@ extern "C" __device__ void __direct_callable__sample_disney(SurfaceInteraction* 
 
 /**
  * @ref: https://rayspace.xyz/CG/contents/Disney_principled_BRDF/
- *
- * @note
+ * 
+ * @note 
  * ===== Prefix =====
- * F : fresnel
+ * F : fresnel 
  * f : brdf function
  * G : geometry function
  * D : normal distribution function
  */
-extern "C" __device__ Vec3f __continuation_callable__bsdf_disney(SurfaceInteraction * si, void* mat_data)
-{
-    const Disney::Data* disney = reinterpret_cast<Disney::Data*>(mat_data);
+extern "C" __device__ Vec3f __continuation_callable__bsdf_disney(SurfaceInteraction* si, void* mat_data)
+{   
+    const auto* disney = (Disney::Data*)mat_data;
     si->emission = Vec3f(0.0f);
 
     const Vec3f V = -normalize(si->wo);
     const Vec3f L = normalize(si->wi);
     const Vec3f N = normalize(si->shading.n);
 
-    const float NdotV = fabs(dot(N, V));
-    const float NdotL = fabs(dot(N, L));
+    const float NdotV = dot(N, V);
+    const float NdotL = dot(N, L);
 
-    if (NdotV == 0.0f || NdotL == 0.0f)
+    if (NdotV <= 0.0f || NdotL <= 0.0f)
         return Vec3f(0.0f);
 
     const Vec3f H = normalize(V + L);
@@ -799,15 +848,15 @@ extern "C" __device__ Vec3f __continuation_callable__bsdf_disney(SurfaceInteract
 
     // Diffuse term (diffuse, subsurface, sheen) ======================
     // Diffuse
-    const float Fd90 = 0.5f + 2.0f * disney->roughness * LdotH * LdotH;
+    const float Fd90 = 0.5f + 2.0f * disney->roughness * LdotH*LdotH;
     const float FVd90 = fresnelSchlickT(NdotV, Fd90);
     const float FLd90 = fresnelSchlickT(NdotL, Fd90);
     const Vec3f f_diffuse = (base_color * math::inv_pi) * FVd90 * FLd90;
 
     // Subsurface
-    const float Fss90 = disney->roughness * LdotH * LdotH;
+    const float Fss90 = disney->roughness * LdotH*LdotH;
     const float FVss90 = fresnelSchlickT(NdotV, Fss90);
-    const float FLss90 = fresnelSchlickT(NdotL, Fss90);
+    const float FLss90 = fresnelSchlickT(NdotL, Fss90); 
     const Vec3f f_subsurface = (base_color * math::inv_pi) * 1.25f * (FVss90 * FLss90 * ((1.0f / (NdotV * NdotL)) - 0.5f) + 0.5f);
 
     // Sheen
@@ -836,18 +885,18 @@ extern "C" __device__ Vec3f __continuation_callable__bsdf_disney(SurfaceInteract
     const float alpha_cc = lerp(0.1f, 0.001f, disney->clearcoat_gloss);
     const float Dcc = GTR1(NdotH, alpha_cc);
     const float Gcc = smithG_GGX(NdotV, 0.25f);
-    const Vec3f f_clearcoat = Vec3f(0.25f * disney->clearcoat * (Fcc * Dcc * Gcc));
+    const Vec3f f_clearcoat = Vec3f( 0.25f * disney->clearcoat * (Fcc * Dcc * Gcc) );
 
-    const Vec3f out = (1.0f - disney->metallic) * (lerp(f_diffuse, f_subsurface, disney->subsurface) + f_sheen) + f_specular + f_clearcoat;
+    const Vec3f out = ( 1.0f - disney->metallic ) * ( lerp( f_diffuse, f_subsurface, disney->subsurface ) + f_sheen ) + f_specular + f_clearcoat;
     return out * clamp(NdotL, 0.0f, 1.0f);
 }
 
 /**
  * @ref http://simon-kallweit.me/rendercompo2015/report/#adaptivesampling
- *
+ * 
  * @todo Investigate correct evaluation of PDF.
  */
-extern "C" __device__ float __direct_callable__pdf_disney(SurfaceInteraction * si, void* mat_data)
+extern "C" __device__ float __direct_callable__pdf_disney(SurfaceInteraction* si, void* mat_data)
 {
     const DisneyData* disney = reinterpret_cast<DisneyData*>(mat_data);
 
@@ -858,8 +907,11 @@ extern "C" __device__ float __direct_callable__pdf_disney(SurfaceInteraction * s
     const float diffuse_ratio = 0.5f * (1.0f - disney->metallic);
     const float specular_ratio = 1.0f - diffuse_ratio;
 
-    const float NdotL = abs(dot(N, L));
-    const float NdotV = abs(dot(N, V));
+    const float NdotL = dot(N, L);
+    const float NdotV = dot(N, V);
+
+    if (NdotL <= 0.0f || NdotV <= 0.0f)
+        return 0.0f;
 
     const float alpha = fmaxf(0.001f, disney->roughness);
     const float alpha_cc = lerp(0.1f, 0.001f, disney->clearcoat_gloss);

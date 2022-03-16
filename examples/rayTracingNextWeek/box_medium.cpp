@@ -21,12 +21,10 @@ constexpr ShapeType BoxMedium::type()
 
 void BoxMedium::copyToDevice() 
 {
-    BoxMediumData data = this->deviceData();
+    auto data = this->getData();
     if (!d_data)
-        CUDA_CHECK(cudaMalloc(&d_data, sizeof(BoxMediumData)));
-    CUDA_CHECK(cudaMemcpy(
-        d_data, &data, sizeof(BoxMediumData), cudaMemcpyHostToDevice
-    ));
+        CUDA_CHECK(cudaMalloc(&d_data, sizeof(Data)));
+    CUDA_CHECK(cudaMemcpy(d_data, &data, sizeof(Data), cudaMemcpyHostToDevice));
 }
 
 void BoxMedium::free() 
@@ -56,15 +54,9 @@ const Vec3f& BoxMedium::max() const
     return m_max;
 }
 
-BoxMedium::DataType BoxMedium::deviceData() const
+BoxMedium::Data BoxMedium::getData() const
 {
-    BoxMediumData data = 
-    {
-        .min = m_min,
-        .max = m_max,
-        .density = m_density
-    };
-    return data;
+    return { m_min, m_max, m_density };
 }
 
 } // ::prayground

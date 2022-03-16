@@ -257,7 +257,7 @@ extern "C" __device__ float __direct_callable__pdf_disney(SurfaceInteraction* si
         return 1.0f;
 
     const float alpha = fmaxf(0.001f, disney->roughness);
-    const float alpha_cc = 0.1f + (0.001f - 0.1f) * disney->clearcoat_gloss; // lerp
+    const float alpha_cc = lerp(0.1f, 0.001f, disney->clearcoat_gloss);
     const float3 H = normalize(V + L);
     const float NdotH = abs(dot(H, N));
 

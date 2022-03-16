@@ -21,13 +21,10 @@ constexpr ShapeType SphereMedium::type()
 
 void SphereMedium::copyToDevice() 
 {
-    SphereMediumData data = this->deviceData();
+    auto data = this->getData();
     if (!d_data)
-        CUDA_CHECK(cudaMalloc(&d_data, sizeof(SphereMediumData)));
-    CUDA_CHECK(cudaMemcpy(
-        d_data, &data, sizeof(SphereMediumData),
-        cudaMemcpyHostToDevice
-    ));
+        CUDA_CHECK(cudaMalloc(&d_data, sizeof(Data)));
+    CUDA_CHECK(cudaMemcpy(d_data, &data, sizeof(Data), cudaMemcpyHostToDevice));
 }
 
 void SphereMedium::free() 
@@ -57,15 +54,9 @@ const float& SphereMedium::radius() const
     return m_radius;
 }
 
-SphereMedium::DataType SphereMedium::deviceData() const
+SphereMedium::Data SphereMedium::getData() const
 {
-    SphereMediumData data = 
-    {
-        .center = m_center,
-        .radius = m_radius,
-        .density = m_density
-    };
-    return data;
+    return { m_center, m_radius, m_density };
 }
 
 } // ::prayground

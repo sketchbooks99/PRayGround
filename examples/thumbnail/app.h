@@ -34,7 +34,7 @@ private:
     Pipeline pipeline;
     Context context;
     CUstream stream;
-    ThumbnailSBT sbt;
+    SBT sbt;
     InstanceAccel scene_ias;
 
     Bitmap result_bitmap;

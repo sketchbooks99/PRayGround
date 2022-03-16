@@ -8,7 +8,7 @@
 
 using namespace prayground;
 
-using Spectrum = float3;
+using Spectrum = Vec3f;
 
 using ConstantTexture = ConstantTexture_<Spectrum>;
 using CheckerTexture = CheckerTexture_<Spectrum>;
@@ -19,18 +19,19 @@ struct AreaEmitterInfo
     Matrix4f objToWorld;
     Matrix4f worldToObj;
 
-    unsigned int sample_id;
-    unsigned int pdf_id;
+    uint32_t sample_id;
+    uint32_t pdf_id;
 };
 
 struct LaunchParams 
 {
-    unsigned int width, height;
-    unsigned int samples_per_launch;
-    unsigned int max_depth;
+    uint32_t width;
+    uint32_t height;
+    uint32_t samples_per_launch;
+    uint32_t max_depth;
     int subframe_index;
-    uchar4* result_buffer;
-    float4* accum_buffer;
+    Vec4u* result_buffer;
+    Vec4f* accum_buffer;
     OptixTraversableHandle handle;
 
     AreaEmitterInfo* lights;
@@ -44,17 +45,11 @@ struct RaygenData
     LensCamera::Data camera;
 };
 
-struct AlphaTexture
-{
-    void* data;
-    uint32_t prg_id;
-};
-
 struct HitgroupData
 {
     void* shape_data;
     SurfaceInfo surface_info;
-    AlphaTexture alpha_texture;
+    Texture::Data alpha_texture;
 };
 
 struct MissData

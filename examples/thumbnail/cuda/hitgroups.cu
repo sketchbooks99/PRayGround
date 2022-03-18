@@ -8,7 +8,6 @@ extern "C" __device__ void __closesthit__shadow()
 // Box -------------------------------------------------------------------------------
 static INLINE DEVICE Vec2f getBoxUV(const Vec3f& p, const Vec3f& min, const Vec3f& max, const int axis)
 {
-    Vec2f uv;
     int u_axis = (axis + 1) % 3;
     int v_axis = (axis + 2) % 3;
 
@@ -373,7 +372,7 @@ extern "C" __device__ float __continuation_callable__pdf_plane(
 // グローバル空間における si.p -> 光源上の点 のベクトルを返す
 extern "C" __device__ Vec3f __direct_callable__rnd_sample_plane(const AreaEmitterInfo& area_info, SurfaceInteraction * si)
 {
-    const PlaneData* plane_data = reinterpret_cast<PlaneData*>(area_info.shape_data);
+    const Plane::Data* plane_data = reinterpret_cast<Plane::Data*>(area_info.shape_data);
     // サーフェスの原点をローカル空間に移す
     const Vec3f local_p = area_info.worldToObj.pointMul(si->p);
     unsigned int seed = si->seed;
@@ -602,9 +601,9 @@ extern "C" __device__ void __anyhit__alpha_discard()
         const Face face = mesh->faces[prim_id];
         const float u = optixGetTriangleBarycentrics().x;
         const float v = optixGetTriangleBarycentrics().y;
-        const Vec2f texcoord0 = mesh->texcoords[face.texcoord_id.x];
-        const Vec2f texcoord1 = mesh->texcoords[face.texcoord_id.y];
-        const Vec2f texcoord2 = mesh->texcoords[face.texcoord_id.z];
+        const Vec2f texcoord0 = mesh->texcoords[face.texcoord_id.x()];
+        const Vec2f texcoord1 = mesh->texcoords[face.texcoord_id.y()];
+        const Vec2f texcoord2 = mesh->texcoords[face.texcoord_id.z()];
 
         texcoord = (1.0f - u - v) * texcoord0 + u * texcoord1 + v * texcoord2;
     }
@@ -617,5 +616,5 @@ extern "C" __device__ void __anyhit__alpha_discard()
     const Vec4f alpha = optixDirectCall<Vec4f, const Vec2f&, void*>(
         data->alpha_texture.prg_id, texcoord, data->alpha_texture.data);
 
-    if (alpha.w == 0.0f) optixIgnoreIntersection();
+    if (alpha.w() == 0.0f) optixIgnoreIntersection();
 }

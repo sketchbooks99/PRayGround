@@ -7,7 +7,7 @@ extern "C" {
 __constant__ LaunchParams params;
 }
 
-using SurfaceInteraction = SurfaceInteraction_<Spectrum>;
+using SurfaceInteraction = SurfaceInteraction_<Vec3f>;
 
 INLINE DEVICE SurfaceInteraction* getSurfaceInteraction()
 {
@@ -25,8 +25,8 @@ INLINE DEVICE void trace(
     packPointer( si, u0, u1 );
     optixTrace(
         handle,
-        ray_origin,
-        ray_direction,
+        ro,
+        rd,
         tmin,
         tmax,
         0.0f,                // rayTime

@@ -22,8 +22,8 @@ static INLINE DEVICE void trace(
     packPointer(si, u0, u1);
     optixTrace(
         handle, 
-        ro.toCUVec(), 
-        rd.toCUVec(), 
+        ro, 
+        rd, 
         tmin, 
         tmax, 
         0.0f, 
@@ -62,9 +62,9 @@ extern "C" __device__ void __raygen__pinhole()
 
     const uint32_t image_index = idx.y() * params.width + idx.x();
 
-    if (isnan(color.x())) color.x() = 0.0f;
-    if (isnan(color.y())) color.y() = 0.0f;
-    if (isnan(color.z())) color.z() = 0.0f;
+    if (isnan(color.x()) || isinf(color.x())) color.x() = 0.0f;
+    if (isnan(color.y()) || isinf(color.y())) color.y() = 0.0f;
+    if (isnan(color.z()) || isinf(color.z())) color.z() = 0.0f;
 
     Vec3u result = make_color(color);
     params.result_buffer[image_index] = Vec4u(result, 255);

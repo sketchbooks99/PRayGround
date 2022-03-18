@@ -7,6 +7,10 @@ using namespace prayground;
 
 int main()
 {
+    cout << Vec2f() << endl;
+    cout << Vec3f() << endl;
+    cout << Vec4f() << endl;
+
     Vec2f v(10, 20);
     Vec3f v3(make_float2(10, 20), 30);
     Vec3f v3_1(v, 30);

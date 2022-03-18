@@ -8,10 +8,6 @@
 
 namespace prayground {
 
-struct BitmapTextureData {
-    cudaTextureObject_t texture;
-};
-
 template <typename PixelT>
 class BitmapTexture_ final : public Texture {
 public:

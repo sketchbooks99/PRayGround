@@ -13,7 +13,7 @@ using HitgroupRecord = Record<HitgroupData>;
 using MissRecord = Record<MissData>;
 using EmptyRecord = Record<EmptyData>;
 
-using MotionBlurSBT = ShaderBindingTable<RaygenRecord, MissRecord, HitgroupRecord, EmptyRecord, EmptyRecord, 1>;
+using SBT = ShaderBindingTable<RaygenRecord, MissRecord, HitgroupRecord, EmptyRecord, EmptyRecord, 1>;
 
 class App : public BaseApp
 {
@@ -30,7 +30,7 @@ private:
     Pipeline pipeline;
     Context context;
     CUstream stream;
-    MotionBlurSBT sbt;
+    SBT sbt;
 
     InstanceAccel instance_accel;
 
@@ -38,7 +38,7 @@ private:
     FloatBitmap accum_bitmap;
     Camera camera;
 
-    float3 sphere_pos, sphere_prev_pos;
+    Vec3f sphere_pos, sphere_prev_pos;
 
     Transform matrix_transform;
     ShapeInstance sphere2;

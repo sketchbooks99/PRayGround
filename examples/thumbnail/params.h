@@ -8,10 +8,8 @@
 
 using namespace prayground;
 
-using Spectrum = Vec3f;
-
-using ConstantTexture = ConstantTexture_<Spectrum>;
-using CheckerTexture = CheckerTexture_<Spectrum>;
+using ConstantTexture = ConstantTexture_<Vec4f>;
+using CheckerTexture = CheckerTexture_<Vec4f>;
 
 struct AreaEmitterInfo
 {
@@ -29,7 +27,7 @@ struct LaunchParams
     uint32_t height;
     uint32_t samples_per_launch;
     uint32_t max_depth;
-    int subframe_index;
+    int frame;
     Vec4u* result_buffer;
     Vec4f* accum_buffer;
     OptixTraversableHandle handle;

@@ -10,7 +10,7 @@ using HitgroupRecord = Record<HitgroupData>;
 using MissRecord = Record<MissData>;
 using EmptyRecord = Record<EmptyData>;
 
-using DynamicUpdateSBT = ShaderBindingTable<RaygenRecord, MissRecord, HitgroupRecord, EmptyRecord, EmptyRecord, 1>;
+using SBT = ShaderBindingTable<RaygenRecord, MissRecord, HitgroupRecord, EmptyRecord, EmptyRecord, 1>;
 
 class App : public BaseApp
 {
@@ -29,7 +29,7 @@ private:
     Pipeline pipeline;
     Context context;
     CUstream stream;
-    DynamicUpdateSBT sbt;
+    SBT sbt;
     InstanceAccel ias;
 
     Bitmap result_bitmap;

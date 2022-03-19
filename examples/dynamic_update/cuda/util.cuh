@@ -74,7 +74,7 @@ INLINE DEVICE void trace(
         0,        
         1,           
         0,        
-        u0, u1);	
+        u0, u1);
 }
 
 }

@@ -3,13 +3,13 @@
 // ----------------------------------------------------------------
 void App::initResultBufferOnDevice()
 {
-    params.subframe_index = 0;
+    params.frame = 0;
 
     result_bitmap.allocateDevicePtr();
     accum_bitmap.allocateDevicePtr();
 
-    params.result_buffer = reinterpret_cast<uchar4*>(result_bitmap.devicePtr());
-    params.accum_buffer = reinterpret_cast<float4*>(accum_bitmap.devicePtr());
+    params.result_buffer = reinterpret_cast<Vec4u*>(result_bitmap.devicePtr());
+    params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bitmap.devicePtr());
 
     CUDA_SYNC_CHECK();
 }
@@ -21,20 +21,9 @@ void App::handleCameraUpdate()
         return;
     camera_update = false;
 
-    float3 U, V, W;
-    camera.UVWFrame(U, V, W);
-
     RaygenRecord* rg_record = reinterpret_cast<RaygenRecord*>(sbt.raygenRecord());
     RaygenData rg_data;
-    rg_data.camera =
-    {
-        .origin = camera.origin(),
-        .lookat = camera.lookat(),
-        .U = U, 
-        .V = V, 
-        .W = W,
-        .farclip = camera.farClip()
-    };
+    rg_data.camera = camera.getData();
 
     CUDA_CHECK(cudaMemcpy(
         reinterpret_cast<void*>(&rg_record->data),
@@ -65,12 +54,7 @@ void App::setup()
     pipeline.setNumAttributes(5);
 
     // OptixModuleをCUDAファイルから生成
-    Module raygen_module, miss_module, hitgroups_module, textures_module, surfaces_module;
-    raygen_module = pipeline.createModuleFromCudaFile(context, "cuda/raygen.cu");
-    miss_module = pipeline.createModuleFromCudaFile(context, "cuda/miss.cu");
-    hitgroups_module = pipeline.createModuleFromCudaFile(context, "cuda/hitgroups.cu");
-    textures_module = pipeline.createModuleFromCudaFile(context, "cuda/textures.cu");
-    surfaces_module = pipeline.createModuleFromCudaFile(context, "cuda/surfaces.cu");
+    Module module = pipeline.createModuleFromCudaFile(context, "kernels.cu");
 
     // レンダリング結果を保存する用のBitmapを用意
     result_bitmap.allocate(PixelFormat::RGBA, pgGetWidth(), pgGetHeight());
@@ -93,27 +77,17 @@ void App::setup()
     camera.setFov(40.0f);
     camera.setAspect(static_cast<float>(params.width) / params.height);
     camera.enableTracking(pgGetCurrentWindow());
-    float3 U, V, W;
-    camera.UVWFrame(U, V, W);
 
     // Raygenプログラム
-    ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, raygen_module, "__raygen__pinhole");
+    ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, module, "__raygen__pinhole");
     // Raygenプログラム用のShader Binding Tableデータ
     RaygenRecord raygen_record;
     raygen_prg.recordPackHeader(&raygen_record);
-    raygen_record.data.camera =
-    {
-        .origin = camera.origin(),
-        .lookat = camera.lookat(),
-        .U = U, 
-        .V = V, 
-        .W = W,
-        .farclip = camera.farClip()
-    };
+    raygen_record.data.camera = camera.getData();
     sbt.setRaygenRecord(raygen_record);
 
     // Callable関数とShader Binding TableにCallable関数用のデータを登録するLambda関数
-    auto setupCallable = [&](const Module& module, const std::string& dc, const std::string& cc)
+    auto setupCallable = [&](const std::string& dc, const std::string& cc)
     {
         EmptyRecord callable_record = {};
         auto [prg, id] = pipeline.createCallablesProgram(context, module, dc, cc);
@@ -123,22 +97,22 @@ void App::setup()
     };
 
     // テクスチャ用のCallableプログラム
-    uint32_t constant_prg_id = setupCallable(textures_module, DC_FUNC_STR("constant"), "");
-    uint32_t bitmap_prg_id = setupCallable(textures_module, DC_FUNC_STR("bitmap"), "");
+    uint32_t constant_prg_id = setupCallable(DC_FUNC_STR("constant"), "");
+    uint32_t bitmap_prg_id = setupCallable(DC_FUNC_STR("bitmap"), "");
 
     // Surface用のCallableプログラム 
     // Diffuse
-    uint32_t diffuse_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_diffuse"), CC_FUNC_STR("bsdf_diffuse"));
-    uint32_t diffuse_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_diffuse"), "");
+    uint32_t diffuse_sample_bsdf_prg_id = setupCallable(DC_FUNC_STR("sample_diffuse"), CC_FUNC_STR("bsdf_diffuse"));
+    uint32_t diffuse_pdf_prg_id = setupCallable(DC_FUNC_STR("pdf_diffuse"), "");
 
     // 環境マッピング (Sphere mapping) 用のテクスチャとデータ準備
-    auto env_texture = make_shared<ConstantTexture>(make_float3(3.0f), constant_prg_id);
+    auto env_texture = make_shared<ConstantTexture>(Vec3f(3.0f), constant_prg_id);
     env_texture->copyToDevice();
     env = EnvironmentEmitter{env_texture};
     env.copyToDevice();
 
     // Missプログラム
-    ProgramGroup miss_prg = pipeline.createMissProgram(context, miss_module, MS_FUNC_STR("envmap"));
+    ProgramGroup miss_prg = pipeline.createMissProgram(context, module, MS_FUNC_STR("envmap"));
     // Missプログラム用のShader Binding Tableデータ
     MissRecord miss_record;
     miss_prg.recordPackHeader(&miss_record);
@@ -147,7 +121,7 @@ void App::setup()
 
     // Hitgroupプログラム
     // Triangle mesh
-    auto mesh_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("mesh"));
+    auto mesh_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("mesh"));
 
     uint32_t sbt_idx = 0;
 
@@ -170,12 +144,11 @@ void App::setup()
         shared_ptr<Texture> texture;
         // Diffuseテクスチャが読み込めている場合はBitmapTextureでテクスチャを初期化
         std::string diffuse_texname = ma.findOneString("diffuse_texture", "");
-        if (!diffuse_texname.empty()) {
+        if (!diffuse_texname.empty())
             texture = make_shared<BitmapTexture>(diffuse_texname, tex_desc, bitmap_prg_id);
-        }
         // テクスチャがない場合は単色テクスチャを生成
         else
-            texture = make_shared<ConstantTexture>(ma.findOneFloat3("diffuse", make_float3(0.0f)), constant_prg_id);
+            texture = make_shared<ConstantTexture>(ma.findOneVec3f("diffuse", Vec3f(0.0f)), constant_prg_id);
         texture->copyToDevice();
         auto diffuse = make_shared<Diffuse>(texture);
         diffuse->copyToDevice();
@@ -241,7 +214,7 @@ void App::update()
         params.height,
         1
     );
-    params.subframe_index++;
+    params.frame++;
 
     render_time = pgGetElapsedTimef() - start_time;
 
@@ -286,7 +259,7 @@ void App::draw()
 
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-    if (params.subframe_index == 4096)
+    if (params.frame == 4096)
         result_bitmap.write(pgPathJoin(pgAppDir(), "objscene.jpg"));
 }
 

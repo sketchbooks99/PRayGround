@@ -14,20 +14,21 @@ struct AreaEmitterInfo
     Matrix4f objToWorld;
     Matrix4f worldToObj;
 
-    unsigned int sample_id;
-    unsigned int pdf_id;
+    uint32_t sample_id;
+    uint32_t pdf_id;
 };
 
 struct LaunchParams 
 {
-    unsigned int width, height;
-    unsigned int samples_per_launch;
-    unsigned int max_depth;
-    int subframe_index;
-    uchar4* result_buffer;
-    float4* accum_buffer;
-    float3* normal_buffer;
-    float3* albedo_buffer;
+    uint32_t width;
+    uint32_t height;
+    uint32_t samples_per_launch;
+    uint32_t max_depth;
+    int frame;
+    Vec4u* result_buffer;
+    Vec4f* accum_buffer;
+    Vec3f* normal_buffer;
+    Vec3f* albedo_buffer;
     float* depth_buffer;
     OptixTraversableHandle handle;
 
@@ -37,19 +38,9 @@ struct LaunchParams
     float white;
 };
 
-struct CameraData 
-{
-    float3 origin; 
-    float3 lookat;
-    float3 U; 
-    float3 V;
-    float3 W;
-    float farclip;
-};
-
 struct RaygenData
 {
-    CameraData camera;
+    Camera::Data camera;
 };
 
 struct HitgroupData

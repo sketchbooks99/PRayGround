@@ -13,7 +13,7 @@ using HitgroupRecord = Record<HitgroupData>;
 using MissRecord = Record<MissData>;
 using EmptyRecord = Record<EmptyData>;
 
-using PathTracingSBT = ShaderBindingTable<RaygenRecord, MissRecord, HitgroupRecord, EmptyRecord, EmptyRecord, 2>;
+using SBT = ShaderBindingTable<RaygenRecord, MissRecord, HitgroupRecord, EmptyRecord, EmptyRecord, 2>;
 
 class App : public BaseApp
 {
@@ -34,7 +34,7 @@ private:
     Pipeline pipeline;
     Context context;
     CUstream stream;
-    PathTracingSBT sbt;
+    SBT sbt;
     InstanceAccel scene_ias;
 
     Bitmap result_bitmap;

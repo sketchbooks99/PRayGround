@@ -1,13 +1,4 @@
 #include "util.cuh"
-#include <prayground/shape/plane.h>
-#include <prayground/shape/trianglemesh.h>
-#include <prayground/shape/sphere.h>
-#include <prayground/shape/cylinder.h>
-#include <prayground/core/ray.h>
-#include <prayground/core/onb.h>
-#include <prayground/core/bsdf.h>
-
-using namespace prayground;
 
 extern "C" __device__ void __closesthit__shadow()
 {

@@ -9,9 +9,8 @@
 
 using namespace prayground;
 
-using Spectrum = float3;
-using ConstantTexture = ConstantTexture_<Spectrum>;
-using CheckerTexture = CheckerTexture_<Spectrum>;
+using ConstantTexture = ConstantTexture_<Vec3f>;
+using CheckerTexture = CheckerTexture_<Vec3f>;
 
 struct AreaEmitterInfo 
 {

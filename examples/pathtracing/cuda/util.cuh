@@ -1,15 +1,11 @@
 #pragma once 
 
-#include <prayground/optix/cuda/device_util.cuh>
-#include <prayground/math/vec_math.h>
-#include <prayground/math/random.h>
+#include <prayground/prayground.h>
 #include "../params.h"
 
-namespace prayground {
+using SurfaceInteraction = SurfaceInteraction_<Vec3f>;
 
-extern "C" {
-__constant__ LaunchParams params;
-}
+extern "C" { __constant__ LaunchParams params; }
 
 INLINE DEVICE SurfaceInteraction* getSurfaceInteraction()
 {
@@ -20,29 +16,17 @@ INLINE DEVICE SurfaceInteraction* getSurfaceInteraction()
 
 // -------------------------------------------------------------------------------
 INLINE DEVICE void trace(
-    OptixTraversableHandle handle,
-    float3                 ray_origin,
-    float3                 ray_direction,
-    float                  tmin,
-    float                  tmax,
-    unsigned int           ray_type,
-    SurfaceInteraction*    si
-) 
+    OptixTraversableHandle handle, const Vec3f& ro, const Vec3f& rd, 
+    float tmin, float tamx, uint32_t ray_type, SurfaceInteraction* si) 
 {
     unsigned int u0, u1;
     packPointer( si, u0, u1 );
     optixTrace(
-        handle,
-        ray_origin,
-        ray_direction,
-        tmin,
-        tmax,
-        0.0f,                // rayTime
+        handle, ro, rd,
+        tmin, tmax, 0.0f, 
         OptixVisibilityMask( 1 ),
         OPTIX_RAY_FLAG_NONE,
-        ray_type,        
-        1,           
-        ray_type,        
+        ray_type, 1, ray_type,        
         u0, u1 );	
 }
 

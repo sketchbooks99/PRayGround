@@ -130,9 +130,9 @@ add_subdirectory(apps/<your-app-name>) # Add this line
 - [Denoiser](examples/denoiser/)
   - <img src=examples/denoiser/denoiser.png width=640>
 - [Spectrum](examples/spectrum/)
-  - <img src=examples/spectrum/spectrum.jpg width=640>
+  - <img src=examples/spectrum/spectrum.jpg width=320>
 - [Volume](examples/pgVolume/)
-  - <img src=examples/pgVolume/pgVolume.png width=640>
+  - <img src=examples/pgVolume/pgVolume.png width=320>
 
 # External libraries
 - [glad](https://github.com/Dav1dde/glad) ... For OpenGL features

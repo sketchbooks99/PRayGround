@@ -115,11 +115,13 @@ add_subdirectory(apps/<your-app-name>) # Add this line
 
 | [Single GAS](examples/single_gas/) | [Path tracing](examples/pathtracing/) | [Obj scene](examples/objscene/) |
 |-|-|-|
-| ![](examples/single_gas/single_gas.gif) | <img src=examples/pathtracing/screenshot.png width=320> | <img src=examples/objscene/objscene.jpg width=320> |
+| ![](examples/single_gas/single_gas.gif) | <img src=examples/pathtracing/screenshot.png width=640> | <img src=examples/objscene/objscene.jpg width=320/> |
 |[Ray Tracing: The Next Weekend](examples/rayTracingNextWeek/) | [Ray Tracing: The Rest Of Your Life](examples/rayTracingRestOfYourLife/) | [Dynamic update](examples/dynamic_update/) |
-| <img src=examples/rayTracingNextWeek/rtNextWeek.jpg width=320> | <img src=examples/rayTracingRestOfYourLife/rtRestOfYourLife.jpg width=320> | <img src=examples/motion_blur/motion_blur.png width=320> | 
-| [Denoiser](examples/denoiser/) | [Spectrum](examples/spectrum/) | [Volume](examples/pgVolume/) |
-| <img src=examples/denoiser/denoiser.png width=320> | <img src=examples/spectrum/spectrum.jpg width=320> | <img src=examples/pgVolume/pgVolume.png width=320> |
+| <img src=examples/rayTracingNextWeek/rtNextWeek.jpg width=320> | <img src=examples/rayTracingRestOfYourLife/rtRestOfYourLife.jpg width=320> | ![](examples/dynamic_update/dynamic_update.gif) | 
+| [Motion blur](examples/motion_blur/) | [Denoiser](examples/denoiser/) | [Spectrum](examples/spectrum/) | 
+| <img src=examples/motion_blur/motion_blur.png width=320> | <img src=examples/denoiser/denoiser.png width=320> | <img src=examples/spectrum/spectrum.jpg width=320> |
+| [Volume](examples/pgVolume/) | | | 
+| <img src=examples/pgVolume/pgVolume.png width=320> | | |
 
 - [Single GAS](examples/single_gas/)
   - ![](examples/single_gas/single_gas.gif)

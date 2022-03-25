@@ -486,7 +486,13 @@ extern "C" __device__ void __closesthit__grid()
     si->p = ray.at(ray.tmax);
     si->shading.n = Vec3f(0,1,0);   // arbitrary
     si->wo = ray.d;
-    si->surface_info = SurfaceInfo{ data->shape_data, data->surface_info.sample_id, SurfaceType::Medium };
+    si->surface_info = SurfaceInfo{ 
+        data->shape_data, 
+        data->surface_info.sample_id, 
+        data->surface_info.sample_id, 
+        data->surface_info.sample_id, 
+        SurfaceType::Medium 
+    };
     si->uv = Vec2f(0.5f);           // arbitrary
 }
 

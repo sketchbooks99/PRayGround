@@ -99,47 +99,19 @@ extern "C" __device__ void __raygen__pinhole()
             // Rough surface sampling with applying MIS
             else if ( +(si.surface_info.type & (SurfaceType::Rough | SurfaceType::Diffuse)) )
             {
-                uint32_t seed = si.seed;
-                AreaEmitterInfo light;
-                if (params.num_lights > 0) {
-                    const int light_id = rndInt(seed, 0, params.num_lights-1);
-                    light = params.lights[light_id];
-                }
-
-                const float weight = 1.0f / (params.num_lights + 1);
-
-                float pdf_val = 0.0f;
-
                 // Importance sampling according to the BSDF
                 optixDirectCall<void, SurfaceInteraction*, void*>(
                     si.surface_info.sample_id, &si, si.surface_info.data);
-
-                if (rnd(seed) < weight * params.num_lights) {
-                    // Light sampling
-                    Vec3f to_light = optixDirectCall<Vec3f, AreaEmitterInfo, SurfaceInteraction*>(
-                        light.sample_id, light, &si);
-                    si.wi = normalize(to_light);
-                }
-
-                for (int i = 0; i < params.num_lights; i++)
-                {
-                    // Evaluate PDF of area emitter
-                    float light_pdf = optixContinuationCall<float, AreaEmitterInfo, const Vec3f&, const Vec3f&>(
-                        params.lights[i].pdf_id, params.lights[i], si.p, si.wi);
-                    pdf_val += weight * light_pdf;
-                }
 
                 // Evaluate PDF depends on BSDF
                 float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*>(
                     si.surface_info.pdf_id, &si, si.surface_info.data);
 
-                pdf_val += weight * bsdf_pdf;
-
                 // Evaluate BSDF
                 Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
                     si.surface_info.bsdf_id, &si, si.surface_info.data);
 
-                throughput *= bsdf_val / pdf_val;
+                throughput *= bsdf_val / bsdf_pdf;
             }
 
             if (depth == 0) {
@@ -176,7 +148,7 @@ extern "C" __device__ void __raygen__pinhole()
     }
     params.accum_buffer[image_index] = Vec4f(accum_color, 1.0f);
     Vec3u color = make_color(reinhardToneMap(accum_color, params.white));
-    params.result_buffer[image_index] = Vec4f(color, 255);
+    params.result_buffer[image_index] = Vec4u(color, 255);
     params.normal_buffer[image_index] = normal;
     params.albedo_buffer[image_index] = albedo;
     params.depth_buffer[image_index] = p_depth == 0.0f ? 1.0f : p_depth;

@@ -8,6 +8,7 @@ extern "C" __device__ void __direct_callable__sample_diffuse(SurfaceInteraction*
         si->shading.n = faceforward(si->shading.n, -si->wo, si->shading.n);
 
     si->trace_terminate = false;
+    uint32_t seed = si->seed;
     Vec2f u = UniformSampler::get2D(seed);
     Vec3f wi = cosineSampleHemisphere(u[0], u[1]);
     Onb onb(si->shading.n);
@@ -128,9 +129,9 @@ extern "C" __device__ void __direct_callable__sample_disney(SurfaceInteraction* 
         const float alpha = fmaxf(0.001f, disney->roughness);
         const float alpha_cc = lerp(0.1f, 0.001f, disney->clearcoat_gloss);
         if (rnd(seed) < gtr2_ratio)
-            h = sampleGGX(z1, z2, alpha);
+            h = sampleGGX(u[0], u[1], alpha);
         else
-            h = sampleGTR1(z1, z2, alpha_cc);
+            h = sampleGTR1(u[0], u[1], alpha_cc);
         onb.inverseTransform(h);
         si->wi = normalize(reflect(si->wo, h));
     }
@@ -161,16 +162,16 @@ extern "C" __device__ Vec3f __continuation_callable__bsdf_disney(SurfaceInteract
     const float NdotV = dot(N, V);
     const float NdotL = dot(N, L);
 
+    const Vec3f base_color = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
+        disney->base.prg_id, si, disney->base.data);
+    si->albedo = base_color;
+
     if (NdotV <= 0.0f || NdotL <= 0.0f)
         return Vec3f(0.0f);
 
     const Vec3f H = normalize(V + L);
     const float NdotH = dot(N, H);
     const float LdotH /* = VdotH */ = dot(L, H);
-
-    const Vec3f base_color = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
-        disney->base.prg_id, si, disney->base.data);
-    si->albedo = base_color;
 
     // Diffuse term (diffuse, subsurface, sheen) ======================
     // Diffuse

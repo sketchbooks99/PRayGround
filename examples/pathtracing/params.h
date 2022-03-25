@@ -8,6 +8,9 @@
 
 using namespace prayground;
 
+using ConstantTexture = ConstantTexture_<Vec3f>;
+using CheckerTexture = CheckerTexture_<Vec3f>;
+
 struct AreaEmitterInfo
 {
     void* shape_data;

@@ -16,7 +16,7 @@ extern "C" __device__ void __miss__envmap()
     float sqrtd = sqrtf(discriminant);
     float t = (-half_b + sqrtd) / a;
 
-    float3 p = normalize(ray.at(t));
+    Vec3f p = normalize(ray.at(t));
 
     float phi = atan2(p.z(), p.x());
     float theta = asin(p.y());

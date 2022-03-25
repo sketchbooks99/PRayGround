@@ -898,7 +898,7 @@ extern "C" __device__ Vec3f __continuation_callable__bsdf_disney(SurfaceInteract
  */
 extern "C" __device__ float __direct_callable__pdf_disney(SurfaceInteraction* si, void* mat_data)
 {
-    const DisneyData* disney = reinterpret_cast<DisneyData*>(mat_data);
+    const Disney::Data* disney = reinterpret_cast<Disney::Data*>(mat_data);
 
     const Vec3f V = -si->wo;
     const Vec3f L = si->wi;

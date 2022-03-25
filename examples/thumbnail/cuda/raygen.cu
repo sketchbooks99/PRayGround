@@ -106,7 +106,7 @@ extern "C" __device__ void __raygen__pinhole()
                     si.surface_info.sample_id, &si, si.surface_info.data);
                 
                 // Evaluate bsdf
-                float3 bsdf_val = optixContinuationCall<float3, SurfaceInteraction*, void*>(
+                Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
                     si.surface_info.bsdf_id, &si, si.surface_info.data);
                 throughput *= bsdf_val;
             }
@@ -122,10 +122,8 @@ extern "C" __device__ void __raygen__pinhole()
                     si.surface_info.pdf_id, &si, si.surface_info.data);
 
                 // Evaluate BSDF
-                float3 bsdf_val = optixContinuationCall<float3, SurfaceInteraction*, void*>(
+                Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
                     si.surface_info.bsdf_id, &si, si.surface_info.data);
-
-                bsdf_pdf = fmaxf(math::eps, bsdf_pdf);
 
                 throughput *= bsdf_val / bsdf_pdf;
             }
@@ -228,7 +226,7 @@ extern "C" __device__ void __raygen__lens()
                     si.surface_info.sample_id, &si, si.surface_info.data);
                 
                 // Evaluate bsdf
-                float3 bsdf_val = optixContinuationCall<float3, SurfaceInteraction*, void*>(
+                Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
                     si.surface_info.bsdf_id, &si, si.surface_info.data);
                 throughput *= bsdf_val;
             }
@@ -244,7 +242,7 @@ extern "C" __device__ void __raygen__lens()
                     si.surface_info.pdf_id, &si, si.surface_info.data);
 
                 // Evaluate BSDF
-                float3 bsdf_val = optixContinuationCall<float3, SurfaceInteraction*, void*>(
+                Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
                     si.surface_info.bsdf_id, &si, si.surface_info.data);
 
                 throughput *= bsdf_val / bsdf_pdf;

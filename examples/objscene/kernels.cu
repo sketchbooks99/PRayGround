@@ -105,7 +105,7 @@ extern "C" __device__ void __raygen__pinhole()
                     si.surface_info.sample_id, &si, si.surface_info.data);
                 
                 // Evaluate bsdf
-                float3 bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
+                Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
                     si.surface_info.bsdf_id, &si, si.surface_info.data);
                 throughput *= bsdf_val;
             }
@@ -139,9 +139,9 @@ extern "C" __device__ void __raygen__pinhole()
 
     const uint32_t image_index = idx.y() * params.width + idx.x();
 
-    if (result.x != result.x) result.x = 0.0f;
-    if (result.y != result.y) result.y = 0.0f;
-    if (result.z != result.z) result.z = 0.0f;
+    if (result.x() != result.x()) result.x() = 0.0f;
+    if (result.y() != result.y()) result.y() = 0.0f;
+    if (result.z() != result.z()) result.z() = 0.0f;
 
     Vec3f accum_color = result / static_cast<float>(params.samples_per_launch);
 
@@ -152,8 +152,8 @@ extern "C" __device__ void __raygen__pinhole()
         accum_color = lerp(accum_color_prev, accum_color, a);
     }
     params.accum_buffer[image_index] = Vec4f(accum_color, 1.0f);
-    Vec3f color = make_color(reinhardToneMap(accum_color, params.white));
-    params.result_buffer[image_index] = Vec4f(color, 255);
+    Vec3u color = make_color(reinhardToneMap(accum_color, params.white));
+    params.result_buffer[image_index] = Vec4u(color, 255);
 }
 
 // Triangle mesh -------------------------------------------------------------------------------
@@ -173,10 +173,10 @@ extern "C" __device__ void __miss__envmap()
     float sqrtd = sqrtf(discriminant);
     float t = (-half_b + sqrtd) / a;
 
-    float3 p = normalize(ray.at(t));
+    Vec3f p = normalize(ray.at(t));
 
-    float phi = atan2(p.z, p.x);
-    float theta = asin(p.y);
+    float phi = atan2(p.z(), p.x());
+    float theta = asin(p.y());
     float u = 1.0f - (phi + math::pi) / (2.0f * math::pi);
     float v = 1.0f - (theta + math::pi / 2.0f) * math::inv_pi;
     si->uv = make_float2(u, v);
@@ -195,18 +195,18 @@ extern "C" __device__ void __closesthit__mesh()
     Ray ray = getWorldRay();
     
     const int prim_id = optixGetPrimitiveIndex();
-    const Face face = mesh_data->faces[prim_id];
+    const Face face = mesh->faces[prim_id];
     const float u = optixGetTriangleBarycentrics().x;
     const float v = optixGetTriangleBarycentrics().y;
 
-    const Vec2f texcoord0 = mesh_data->texcoords[face.texcoord_id.x()];
-    const Vec2f texcoord1 = mesh_data->texcoords[face.texcoord_id.y()];
-    const Vec2f texcoord2 = mesh_data->texcoords[face.texcoord_id.z()];
+    const Vec2f texcoord0 = mesh->texcoords[face.texcoord_id.x()];
+    const Vec2f texcoord1 = mesh->texcoords[face.texcoord_id.y()];
+    const Vec2f texcoord2 = mesh->texcoords[face.texcoord_id.z()];
     const Vec2f texcoords = (1-u-v)*texcoord0 + u*texcoord1 + v*texcoord2;
 
-    const Vec3f n0 = mesh_data->normals[face.normal_id.x()];
-	const Vec3f n1 = mesh_data->normals[face.normal_id.y()];
-	const Vec3f n2 = mesh_data->normals[face.normal_id.z()];
+    const Vec3f n0 = mesh->normals[face.normal_id.x()];
+	const Vec3f n1 = mesh->normals[face.normal_id.y()];
+	const Vec3f n2 = mesh->normals[face.normal_id.z()];
 
     // Linear interpolation of normal by barycentric coordinates.
     Vec3f local_n = (1.0f-u-v)*n0 + u*n1 + v*n2;
@@ -240,7 +240,7 @@ extern "C" __device__ void __direct_callable__sample_diffuse(SurfaceInteraction*
     si->seed = seed;
 }
 
-extern "C" __device__ float3 __continuation_callable__bsdf_diffuse(SurfaceInteraction* si, void* mat_data)
+extern "C" __device__ Vec3f __continuation_callable__bsdf_diffuse(SurfaceInteraction* si, void* mat_data)
 {
     const auto* diffuse = reinterpret_cast<Diffuse::Data*>(mat_data);
     const Vec3f albedo = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
@@ -265,7 +265,7 @@ extern "C" __device__ void __direct_callable__sample_dielectric(SurfaceInteracti
     float nt = dielectric->ior;  // ior specified 
     float cosine = dot(si->wo, si->shading.n);
     bool into = cosine < 0;
-    float3 outward_normal = into ? si->shading.n : -si->shading.n;
+    Vec3f outward_normal = into ? si->shading.n : -si->shading.n;
 
     if (!into) swap(ni, nt);
 
@@ -285,7 +285,7 @@ extern "C" __device__ void __direct_callable__sample_dielectric(SurfaceInteracti
     si->seed = seed;
 }
 
-extern "C" __device__ float3 __continuation_callable__bsdf_dielectric(SurfaceInteraction* si, void* mat_data)
+extern "C" __device__ Vec3f __continuation_callable__bsdf_dielectric(SurfaceInteraction* si, void* mat_data)
 {
     const auto* dielectric = reinterpret_cast<Dielectric::Data*>(mat_data);
     si->emission = Vec3f(0.0f);
@@ -311,7 +311,7 @@ extern "C" __device__ void __direct_callable__sample_conductor(SurfaceInteractio
     si->radiance_evaled = false;
 }
 
-extern "C" __device__ float3 __continuation_callable__bsdf_conductor(SurfaceInteraction* si, void* mat_data)
+extern "C" __device__ Vec3f __continuation_callable__bsdf_conductor(SurfaceInteraction* si, void* mat_data)
 {
     const auto* conductor = reinterpret_cast<Conductor::Data*>(mat_data);
     si->emission = Vec3f(0.0f);

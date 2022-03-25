@@ -2,7 +2,7 @@
 
 void App::initResultBufferOnDevice()
 {
-    params.subframe_index = 0;
+    params.frame = 0;
 
     result_bitmap.allocateDevicePtr();
     accum_bitmap.allocateDevicePtr();
@@ -485,9 +485,9 @@ void App::draw()
 
     ImGui::SliderFloat("White", &params.white, 0.01f, 1.0f);
     ImGui::Text("Camera info:");
-    ImGui::Text("Origin: %f %f %f", camera.origin().x, camera.origin().y, camera.origin().z);
-    ImGui::Text("Lookat: %f %f %f", camera.lookat().x, camera.lookat().y, camera.lookat().z);
-    ImGui::Text("Up: %f %f %f", camera.up().x, camera.up().y, camera.up().z);
+    ImGui::Text("Origin: %f %f %f", camera.origin().x(), camera.origin().y(), camera.origin().z());
+    ImGui::Text("Lookat: %f %f %f", camera.lookat().x(), camera.lookat().y(), camera.lookat().z());
+    ImGui::Text("Up: %f %f %f", camera.up().x(), camera.up().y(), camera.up().z());
 
     float farclip = camera.farClip();
     ImGui::SliderFloat("far clip", &farclip, 500.0f, 10000.0f);
@@ -498,7 +498,7 @@ void App::draw()
 
     ImGui::Text("Frame rate: %.3f ms/frame (%.2f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
     ImGui::Text("Render time: %.3f ms/frame", render_time * 1000.0f);
-    ImGui::Text("Subframe index: %d", params.subframe_index);
+    ImGui::Text("Subframe index: %d", params.frame);
 
     ImGui::End();
 

@@ -18,7 +18,7 @@ static INLINE DEVICE float2 getUV(const float3& p) {
 
 CALLABLE_FUNC void IS_FUNC(sphere)() {
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
-    const SphereData* sphere_data = reinterpret_cast<SphereData*>(data->shape_data);
+    const Sphere::Data* sphere_data = reinterpret_cast<Sphere::Data*>(data->shape_data);
 
     const float3 center = sphere_data->center;
     const float radius = sphere_data->radius;
@@ -53,7 +53,7 @@ CALLABLE_FUNC void IS_FUNC(sphere)() {
 
 CALLABLE_FUNC void CH_FUNC(sphere)() {
     const HitGroupData* data = reinterpret_cast<HitGroupData*>(optixGetSbtDataPointer());
-    const SphereData* sphere_data = reinterpret_cast<SphereData*>(data->shape_data);
+    const Sphere::Data* sphere_data = reinterpret_cast<Sphere::Data*>(data->shape_data);
 
     Ray ray = getWorldRay();
 

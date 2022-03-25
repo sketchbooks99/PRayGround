@@ -34,18 +34,22 @@
     #include <prayground/core/stream_helpers.h>
 #endif
 
+/// @todo Add PG_ prefix to all macros
+
 #ifdef __CUDACC__
     #define CALLABLE_FUNC extern "C" __device__
     #define INLINE __forceinline__
     #define HOSTDEVICE __device__ __host__
     #define HOST __host__
     #define DEVICE __device__
+    #define GLOBAL __global__
 #else
     #define CALLABLE_FUNC
     #define INLINE inline
     #define HOSTDEVICE
     #define HOST 
     #define DEVICE 
+    #define GLOBAL
 #endif
 
 #define RG_FUNC(name) __raygen__ ## name

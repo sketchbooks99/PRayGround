@@ -20,10 +20,10 @@ TriangleMesh::TriangleMesh(const fs::path& filename)
 }
 
 TriangleMesh::TriangleMesh(
-    const std::vector<float3>& vertices, 
+    const std::vector<Vec3f>& vertices, 
     const std::vector<Face>& faces, 
-    const std::vector<float3>& normals, 
-    const std::vector<float2>& texcoords, 
+    const std::vector<Vec3f>& normals, 
+    const std::vector<Vec2f>& texcoords, 
     const std::vector<uint32_t>& sbt_indices) 
     : m_vertices(vertices), 
       m_faces(faces), 
@@ -48,13 +48,13 @@ constexpr ShapeType TriangleMesh::type()
 // ------------------------------------------------------------------
 void TriangleMesh::copyToDevice() 
 {
-    MeshData data = this->deviceData();
+    Data data = this->getData();
 
     if (!d_data) 
-        CUDA_CHECK(cudaMalloc(&d_data, sizeof(MeshData)));
+        CUDA_CHECK(cudaMalloc(&d_data, sizeof(Data)));
     CUDA_CHECK(cudaMemcpy(
         d_data,
-        &data, sizeof(MeshData),
+        &data, sizeof(Data),
         cudaMemcpyHostToDevice
     ));
 }
@@ -87,7 +87,7 @@ OptixBuildInput TriangleMesh::createBuildInput()
     
     bi.type = static_cast<OptixBuildInputType>(this->type());
     bi.triangleArray.vertexFormat = OPTIX_VERTEX_FORMAT_FLOAT3;
-    bi.triangleArray.vertexStrideInBytes = sizeof(float3);
+    bi.triangleArray.vertexStrideInBytes = sizeof(Vec3f);
     bi.triangleArray.numVertices = static_cast<uint32_t>(m_vertices.size());
     bi.triangleArray.vertexBuffers = &d_vertices;
     bi.triangleArray.flags = triangle_input_flags;
@@ -115,12 +115,12 @@ AABB TriangleMesh::bound() const
 }
 
 // ------------------------------------------------------------------
-TriangleMesh::DataType TriangleMesh::deviceData()
+TriangleMesh::Data TriangleMesh::getData()
 {
-    CUDABuffer<float3> d_vertices_buf;
+    CUDABuffer<Vec3f> d_vertices_buf;
     CUDABuffer<Face> d_faces_buf;
-    CUDABuffer<float3> d_normals_buf;
-    CUDABuffer<float2> d_texcoords_buf;
+    CUDABuffer<Vec3f> d_normals_buf;
+    CUDABuffer<Vec2f> d_texcoords_buf;
     d_vertices_buf.copyToDevice(m_vertices);
     d_faces_buf.copyToDevice(m_faces);
     d_normals_buf.copyToDevice(m_normals);
@@ -132,7 +132,7 @@ TriangleMesh::DataType TriangleMesh::deviceData()
     d_texcoords = d_texcoords_buf.devicePtr();
 
     // device side pointer of mesh data
-    MeshData data = {
+    Data data = {
         .vertices = d_vertices_buf.deviceData(),
         .faces = d_faces_buf.deviceData(),
         .normals = d_normals_buf.deviceData(),
@@ -143,7 +143,7 @@ TriangleMesh::DataType TriangleMesh::deviceData()
 }
 
 // ------------------------------------------------------------------
-void TriangleMesh::addVertices(const std::vector<float3>& verts)
+void TriangleMesh::addVertices(const std::vector<Vec3f>& verts)
 {
     std::copy(verts.begin(), verts.end(), std::back_inserter(m_vertices));
 }
@@ -161,18 +161,18 @@ void TriangleMesh::addFaces(const std::vector<Face>& faces, const std::vector<ui
     std::copy(sbt_indices.begin(), sbt_indices.end(), std::back_inserter(m_sbt_indices));
 }
 
-void TriangleMesh::addNormals(const std::vector<float3>& normals)
+void TriangleMesh::addNormals(const std::vector<Vec3f>& normals)
 {
     std::copy(normals.begin(), normals.end(), std::back_inserter(m_normals));
 }
 
-void TriangleMesh::addTexcoords(const std::vector<float2>& texcoords)
+void TriangleMesh::addTexcoords(const std::vector<Vec2f>& texcoords)
 {
     std::copy(texcoords.begin(), texcoords.end(), std::back_inserter(m_texcoords));
 }
 
 // ------------------------------------------------------------------
-void TriangleMesh::addVertex(const float3& v)
+void TriangleMesh::addVertex(const Vec3f& v)
 {
     m_vertices.emplace_back(v);
 }
@@ -189,12 +189,12 @@ void TriangleMesh::addFace(const Face& face, uint32_t sbt_index)
     m_sbt_indices.emplace_back(sbt_index);
 }
 
-void TriangleMesh::addNormal(const float3& n)
+void TriangleMesh::addNormal(const Vec3f& n)
 {
     m_normals.emplace_back(n);
 }
 
-void TriangleMesh::addTexcoord(const float2& texcoord)
+void TriangleMesh::addTexcoord(const Vec2f& texcoord)
 {
     m_texcoords.emplace_back(texcoord);
 }
@@ -224,11 +224,11 @@ void TriangleMesh::load(const fs::path& filename)
         m_normals.resize(m_faces.size());
         for (size_t i = 0; i < m_faces.size(); i++)
         {
-            m_faces[i].normal_id = make_int3(i);
+            m_faces[i].normal_id = Vec3i(i);
 
-            auto p0 = m_vertices[m_faces[i].vertex_id.x];
-            auto p1 = m_vertices[m_faces[i].vertex_id.y];
-            auto p2 = m_vertices[m_faces[i].vertex_id.z];
+            auto p0 = m_vertices[m_faces[i].vertex_id.x()];
+            auto p1 = m_vertices[m_faces[i].vertex_id.y()];
+            auto p2 = m_vertices[m_faces[i].vertex_id.z()];
             auto N = cross(p1 - p0, p2 - p0);
             N = length(N) != 0.0f ? normalize(N) : N;
 
@@ -267,11 +267,11 @@ void TriangleMesh::loadWithMtl(
         m_normals.resize(m_faces.size());
         for (size_t i = 0; i < m_faces.size(); i++)
         {
-            m_faces[i].normal_id = make_int3(i);
+            m_faces[i].normal_id = Vec3i(i);
 
-            auto p0 = m_vertices[m_faces[i].vertex_id.x];
-            auto p1 = m_vertices[m_faces[i].vertex_id.y];
-            auto p2 = m_vertices[m_faces[i].vertex_id.z];
+            auto p0 = m_vertices[m_faces[i].vertex_id[0]];
+            auto p1 = m_vertices[m_faces[i].vertex_id[1]];
+            auto p2 = m_vertices[m_faces[i].vertex_id[2]];
             auto N = cross(p1 - p0, p2 - p0);
             N = length(N) != 0.0f ? normalize(N) : N;
 
@@ -294,21 +294,21 @@ void TriangleMesh::smooth()
     {
         m_faces[i].normal_id = m_faces[i].vertex_id;
 
-        auto p0 = m_vertices[m_faces[i].vertex_id.x];
-        auto p1 = m_vertices[m_faces[i].vertex_id.y];
-        auto p2 = m_vertices[m_faces[i].vertex_id.z];
+        auto p0 = m_vertices[m_faces[i].vertex_id.x()];
+        auto p1 = m_vertices[m_faces[i].vertex_id.y()];
+        auto p2 = m_vertices[m_faces[i].vertex_id.z()];
         auto N = cross(p1 - p0, p2 - p0);
         N = length(N) != 0.0f ? normalize(N) : N;
 
-        auto idx = m_faces[i].vertex_id.x;
+        auto idx = m_faces[i].vertex_id.x();
         m_normals[idx] += N;
         counts[idx]++;
 
-        idx = m_faces[i].vertex_id.y;
+        idx = m_faces[i].vertex_id.y();
         m_normals[idx] += N;
         counts[idx]++;
 
-        idx = m_faces[i].vertex_id.z;
+        idx = m_faces[i].vertex_id.z();
         m_normals[idx] += N;
         counts[idx]++;
     }

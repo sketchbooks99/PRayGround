@@ -1,10 +1,8 @@
 #pragma once
 
 #include <cuda_runtime.h>
-#include <optix.h>
-#include <prayground/math/vec_math.h>
 #include <prayground/core/interaction.h>
-#include <prayground/core/util.h>
+#include <prayground/optix/macros.h>
 
 #ifndef __CUDACC__
     #include <map>
@@ -12,10 +10,11 @@
 
 namespace prayground {
 
-#ifndef __CUDACC__
-
 // Abstract class to compute scattering properties.
 class Material {
+/// @note Make this class be dummy class on device kernels
+#ifndef __CUDACC__
+
 public:
     virtual ~Material() {}
 
@@ -25,15 +24,17 @@ public:
 
     virtual void free()
     {
-        if (d_data) CUDA_CHECK(cudaFree(d_data));
-        d_data = nullptr;
+        if (d_data)
+        {
+            CUDA_CHECK(cudaFree(d_data));
+            d_data = nullptr;
+        }
     }
     
     void* devicePtr() const { return d_data; }
 protected:
     void* d_data { nullptr };
-};
-
 #endif
+};
 
 } // ::prayground

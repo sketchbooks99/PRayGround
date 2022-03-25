@@ -7,13 +7,13 @@ float easeOutExpo(float x)
 
 void App::initResultBufferOnDevice()
 {
-    params.subframe_index = 0;
+    params.frame = 0;
 
     result_bitmap.allocateDevicePtr();
     accum_bitmap.allocateDevicePtr();
 
-    params.result_buffer = reinterpret_cast<uchar4*>(result_bitmap.devicePtr());
-    params.accum_buffer = reinterpret_cast<float4*>(accum_bitmap.devicePtr());
+    params.result_buffer = reinterpret_cast<Vec4u*>(result_bitmap.devicePtr());
+    params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bitmap.devicePtr());
 
     CUDA_SYNC_CHECK();
 }
@@ -21,7 +21,7 @@ void App::initResultBufferOnDevice()
 // ----------------------------------------------------------------
 void App::setup()
 {
-    pgSetFrameRate(15);
+    pgSetFrameRate(30);
 
     // OptixDeviceContextの生成
     stream = 0;
@@ -49,11 +49,7 @@ void App::setup()
     pipeline.enableMotionBlur();
 
     // OptiXのModuleをCUDAファイルから生成
-    Module raygen_module, miss_module, hitgroups_module, textures_module;
-    raygen_module = pipeline.createModuleFromCudaFile(context, "cuda/raygen.cu");
-    miss_module = pipeline.createModuleFromCudaFile(context, "cuda/miss.cu");
-    hitgroups_module = pipeline.createModuleFromCudaFile(context, "cuda/hitgroups.cu");
-    textures_module = pipeline.createModuleFromCudaFile(context, "cuda/textures.cu");
+    Module module = pipeline.createModuleFromCudaFile(context, "kernels.cu");
 
     // レンダリング結果を保存する用のBitmapを用意
     result_bitmap.allocate(PixelFormat::RGBA, pgGetWidth(), pgGetHeight());
@@ -62,33 +58,29 @@ void App::setup()
     accum_bitmap.allocateDevicePtr();
     params.width = result_bitmap.width();
     params.height = result_bitmap.height();
-    params.subframe_index = 0;
+    params.frame = 0;
     params.samples_per_launch = 4;
-    params.light.pos = make_float3(0.0f, 9.9f, 0.0f);
-    params.result_buffer = reinterpret_cast<uchar4*>(result_bitmap.devicePtr());
-    params.accum_buffer = reinterpret_cast<float4*>(accum_bitmap.devicePtr());
+    params.light =
+    {
+        .pos = Vec3f(0, 9.9f, 0), 
+        .color = Vec3f(1.0f), 
+        .intensity = 5.0f
+    };
+    params.result_buffer = reinterpret_cast<Vec4u*>(result_bitmap.devicePtr());
+    params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bitmap.devicePtr());
 
     // カメラの設定
-    camera.setOrigin(make_float3(0.0f, 0.0f, 40.0f));
-    camera.setLookat(make_float3(0.0f, 0.0f, 0.0f));
-    camera.setUp(make_float3(0.0f, 1.0f, 0.0f));
+    camera.setOrigin(Vec3f(0.0f, 0.0f, 40.0f));
+    camera.setLookat(Vec3f(0.0f, 0.0f, 0.0f));
+    camera.setUp(Vec3f(0.0f, 1.0f, 0.0f));
     camera.setFov(40.0f);
     camera.setAspect((float)params.width / params.height);
-    float3 U, V, W;
-    camera.UVWFrame(U, V, W);
 
     // Raygen プログラム用のデータ準備
-    ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, raygen_module, "__raygen__pinhole");
+    ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, module, "__raygen__pinhole");
     RaygenRecord raygen_record;
     raygen_prg.recordPackHeader(&raygen_record);
-    raygen_record.data.camera =
-    {
-        .origin = camera.origin(), 
-        .lookat = camera.lookat(), 
-        .U = U, 
-        .V = V, 
-        .W = W
-    };
+    raygen_record.data.camera = camera.getData();
     sbt.setRaygenRecord(raygen_record);
 
     // Callable関数とShader Binding TableにCallable関数用のデータを登録するLambda関数
@@ -102,17 +94,17 @@ void App::setup()
     };
 
     // テクスチャ用のCallableプログラム
-    uint32_t constant_prg_id = setupCallable(textures_module, "__direct_callable__constant", "");
-    uint32_t checker_prg_id = setupCallable(textures_module, "__direct_callable__checker", "");
+    uint32_t constant_prg_id = setupCallable(module, "__direct_callable__constant", "");
+    uint32_t checker_prg_id = setupCallable(module, "__direct_callable__checker", "");
 
     // 環境マッピング用のテクスチャとデータを準備
-    auto env_color = make_shared<ConstantTexture>(make_float3(0.5f), constant_prg_id);
+    auto env_color = make_shared<ConstantTexture>(Vec3f(0.5f), constant_prg_id);
     env_color->copyToDevice();
     auto env = EnvironmentEmitter{env_color};
     env.copyToDevice();
 
     // Miss プログラムの生成とSBTデータの用意
-    ProgramGroup miss_prg = pipeline.createMissProgram(context, miss_module, "__miss__envmap");
+    ProgramGroup miss_prg = pipeline.createMissProgram(context, module, "__miss__envmap");
     MissRecord miss_record;
     miss_prg.recordPackHeader(&miss_record);
     miss_record.data.env_data = env.devicePtr();
@@ -137,11 +129,7 @@ void App::setup()
         record.data = 
         {
             .shape_data = shape->devicePtr(),
-            .tex_data = 
-            {
-                .data = texture->devicePtr(), 
-                .prg_id = texture->programId()
-            }
+            .texture = texture->getData()
         };
 
         sbt.addHitgroupRecord(record);
@@ -156,54 +144,54 @@ void App::setup()
         instance_accel.addInstance(instance);
 
         instance_id++;
-        sbt_offset += MotionBlurSBT::NRay;
+        sbt_offset += SBT::NRay;
         sbt_idx++;
     };
 
-    auto plane_prg = pipeline.createHitgroupProgram(context, hitgroups_module, "__closesthit__plane", "__intersection__plane");
-    auto sphere_prg = pipeline.createHitgroupProgram(context, hitgroups_module, "__closesthit__sphere", "__intersection__sphere");
+    auto plane_prg = pipeline.createHitgroupProgram(context, module, "__closesthit__plane", "__intersection__plane");
+    auto sphere_prg = pipeline.createHitgroupProgram(context, module, "__closesthit__sphere", "__intersection__sphere");
 
     // Scene ==========================================================================
     // Cornel box用のテクスチャを用意
-    auto floor_checker = make_shared<CheckerTexture>(make_float3(0.9f), make_float3(0.3f), 10, checker_prg_id);
-    auto red = make_shared<ConstantTexture>(make_float3(0.8f, 0.05f, 0.05f), constant_prg_id);
-    auto green = make_shared<ConstantTexture>(make_float3(0.05f, 0.8f, 0.05f), constant_prg_id);
-    auto white = make_shared<ConstantTexture>(make_float3(0.8f), constant_prg_id);
+    auto floor_checker = make_shared<CheckerTexture>(Vec3f(0.9f), Vec3f(0.3f), 10, checker_prg_id);
+    auto red = make_shared<ConstantTexture>(Vec3f(0.8f, 0.05f, 0.05f), constant_prg_id);
+    auto green = make_shared<ConstantTexture>(Vec3f(0.05f, 0.8f, 0.05f), constant_prg_id);
+    auto white = make_shared<ConstantTexture>(Vec3f(0.8f), constant_prg_id);
 
     // Cornel box
     {
 
         ShapeInstance floor {
             ShapeType::Custom, 
-            make_shared<Plane>(make_float2(-10.0f, -10.0f), make_float2(10.0f, 10.0f)),
-            Matrix4f::translate(make_float3(0.0f, -10.0f, 0.0f))
+            make_shared<Plane>(Vec2f(-10.0f, -10.0f), Vec2f(10.0f, 10.0f)),
+            Matrix4f::translate(Vec3f(0.0f, -10.0f, 0.0f))
         };
 
         ShapeInstance ceiling {
             ShapeType::Custom, 
-            make_shared<Plane>(make_float2(-10.0f, -10.0f), make_float2(10.0f, 10.0f)),
-            Matrix4f::translate(make_float3(0.0f, 10.0f, 0.0f))
+            make_shared<Plane>(Vec2f(-10.0f, -10.0f), Vec2f(10.0f, 10.0f)),
+            Matrix4f::translate(Vec3f(0.0f, 10.0f, 0.0f))
         };
 
         ShapeInstance back {
             ShapeType::Custom, 
-            make_shared<Plane>(make_float2(-10.0f, -10.0f), make_float2(10.0f, 10.0f)),
+            make_shared<Plane>(Vec2f(-10.0f, -10.0f), Vec2f(10.0f, 10.0f)),
             // x軸中心に90度回転
-            Matrix4f::translate(make_float3(0.0f, 0.0f, -10.0f)) * Matrix4f::rotate(math::pi / 2, {1.0f, 0.0f, 0.0f}) 
+            Matrix4f::translate(Vec3f(0.0f, 0.0f, -10.0f)) * Matrix4f::rotate(math::pi / 2, {1.0f, 0.0f, 0.0f}) 
         };
-
+        
         ShapeInstance right_wall {
             ShapeType::Custom, 
-            make_shared<Plane>(make_float2(-10.0f, -10.0f), make_float2(10.0f, 10.0f)),
+            make_shared<Plane>(Vec2f(-10.0f, -10.0f), Vec2f(10.0f, 10.0f)),
             // z軸中心に90度回転
-            Matrix4f::translate(make_float3(10.0f, 0.0f, 0.0f)) * Matrix4f::rotate(math::pi / 2, {0.0f, 0.0f, 1.0f})
+            Matrix4f::translate(Vec3f(10.0f, 0.0f, 0.0f)) * Matrix4f::rotate(math::pi / 2, {0.0f, 0.0f, 1.0f})
         };
 
         ShapeInstance left_wall {
             ShapeType::Custom, 
-            make_shared<Plane>(make_float2(-10.0f, -10.0f), make_float2(10.0f, 10.0f)),
+            make_shared<Plane>(Vec2f(-10.0f, -10.0f), Vec2f(10.0f, 10.0f)),
             // z軸中心に90度回転
-            Matrix4f::translate(make_float3(-10.0f, 0.0f, 0.0f)) * Matrix4f::rotate(math::pi / 2, {0.0f, 0.0f, 1.0f})
+            Matrix4f::translate(Vec3f(-10.0f, 0.0f, 0.0f)) * Matrix4f::rotate(math::pi / 2, {0.0f, 0.0f, 1.0f})
         };
 
         setupShapeInstance(plane_prg, floor, floor_checker);
@@ -215,7 +203,7 @@ void App::setup()
 
     // Sphere (with motion blur)
     {
-        sphere_pos = sphere_prev_pos = make_float3(0.0f, 2.5f, 0.0f);
+        sphere_pos = sphere_prev_pos = Vec3f(0.0f, 2.5f, 0.0f);
 
         auto sphere = make_shared<Sphere>();
         sphere->setSbtIndex(sbt_idx);
@@ -226,11 +214,7 @@ void App::setup()
         record.data = 
         {
             .shape_data = sphere->devicePtr(),
-            .tex_data = 
-            {
-                .data = white->devicePtr(), 
-                .prg_id = white->programId()
-            }
+            .texture = white->getData()
         };
 
         sbt.addHitgroupRecord(record);
@@ -269,7 +253,7 @@ void App::setup()
         sphere2 = ShapeInstance{
             ShapeType::Custom,
             make_shared<Sphere>(),
-            Matrix4f::translate(sphere_pos - make_float3(0.0f, 8.5f, 0.0f)) * Matrix4f::scale(3.0f)
+            Matrix4f::translate(sphere_pos - Vec3f(0.0f, 8.5f, 0.0f)) * Matrix4f::scale(3.0f)
         };
         setupShapeInstance(sphere_prg, sphere2, white, true);
     }
@@ -298,7 +282,7 @@ void App::update()
     if (is_move) {
         float x = fmodf(time, 1.0f);
         sphere_prev_pos = sphere_pos;
-        sphere_pos.x = -5.0f + easeOutExpo(x) * 10.0f;
+        sphere_pos.x() = -5.0f + easeOutExpo(x) * 10.0f;
 
         Matrix4f begin_matrix = Matrix4f::translate(sphere_prev_pos) * Matrix4f::scale(3.0f);
         Matrix4f end_matrix = Matrix4f::translate(sphere_pos) * Matrix4f::scale(3.0f);
@@ -306,12 +290,12 @@ void App::update()
         matrix_transform.setMatrixMotionTransform(begin_matrix, end_matrix);
         matrix_transform.copyToDevice();
 
-        sphere2.setTransform(Matrix4f::translate(sphere_pos - make_float3(0.0f, 8.5f, 0.0f)) * Matrix4f::scale(3.0f));
+        sphere2.setTransform(Matrix4f::translate(sphere_pos - Vec3f(0.0f, 8.5f, 0.0f)) * Matrix4f::scale(3.0f));
     }
 
     instance_accel.update(context, stream);
 
-    params.subframe_index++;
+    params.frame++;
     d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);
 
     OPTIX_CHECK(optixLaunch(

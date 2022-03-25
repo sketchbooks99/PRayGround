@@ -6,58 +6,45 @@
 
 namespace prayground {
 
-struct Light
-{
-    float3 pos;
-};
+    using ConstantTexture = ConstantTexture_<Vec3f>;
+    using CheckerTexture = CheckerTexture_<Vec3f>;
 
-struct LaunchParams 
-{
-    unsigned int width, height;
-    uchar4* result_buffer;
-    float3* normal_buffer;
-    float3* albedo_buffer;
+    struct Light
+    {
+        Vec3f pos;
+    };
 
-    Light light;
+    struct LaunchParams
+    {
+        unsigned int width, height;
+        Vec4u* result_buffer;
+        Vec3f* normal_buffer;
+        Vec3f* albedo_buffer;
 
-    OptixTraversableHandle handle;
-};
+        Light light;
 
-struct CameraData 
-{
-    float3 origin; 
-    float3 lookat;
-    float3 U; 
-    float3 V;
-    float3 W;
-    float farclip;
-};
+        OptixTraversableHandle handle;
+    };
 
-struct RaygenData
-{
-    CameraData camera;
-};
+    struct RaygenData
+    {
+        Camera::Data camera;
+    };
 
-struct TextureData
-{
-    void* data;
-    unsigned int prg_id;
-};
+    struct HitgroupData
+    {
+        void* shape_data;
+        Texture::Data texture;
+    };
 
-struct HitgroupData
-{
-    void* shape_data;
-    TextureData tex_data;
-};
+    struct MissData
+    {
+        void* env_data;
+    };
 
-struct MissData
-{
-    void* env_data;
-};
+    struct EmptyData
+    {
 
-struct EmptyData
-{
+    };
 
-};
-
-} // ::prayground
+} // namespace prayground

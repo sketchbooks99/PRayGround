@@ -28,20 +28,23 @@
 
 #pragma once
 
-#include <vector_types.h>
-#include <prayground/math/vec_math.h>
 #include <prayground/optix/macros.h>
+#include <prayground/math/util.h>
 
 //__forceinline__ __device__ float dequantizeUnsigned8Bits( const unsigned char i )
 //{
 //    enum { N = (1 << 8) - 1 };
 //    return min((float)i / (float)N), 1.f)
 //}
-HOSTDEVICE INLINE unsigned char quantizeUnsigned8Bits( float x )
-{
-    x = clamp( x, 0.0f, 1.0f );
-    enum { N = (1 << 8) - 1, Np1 = (1 << 8) };
-    return (unsigned char)min((unsigned int)(x * (float)Np1), (unsigned int)N);
+namespace prayground {
+
+    HOSTDEVICE INLINE unsigned char quantizeUnsigned8Bits(float x)
+    {
+        x = clamp(x, 0.0f, 1.0f);
+        enum { N = (1 << 8) - 1, Np1 = (1 << 8) };
+        return (unsigned char)min((unsigned int)(x * (float)Np1), (unsigned int)N);
+    }
+
 }
 
 #define float3_as_args(u) \
@@ -49,6 +52,10 @@ HOSTDEVICE INLINE unsigned char quantizeUnsigned8Bits( float x )
     reinterpret_cast<unsigned int&>((u).y), \
     reinterpret_cast<unsigned int&>((u).z)
 
-#define float3_as_ints( u ) float_as_int( u.x ), float_as_int( u.y ), float_as_int( u.z )
+#define float3_as_ints( u ) __float_as_int( u.x ), __float_as_int( u.y ), __float_as_int( u.z )
 
-#define float2_as_ints( u ) float_as_int( u.x ), float_as_int( u.y )
+#define float2_as_ints( u ) __float_as_int( u.x ), __float_as_int( u.y )
+
+#define Vec3f_as_ints(u) __float_as_int(u.x()), __float_as_int(u.y()), __float_as_int(u.z())
+
+#define Vec2f_as_ints(u) __float_as_int(u.x()), __float_as_int(u.y())

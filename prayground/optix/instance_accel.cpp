@@ -1,5 +1,6 @@
 #include "instance_accel.h"
 #include <prayground/optix/macros.h>
+#include <prayground/math/util.h>
 #include <algorithm>
 
 namespace prayground {

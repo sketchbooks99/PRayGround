@@ -1,7 +1,7 @@
 #pragma once
 
 #include <optix.h>
-#include <prayground/math/vec_math.h>
+#include <prayground/math/vec.h>
 
 #ifndef __CUDACC__
 #include <prayground/core/stream_helpers.h>
@@ -11,38 +11,38 @@ namespace prayground {
 
 class AABB {
 public:
-    AABB() : m_min(make_float3(0.f)), m_max(make_float3(0.f)) {}
-    AABB(float3 min, float3 max) : m_min(min), m_max(max) {}
-    float3 min() const { return m_min; }
-    float3 max() const { return m_max; }
+    AABB() : m_min(Vec3f(0.f)), m_max(Vec3f(0.f)) {}
+    AABB(Vec3f min, Vec3f max) : m_min(min), m_max(max) {}
+    Vec3f min() const { return m_min; }
+    Vec3f max() const { return m_max; }
 
-    explicit operator OptixAabb() { return {m_min.x, m_min.y, m_min.z, m_max.x, m_max.y, m_max.z}; }
+    explicit operator OptixAabb() { return {m_min[0], m_min[1], m_min[2], m_max[0], m_max[1], m_max[2]}; }
 
     float surfaceArea() {
-        float dx = m_max.x - m_min.x;
-        float dy = m_max.y - m_max.y;
-        float dz = m_max.z - m_max.z;
+        float dx = m_max[0] - m_min[0];
+        float dy = m_max[1] - m_max[1];
+        float dz = m_max[2] - m_max[2];
         return 2*(dx*dy + dy*dz + dz*dx);
     }
 
     static AABB merge(AABB box0, AABB box1)
     {
-        float3 min_box = make_float3(
-            fmin(box0.min().x, box1.min().x),
-            fmin(box0.min().y, box1.min().y),
-            fmin(box0.min().z, box1.min().z)
+        Vec3f min_box = Vec3f(
+            fmin(box0.min()[0], box1.min()[0]),
+            fmin(box0.min()[1], box1.min()[1]),
+            fmin(box0.min()[2], box1.min()[2])
         );
 
-        float3 max_box = make_float3(
-            fmax(box0.max().x, box1.max().x),
-            fmax(box0.max().y, box1.max().y),
-            fmax(box0.max().z, box1.max().z)
+        Vec3f max_box = Vec3f(
+            fmax(box0.max()[0], box1.max()[0]),
+            fmax(box0.max()[1], box1.max()[1]),
+            fmax(box0.max()[2], box1.max()[2])
         );
 
         return AABB(min_box, max_box);
     }
 private:
-    float3 m_min, m_max;
+    Vec3f m_min, m_max;
 };
 
 #ifndef __CUDACC__

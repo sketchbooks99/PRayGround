@@ -1,8 +1,4 @@
 #include "util.cuh"
-#include <prayground/shape/plane.h>
-#include <prayground/shape/sphere.h>
-#include <prayground/shape/trianglemesh.h>
-#include <prayground/core/ray.h>
 
 using namespace prayground;
 

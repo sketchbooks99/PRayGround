@@ -26,17 +26,16 @@ void Diffuse::copyToDevice()
     if (!m_texture->devicePtr())
         m_texture->copyToDevice();
 
-    DiffuseData data {
-        .tex_data = m_texture->devicePtr(),
-        .twosided = m_twosided,
-        .tex_program_id = m_texture->programId()
+    Data data {
+        .texture = m_texture->getData(),
+        .twosided = m_twosided
     };
 
     if (!d_data)
-        CUDA_CHECK(cudaMalloc(&d_data, sizeof(DiffuseData)));
+        CUDA_CHECK(cudaMalloc(&d_data, sizeof(Data)));
     CUDA_CHECK(cudaMemcpy(
         d_data,
-        &data, sizeof(DiffuseData), 
+        &data, sizeof(Data), 
         cudaMemcpyHostToDevice
     ));
 }

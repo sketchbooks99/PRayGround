@@ -8,6 +8,9 @@
 
 using namespace prayground;
 
+using ConstantTexture = ConstantTexture_<Vec3f>;
+using CheckerTexture = CheckerTexture_<Vec3f>;
+
 struct AreaEmitterInfo
 {
     void* shape_data;
@@ -20,30 +23,21 @@ struct AreaEmitterInfo
 
 struct LaunchParams 
 {
-    unsigned int width, height;
-    unsigned int samples_per_launch;
-    unsigned int max_depth;
-    int subframe_index;
-    uchar4* result_buffer;
-    float4* accum_buffer;
+    uint32_t width;
+    uint32_t height;
+    uint32_t samples_per_launch;
+    uint32_t max_depth;
+    int frame;
+    Vec4u* result_buffer;
+    Vec4f* accum_buffer;
     OptixTraversableHandle handle;
     
     float white;
 };
 
-struct CameraData 
-{
-    float3 origin; 
-    float3 lookat;
-    float3 U; 
-    float3 V;
-    float3 W;
-    float farclip;
-};
-
 struct RaygenData
 {
-    CameraData camera;
+    Camera::Data camera;
 };
 
 struct HitgroupData

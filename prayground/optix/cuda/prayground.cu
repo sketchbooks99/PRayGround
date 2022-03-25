@@ -29,7 +29,7 @@
 #include <optix.h>
 #include <cuda/random.h>
 
-#include <prayground/core/color.h>
+#include <prayground/core/spectrum.h>
 #include <prayground/prayground.h>
 
 namespace prayground {

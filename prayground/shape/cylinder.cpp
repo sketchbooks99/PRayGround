@@ -26,13 +26,13 @@ constexpr ShapeType Cylinder::type()
 // ------------------------------------------------------------------
 void Cylinder::copyToDevice()
 {
-    CylinderData data = this->deviceData();
+    Data data = this->getData();
 
     if (!d_data) 
-        CUDA_CHECK( cudaMalloc( &d_data, sizeof(CylinderData) ) );
+        CUDA_CHECK( cudaMalloc( &d_data, sizeof(Data) ) );
     CUDA_CHECK( cudaMemcpy(
         d_data, 
-        &data, sizeof(CylinderData), 
+        &data, sizeof(Data), 
         cudaMemcpyHostToDevice
     ));
 }
@@ -55,21 +55,15 @@ void Cylinder::free()
 AABB Cylinder::bound() const 
 {
     return AABB( 
-        -make_float3(m_radius, m_height / 2.0f, m_radius),
-         make_float3(m_radius, m_height / 2.0f, m_radius)
+        -Vec3f(m_radius, m_height / 2.0f, m_radius),
+         Vec3f(m_radius, m_height / 2.0f, m_radius)
     );
 }
 
 // ------------------------------------------------------------------
-Cylinder::DataType Cylinder::deviceData() const 
+Cylinder::Data Cylinder::getData() const 
 {
-    CylinderData data = 
-    {
-        .radius = m_radius,
-        .height = m_height
-    };
-
-    return data;
+    return { m_radius, m_height };
 }
 
 } // ::prayground

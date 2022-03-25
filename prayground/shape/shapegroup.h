@@ -15,9 +15,9 @@ namespace prayground {
 template <class T>
 concept DerivedShape = requires(T x)
 {
-    std::derived_from<T, Shape>;    // Shapeの派生クラスであること
-    x.deviceData();                 // devideData()呼び出しが可能なこと
-    typename T::DataType;           // DataTypeがalias宣言されていること
+    std::derived_from<T, Shape>; // Shapeの派生クラス
+    x.getData();                 // getData()呼び出しが可能
+    typename T::Data;            // Data構造体を持っている
 };
 
 // 力技感が否めない...
@@ -59,7 +59,7 @@ public:
 
             bi.type = static_cast<OptixBuildInputType>(Type);
             bi.triangleArray.vertexFormat = OPTIX_VERTEX_FORMAT_FLOAT3;
-            bi.triangleArray.vertexStrideInBytes = sizeof(float3);
+            bi.triangleArray.vertexStrideInBytes = sizeof(Vec3f);
             bi.triangleArray.numVertices = m_mesh_input.num_vertices;
             bi.triangleArray.vertexBuffers = m_mesh_input.d_vertices;
             bi.triangleArray.flags = triangle_input_flags.data();
@@ -118,9 +118,9 @@ public:
     {
         if constexpr (Type == ShapeType::Mesh)
         {
-            std::vector<float3> vertices;
-            std::vector<float3> normals;
-            std::vector<float2> texcoords;
+            std::vector<Vec3f> vertices;
+            std::vector<Vec3f> normals;
+            std::vector<Vec2f> texcoords;
             std::vector<Face> faces;
             int32_t num_verts = 0;
             int32_t num_normals = 0;
@@ -132,9 +132,9 @@ public:
                 std::copy(mesh.texcoords().begin(), mesh.texcoords().end(), std::back_inserter(texcoords));
                 std::transform(mesh.faces().begin(), mesh.faces().end(), std::back_inserter(faces),
                     [&](Face face) { return Face{
-                        .vertex_id = face.vertex_id + make_int3(num_verts),
-                        .normal_id = face.normal_id + make_int3(num_normals),
-                        .texcoord_id = face.texcoord_id + make_int3(num_texcoords),
+                        .vertex_id = face.vertex_id + Vec3i(num_verts),
+                        .normal_id = face.normal_id + Vec3i(num_normals),
+                        .texcoord_id = face.texcoord_id + Vec3i(num_texcoords)
                     };  });
                 
                 num_verts += (uint32_t)mesh.vertices().size();
@@ -145,12 +145,12 @@ public:
             // GPU側にMeshのデータをコピー
             // tmp_mesh.copyToDevice()としても、tmp_meshの保持するd_dataの寿命が切れる可能性があるため、それは避ける
             TriangleMesh tmp_mesh{vertices, faces, normals, texcoords};
-            MeshData data = tmp_mesh.deviceData();
+            TriangleMesh::Data data = tmp_mesh.getData();
             if (!d_data) 
-                CUDA_CHECK(cudaMalloc(&d_data, sizeof(MeshData)));
+                CUDA_CHECK(cudaMalloc(&d_data, sizeof(TriangleMesh::Data)));
             CUDA_CHECK(cudaMemcpy(
                 d_data,
-                &data, sizeof(MeshData),
+                &data, sizeof(TriangleMesh::Data),
                 cudaMemcpyHostToDevice
             ));
 
@@ -164,15 +164,15 @@ public:
         }
         else if constexpr (Type == ShapeType::Custom)
         {
-            std::vector<typename ShapeT::DataType> device_data;
+            std::vector<typename ShapeT::Data> device_data;
             for (auto& custom : m_shapes)
-                device_data.push_back(custom.deviceData());
+                device_data.push_back(custom.getData());
 
             if (!d_data)
-                CUDA_CHECK(cudaMalloc(&d_data, sizeof(typename ShapeT::DataType) * device_data.size()));
+                CUDA_CHECK(cudaMalloc(&d_data, sizeof(typename ShapeT::Data) * device_data.size()));
             CUDA_CHECK(cudaMemcpy(
                 d_data, 
-                device_data.data(), sizeof(typename ShapeT::DataType) * device_data.size(),
+                device_data.data(), sizeof(typename ShapeT::Data) * device_data.size(),
                 cudaMemcpyHostToDevice
             ));
         }

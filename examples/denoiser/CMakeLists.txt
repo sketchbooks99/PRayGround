@@ -9,6 +9,7 @@ PRAYGROUND_add_executalbe(denoiser target_name
     cuda/surfaces.cu 
     cuda/textures.cu 
     cuda/util.cuh
+    kernels.cu
 )
 
 target_compile_definitions(

@@ -1,54 +1,45 @@
 #pragma once 
 
 #include <optix.h>
-#include <prayground/math/vec_math.h>
+#include <prayground/math/vec.h>
 #include <prayground/optix/sbt.h>
+#include <prayground/core/camera.h>
 
-namespace prayground {
+using namespace prayground;
+
+using ConstantTexture = ConstantTexture_<Vec3f>;
+using CheckerTexture = CheckerTexture_<Vec3f>;
 
 struct Light 
 {
-    float3 pos;
+    Vec3f pos;
+    Vec3f color;
+    float intensity;
 };
 
 struct LaunchParams 
 {
-    unsigned int width, height;
-    uchar4* result_buffer;
-    float4* accum_buffer;
-    unsigned int subframe_index;
-    unsigned int samples_per_launch;
+    uint32_t width;
+    uint32_t height;
+    Vec4u* result_buffer;
+    Vec4f* accum_buffer;
+    uint32_t frame;
+    uint32_t samples_per_launch;
 
     Light light;
 
     OptixTraversableHandle handle;
 };
 
-struct CameraData 
-{
-    float3 origin; 
-    float3 lookat;
-    float3 U; 
-    float3 V;
-    float3 W;
-    float farclip;
-};
-
 struct RaygenData
 {
-    CameraData camera;
-};
-
-struct TextureData
-{
-    void* data; 
-    unsigned int prg_id;
+    Camera::Data camera;
 };
 
 struct HitgroupData
 {
     void* shape_data;
-    TextureData tex_data;
+    Texture::Data texture;
 };
 
 struct MissData
@@ -60,5 +51,3 @@ struct EmptyData
 {
 
 };
-
-} // ::prayground

@@ -3,11 +3,7 @@ PRAYGROUND_add_executalbe(single_gas target_name
     app.cpp 
     app.h
     params.h
-    cuda/hitgroups.cu
-    cuda/miss.cu
-    cuda/raygen.cu
-    cuda/textures.cu
-    cuda/util.cuh
+    kernels.cu
 )
 
 target_compile_definitions(

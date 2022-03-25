@@ -1,7 +1,7 @@
 #pragma once
 
 #include <prayground/math/random.h>
-#include <prayground/math/vec_math.h>
+#include <prayground/math/vec.h>
 
 namespace prayground {
 
@@ -23,7 +23,7 @@ INLINE HOSTDEVICE float trilinerInterop(float c[2][2][2], float u, float v, floa
     return accum;
 }
 
-INLINE HOSTDEVICE float perlinInterop(float3 c[2][2][2], float u, float v, float w)
+INLINE HOSTDEVICE float perlinInterop(Vec3f c[2][2][2], float u, float v, float w)
 {
     float uu = u*u*(3-2*u);
     float vv = v*v*(3-2*v);
@@ -33,7 +33,7 @@ INLINE HOSTDEVICE float perlinInterop(float3 c[2][2][2], float u, float v, float
     for(int i=0; i<2; i++) {
         for(int j=0; j<2; j++) {
             for(int k=0; k<2; k++) {
-                float3 weight_v{u-i, v-j, w-k};
+                Vec3f weight_v{u-i, v-j, w-k};
                 accum += (i*uu + (1-i) * (1-uu))
                         * (j*vv + (1-j) * (1-vv))
                         * (k*ww + (1-k) * (1-ww))
@@ -50,12 +50,12 @@ public:
 
     HOSTDEVICE void setSeed(unsigned int seed);
 
-    HOSTDEVICE float turb(const float3& p, int depth=7) const;
+    HOSTDEVICE float turb(const Vec3f& p, int depth=7) const;
 
-    HOSTDEVICE float noise(const float3& p) const;
+    HOSTDEVICE float noise(const Vec3f& p) const;
 private:
     static const int POINT_COUNT = 256;
-    float3* m_rnd_vec;
+    Vec3f* m_rnd_vec;
     int* m_perm_x;
     int* m_perm_y;
     int* m_perm_z;
@@ -77,7 +77,7 @@ private:
     {
         for (int i = n-1; i > 0; i--)
         {
-            int target = rnd_int(seed, 0, i);
+            int target = rndInt(seed, 0, i);
             int tmp = p[i];
             p[i] = p[target];
             p[target] = tmp;
@@ -88,9 +88,9 @@ private:
 // Definitions
 INLINE HOSTDEVICE PerlinNoise::PerlinNoise(unsigned int seed) : m_seed{seed}
 {
-    m_rnd_vec = new float3[POINT_COUNT];
+    m_rnd_vec = new Vec3f[POINT_COUNT];
     for (int i = 0; i < POINT_COUNT; i++) {
-        const float3 rnd_v = make_float3(rnd(seed), rnd(seed), rnd(seed)) * 2.0f - 1.0f;
+        const Vec3f rnd_v = Vec3f(rnd(seed), rnd(seed), rnd(seed)) * 2.0f - 1.0f;
         m_rnd_vec[i] = normalize(rnd_v);
     }
 
@@ -104,10 +104,10 @@ void INLINE HOSTDEVICE PerlinNoise::setSeed(unsigned int seed)
     m_seed = seed;
 }
 
-float INLINE HOSTDEVICE PerlinNoise::turb(const float3& p, int depth) const 
+float INLINE HOSTDEVICE PerlinNoise::turb(const Vec3f& p, int depth) const 
 {
     float accum = 0.0f;
-    float3 tmp_p = p;
+    Vec3f tmp_p = p;
     float weight = 1.0f;
 
     for (int i = 0; i < depth; i++)
@@ -119,16 +119,16 @@ float INLINE HOSTDEVICE PerlinNoise::turb(const float3& p, int depth) const
     return fabs(accum);
 }
 
-float INLINE HOSTDEVICE PerlinNoise::noise(const float3& p) const 
+float INLINE HOSTDEVICE PerlinNoise::noise(const Vec3f& p) const 
 {
-    float u = p.x - floor(p.x);
-    float v = p.y - floor(p.y);
-    float w = p.z - floor(p.z);
+    float u = p.x() - floor(p.x());
+    float v = p.y() - floor(p.y());
+    float w = p.z() - floor(p.z());
 
-    int i = static_cast<int>(floor(p.x));
-    int j = static_cast<int>(floor(p.y));
-    int k = static_cast<int>(floor(p.z));
-    float3 c[2][2][2];
+    int i = static_cast<int>(floor(p.x()));
+    int j = static_cast<int>(floor(p.y()));
+    int k = static_cast<int>(floor(p.z()));
+    Vec3f c[2][2][2];
 
     for(int di=0; di<2; di++) {
         for(int dj=0; dj<2; dj++) {

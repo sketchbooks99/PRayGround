@@ -38,8 +38,8 @@ Window::~Window()
 void Window::setup()
 {
     m_events = std::make_unique<WindowEvents>();
-    m_events->inputStates.mousePosition = make_float2(0.0f);
-    m_events->inputStates.mousePreviousPosition = make_float2(0.0f);
+    m_events->inputStates.mousePosition = Vec2f(0.0f);
+    m_events->inputStates.mousePreviousPosition = Vec2f(0.0f);
 
     // Initialize GLFW
     if (!glfwInit())
@@ -203,7 +203,7 @@ void Window::_mouseButtonCallback(GLFWwindow* window, int button, int action, in
     double mouse_x, mouse_y;
     glfwGetCursorPos(window, &mouse_x, &mouse_y);
 
-    current_window->events().inputStates.mousePosition = make_float2(mouse_x, mouse_y);
+    current_window->events().inputStates.mousePosition = Vec2f(mouse_x, mouse_y);
     current_window->events().inputStates.mouseButton = button;
 
     if (action == GLFW_PRESS)
@@ -223,7 +223,7 @@ void Window::_cursorPosCallback(GLFWwindow* window, double xpos, double ypos)
 {
     Window* current_window = _getCurrent(window);
 
-    const float2 mouse_pos = make_float2(xpos, ypos);
+    const Vec2f mouse_pos = Vec2f(xpos, ypos);
     current_window->events().inputStates.mousePosition = mouse_pos;
 
     if (current_window->events().inputStates.mouseButtonPressed)

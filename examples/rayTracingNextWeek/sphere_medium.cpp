@@ -3,12 +3,12 @@
 namespace prayground {
 
 SphereMedium::SphereMedium()
-: m_center(make_float3(0.0f)), m_radius(1.0f), m_density(0.001f)
+: m_center(Vec3f(0.0f)), m_radius(1.0f), m_density(0.001f)
 {
 
 }
 
-SphereMedium::SphereMedium(const float3& center, const float radius, const float density)
+SphereMedium::SphereMedium(const Vec3f& center, const float radius, const float density)
 : m_center(center), m_radius(radius), m_density(density)
 {
 
@@ -21,13 +21,10 @@ constexpr ShapeType SphereMedium::type()
 
 void SphereMedium::copyToDevice() 
 {
-    SphereMediumData data = this->deviceData();
+    auto data = this->getData();
     if (!d_data)
-        CUDA_CHECK(cudaMalloc(&d_data, sizeof(SphereMediumData)));
-    CUDA_CHECK(cudaMemcpy(
-        d_data, &data, sizeof(SphereMediumData),
-        cudaMemcpyHostToDevice
-    ));
+        CUDA_CHECK(cudaMalloc(&d_data, sizeof(Data)));
+    CUDA_CHECK(cudaMemcpy(d_data, &data, sizeof(Data), cudaMemcpyHostToDevice));
 }
 
 void SphereMedium::free() 
@@ -47,7 +44,7 @@ AABB SphereMedium::bound() const
     return AABB(m_center - m_radius, m_center + m_radius);
 }
 
-const float3& SphereMedium::center() const
+const Vec3f& SphereMedium::center() const
 {
     return m_center;
 }
@@ -57,15 +54,9 @@ const float& SphereMedium::radius() const
     return m_radius;
 }
 
-SphereMedium::DataType SphereMedium::deviceData() const
+SphereMedium::Data SphereMedium::getData() const
 {
-    SphereMediumData data = 
-    {
-        .center = m_center,
-        .radius = m_radius,
-        .density = m_density
-    };
-    return data;
+    return { m_center, m_radius, m_density };
 }
 
 } // ::prayground

@@ -2,24 +2,22 @@
 
 #ifndef __CUDACC__
 #include <memory>
+#endif 
+
 #include <prayground/core/texture.h>
 #include <prayground/core/emitter.h>
 #include <prayground/core/interaction.h>
-#endif 
 
 namespace prayground {
 
-struct AreaEmitterData {
-    void* tex_data;
-    float intensity;
-    bool twosided;
-    unsigned int tex_program_id;
-};
-
-#ifndef __CUDACC__
-
 class AreaEmitter final : public Emitter {
 public:
+    struct Data {
+        Texture::Data texture;
+        float intensity;
+        bool twosided;
+    };
+#ifndef __CUDACC__
     AreaEmitter(const std::shared_ptr<Texture>& texture, float intensity = 1.0f, bool twosided = true);
 
     SurfaceType surfaceType() const;
@@ -34,12 +32,13 @@ public:
 
     void setIntensity(float intensity);
     float intensity() const;
+
+    Data getData() const;
 private:
     std::shared_ptr<Texture> m_texture;
     float m_intensity;
     bool m_twosided;
+#endif
 };
-
-#endif // __CUDACC__
 
 }

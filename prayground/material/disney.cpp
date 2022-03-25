@@ -39,8 +39,8 @@ void Disney::copyToDevice()
     if (!m_base->devicePtr())
         m_base->copyToDevice();
 
-    DisneyData data = {
-        .base_tex_data = m_base->devicePtr(),
+    Data data = {
+        .base = m_base->getData(),
         .subsurface = m_subsurface,
         .metallic = m_metallic, 
         .specular = m_specular, 
@@ -51,15 +51,14 @@ void Disney::copyToDevice()
         .sheen_tint = m_sheen_tint,
         .clearcoat = m_clearcoat,
         .clearcoat_gloss = m_clearcoat_gloss,
-        .twosided = m_twosided,
-        .base_program_id = m_base->programId()
+        .twosided = m_twosided
     };
 
     if (!d_data)
-        CUDA_CHECK(cudaMalloc(&d_data, sizeof(DisneyData)));
+        CUDA_CHECK(cudaMalloc(&d_data, sizeof(Data)));
     CUDA_CHECK(cudaMemcpy(
         d_data,
-        &data, sizeof(DisneyData),
+        &data, sizeof(Data),
         cudaMemcpyHostToDevice
     ));
 }

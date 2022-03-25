@@ -7,12 +7,12 @@ namespace prayground {
 
 // ------------------------------------------------------------------
 Box::Box()
-: m_min(make_float3(-1.0f)), m_max(make_float3(1.0f))
+: m_min(Vec3f(-1.0f)), m_max(Vec3f(1.0f))
 {
 
 }
 
-Box::Box(const float3& min, const float3& max)
+Box::Box(const Vec3f& min, const Vec3f& max)
 : m_min(min), m_max(max)
 {
 
@@ -27,11 +27,11 @@ constexpr ShapeType Box::type()
 // ------------------------------------------------------------------
 void Box::copyToDevice()
 {
-    BoxData data = this->deviceData();
+    Data data = this->getData();
     if (!d_data)
-        CUDA_CHECK(cudaMalloc(&d_data, sizeof(BoxData)));
+        CUDA_CHECK(cudaMalloc(&d_data, sizeof(Data)));
     CUDA_CHECK(cudaMemcpy(
-        d_data, &data, sizeof(BoxData), cudaMemcpyHostToDevice
+        d_data, &data, sizeof(Data), cudaMemcpyHostToDevice
     ));
 }
 
@@ -55,25 +55,19 @@ AABB Box::bound() const
     return AABB(m_min, m_max);
 }
 
-const float3& Box::min() const
+const Vec3f& Box::min() const
 {
     return m_min;
 }
-const float3& Box::max() const
+const Vec3f& Box::max() const
 {
     return m_max;
 }
 
 // ------------------------------------------------------------------
-Box::DataType Box::deviceData() const 
+Box::Data Box::getData() const 
 {
-    BoxData data = 
-    {
-        .min = m_min,
-        .max = m_max
-    };
-
-    return data;
+    return { m_min, m_max };
 }
 
 } // ::prayground

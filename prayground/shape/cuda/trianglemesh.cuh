@@ -44,10 +44,3 @@ CALLABLE_FUNC void CH_FUNC(mesh)()
         data->surface_func_base_id
     };
 }
-
-// -------------------------------------------------------------------------------
-CALLABLE_FUNC void CH_FUNC(mesh_occlusion)()
-{
-	setPayloadOcclusion(true);
-}
-

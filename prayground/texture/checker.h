@@ -3,35 +3,71 @@
 
 namespace prayground {
 
-struct CheckerTextureData {
-    float4 color1;
-    float4 color2;
-    float scale;
-};
+template <typename T>
+class CheckerTexture_ final : public Texture {
+public:
+    using DataType = T;
+    struct Data
+    {
+        T color1;
+        T color2;
+        float scale;
+    };
 
 #ifndef __CUDACC__
-class CheckerTexture final : public Texture {
-public:
-    CheckerTexture(const float3& c1, const float3& c2, float s, int prg_id);
-    CheckerTexture(const float4& c1, const float4& c2, float s, int prg_id);
+    CheckerTexture_(const T& c1, const T& c2, float s, int prg_id)
+        : Texture(prg_id), m_color1(c1), m_color2(c2), m_scale(s)
+    {}
 
-    void setColor1(const float3& c1);
-    void setColor1(const float4& c1);
-    float4 color1() const;
+    void setColor1(const T& c1)
+    {
+        m_color1 = c1;
+    }
+    T color1() const
+    {
+        return m_color1;
+    }
 
-    void setColor2(const float3& c2);
-    void setColor2(const float4& c2);
-    float4 color2() const;
+    void setColor2(const T& c2)
+    {
+        m_color2 = c2;
+    }
+    T color2() const
+    {
+        return m_color2;
+    }
 
-    void setScale(const float s);
-    float scale() const;
+    void setScale(const float& s)
+    {
+        m_scale = s;
+    }
+    float scale() const
+    {
+        return m_scale;
+    }
 
-    void copyToDevice() override;
+    void copyToDevice() override
+    {
+        Data data =
+        {
+            m_color1, 
+            m_color2, 
+            m_scale
+        };
+
+        if (!d_data) 
+            CUDA_CHECK(cudaMalloc(&d_data, sizeof(Data)));
+        CUDA_CHECK(cudaMemcpy(
+            d_data,
+            &data, sizeof(Data),
+            cudaMemcpyHostToDevice
+        ));
+    }
 private:
-    float4 m_color1, m_color2;
+    T m_color1, m_color2;
     float m_scale;
-}; 
-
 #endif // __CUDACC__
+
+};
 
 }

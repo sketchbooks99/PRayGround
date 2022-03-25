@@ -1,25 +1,23 @@
 #pragma once
 
 #ifndef __CUDACC__
-#include <prayground/core/shape.h>
 #include <prayground/core/cudabuffer.h>
 #endif
 
+#include <prayground/core/shape.h>
+
 namespace prayground {
 
-struct PlaneData 
-{
-    float2 min;
-    float2 max;
-};
-
-#ifndef __CUDACC__
 class Plane final : public Shape {
 public:
-    using DataType = PlaneData;
+    struct Data {
+        Vec2f min; 
+        Vec2f max;
+    };
 
+#ifndef __CUDACC__
     Plane();
-    Plane(const float2& min, const float2& max);
+    Plane(const Vec2f& min, const Vec2f& max);
 
     constexpr ShapeType type() override;
 
@@ -30,11 +28,12 @@ public:
 
     AABB bound() const override;
 
-    DataType deviceData() const;
+    Data getData() const;
 private:
-    float2 m_min, m_max;
+    Vec2f m_min, m_max;
     CUdeviceptr d_aabb_buffer{ 0 };
+
+#endif
 };
-#endif // __CUDACC__
 
 } // ::prayground

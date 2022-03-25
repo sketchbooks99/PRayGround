@@ -10,7 +10,7 @@ Plane::Plane()
 
 }
 
-Plane::Plane(const float2& min, const float2& max)
+Plane::Plane(const Vec2f& min, const Vec2f& max)
 : m_min{ min }, m_max{ max }
 {
 
@@ -25,13 +25,13 @@ constexpr ShapeType Plane::type()
 // ------------------------------------------------------------------
 void Plane::copyToDevice() 
 {
-    PlaneData data = this->deviceData();
+    Data data = this->getData();
 
     if (!d_data)
-        CUDA_CHECK( cudaMalloc( &d_data, sizeof(PlaneData) ) );
+        CUDA_CHECK( cudaMalloc( &d_data, sizeof(Data) ) );
     CUDA_CHECK( cudaMemcpy(
         d_data, 
-        &data, sizeof(PlaneData), 
+        &data, sizeof(Data), 
         cudaMemcpyHostToDevice
     ));
 }
@@ -53,19 +53,14 @@ void Plane::free()
 // ------------------------------------------------------------------
 AABB Plane::bound() const 
 {
-    AABB box{make_float3(m_min.x, -0.01f, m_min.y), make_float3(m_max.x, 0.01f, m_max.y)};
+    AABB box{Vec3f(m_min.x(), -0.01f, m_min.y()), Vec3f(m_max.x(), 0.01f, m_max.y())};
     return box;
 }
 
 // ------------------------------------------------------------------
-Plane::DataType Plane::deviceData() const 
+Plane::Data Plane::getData() const 
 {
-    PlaneData data = 
-    {
-        .min = m_min, 
-        .max = m_max
-    };
-    return data;
+    return { m_min, m_max };
 }
 
 } // ::prayground

@@ -1,7 +1,6 @@
 #pragma once 
 
-#include <prayground/optix/cuda/device_util.cuh>
-#include <prayground/math/random.h>
+
 #include "../params.h"
 
 using namespace prayground;

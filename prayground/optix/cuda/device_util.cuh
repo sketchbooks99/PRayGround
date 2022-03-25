@@ -3,27 +3,15 @@
 #include <optix.h>
 #include <cuda_runtime.h>
 #include <vector_types.h>
+#include <prayground/core/util.h>
 #include <prayground/optix/helpers.h>
-#include <prayground/optix/macros.h>
 #include <prayground/math/util.h>
-
-#ifdef __CUDACC__
-using int8_t = char;
-using int16_t = short;
-using int32_t = int;
-using int64_t = long long;
-using uint8_t = unsigned char;
-using uint16_t = unsigned short;
-using uint32_t = unsigned int;
-using uint64_t = unsigned long long;
-#endif
+#include <prayground/math/vec.h>
 
 #define PG_MAX_NUM_ATTRIBUTES 8
 #define PG_MAX_NUM_PAYLOADS 8
 #define PG_MAX_NUM_ATTRIBUTES_STR "8"
 #define PG_MAX_NUM_PAYLOADS_STR "8"
-
-#ifdef __CUDACC__
 
 namespace prayground {
 
@@ -120,18 +108,18 @@ namespace prayground {
     }
 
     template <uint32_t Base> 
-    INLINE DEVICE float2 getFloat2FromAttribute()
+    INLINE DEVICE Vec2f getVec2fFromAttribute()
     {
-        return make_float2(
+        return Vec2f(
             __int_as_float(getAttribute<Base + 0>()), 
             __int_as_float(getAttribute<Base + 1>())
         );
     }
 
     template <uint32_t Base>
-    INLINE DEVICE float3 getFloat3FromAttribute()
+    INLINE DEVICE Vec3f getVec3fFromAttribute()
     {
-        return make_float3(
+        return Vec3f(
             __int_as_float(getAttribute<Base + 0>()), 
             __int_as_float(getAttribute<Base + 1>()), 
             __int_as_float(getAttribute<Base + 2>())
@@ -139,9 +127,9 @@ namespace prayground {
     }
 
     template <uint32_t Base>
-    INLINE DEVICE float4 getFloat4FromAttribute()
+    INLINE DEVICE Vec4f getVec4fFromAttribute()
     {
-        return make_float4(
+        return Vec4f(
             __int_as_float(getAttribute<Base + 0>()),
             __int_as_float(getAttribute<Base + 1>()),
             __int_as_float(getAttribute<Base + 2>()),
@@ -197,6 +185,4 @@ namespace prayground {
             payloads...);
     }
 
-} // ::prayground
-
-#endif // __CUDACC__
+} // namespace prayground

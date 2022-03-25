@@ -13,7 +13,7 @@ CALLABLE_FUNC void IS_FUNC(plane)()
 {
 
     const HitGroupData* data = reinterpret_cast<HitGroupData*>(optixGetSbtDataPointer());
-    const PlaneData* plane_data = reinterpret_cast<PlaneData*>(data->shape_data);
+    const Plane::Data* plane_data = reinterpret_cast<Plane::Data*>(data->shape_data);
 
     const float2 min = plane_data->min;
     const float2 max = plane_data->max;

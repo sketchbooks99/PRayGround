@@ -23,7 +23,7 @@ static INLINE DEVICE float2 getBoxUV(const float3& p, const float3& min, const f
 extern "C" __device__ void __intersection__box()
 {
     const HitGroupData* data = reinterpret_cast<HitGroupData*>(optixGetSbtDataPointer());
-    const BoxData* box_data = reinterpret_cast<BoxData*>(data->shape_data);
+    const Box::Data* box_data = reinterpret_cast<Box::Data*>(data->shape_data);
 
     float3 min = box_data->min;
     float3 max = box_data->max;

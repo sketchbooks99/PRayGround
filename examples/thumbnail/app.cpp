@@ -23,13 +23,13 @@ static void streamProgress(int frame, int max_frame, float elapsed_time, int bar
 
 void App::initResultBufferOnDevice()
 {
-    params.subframe_index = 0;
+    params.frame = 0;
 
     result_bitmap.allocateDevicePtr();
     accum_bitmap.allocateDevicePtr();
 
-    params.result_buffer = reinterpret_cast<uchar4*>(result_bitmap.devicePtr());
-    params.accum_buffer = reinterpret_cast<float4*>(accum_bitmap.devicePtr());
+    params.result_buffer = reinterpret_cast<Vec4u*>(result_bitmap.devicePtr());
+    params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bitmap.devicePtr());
 
     CUDA_SYNC_CHECK();
 }
@@ -40,24 +40,9 @@ void App::handleCameraUpdate()
         return;
     camera_update = false;
 
-    float3 U, V, W;
-    camera.UVWFrame(U, V, W);
-
     RaygenRecord* rg_record = reinterpret_cast<RaygenRecord*>(sbt.raygenRecord());
     RaygenData rg_data;
-    rg_data.camera =
-    {
-        .origin = camera.origin(),
-        .lookat = camera.lookat(),
-        .U = U,
-        .V = V,
-        .W = W,
-        .fov = camera.fov(),
-        .aspect = camera.aspect(),
-        .aperture = camera.aperture(),
-        .focus_distance = camera.focusDistance(),
-        .farclip = camera.farClip()
-    };
+    rg_data.camera = camera.getData();
 
     CUDA_CHECK(cudaMemcpy(
         reinterpret_cast<void*>(&rg_record->data),
@@ -120,27 +105,13 @@ void App::setup()
     camera.setAperture(2.0f);
     camera.setFocusDistance(60);
     camera.enableTracking(pgGetCurrentWindow());
-    float3 U, V, W;
-    camera.UVWFrame(U, V, W);
 
     // Raygen program
     ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, raygen_module, "__raygen__pinhole");
     // Shader binding table data for raygen program
     RaygenRecord raygen_record;
     raygen_prg.recordPackHeader(&raygen_record);
-    raygen_record.data.camera =
-    {
-        .origin = camera.origin(),
-        .lookat = camera.lookat(),
-        .U = U, 
-        .V = V, 
-        .W = W,
-        .fov = camera.fov(),
-        .aspect = camera.aspect(),
-        .aperture = camera.aperture(), 
-        .focus_distance = camera.focusDistance(),
-        .farclip = camera.farClip()
-    };
+    raygen_record.data.camera = camera.getData();
     sbt.setRaygenRecord(raygen_record);
 
     auto setupCallable = [&](const Module& module, const std::string& dc, const std::string& cc)
@@ -216,7 +187,8 @@ void App::setup()
     uint32_t instance_id = 0;
 
     using SurfaceP = variant<shared_ptr<Material>, shared_ptr<AreaEmitter>>;
-    auto addHitgroupRecord = [&](ProgramGroup& prg, shared_ptr<Shape> shape, SurfaceP surface, uint32_t sample_bsdf_id, uint32_t pdf_id, shared_ptr<Texture> alpha_texture = nullptr)
+    auto addHitgroupRecord = [&](
+        ProgramGroup& prg, shared_ptr<Shape> shape, SurfaceP surface, uint32_t sample_bsdf_id, uint32_t pdf_id, shared_ptr<Texture> alpha_texture = nullptr)
     {
         const bool is_mat = holds_alternative<shared_ptr<Material>>(surface);
         if (alpha_texture) alpha_texture->copyToDevice();
@@ -243,11 +215,7 @@ void App::setup()
                 .pdf_id = pdf_id,
                 .type = is_mat ? std::get<shared_ptr<Material>>(surface)->surfaceType() : SurfaceType::AreaEmitter,
             },
-            .alpha_texture =
-            {
-                alpha_texture ? alpha_texture->devicePtr() : nullptr,
-                alpha_texture ? alpha_texture->programId() : bitmap_prg_id
-            }
+            .alpha_texture = alpha_texture ? alpha_texture->getData() : Texture::Data{ nullptr, bitmap_prg_id }
         };
 
         sbt.addHitgroupRecord(record);
@@ -266,7 +234,7 @@ void App::setup()
         scene_ias.addInstance(instance);
 
         instance_id++;
-        sbt_offset += ThumbnailSBT::NRay * num_sbt;
+        sbt_offset += SBT::NRay * num_sbt;
     };
 
     auto setupPrimitive = [&](ProgramGroup& prg, const Primitive& p, const Matrix4f& transform, shared_ptr<Texture> alpha_texture = nullptr)
@@ -407,7 +375,7 @@ void App::setup()
         }
         else if (attrib.name == "case")
         {
-            textures.emplace("case", new ConstantTexture(attrib.findOneFloat3("diffuse", make_float3(0.3, 0.8, 0.7)), constant_prg_id));
+            textures.emplace("case", new ConstantTexture(attrib.findOneVec3f("diffuse", Vec3f(0.3, 0.8, 0.7)), constant_prg_id));
             auto case_disney = make_shared<Disney>(textures.at("case"));
             case_disney->setRoughness(0.3f);
             case_disney->setSubsurface(0.0f);
@@ -495,8 +463,8 @@ void App::setup()
         CUDA_CHECK(cudaStreamSynchronize(stream));
         CUDA_SYNC_CHECK();
 
-        params.subframe_index = frame + 1;
-        streamProgress(params.subframe_index, num_samples, pgGetElapsedTimef() - start_time, 20);
+        params.frame = frame + 1;
+        streamProgress(params.frame, num_samples, pgGetElapsedTimef() - start_time, 20);
     }
     result_bitmap.copyFromDevice();
     result_bitmap.write(pgPathJoin(pgAppDir(), "thumbnail.jpg"));
@@ -527,7 +495,7 @@ void App::update()
     CUDA_CHECK(cudaStreamSynchronize(stream));
     CUDA_SYNC_CHECK();
     render_time = pgGetElapsedTimef() - start_time;
-    params.subframe_index++;
+    params.frame++;
 
     result_bitmap.copyFromDevice();
 }
@@ -543,9 +511,9 @@ void App::draw()
 
     ImGui::SliderFloat("White", &params.white, 0.01f, 1.0f);
     ImGui::Text("Camera info:");
-    ImGui::Text("Origin: %f %f %f", camera.origin().x, camera.origin().y, camera.origin().z);
-    ImGui::Text("Lookat: %f %f %f", camera.lookat().x, camera.lookat().y, camera.lookat().z);
-    ImGui::Text("Up: %f %f %f", camera.up().x, camera.up().y, camera.up().z);
+    ImGui::Text("Origin: %f %f %f", camera.origin().x(), camera.origin().y(), camera.origin().z());
+    ImGui::Text("Lookat: %f %f %f", camera.lookat().x(), camera.lookat().y(), camera.lookat().z());
+    ImGui::Text("Up: %f %f %f", camera.up().x(), camera.up().y(), camera.up().z());
 
     float farclip = camera.farClip();
     ImGui::SliderFloat("far clip", &farclip, 500.0f, 10000.0f);
@@ -590,7 +558,7 @@ void App::draw()
 
     ImGui::Text("Frame rate: %.3f ms/frame (%.2f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
     ImGui::Text("Render time: %.3f ms/frame", render_time * 1000.0f);
-    ImGui::Text("Subframe index: %d", params.subframe_index);
+    ImGui::Text("Subframe index: %d", params.frame);
 
     ImGui::End();
 
@@ -600,7 +568,7 @@ void App::draw()
 
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-    if (params.subframe_index == 20000) {
+    if (params.frame == 20000) {
         result_bitmap.write(pgPathJoin(pgAppDir(), "thumbnail.jpg"));
         pgExit();
     }

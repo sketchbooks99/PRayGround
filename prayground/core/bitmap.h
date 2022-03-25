@@ -17,19 +17,21 @@ enum class PixelFormat : int
     RGBA        = 4
 };
 
-template <typename PixelType>
+template <typename PixelT>
 class Bitmap_ {
 public:
-    using Type = PixelType;
+    using Type = PixelT;
 
     Bitmap_();
-    Bitmap_(PixelFormat format, int width, int height, PixelType* data = nullptr);
+    Bitmap_(PixelFormat format, int width, int height, PixelT* data = nullptr);
     explicit Bitmap_(const std::filesystem::path& filename);
     explicit Bitmap_(const std::filesystem::path& filename, PixelFormat format);
+    /// @todo: Check if "Disallow the copy-constructor"
+    // Bitmap_(const Bitmap_& bmp) = delete;
 
     void allocate(PixelFormat format, int width, int height);
-    void setData(PixelType* data, int offset_x, int offset_y, int width, int height);
-    void setData(PixelType* data, const int2& offset, const int2& res);
+    void setData(PixelT* data, int offset_x, int offset_y, int width, int height);
+    void setData(PixelT* data, const int2& offset, const int2& res);
 
     void load(const std::filesystem::path& filename);
     void load(const std::filesystem::path& filename, PixelFormat format);
@@ -43,8 +45,10 @@ public:
     void copyToDevice();
     void copyFromDevice();
 
-    PixelType* data() const { return m_data.get(); }
-    PixelType* devicePtr() const { return d_data; }
+    PixelT* data() const { return m_data.get(); }
+    PixelT* devicePtr() const { return d_data; }
+
+    OptixImage2D toOptixImage2D() const;
 
     int width() const { return m_width; }
     int height() const { return m_height; }
@@ -52,8 +56,8 @@ public:
 private:
     void prepareGL();
 
-    std::unique_ptr<PixelType[]> m_data;  // CPU側のデータ
-    PixelType* d_data { nullptr };        // GPU側のデータ
+    std::unique_ptr<PixelT[]> m_data;  // CPU側のデータ
+    PixelT* d_data { nullptr };        // GPU側のデータ
 
     PixelFormat m_format { PixelFormat::NONE };
     int m_width { 0 };

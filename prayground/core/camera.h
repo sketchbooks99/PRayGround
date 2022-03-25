@@ -1,14 +1,12 @@
 #pragma once
 
-#include <prayground/math/vec_math.h>
+#include <prayground/math/vec.h>
 
 #ifndef __CUDACC__
     #include <prayground/app/window.h>
 #endif
 
 namespace prayground {
-
-#ifndef __CUDACC__
 
 /**
  * @brief 
@@ -23,23 +21,38 @@ public:
         Diagonal
     };
 
+    struct Data {
+        Vec3f origin;
+        Vec3f lookat;
+        Vec3f up;
+        Vec3f U;
+        Vec3f V;
+        Vec3f W;
+        float fov;
+        float aspect;
+        float nearclip;
+        float farclip;
+        FovAxis fovaxis;
+    };
+
+#ifndef __CUDACC__
     Camera();
 
-    Camera(const float3& origin, const float3& lookat, const float3& up, float fov, float aspect,
+    Camera(const Vec3f& origin, const Vec3f& lookat, const Vec3f& up, float fov, float aspect,
         float nearclip = 0.01f, float farclip = 10000.0f, FovAxis fovaxis = FovAxis::Horizontal);
 
-    float3 direction() const;
+    Vec3f direction() const;
 
-    const float3& origin() const;
-    void setOrigin(const float3& origin);
+    const Vec3f& origin() const;
+    void setOrigin(const Vec3f& origin);
     void setOrigin(float x, float y, float z);
 
-    const float3& lookat() const;
-    void setLookat(const float3& lookat);
+    const Vec3f& lookat() const;
+    void setLookat(const Vec3f& lookat);
     void setLookat(float x, float y, float z);
 
-    const float3& up() const;
-    void setUp(const float3& up);
+    const Vec3f& up() const;
+    void setUp(const Vec3f& up);
     void setUp(float x, float y, float z);
 
     const float& fov() const;
@@ -60,12 +73,13 @@ public:
     void enableTracking(std::shared_ptr<Window> window);
     void disableTracking();
 
-    void UVWFrame(float3& U, float3& V, float3& W) const;
+    void UVWFrame(Vec3f& U, Vec3f& V, Vec3f& W) const;
 
+    Data getData() const;
 protected:
-    float3 m_origin;
-    float3 m_lookat;
-    float3 m_up;
+    Vec3f m_origin;
+    Vec3f m_lookat;
+    Vec3f m_up;
     float m_fov;
     float m_aspect;
     float m_nearclip;
@@ -74,6 +88,8 @@ protected:
 private:
     void mouseDragged(float x, float y, int button);
     void mouseScrolled(float xoffset, float yoffset);
+#endif 
+
 };
 
 /**
@@ -83,9 +99,26 @@ private:
  */
 class LensCamera final : public Camera {
 public:
+    struct Data {
+        Vec3f origin;
+        Vec3f lookat;
+        Vec3f up;
+        Vec3f U;
+        Vec3f V;
+        Vec3f W;
+        float fov;
+        float aspect;
+        float nearclip;
+        float farclip;
+        float aperture;
+        float focus_distance;
+        FovAxis fovaxis;
+    };
+
+#ifndef __CUDACC__
     LensCamera() : Camera(), m_aperture(0.01f), m_focus_distance(100.0) {}
     LensCamera(
-        const float3& origin, const float3& lookat, const float3& up, float fov, float aspect, 
+        const Vec3f& origin, const Vec3f& lookat, const Vec3f& up, float fov, float aspect, 
         float nearclip = 0.01f, float farclip = 10000.0f, 
         float aperture = 0.01f, float focus_dist = 100.0f,
         FovAxis fovaxis=FovAxis::Horizontal)
@@ -98,12 +131,12 @@ public:
     const float& focusDistance() const { return m_focus_distance; }
     void setFocusDistance( const float& focus_dist ) { m_focus_distance = focus_dist; }
 
-
+    Data getData() const;
 private:
     float m_aperture;
     float m_focus_distance;
-};
 
 #endif // __CUDACC__
+};
 
 }

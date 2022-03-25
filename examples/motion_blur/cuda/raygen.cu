@@ -1,5 +1,5 @@
 #include "util.cuh"
-#include <prayground/core/color.h>
+#include <prayground/core/spectrum.h>
 #include "../params.h"
 
 using namespace prayground;

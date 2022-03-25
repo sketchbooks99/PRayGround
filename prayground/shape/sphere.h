@@ -1,23 +1,19 @@
 #pragma once 
 
-#ifndef __CUDACC__
 #include <prayground/core/shape.h>
-#endif
 
 namespace prayground {
 
-struct SphereData {
-    float3 center;
-    float radius;
-};
-
-#ifndef __CUDACC__
 class Sphere final : public Shape {
 public:
-    using DataType = SphereData;
+    struct Data {
+        Vec3f center;
+        float radius;
+    };
 
+#ifndef __CUDACC__
     Sphere();
-    Sphere(const float3& c, float r);
+    Sphere(const Vec3f& c, float r);
 
     constexpr ShapeType type() override;
     OptixBuildInput createBuildInput() override;
@@ -26,13 +22,13 @@ public:
 
     AABB bound() const override;
 
-    DataType deviceData() const;
+    Data getData() const;
 private:
-    float3 m_center;
+    Vec3f m_center;
     float m_radius;
     CUdeviceptr d_aabb_buffer{ 0 };
-};
 
 #endif
+};
 
 }

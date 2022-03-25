@@ -7,7 +7,7 @@ using namespace prayground;
 extern "C" __device__ void __miss__envmap()
 {
     MissData* data = reinterpret_cast<MissData*>(optixGetSbtDataPointer());
-    EnvironmentEmitterData* env = reinterpret_cast<EnvironmentEmitterData*>(data->env_data);
+    const auto* env = reinterpret_cast<EnvironmentEmitter::Data*>(data->env_data);
     SurfaceInteraction* si = getSurfaceInteraction();
 
     Ray ray = getWorldRay();
@@ -25,14 +25,13 @@ extern "C" __device__ void __miss__envmap()
     float phi = atan2(p.z, p.x);
     float theta = asin(p.y);
     float u = 1.0f - (phi + math::pi) / (2.0f * math::pi);
-    float v = 1.0f - (theta + math::pi / 2.0f) / math::pi;
+    float v = 1.0f - (theta + math::pi / 2.0f) * math::inv_pi;
     si->uv = make_float2(u, v);
     si->trace_terminate = true;
     si->surface_info.type = SurfaceType::None;
-    const float4 emission = optixDirectCall<float4, const float2&, void*>(
-        env->tex_program_id, si->uv, env->tex_data
-        );
-    si->emission = make_float3(emission);
+    const Vec4f emission = optixDirectCall<Vec4f, const float2&, void*>(
+        env->texture.prg_id, si->uv, env->texture.data);
+    si->emission = Vec3f(emission);
 }
 
 extern "C" __device__ void __miss__shadow()

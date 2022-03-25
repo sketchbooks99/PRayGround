@@ -25,8 +25,41 @@
 
 namespace prayground {
 
-/** Error handling at the host side. */
-#ifndef __CUDACC__
+/* Declare integer types for CUDA kernel */
+#ifdef __CUDACC__
+#if !defined(int8_t)
+    typedef signed char int8_t;
+#endif
+
+#if !defined(int16_t)
+    typedef short int16_t;
+#endif
+
+#if !defined(int32_t)
+    typedef int int32_t;
+#endif
+
+#if !defined(int64_t)
+    typedef long long int64_t;
+#endif
+
+#if !defined(uint8_t)
+    typedef unsigned char uint8_t;
+#endif
+
+#if !defined(uint16_t)
+    typedef unsigned short uint16_t;
+#endif
+
+#if !defined(uint32_t)
+    typedef unsigned int uint32_t;
+#endif 
+
+#if !defined(uint64_t)
+    typedef unsigned long long uint64_t;
+#endif
+
+#else // __CUDACC__
 
 enum MessageType
 {

@@ -4,13 +4,13 @@
 
 void App::initResultBufferOnDevice()
 {
-    params.subframe_index = 0;
+    params.frame = 0;
 
     result_bitmap.allocateDevicePtr();
     accum_bitmap.allocateDevicePtr();
 
-    params.result_buffer = reinterpret_cast<uchar4*>(result_bitmap.devicePtr());
-    params.accum_buffer = reinterpret_cast<float4*>(accum_bitmap.devicePtr());
+    params.result_buffer = reinterpret_cast<Vec4u*>(result_bitmap.devicePtr());
+    params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bitmap.devicePtr());
 
     CUDA_SYNC_CHECK();
 }
@@ -21,20 +21,9 @@ void App::handleCameraUpdate()
         return;
     camera_update = false;
 
-    float3 U, V, W;
-    camera.UVWFrame(U, V, W);
-
     RaygenRecord* rg_record = reinterpret_cast<RaygenRecord*>(sbt.raygenRecord());
     RaygenData rg_data;
-    rg_data.camera =
-    {
-        .origin = camera.origin(),
-        .lookat = camera.lookat(),
-        .U = U, 
-        .V = V, 
-        .W = W,
-        .farclip = camera.farClip()
-    };
+    rg_data.camera = camera.getData();
 
     CUDA_CHECK(cudaMemcpy(
         reinterpret_cast<void*>(&rg_record->data),
@@ -73,12 +62,7 @@ void App::setup()
     pipeline.enableMotionBlur();
 
     // OptixModuleをCUDAファイルから生成
-    Module raygen_module, miss_module, hitgroups_module, textures_module, surfaces_module;
-    raygen_module = pipeline.createModuleFromCudaFile(context, "cuda/raygen.cu");
-    miss_module = pipeline.createModuleFromCudaFile(context, "cuda/miss.cu");
-    hitgroups_module = pipeline.createModuleFromCudaFile(context, "cuda/hitgroups.cu");
-    textures_module = pipeline.createModuleFromCudaFile(context, "cuda/textures.cu");
-    surfaces_module = pipeline.createModuleFromCudaFile(context, "cuda/surfaces.cu");
+    Module module = pipeline.createModuleFromCudaFile(context, "kernels.cu");
 
     // レンダリング結果を保存する用のBitmapを用意
     const float width = pgGetWidth(), height = pgGetHeight();
@@ -95,29 +79,20 @@ void App::setup()
     initResultBufferOnDevice();
 
     // カメラの設定
-    camera.setOrigin(make_float3(478.0f, 278.0f, -600.0f));
-    camera.setLookat(make_float3(278.0f, 278.0f, 0.0f));
-    camera.setUp(make_float3(0.0f, 1.0f, 0.0f));
+    // camera.setOrigin(478.0f, 278.0f, -600.0f);
+    camera.setOrigin(478, 278, -600);
+    camera.setLookat(278, 278, 0);
+    camera.setUp(0, 1, 0);
     camera.setFarClip(5000);
     camera.setFov(40.0f);
-    float3 U, V, W;
-    camera.UVWFrame(U, V, W);
     camera.enableTracking(pgGetCurrentWindow());
 
     // Raygenプログラム
-    ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, raygen_module, "__raygen__pinhole");
+    ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, module, "__raygen__pinhole");
     // Raygenプログラム用のShader Binding Tableデータ
     RaygenRecord raygen_record;
     raygen_prg.recordPackHeader(&raygen_record);
-    raygen_record.data.camera =
-    {
-        .origin = camera.origin(),
-        .lookat = camera.lookat(),
-        .U = U,
-        .V = V,
-        .W = W,
-        .farclip = camera.farClip()
-    };
+    raygen_record.data.camera = camera.getData();
     sbt.setRaygenRecord(raygen_record);
 
     // Callable関数とShader Binding TableにCallable関数用のデータを登録するLambda関数
@@ -131,27 +106,27 @@ void App::setup()
     };
 
     // テクスチャ用のCallableプログラム
-    uint32_t constant_prg_id = setupCallable(textures_module, DC_FUNC_STR("constant"), "");
-    uint32_t bitmap_prg_id = setupCallable(textures_module, DC_FUNC_STR("bitmap"), "");
+    uint32_t constant_prg_id = setupCallable(module, DC_FUNC_STR("constant"), "");
+    uint32_t bitmap_prg_id = setupCallable(module, DC_FUNC_STR("bitmap"), "");
 
     // Surface用のCallableプログラム 
     // Diffuse
-    uint32_t diffuse_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_diffuse"), CC_FUNC_STR("bsdf_diffuse"));
-    uint32_t diffuse_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_diffuse"), "");
+    uint32_t diffuse_sample_bsdf_prg_id = setupCallable(module, DC_FUNC_STR("sample_diffuse"), CC_FUNC_STR("bsdf_diffuse"));
+    uint32_t diffuse_pdf_prg_id = setupCallable(module, DC_FUNC_STR("pdf_diffuse"), "");
     // Dielectric
-    uint32_t dielectric_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_dielectric"), CC_FUNC_STR("bsdf_dielectric"));
-    uint32_t dielectric_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_dielectric"), "");
+    uint32_t dielectric_sample_bsdf_prg_id = setupCallable(module, DC_FUNC_STR("sample_dielectric"), CC_FUNC_STR("bsdf_dielectric"));
+    uint32_t dielectric_pdf_prg_id = setupCallable(module, DC_FUNC_STR("pdf_dielectric"), "");
     // Disney
-    uint32_t disney_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_disney"), CC_FUNC_STR("bsdf_disney"));
-    uint32_t disney_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_disney"), "");
+    uint32_t disney_sample_bsdf_prg_id = setupCallable(module, DC_FUNC_STR("sample_disney"), CC_FUNC_STR("bsdf_disney"));
+    uint32_t disney_pdf_prg_id = setupCallable(module, DC_FUNC_STR("pdf_disney"), "");
     // Isotropic
-    uint32_t isotropic_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_isotropic"), CC_FUNC_STR("bsdf_isotropic"));
-    uint32_t isotropic_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_isotropic"), "");
+    uint32_t isotropic_sample_bsdf_prg_id = setupCallable(module, DC_FUNC_STR("sample_isotropic"), CC_FUNC_STR("bsdf_isotropic"));
+    uint32_t isotropic_pdf_prg_id = setupCallable(module, DC_FUNC_STR("pdf_isotropic"), "");
     // AreaEmitter
-    uint32_t area_emitter_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("area_emitter"), "");
+    uint32_t area_emitter_prg_id = setupCallable(module, DC_FUNC_STR("area_emitter"), "");
 
     // Shape用のCallableプログラム(主に面光源サンプリング用)
-    uint32_t plane_sample_pdf_prg_id = setupCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_plane"), CC_FUNC_STR("pdf_plane"));
+    uint32_t plane_sample_pdf_prg_id = setupCallable(module, DC_FUNC_STR("rnd_sample_plane"), CC_FUNC_STR("pdf_plane"));
 
     // 環境マッピング (Sphere mapping) 用のテクスチャとデータ準備
     auto env_texture = make_shared<ConstantTexture>(make_float3(0.0f), constant_prg_id);
@@ -160,7 +135,7 @@ void App::setup()
     env.copyToDevice();
 
     // Missプログラム
-    ProgramGroup miss_prg = pipeline.createMissProgram(context, miss_module, MS_FUNC_STR("envmap"));
+    ProgramGroup miss_prg = pipeline.createMissProgram(context, module, MS_FUNC_STR("envmap"));
     // Missプログラム用のShader Binding Tableデータ
     MissRecord miss_record;
     miss_prg.recordPackHeader(&miss_record);
@@ -169,15 +144,15 @@ void App::setup()
 
     // Hitgroupプログラム
     // Plane
-    auto plane_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("plane"), IS_FUNC_STR("plane"));
+    auto plane_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("plane"), IS_FUNC_STR("plane"));
     // Sphere
-    auto sphere_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("sphere"), IS_FUNC_STR("sphere"));
+    auto sphere_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("sphere"), IS_FUNC_STR("sphere"));
     // Box
-    auto box_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("box"), IS_FUNC_STR("box"));
+    auto box_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("box"), IS_FUNC_STR("box"));
     // Sphere medium
-    auto sphere_medium_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("sphere"), IS_FUNC_STR("sphere_medium"));
+    auto sphere_medium_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("sphere"), IS_FUNC_STR("sphere_medium"));
     // Box medium
-    auto box_medium_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("box"), IS_FUNC_STR("box_medium"));
+    auto box_medium_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("box"), IS_FUNC_STR("box_medium"));
 
     struct Primitive
     {
@@ -225,7 +200,7 @@ void App::setup()
         scene_ias.addInstance(instance);
 
         instance_id++;
-        sbt_offset += RtNextWeekSBT::NRay;
+        sbt_offset += SBT::NRay;
     };
 
     std::vector<AreaEmitterInfo> area_emitter_infos;
@@ -273,7 +248,7 @@ void App::setup()
         scene_ias.addInstance(instance);
 
         instance_id++;
-        sbt_offset += RtNextWeekSBT::NRay;
+        sbt_offset += SBT::NRay;
 
         AreaEmitterInfo area_emitter_info = 
         {
@@ -326,36 +301,36 @@ void App::setup()
         int ns = 1000;
         for (int j = 0; j < ns; j++)
         {
-            float3 rnd_pos = make_float3(rnd(seed), rnd(seed), rnd(seed)) * 165.0f;
-            Sphere sphere = Sphere(rnd_pos, 10.0f);
+            Vec3f rnd_pos = Vec3f(rnd(seed), rnd(seed), rnd(seed)) * 165.0f;
+            Sphere sphere(rnd_pos, 10.0f);
             sphere.setSbtIndex(sbt_idx);
-            spheres->addShape(Sphere(rnd_pos, 10.0f));
+            spheres->addShape(sphere);
         }
         sbt_idx++;
-        auto white = make_shared<ConstantTexture>(make_float3(0.73f), constant_prg_id);
+        auto white = make_shared<ConstantTexture>(Vec3f(0.73f), constant_prg_id);
         auto diffuse = make_shared<Diffuse>(white);
-        auto transform = Matrix4f::translate({ -100.0f, 270.0f, 395.0f });
+        auto transform = Matrix4f::translate(-100, 270, 395);
         Primitive crowded_sphere{ spheres, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
         setupPrimitive(sphere_prg, crowded_sphere, transform);
     }
 
     // Light
     {
-        auto plane = make_shared<Plane>(make_float2(123.0f, 147.0f), make_float2(423.0f, 412.0f));
+        auto plane = make_shared<Plane>(Vec2f(123, 147), Vec2f(423, 412));
         plane->setSbtIndex(sbt_idx);
         sbt_idx++;
-        auto white = make_shared<ConstantTexture>(make_float3(1.0f), constant_prg_id);
+        auto white = make_shared<ConstantTexture>(Vec3f(1.0f), constant_prg_id);
         AreaEmitter light{ white, 7.0f };
-        auto transform = Matrix4f::translate({0.0f, 554.0f, 0.0f});
+        auto transform = Matrix4f::translate(0, 554, 0);
         setupAreaEmitter(plane_prg, plane, light, transform, plane_sample_pdf_prg_id);
     }
 
     // Glass sphere
     {
-        auto sphere = make_shared<Sphere>(make_float3(260.0f, 150.0f, 45.0f), 50.0f);
+        auto sphere = make_shared<Sphere>(Vec3f(260, 150, 45), 50.0f);
         sphere->setSbtIndex(sbt_idx);
         sbt_idx++;
-        auto white = make_shared<ConstantTexture>(make_float3(1.0f), constant_prg_id);
+        auto white = make_shared<ConstantTexture>(Vec3f(1.0f), constant_prg_id);
         auto glass = make_shared<Dielectric>(white, 1.5f);
         auto transform = Matrix4f::identity();
         Primitive glass_sphere{sphere, glass, dielectric_sample_bsdf_prg_id, dielectric_pdf_prg_id};
@@ -364,10 +339,10 @@ void App::setup()
 
     // Metal sphere
     {
-        auto sphere = make_shared<Sphere>(make_float3(0.0f, 150.0f, 145.0f), 50.0f);
+        auto sphere = make_shared<Sphere>(Vec3f(0, 150, 145), 50.0f);
         sphere->setSbtIndex(sbt_idx);
         sbt_idx++;
-        auto silver = make_shared<ConstantTexture>(make_float3(0.8f, 0.8f, 0.9f), constant_prg_id);
+        auto silver = make_shared<ConstantTexture>(Vec3f(0.8f, 0.8f, 0.9f), constant_prg_id);
         auto metal = make_shared<Disney>(silver);
         metal->setRoughness(0.5f);
         metal->setMetallic(1.0f);
@@ -379,11 +354,11 @@ void App::setup()
 
     // Sphere with motion blur
     {
-        auto sphere = make_shared<Sphere>(make_float3(0.0f), 50.0f);
+        auto sphere = make_shared<Sphere>(Vec3f(0.0f), 50.0f);
         sphere->setSbtIndex(sbt_idx);
         sphere->copyToDevice();
         sbt_idx++;
-        auto orange = make_shared<ConstantTexture>(make_float3(0.7f, 0.3f, 0.1f), constant_prg_id);
+        auto orange = make_shared<ConstantTexture>(Vec3f(0.7f, 0.3f, 0.1f), constant_prg_id);
         auto diffuse = make_shared<Diffuse>(orange);
         diffuse->copyToDevice();
         auto matrix_transform = Transform{ TransformType::MatrixMotion };
@@ -412,8 +387,8 @@ void App::setup()
         sphere_gas.build(context, stream);
 
         // Motion blur用の開始と終了点における変換行列を用意
-        float3 center1 = make_float3(400.0f, 400.0f, 200.0f);
-        float3 center2 = center1 + make_float3(30.0f, 0.0f, 0.0f);
+        Vec3f center1(400.0f, 400.0f, 200.0f);
+        Vec3f center2 = center1 + Vec3f(30.0f, 0.0f, 0.0f);
         Matrix4f begin_matrix = Matrix4f::translate(center1);
         Matrix4f end_matrix = Matrix4f::translate(center2);
 
@@ -433,14 +408,14 @@ void App::setup()
         instance.setTraversableHandle(matrix_transform.handle());
 
         instance_id++;
-        sbt_offset += RtNextWeekSBT::NRay;
+        sbt_offset += SBT::NRay;
 
         scene_ias.addInstance(instance);
     }
 
     // Earth sphere
     {
-        auto sphere = make_shared<Sphere>(make_float3(400.0f, 200.0f, 400.0f), 100.0f);
+        auto sphere = make_shared<Sphere>(Vec3f(400, 200, 400), 100.0f);
         sphere->setSbtIndex(sbt_idx);
         sbt_idx++;
         auto earth_texture = make_shared<BitmapTexture>("resources/image/earth.jpg", bitmap_prg_id);
@@ -453,30 +428,30 @@ void App::setup()
     // Sphere with dense medium
     {
         // Boundary sphere
-        auto sphere = make_shared<Sphere>(make_float3(360.0f, 150.0f, 145.0f), 70.0f);
+        auto sphere = make_shared<Sphere>(Vec3f(360, 150, 145), 70.0f);
         sphere->setSbtIndex(sbt_idx);
         sbt_idx++;
-        auto white = make_shared<ConstantTexture>(make_float3(1.0f), constant_prg_id);
+        auto white = make_shared<ConstantTexture>(Vec3f(1.0f), constant_prg_id);
         auto glass = make_shared<Dielectric>(white, 1.5f);
         Primitive boundary{ sphere, glass, dielectric_sample_bsdf_prg_id, dielectric_pdf_prg_id };
         setupPrimitive(sphere_prg, boundary, Matrix4f::identity());
 
         // Constant medium that fills inside boundary sphere
-        auto medium = make_shared<SphereMedium>(make_float3(360.0f, 150.0f, 145.0f), 70.0f, 0.2f);
+        auto medium = make_shared<SphereMedium>(Vec3f(360, 150, 145), 70.0f, 0.2f);
         medium->setSbtIndex(sbt_idx);
         sbt_idx++;
-        auto isotropic = make_shared<Isotropic>(make_float3(0.2f, 0.4f, 0.9f));
+        auto isotropic = make_shared<Isotropic>(Vec3f(0.2f, 0.4f, 0.9f));
         Primitive sphere_medium{ medium, isotropic, isotropic_sample_bsdf_prg_id, isotropic_pdf_prg_id };
         setupPrimitive(sphere_medium_prg, sphere_medium, Matrix4f::identity());
     }
 
     // Noise sphere
     {
-        auto sphere = make_shared<Sphere>(make_float3(220.0f, 280.0f, 300.0f), 80.0f);
+        auto sphere = make_shared<Sphere>(Vec3f(220, 280, 300), 80.0f);
         sphere->setSbtIndex(sbt_idx);
         sbt_idx++;
         // @todo ConstantTexture -> NoiseTexture
-        auto noise = make_shared<ConstantTexture>(make_float3(0.73f), constant_prg_id);
+        auto noise = make_shared<ConstantTexture>(Vec3f(0.73f), constant_prg_id);
         auto diffuse = make_shared<Diffuse>(noise);
         auto transform = Matrix4f::identity();
         Primitive earth_sphere{ sphere, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
@@ -485,10 +460,10 @@ void App::setup()
 
     // Sparse medium surrounds whole scene
     {
-        auto medium = make_shared<BoxMedium>(make_float3(-5000.0f), make_float3(5000.0f), 0.0001f);
+        auto medium = make_shared<BoxMedium>(Vec3f(-5000), Vec3f(5000), 0.0001f);
         medium->setSbtIndex(sbt_idx);
         sbt_idx++;
-        auto isotropic = make_shared<Isotropic>(make_float3(1.0f));
+        auto isotropic = make_shared<Isotropic>(Vec3f(1.0f));
         Primitive atomosphere{ medium, isotropic, isotropic_sample_bsdf_prg_id, isotropic_pdf_prg_id };
         setupPrimitive(box_medium_prg, atomosphere, Matrix4f::identity());
     }
@@ -522,7 +497,7 @@ void App::update()
 {
     handleCameraUpdate();
 
-    params.subframe_index++;
+    params.frame++;
     d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);
 
     // OptiX レイトレーシングカーネルの起動
@@ -555,9 +530,9 @@ void App::draw()
 
     ImGui::SliderFloat("White", &params.white, 1.0f, 1000.0f);
     ImGui::Text("Camera info:");
-    ImGui::Text("Origin: %f %f %f", camera.origin().x, camera.origin().y, camera.origin().z);
-    ImGui::Text("Lookat: %f %f %f", camera.lookat().x, camera.lookat().y, camera.lookat().z);
-    ImGui::Text("Up: %f %f %f", camera.up().x, camera.up().y, camera.up().z);
+    ImGui::Text("Origin: %f %f %f", camera.origin().x(), camera.origin().y(), camera.origin().z());
+    ImGui::Text("Lookat: %f %f %f", camera.lookat().x(), camera.lookat().y(), camera.lookat().z());
+    ImGui::Text("Up: %f %f %f", camera.up().x(), camera.up().y(), camera.up().z());
 
     float farclip = camera.farClip();
     ImGui::SliderFloat("far clip", &farclip, 500.0f, 10000.0f);
@@ -567,7 +542,7 @@ void App::draw()
     }
 
     ImGui::Text("Frame rate: %.3f ms/frame (%.2f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-    ImGui::Text("Subframe index: %d", params.subframe_index);
+    ImGui::Text("Subframe index: %d", params.frame);
 
     ImGui::End();
 
@@ -577,7 +552,7 @@ void App::draw()
 
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-    if (params.subframe_index == 4096)
+    if (params.frame == 4096)
         result_bitmap.write(pgPathJoin(pgAppDir(), "rtNextWeek.jpg"));
 }
 

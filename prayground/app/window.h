@@ -2,7 +2,7 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#include <prayground/math/vec_math.h>
+#include <prayground/math/vec.h>
 #include <prayground/core/util.h>
 #include <prayground/app/event.h>
 
@@ -17,8 +17,8 @@ struct WindowEvents
 {
     struct InputStates 
     {
-        float2 mousePosition;
-        float2 mousePreviousPosition;
+        Vec2f mousePosition;
+        Vec2f mousePreviousPosition;
         int32_t mouseButton;
         bool mouseButtonPressed;
         int32_t key;

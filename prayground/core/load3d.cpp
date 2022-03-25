@@ -8,15 +8,19 @@
 #endif
 #include <prayground/ext/tinyobjloader/tiny_obj_loader.h>
 
+#include <prayground/ext/nanovdb/util/IO.h>
+
 namespace prayground {
+
+namespace fs = std::filesystem;
 
 // -------------------------------------------------------------------------------
 void loadObj(
-    const std::filesystem::path& filepath, 
-    std::vector<float3>& vertices,
+    const fs::path& filepath, 
+    std::vector<Vec3f>& vertices,
     std::vector<Face>& faces, 
-    std::vector<float3>& normals,  
-    std::vector<float2>& texcoords
+    std::vector<Vec3f>& normals,  
+    std::vector<Vec2f>& texcoords
 )
 {
     tinyobj::ObjReaderConfig reader_config;
@@ -48,29 +52,29 @@ void loadObj(
             {
                 // access to vertex
                 tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
-                setByIndex(face.vertex_id, (int)v, idx.vertex_index);
+                face.vertex_id[v] = idx.vertex_index;
                 tinyobj::real_t vx = attrib.vertices[3 * size_t(idx.vertex_index) + 0];
                 tinyobj::real_t vy = attrib.vertices[3 * size_t(idx.vertex_index) + 1];
                 tinyobj::real_t vz = attrib.vertices[3 * size_t(idx.vertex_index) + 2];
-                vertices[idx.vertex_index] = make_float3(vx, vy, vz);
+                vertices[idx.vertex_index] = Vec3f(vx, vy, vz);
 
                 // Normals if exists
                 if (idx.normal_index >= 0)
                 {
-                    setByIndex(face.normal_id, (int)v, idx.normal_index);
+                    face.normal_id[v] = idx.normal_index;
                     tinyobj::real_t nx = attrib.normals[3 * size_t(idx.normal_index) + 0];
                     tinyobj::real_t ny = attrib.normals[3 * size_t(idx.normal_index) + 1];
                     tinyobj::real_t nz = attrib.normals[3 * size_t(idx.normal_index) + 2];
-                    normals[idx.normal_index] = make_float3(nx, ny, nz);
+                    normals[idx.normal_index] = Vec3f(nx, ny, nz);
                 }
 
                 // Texcoords if exists
                 if (idx.texcoord_index >= 0)
                 {
-                    setByIndex(face.texcoord_id, (int)v, idx.texcoord_index);
+                    face.texcoord_id[v] = idx.texcoord_index;
                     tinyobj::real_t tx = attrib.texcoords[2 * size_t(idx.texcoord_index) + 0];
                     tinyobj::real_t ty = attrib.texcoords[2 * size_t(idx.texcoord_index) + 1];
-                    texcoords[idx.texcoord_index] = make_float2(tx, ty);
+                    texcoords[idx.texcoord_index] = Vec2f(tx, ty);
                 }
             }
             faces.push_back(face);
@@ -80,7 +84,7 @@ void loadObj(
 }
 
 void loadObj(
-    const std::filesystem::path& filepath, 
+    const fs::path& filepath, 
     TriangleMesh& mesh
 )
 {
@@ -89,14 +93,14 @@ void loadObj(
 
 // -------------------------------------------------------------------------------
 void loadObjWithMtl(
-    const std::filesystem::path& objpath, 
-    std::vector<float3>& vertices,
+    const fs::path& objpath, 
+    std::vector<Vec3f>& vertices,
     std::vector<Face>& faces, 
-    std::vector<float3>& normals,  
-    std::vector<float2>& texcoords, 
+    std::vector<Vec3f>& normals,  
+    std::vector<Vec2f>& texcoords, 
     std::vector<uint32_t>& face_indices,
     std::vector<Attributes>& material_attribs, 
-    const std::filesystem::path& mtlpath = ""
+    const fs::path& mtlpath = ""
 )
 {
     tinyobj::ObjReaderConfig reader_config;
@@ -134,29 +138,29 @@ void loadObjWithMtl(
             {
                 // access to vertex
                 tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
-                setByIndex(face.vertex_id, (int)v, idx.vertex_index);
+                face.vertex_id[v] = idx.vertex_index;
                 tinyobj::real_t vx = attrib.vertices[3 * size_t(idx.vertex_index) + 0];
                 tinyobj::real_t vy = attrib.vertices[3 * size_t(idx.vertex_index) + 1];
                 tinyobj::real_t vz = attrib.vertices[3 * size_t(idx.vertex_index) + 2];
-                vertices[idx.vertex_index] = make_float3(vx, vy, vz);
+                vertices[idx.vertex_index] = Vec3f(vx, vy, vz);
 
                 // Normals if exists
                 if (idx.normal_index >= 0)
                 {
-                    setByIndex(face.normal_id, (int)v, idx.normal_index);
+                    face.normal_id[v] = idx.normal_index;
                     tinyobj::real_t nx = attrib.normals[3 * size_t(idx.normal_index) + 0];
                     tinyobj::real_t ny = attrib.normals[3 * size_t(idx.normal_index) + 1];
                     tinyobj::real_t nz = attrib.normals[3 * size_t(idx.normal_index) + 2];
-                    normals[idx.normal_index] = make_float3(nx, ny, nz);
+                    normals[idx.normal_index] = Vec3f(nx, ny, nz);
                 }
 
                 // Texcoords if exists
                 if (idx.texcoord_index >= 0)
                 {
-                    setByIndex(face.texcoord_id, (int)v, idx.texcoord_index);
+                    face.texcoord_id[v] = idx.texcoord_index;
                     tinyobj::real_t tx = attrib.texcoords[2 * size_t(idx.texcoord_index) + 0];
                     tinyobj::real_t ty = attrib.texcoords[2 * size_t(idx.texcoord_index) + 1];
-                    texcoords[idx.texcoord_index] = make_float2(tx, ty);
+                    texcoords[idx.texcoord_index] = Vec2f(tx, ty);
                 }
             }
             faces.push_back(face);
@@ -179,22 +183,22 @@ void loadObjWithMtl(
     {
         Attributes attrib;
         attrib.name = m.name;
-        float3* ambient = new float3;
-        float3* diffuse = new float3;
-        float3* specular = new float3;
-        float3* transmittance = new float3;
-        float3* emission = new float3;
-        *ambient = make_float3(m.ambient[0], m.ambient[1], m.ambient[2]);
-        *diffuse = make_float3(m.diffuse[0], m.diffuse[1], m.diffuse[2]);
-        *specular = make_float3(m.specular[0], m.specular[1], m.specular[2]);
-        *transmittance = make_float3(m.transmittance[0], m.transmittance[1], m.transmittance[2]);
-        *emission = make_float3(m.emission[0], m.emission[1], m.emission[2]);
+        Vec3f* ambient = new Vec3f;
+        Vec3f* diffuse = new Vec3f;
+        Vec3f* specular = new Vec3f;
+        Vec3f* transmittance = new Vec3f;
+        Vec3f* emission = new Vec3f;
+        *ambient = Vec3f(m.ambient[0], m.ambient[1], m.ambient[2]);
+        *diffuse = Vec3f(m.diffuse[0], m.diffuse[1], m.diffuse[2]);
+        *specular = Vec3f(m.specular[0], m.specular[1], m.specular[2]);
+        *transmittance = Vec3f(m.transmittance[0], m.transmittance[1], m.transmittance[2]);
+        *emission = Vec3f(m.emission[0], m.emission[1], m.emission[2]);
 
-        attrib.addFloat3("ambient", std::unique_ptr<float3[]>(ambient), 1);
-        attrib.addFloat3("diffuse", std::unique_ptr<float3[]>(diffuse), 1);
-        attrib.addFloat3("specular", std::unique_ptr<float3[]>(specular), 1);
-        attrib.addFloat3("transmittance", std::unique_ptr<float3[]>(transmittance), 1);
-        attrib.addFloat3("emission", std::unique_ptr<float3[]>(emission), 1);
+        attrib.addVec3f("ambient", std::unique_ptr<Vec3f[]>(ambient), 1);
+        attrib.addVec3f("diffuse", std::unique_ptr<Vec3f[]>(diffuse), 1);
+        attrib.addVec3f("specular", std::unique_ptr<Vec3f[]>(specular), 1);
+        attrib.addVec3f("transmittance", std::unique_ptr<Vec3f[]>(transmittance), 1);
+        attrib.addVec3f("emission", std::unique_ptr<Vec3f[]>(emission), 1);
 
         float* shininess = new float(m.shininess);
         float* ior = new float(m.ior);
@@ -217,16 +221,16 @@ void loadObjWithMtl(
 }
 
 void loadObjWithMtl(
-    const std::filesystem::path& objpath, 
-    const std::filesystem::path& mtlpath, 
+    const fs::path& objpath, 
+    const fs::path& mtlpath, 
     TriangleMesh& mesh, 
     std::vector<Attributes>& material_attribs
 )
 {
-    std::vector<float3> vertices;
+    std::vector<Vec3f> vertices;
     std::vector<Face> faces;
-    std::vector<float3> normals;
-    std::vector<float2> texcoords;
+    std::vector<Vec3f> normals;
+    std::vector<Vec2f> texcoords;
     std::vector<uint32_t> face_indices;
 
     loadObjWithMtl(objpath, vertices, faces, normals, texcoords, face_indices, material_attribs, mtlpath);
@@ -237,15 +241,15 @@ void loadObjWithMtl(
 }
 
 void loadObjWithMtl(
-    const std::filesystem::path& filepath, 
+    const fs::path& filepath, 
     TriangleMesh& mesh, 
     std::vector<Attributes>& material_attribs
 )
 {
-    std::vector<float3> vertices;
+    std::vector<Vec3f> vertices;
     std::vector<Face> faces;
-    std::vector<float3> normals;
-    std::vector<float2> texcoords;
+    std::vector<Vec3f> normals;
+    std::vector<Vec2f> texcoords;
     std::vector<uint32_t> face_indices;
 
     loadObjWithMtl(filepath, vertices, faces, normals, texcoords, face_indices, material_attribs);
@@ -257,11 +261,11 @@ void loadObjWithMtl(
 
 // -------------------------------------------------------------------------------
 void loadPly(
-    const std::filesystem::path& filepath, 
-    std::vector<float3>& vertices,
+    const fs::path& filepath, 
+    std::vector<Vec3f>& vertices,
     std::vector<Face>& faces,
-    std::vector<float3>& normals, 
-    std::vector<float2>& texcoords
+    std::vector<Vec3f>& normals, 
+    std::vector<Vec2f>& texcoords
 )
 {
     happly::PLYData plyIn(filepath.string());
@@ -281,7 +285,7 @@ void loadPly(
     // Get vertices
     std::vector<std::array<double, 3>> ply_vertices = plyIn.getVertexPositions();
     std::transform(ply_vertices.begin(), ply_vertices.end(), std::back_inserter(vertices), 
-        [](const std::array<double, 3>& v) { return make_float3(v[0], v[1], v[2]); } );
+        [](const std::array<double, 3>& v) { return Vec3f(v[0], v[1], v[2]); } );
 
     // Get normals
     if (plyIn.getElement("vertex").hasProperty("nx") && 
@@ -295,7 +299,7 @@ void loadPly(
         normals.resize(x_normals.size());
         for (size_t i = 0; auto& n : normals)
         {
-            n = make_float3(x_normals[i], y_normals[i], z_normals[i]);
+            n = Vec3f(x_normals[i], y_normals[i], z_normals[i]);
             i++;
         }
     }
@@ -310,7 +314,7 @@ void loadPly(
         texcoords.resize(u_texcoords.size());
         for (size_t i = 0; auto & texcoord : texcoords)
         {
-            texcoord = make_float2(u_texcoords[i], v_texcoords[i]);
+            texcoord = Vec2f(u_texcoords[i], v_texcoords[i]);
             i++;
         }
     }
@@ -320,11 +324,47 @@ void loadPly(
     std::transform(ply_faces.begin(), ply_faces.end(), std::back_inserter(faces), 
         [&](const std::vector<size_t>& f) { 
             return Face{
-                make_int3(f[0], f[1], f[2]), // vertex_id
-                make_int3(f[0], f[1], f[2]), // normal_id
-                make_int3(f[0], f[1], f[2])  // texcoord_id
+                Vec3i(f[0], f[1], f[2]), // vertex_id
+                Vec3i(f[0], f[1], f[2]), // normal_id
+                Vec3i(f[0], f[1], f[2])  // texcoord_id
             }; 
         } );
 }
 
-} // ::prayground
+// -------------------------------------------------------------------------------
+void loadNanoVDB(const fs::path& filepath, nanovdb::GridHandle<>& handle)
+{
+    nanovdb::GridHandle<> nano_handle;
+
+    auto list = nanovdb::io::readGridMetaData(filepath.string());
+    for (auto& m : list)
+        pgLog("       ", m.gridName);
+    ASSERT(list.size() > 0, "The grid data is not found or incorrect.");
+
+    /* Create grid */
+    std::string first_gridname = list[0].gridName;
+
+    if (first_gridname.length() > 0)
+        nano_handle = nanovdb::io::readGrid<>(filepath.string(), first_gridname);
+    else
+        nano_handle = nanovdb::io::readGrid<>(filepath.string());
+
+    if (!nano_handle)
+    {
+        std::stringstream ss;
+        ss << "Unable to read " << first_gridname << " from " << filepath.string();
+        THROW(ss.str());
+    }
+
+    auto* meta_data = nano_handle.gridMetaData();
+    if (meta_data->isPointData())
+        THROW("NanoVDB Point Data cannot be handled by PRayGround.");
+    if (meta_data->isLevelSet())
+        THROW("NanoVDB Level Sets cannot be handled by PRayGround.");
+
+    ASSERT(nano_handle.size() != 0, "The size of grid data is zero.");
+
+    handle = std::move(nano_handle);
+}
+
+} // namespace prayground

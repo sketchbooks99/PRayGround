@@ -1,4 +1,4 @@
-#include <prayground/core/color.h>
+#include <prayground/core/spectrum.h>
 #include <prayground/core/bsdf.h>
 #include "../params.h"
 #include "util.cuh"

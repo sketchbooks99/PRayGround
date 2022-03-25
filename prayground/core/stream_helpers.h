@@ -21,6 +21,13 @@ inline std::ostream& operator<<(std::ostream& out, const float3& v) {
     return out << v.x << ' ' << v.y << ' ' << v.z;
 }
 
+/**
+ * @struct float2
+ */
+inline std::ostream& operator<<(std::ostream& out, const float2& v) {
+    return out << v.x << ' ' << v.y;
+}
+
 // For OptiX ======================================================================
 /**
  * @struct OptixResult 

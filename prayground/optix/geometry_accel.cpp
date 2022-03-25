@@ -1,6 +1,7 @@
 #include "geometry_accel.h"
 #include <prayground/core/cudabuffer.h>
 #include <prayground/core/util.h>
+#include <prayground/math/util.h>
 #include <algorithm>
 
 namespace prayground {

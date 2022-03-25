@@ -8,7 +8,7 @@ set(sources
   core/bsdf.h 
   core/camera.h 
   core/camera.cpp
-  core/color.h 
+  core/spectrum.h 
   core/cudabuffer.h 
   core/emitter.h 
   core/file_util.h 
@@ -19,6 +19,7 @@ set(sources
   core/material.h 
   core/onb.h 
   core/ray.h 
+  core/sampler.h
   core/shape.h 
   core/shape.cpp
   core/stream_helpers.h 
@@ -30,6 +31,7 @@ set(sources
   # Math libraries ==========
   math/matrix.h
   math/noise.h
+  math/vec.h
   math/vec_math.h
   math/util.h
   math/random.h
@@ -101,7 +103,6 @@ set(sources
   material/disney.h
   material/disney.cpp
   material/isotropic.h 
-  material/isotropic.cpp
   material/cuda/conductor.cuh
   material/cuda/dielectric.cuh
   material/cuda/diffuse.cuh
@@ -111,9 +112,12 @@ set(sources
   texture/bitmap.h
   texture/bitmap.cpp
   texture/checker.h 
-  texture/checker.cpp 
   texture/constant.h  
-  texture/constant.cpp
+
+  # Medium ==========
+  medium/gridmedium.h
+  medium/vdbgrid.h 
+  medium/atmosphere.h
 
   # Emitter ==========
   emitter/area.h 

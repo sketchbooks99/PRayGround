@@ -7,12 +7,13 @@ PRAYGROUND_add_executalbe(rayTracingNextWeek target_name
     sphere_medium.h
     sphere_medium.cpp
     params.h
-    cuda/hitgroups.cu
-    cuda/surfaces.cu
-    cuda/miss.cu
-    cuda/raygen.cu
-    cuda/textures.cu
-    cuda/util.cuh
+    kernels.cu
+    # cuda/hitgroups.cu
+    # cuda/surfaces.cu
+    # cuda/miss.cu
+    # cuda/raygen.cu
+    # cuda/textures.cu
+    # cuda/util.cuh
 )
 
 target_compile_definitions(

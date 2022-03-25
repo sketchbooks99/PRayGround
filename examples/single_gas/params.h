@@ -6,50 +6,39 @@
 
 namespace prayground {
 
-struct LaunchParams 
-{
-    unsigned int width, height;
-    unsigned int samples_per_launch;
-    unsigned int max_depth;
-    int subframe_index;
-    uchar4* result_buffer;
-    OptixTraversableHandle handle;
-};
+    using CheckerTexture = CheckerTexture_<Vec3f>;
+    using ConstantTexture = ConstantTexture_<Vec3f>;
 
-struct CameraData 
-{
-    float3 origin;
-    float3 lookat;
-    float3 U;
-    float3 V; 
-    float3 W;
-};
+    struct LaunchParams 
+    {
+        uint32_t width;
+        uint32_t height;
+        uint32_t samples_per_launch;
+        uint32_t max_depth;
+        int frame;
+        Vec4u* result_buffer;
+        OptixTraversableHandle handle;
+    };
 
-struct RaygenData
-{
-    CameraData camera;
-};
+    struct RaygenData
+    {
+        Camera::Data camera;
+    };
 
-struct TextureData
-{
-    void* data;
-    unsigned int prg_id;
-};
+    struct HitgroupData
+    {
+        void* shape_data;
+        Texture::Data texture;
+    };
 
-struct HitgroupData
-{
-    void* shape_data;
-    TextureData tex_data;
-};
+    struct MissData
+    {
+        void* env_data;
+    };
 
-struct MissData
-{
-    void* env_data;
-};
+    struct EmptyData
+    {
 
-struct EmptyData
-{
-
-};
+    };
 
 } // ::prayground

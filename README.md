@@ -115,35 +115,13 @@ add_subdirectory(apps/<your-app-name>) # Add this line
 
 | [Single GAS](examples/single_gas/) | [Path tracing](examples/pathtracing/) | [Obj scene](examples/objscene/) |
 |-|-|-|
-| ![](examples/single_gas/single_gas.gif) | <img src=examples/pathtracing/screenshot.png width=640> | <img src=examples/objscene/objscene.jpg width=320/> |
+| ![](examples/single_gas/single_gas.gif) | <img src=examples/pathtracing/screenshot.png width=320> | <img src=examples/objscene/objscene.jpg width=320/> |
 |[Ray Tracing: The Next Weekend](examples/rayTracingNextWeek/) | [Ray Tracing: The Rest Of Your Life](examples/rayTracingRestOfYourLife/) | [Dynamic update](examples/dynamic_update/) |
 | <img src=examples/rayTracingNextWeek/rtNextWeek.jpg width=320> | <img src=examples/rayTracingRestOfYourLife/rtRestOfYourLife.jpg width=320> | ![](examples/dynamic_update/dynamic_update.gif) | 
 | [Motion blur](examples/motion_blur/) | [Denoiser](examples/denoiser/) | [Spectrum](examples/spectrum/) | 
 | <img src=examples/motion_blur/motion_blur.png width=320> | <img src=examples/denoiser/denoiser.png width=320> | <img src=examples/spectrum/spectrum.jpg width=320> |
 | [Volume](examples/pgVolume/) | | | 
 | <img src=examples/pgVolume/pgVolume.png width=320> | | |
-
-- [Single GAS](examples/single_gas/)
-  - ![](examples/single_gas/single_gas.gif)
-- [Path tracing](examples/pathtracing/)
-  - <img src=examples/pathtracing/pathtracing.jpg width=640> 
-  - <img src=examples/pathtracing/screenshot.png width=640> 
-- [Obj scene](examples/objscene/)
-  - <img src=examples/objscene/objscene.jpg width=320>
-- [Ray Tracing: The Next Weekend](examples/rayTracingNextWeek/)
-  - <img src=examples/rayTracingNextWeek/rtNextWeek.jpg width=320>
-- [Ray Tracing: The Rest Of Your Life](examples/rayTracingRestOfYourLife/)
-  - <img src=examples/rayTracingRestOfYourLife/rtRestOfYourLife.jpg width=320> 
-- [Dynamic update](examples/dynamic_update/)
-  - ![](examples/dynamic_update/dynamic_update.gif)
-- [Motion blur](examples/motion_blur/)
-  - <img src=examples/motion_blur/motion_blur.png width=320>
-- [Denoiser](examples/denoiser/)
-  - <img src=examples/denoiser/denoiser.png width=640>
-- [Spectrum](examples/spectrum/)
-  - <img src=examples/spectrum/spectrum.jpg width=320>
-- [Volume](examples/pgVolume/)
-  - <img src=examples/pgVolume/pgVolume.png width=320>
 
 # External libraries
 - [glad](https://github.com/Dav1dde/glad) ... For OpenGL features

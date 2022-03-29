@@ -80,6 +80,7 @@ namespace prayground {
         Vec2(T t) { e[0] = t; e[1] = t; }
         Vec2(const CUVec& v) { e[0] = v.x; e[1] = v.y; }
 
+        // Implicit cast operator to CUDA vector i.e. float2
         operator CUVec() const { return CUVec{ e[0], e[1] }; }
 
               T& operator[](int32_t i)       { return e[i]; }
@@ -91,7 +92,6 @@ namespace prayground {
               T& y()       { return e[1]; }
         const T& y() const { return e[1]; }
 
-        // Implicit cast operator to CUDA vector i.e. float2
         const Vec2& operator-() const { return Vec2{ -e[0], -e[1] }; }
 
         Vec2& operator+=(const Vec2& v)
@@ -150,7 +150,7 @@ namespace prayground {
         Vec3(const typename CUVec4<T>::Type& v) { e[0] = v.x; e[1] = v.y; e[2] = v.z; }
 
         // Implicit cast operator to CUDA vector i.e. float3
-        operator CUVec() const { return CUVec{ e[0], e[1], e[2]}; }
+        operator CUVec() const { return CUVec{ e[0], e[1], e[2] }; }
 
         T& operator[](int i) { return e[i]; }
         const T& operator[](int i) const { return e[i]; }

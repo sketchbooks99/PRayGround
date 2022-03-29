@@ -13,8 +13,7 @@ static __forceinline__ __device__ Vec3f reinhardToneMap(const Vec3f& color, cons
     return (color * 1.0f) / (1.0f + l / white);
 }
 
-/// @todo MISの実装
-
+// Simple path tracer w/o MIS, NEE
 extern "C" __device__ void __raygen__pinhole()
 {
     const RaygenData* raygen = reinterpret_cast<RaygenData*>(optixGetSbtDataPointer());
@@ -153,4 +152,3 @@ extern "C" __device__ void __raygen__pinhole()
     params.albedo_buffer[image_index] = albedo;
     params.depth_buffer[image_index] = p_depth == 0.0f ? 1.0f : p_depth;
 }
-

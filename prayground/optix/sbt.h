@@ -2,52 +2,26 @@
 
 #include <optix.h>
 #include <prayground/core/camera.h>
+#include <prayground/core/interaction.h>
 
 #ifndef __CUDACC__
-    #include <concepts>
-    #include <type_traits>
-    #include <prayground/core/cudabuffer.h>
-#endif
+#include <concepts>
+#include <type_traits>
+#include <prayground/core/cudabuffer.h>
+#endif // __CUDACC__
 
 namespace prayground {
 
-/**
- * デフォルトのレイトレ実装 <prayground/optix/cuda/prayground.cu> などが動くようにビルトインパラメータを宣言しておく
- */
+/** @note Default implementation for shader binding table records. */
 
-struct pgLaunchParams 
-{
-    unsigned int width, height;
-    unsigned int samples_per_launch;
-    int subframe_index;
-    float4* accum_buffer;
-    uchar4* result_buffer;
-    OptixTraversableHandle handle;
+template <class Cam>
+struct pgRaygenData {
+    Cam::Data camera;
 };
 
-struct pgCameraData
-{
-    float3 origin; 
-    float3 lookat; 
-    float3 U;
-    float3 V; 
-    float3 W;
-    float nearclip;
-    float farclip; 
-};
-
-struct pgRaygenData
-{
-    pgCameraData camera;
-};
-
-struct pgHitgroupData
-{
+struct pgHitgroupData {
     void* shape_data;
-    void* surface_data;
-
-    unsigned int surface_program_id;
-    unsigned int surface_pdf_id;
+    SurfaceInfo surface_info;
 };
 
 struct pgMissData
@@ -76,7 +50,7 @@ namespace {
         if constexpr (sizeof...(args) != 0)
             push_to_vector(v, args...);
     }
-} // ::nonamed namespace
+} // nonamed namespace
 
 template <class T>
 struct Record 
@@ -155,8 +129,7 @@ public:
         {
             HitgroupRecord* hg_ptr = &reinterpret_cast<HitgroupRecord*>(m_sbt.hitgroupRecordBase)[idx];
             CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(&hg_ptr->data), 
-                &record.data, sizeof(record.data), cudaMemcpyHostToDevice
-            ));
+                &record.data, sizeof(record.data), cudaMemcpyHostToDevice));
         }
     }
 
@@ -255,13 +228,15 @@ private:
 };
 
 // Default declaration for easy usage
-using pgRaygenRecord = Record<pgRaygenData>;
+template <class Cam>
+using pgRaygenRecord = Record<pgRaygenData<Cam>>;
 using pgMissRecord = Record<pgMissData>;
 using pgHitgroupRecord = Record<pgHitgroupData>;
 using pgCallableRecord = Record<pgEmptyData>;
 using pgExceptionRecord = Record<pgEmptyData>;
-template <uint32_t N>
-using pgSBT = ShaderBindingTable<pgRaygenRecord, pgMissRecord, pgHitgroupRecord, pgCallableRecord, pgExceptionRecord, N>;
+
+template <class Cam, uint32_t N>
+using pgSBT = ShaderBindingTable<pgRaygenRecord<Cam>, pgMissRecord, pgHitgroupRecord, pgCallableRecord, pgExceptionRecord, N>;
 
 #endif // __CUDACC__
 

@@ -1,4 +1,4 @@
-#include "util.cuh"
+#include <prayground/optix/cuda/device_util.cuh>
 #include <prayground/shape/plane.h>
 #include <prayground/shape/trianglemesh.h>
 #include <prayground/shape/sphere.h>
@@ -15,19 +15,20 @@ extern "C" __device__ void __closesthit__shadow()
 }
 
 // Plane -------------------------------------------------------------------------------
-static __forceinline__ __device__ bool hitPlane(const PlaneData* plane_data, const float3& o, const float3& v, const float tmin, const float tmax, SurfaceInteraction& si)
+static __forceinline__ __device__ bool hitPlane(
+    const Plane::Data* plane, const Vec3f& o, const Vec3f& v, const float tmin, const float tmax, SurfaceInteraction& si)
 {
-    const float2 min = plane_data->min;
-    const float2 max = plane_data->max;
+    const Vec2f min = plane->min;
+    const Vec2f max = plane->max;
     
-    const float t = -o.y / v.y;
-    const float x = o.x + t * v.x;
-    const float z = o.z + t * v.z;
+    const float t = -o.y() / v.y();
+    const float x = o.x() + t * v.x();
+    const float z = o.z() + t * v.z();
 
-    if (min.x < x && x < max.x && min.y < z && z < max.y && tmin < t && t < tmax)
+    if (min.x() < x && x < max.x() && min.y() < z && z < max.y() && tmin < t && t < tmax)
     {
-        si.uv = make_float2((x - min.x) / (max.x - min.x), (z - min.y) / max.y - min.y);
-        si.n = make_float3(0, 1, 0);
+        si.uv = Vec2f((x - min.x()) / (max.x() - min.x()), (z - min.y()) / max.y() - min.y());
+        si.shading.n = Vec3f(0, 1, 0);
         si.t = t;
         si.p = o + t*v;
         return true;
@@ -39,7 +40,7 @@ extern "C" __device__ void __intersection__plane()
 {
     // Get hitgroup data from shader binding table
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
-    const PlaneData* plane_data = reinterpret_cast<PlaneData*>(data->shape_data);
+    const Plane::Data* plane = reinterpret_cast<Plane::Data*>(data->shape_data);
 
     const float2 min = plane_data->min;
     const float2 max = plane_data->max;
@@ -90,7 +91,7 @@ extern "C" __device__ void __closesthit__plane()
 
 extern "C" __device__ float __continuation_callable__pdf_plane(AreaEmitterInfo area_info, const float3 & origin, const float3 & direction)
 {
-    const PlaneData* plane_data = reinterpret_cast<PlaneData*>(area_info.shape_data);
+    const Plane::Data* plane_data = reinterpret_cast<Plane::Data*>(area_info.shape_data);
 
     SurfaceInteraction si;
     const float3 local_o = area_info.worldToObj.pointMul(origin);
@@ -114,7 +115,7 @@ extern "C" __device__ float __continuation_callable__pdf_plane(AreaEmitterInfo a
 // グローバル空間における si.p -> 光源上の点 のベクトルを返す
 extern "C" __device__ float3 __direct_callable__rnd_sample_plane(AreaEmitterInfo area_info, SurfaceInteraction * si)
 {
-    const PlaneData* plane_data = reinterpret_cast<PlaneData*>(area_info.shape_data);
+    const Plane::Data* plane_data = reinterpret_cast<Plane::Data*>(area_info.shape_data);
     // サーフェスの原点をローカル空間に移す
     const float3 local_p = area_info.worldToObj.pointMul(si->p);
     unsigned int seed = si->seed;

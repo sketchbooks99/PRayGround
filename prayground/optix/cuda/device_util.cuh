@@ -158,7 +158,7 @@ namespace prayground {
     }
 
     template <typename... Payloads>
-    INLINE DEVICE auto trace(
+    INLINE DEVICE auto pgTrace(
         OptixTraversableHandle handle,
         float3                 ray_origin,
         float3                 ray_direction,

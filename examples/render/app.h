@@ -5,10 +5,9 @@
 
 using namespace std;
 
-using SBT = pgSBT<Camera, 2>;
+using SBT = pgDefaultSBT<Camera, 2>;
 
-class App : public BaseApp 
-{
+class App : public BaseApp {
 public:
     void setup();
     void update();
@@ -23,8 +22,27 @@ public:
     void keyPressed(int key);
     void keyReleased(int key);
 private:
-    Pipeline ppl;
+    void initResultBufferOnDevice();
+    void handleCameraUpdate();
+
+    LaunchParams params;
+    CUDABuffer<LaunchParams> d_params;
+    Pipeline pipeline;
+    Context context;
+    CUstream stream;
     SBT sbt;
+    InstanceAccel ias;
+
+    Bitmap result_bmp;
+    FloatBitmap accum_bmp;
+    
+    Camera camera;
+    bool camera_update;
+
+    EnvironmentEmitter env;
+
+    float light_gen_time = 0.0f; // Calculation time for light vertices generation
+    float camera_time = 0.0f;    // Calculation time for camera path (with VCM, VC, VM)
 
     map<string, shared_ptr<Shape>> shapes;
     map<string, shared_ptr<Texture>> textures;

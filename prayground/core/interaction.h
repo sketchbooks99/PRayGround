@@ -69,6 +69,17 @@ namespace prayground {
         MediumInfo inside;
     };
 
+    struct Shading {
+        /* Surface normal */
+        Vec3f n;
+        /* Texture coordinate at an intersection point */
+        Vec2f uv;
+        /* Partial derivative on intersection point */
+        Vec3f dpdu, dpdv;
+        /* Partial derivative on surface normal */
+        Vec3f dndu, dndv;
+    };
+
     /// @note Currently \c spectrum is RGB representation, not spectrum. 
     /// @todo template <typename Spectrum>
     template <typename Spectrum>
@@ -87,19 +98,8 @@ namespace prayground {
         Spectrum albedo;
         Spectrum emission;
 
-        /** UV coordinate at an intersection point. */
-        Vec2f uv;
- 
-        struct {
-            /** Surface normal */
-            Vec3f n;
-
-            /** Partial derivative on intersection point */
-            Vec3f dpdu, dpdv;
-
-            /** Partial derivative on surface normal */
-            Vec3f dndu, dndv;
-        } shading;
+        /** Shading frame */
+        Shading shading;
 
         uint32_t seed;
 

@@ -65,7 +65,7 @@ namespace prayground {
     INLINE DEVICE uint32_t getPayload()
     {
         static_assert(i < PG_MAX_NUM_PAYLOADS, 
-            "Index to set attribute exceeds the maximum number of payloads (" PG_MAX_NUM_PAYLOADS_STR ")");
+            "Index to get payload exceeds the maximum number of payloads (" PG_MAX_NUM_PAYLOADS_STR ")");
         if constexpr (i == 0)
             return optixGetPayload_0();
         if constexpr (i == 1)
@@ -137,22 +137,68 @@ namespace prayground {
         );
     }
 
+    template <uint32_t Base> 
+    INLINE DEVICE Vec2f getVec2fFromPayload()
+    {
+        return Vec2f(
+            __int_as_float(getPayload<Base + 0>()), 
+            __int_as_float(getPayload<Base + 1>())
+        );
+    }
+
+    template <uint32_t Base>
+    INLINE DEVICE Vec3f getVec3fFromPayload()
+    {
+        return Vec3f(
+            __int_as_float(getPayload<Base + 0>()), 
+            __int_as_float(getPayload<Base + 1>()), 
+            __int_as_float(getPayload<Base + 2>())
+        );
+    }
+
+    template <uint32_t Base>
+    INLINE DEVICE Vec4f getVec4fFromPayload()
+    {
+        return Vec4f(
+            __int_as_float(getPayload<Base + 0>()),
+            __int_as_float(getPayload<Base + 1>()),
+            __int_as_float(getPayload<Base + 2>()),
+            __int_as_float(getPayload<Base + 3>())
+        );
+    }
+
+    template <typename ReturnT, uint32_t Base>
+    INLINE DEVICE ReturnT* getPtrFromTwoAttributes()
+    {
+        const uint32_t u0 = getAttribute<Base + 0>();
+        const uint32_t u1 = getAttribute<Base + 1>();
+        return reinterpret_cast<ReturnT*>(unpackPointer(u0, u1));
+    }
+
+    template <typename ReturnT, uint32_t Base>
+    INLINE DEVICE ReturnT* getPtrFromTwoPayloads()
+    {
+        const uint32_t u0 = getPayload<Base + 0>();
+        const uint32_t u1 = getPayload<Base + 1>();
+        return reinterpret_cast<ReturnT*>(unpackPointer(u0, u1));
+    }
+
     template <typename T>
     INLINE DEVICE void swap(T& a, T& b)
     {
         T c(a); a = b; b = c;
     }
 
-    INLINE DEVICE void* unpackPointer( unsigned int i0, unsigned int i1 )
+    INLINE DEVICE void* unpackPointer( uint32_t i0, uint32_t i1 )
     {
-        const unsigned long long uptr = static_cast<unsigned long long>( i0 ) << 32 | i1;
+        const uint64_t uptr = static_cast<uint64_t>( i0 ) << 32 | i1;
         void* ptr = reinterpret_cast<void*>( uptr );
         return ptr;
     }
 
-    INLINE DEVICE void packPointer(void* ptr, unsigned int& i0, unsigned int& i1)
+    INLINE DEVICE void packPointer(void* ptr, uint32_t& i0, uint32_t& i1)
     {
-        const unsigned long long uptr = reinterpret_cast<unsigned long long>( ptr );
+        const uint64_t uptr = reinterpret_cast<uint64_t>( ptr );
         i0 = uptr >> 32;
         i1 = uptr & 0x00000000ffffffff;
     }
@@ -160,15 +206,14 @@ namespace prayground {
     template <typename... Payloads>
     INLINE DEVICE auto pgTrace(
         OptixTraversableHandle handle,
-        float3                 ray_origin,
-        float3                 ray_direction,
+        Vec3f                  ray_origin,
+        Vec3f                  ray_direction,
         float                  tmin,
         float                  tmax,
         uint32_t               ray_type,
         uint32_t               ray_count, 
         Payloads...            payloads
-    ) 
-        -> decltype(std::initializer_list<uint32_t>{payloads...}, void())
+    ) -> decltype(std::initializer_list<uint32_t>{payloads...}, void())
     {
         optixTrace(
             handle,

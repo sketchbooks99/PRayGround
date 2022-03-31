@@ -42,20 +42,20 @@ extern "C" __device__ void __intersection__plane()
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
     const Plane::Data* plane = reinterpret_cast<Plane::Data*>(data->shape_data);
 
-    const float2 min = plane_data->min;
-    const float2 max = plane_data->max;
+    const Vec2f min = plane->min;
+    const Vec2f max = plane->max;
 
     Ray ray = getLocalRay();
 
     // Calculate ray time to infinite plane
-    const float t = -ray.o.y / ray.d.y;
+    const float t = -ray.o.y() / ray.d.y();
 
     // Get varycentric coordinates on plane
-    const float x = ray.o.x + t * ray.d.x;
-    const float z = ray.o.z + t * ray.d.z;
+    const float x = ray.o.x() + t * ray.d.x();
+    const float z = ray.o.z() + t * ray.d.z();
 
     // Get texture coordinates
-    float2 uv = make_float2((x - min.x) / (max.x - min.x), (z - min.y) / (max.y - min.y));
+    float2 uv = make_float2((x - min.x()) / (max.x() - min.x()), (z - min.y()) / (max.y() - min.y()));
     
     // Check if ray hits plane
     if (min.x < x && x < max.x && min.y < z && z < max.y && ray.tmin < t && t < ray.tmax)

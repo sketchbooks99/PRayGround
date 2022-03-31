@@ -21,7 +21,6 @@
 	// optix utilities
 	#include "optix/module.h"
 	#include "optix/pipeline.h"
-	#include "optix/sbt.h"
 	#include "optix/program.h"
 	#include "optix/macros.h"
 	#include "optix/context.h"
@@ -48,6 +47,8 @@
 #include "core/bsdf.h"
 #include "core/interaction.h"
 #include "core/onb.h"
+
+#include "optix/sbt.h"
 
 // math utilities
 #include "math/util.h"

@@ -236,7 +236,7 @@ using pgCallableRecord = Record<pgEmptyData>;
 using pgExceptionRecord = Record<pgEmptyData>;
 
 template <class Cam, uint32_t N>
-using pgSBT = ShaderBindingTable<pgRaygenRecord<Cam>, pgMissRecord, pgHitgroupRecord, pgCallableRecord, pgExceptionRecord, N>;
+using pgDefaultSBT = ShaderBindingTable<pgRaygenRecord<Cam>, pgMissRecord, pgHitgroupRecord, pgCallableRecord, pgExceptionRecord, N>;
 
 #endif // __CUDACC__
 

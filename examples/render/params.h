@@ -15,6 +15,38 @@ struct AreaEmitterInfo
     uint32_t pdf_id;
 };
 
+struct LightInteraction
+{
+    // A surface point on the light source in world coordinates
+    Vec3f p;
+    // Surface normal on the light source in world coordinates
+    Vec3f n;
+    // Texture coordinates on light source
+    Vec2f uv;
+    // Area of light source
+    float area;
+    // PDF of light source
+    float pdf;
+};
+
+struct PathVertex {
+    // Hit position
+    Vec3f       p;
+    // Path throughput
+    Vec3f       throughput;
+    // Path length between source and vertex
+    uint32_t    path_length;
+
+    // Surface infomation on a vertex
+    SurfaceInfo surface_info;
+    bool from_light;
+
+    // MIS quantities
+    float dVCM;
+    float dVM; 
+    float dVC;
+};
+
 struct LaunchParams {
     uint32_t width; 
     uint32_t height;
@@ -24,6 +56,8 @@ struct LaunchParams {
     Vec4f* accum_buffer;
     Vec4u* result_buffer;
 
-    AreaEmitterInfo lights;
+    AreaEmitterInfo* lights;
+    
+    // Stored light vertices 
+    PathVertex* light_vertices;
 };
-

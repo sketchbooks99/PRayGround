@@ -84,7 +84,7 @@ extern "C" __device__ void __closesthit__mesh()
     shading.dpdu = normalize(optixTransformVectorFromObjectToWorldSpace(shading.dpdu));
     shading.dpdv = normalize(optixTransformVectorFromObjectToWorldSpace(shading.dpdv));
 
-    auto* si = getSurfaceInteraction();
+    auto* si = getPtrFromTwoPayloads<SurfaceInteraction, 0>();
 
     si->p = ray.at(ray.tmax);
     si->shading = shading;

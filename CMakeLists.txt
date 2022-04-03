@@ -396,6 +396,7 @@ add_subdirectory(examples/denoiser)
 add_subdirectory(examples/thumbnail)
 add_subdirectory(examples/spectrum)
 add_subdirectory(examples/pgVolume)
+add_subdirectory(examples/render)
 
 ################################################################
 # Applications

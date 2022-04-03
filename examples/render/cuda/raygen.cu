@@ -19,7 +19,7 @@ extern "C" __device__ void __raygen__lightpath()
 // Connection and merging from camera
 extern "C" __device__ void __raygen__camerapath()
 {
-    const auto* raygen = (pgRaygenData*)optixGetSbtDataPointer();
+    const auto* raygen = (pgRaygenData<Camera>*)optixGetSbtDataPointer();
 
     const int frame = params.frame;
     const Vec3ui idx(optixGetLaunchIndex());

@@ -24,10 +24,12 @@ public:
 private:
     void initResultBufferOnDevice();
     void handleCameraUpdate();
+    void launchGenLightVertices();
 
     LaunchParams params;
     CUDABuffer<LaunchParams> d_params;
     Pipeline pipeline;
+    Pipeline genlight_pipeline;
     Context context;
     CUstream stream;
     SBT sbt;
@@ -48,4 +50,7 @@ private:
     map<string, shared_ptr<Texture>> textures;
     map<string, shared_ptr<Material>> materials;
     map<string, shared_ptr<AreaEmitter>> lights;
+
+    // Path vertices information on host side
+    thrust::host_vector<PathVertex> h_light_vertices;
 };

@@ -227,6 +227,42 @@ void Pipeline::create(const Context& ctx)
     ));
 }
 
+void Pipeline::createFromPrograms(const Context& ctx, const std::vector<ProgramGroup>& prgs)
+{
+    bool is_raygen = false, is_miss = false, is_hitgroup = false;
+
+    for (const auto& prg : prgs)
+    {
+        switch (prg.kind())
+        {
+        case OPTIX_PROGRAM_GROUP_KIND_RAYGEN:
+            m_raygen_program = prg;
+            is_raygen = true;
+            break;
+        case OPTIX_PROGRAM_GROUP_KIND_MISS:
+            m_miss_programs.emplace_back(prg);
+            is_miss = true;
+            break;
+        case OPTIX_PROGRAM_GROUP_KIND_HITGROUP:
+            m_hitgroup_programs.emplace_back(prg);
+            is_hitgroup = true;
+            break;
+        case OPTIX_PROGRAM_GROUP_KIND_CALLABLES:
+            m_callables_programs.emplace_back(prg);
+            break;
+        case OPTIX_PROGRAM_GROUP_KIND_EXCEPTION:
+            m_exception_program = prg;
+            break;
+        }
+    }
+
+    ASSERT(is_raygen, "Any RAYGEN program is not found.");
+    ASSERT(is_miss, "Any MISS program is not found.");
+    ASSERT(is_hitgroup, "Any HITGROUP program is not found.");
+
+    this->create(ctx);
+}
+
 void Pipeline::destroy()
 {
     if (m_pipeline) OPTIX_CHECK(optixPipelineDestroy(m_pipeline));
@@ -248,6 +284,22 @@ void Pipeline::destroy()
     destroyPrograms(m_hitgroup_programs);
     destroyPrograms(m_miss_programs);
     destroyPrograms(m_callables_programs);
+}
+
+std::vector<ProgramGroup> Pipeline::programs() const
+{
+    std::vector<ProgramGroup> m_programs;
+    auto pushVector = [&](const std::vector<ProgramGroup>& prgs)
+    {
+        for (const auto& prg : prgs) m_programs.emplace_back(prg);
+    };
+    m_programs.emplace_back(m_raygen_program);
+    pushVector(m_miss_programs);
+    pushVector(m_hitgroup_programs);
+    pushVector(m_callables_programs);
+    m_programs.emplace_back(m_exception_program);
+
+    return m_programs;
 }
 
 // --------------------------------------------------------------------

@@ -2,8 +2,13 @@
 
 #include <prayground/math/matrix.h>
 #include <prayground/math/vec.h>
+#include <thrust/host_vector.h>
+#include <thrust/device_vector.h>
 
 using namespace prayground;
+
+using ConstantTexture = ConstantTexture_<Vec3f>;
+using CheckerTexture = CheckerTexture_<Vec3f>;
 
 struct AreaEmitterInfo
 {
@@ -51,6 +56,7 @@ struct LaunchParams {
     uint32_t width; 
     uint32_t height;
     uint32_t samples_per_launch;
+    uint32_t max_depth;
     int frame;
 
     Vec4f* accum_buffer;
@@ -59,5 +65,5 @@ struct LaunchParams {
     AreaEmitterInfo* lights;
     
     // Stored light vertices 
-    PathVertex* light_vertices;
+    thrust::device_vector<PathVertex> light_vertices;
 };

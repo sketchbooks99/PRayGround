@@ -10,23 +10,15 @@
 
 namespace prayground {
 
-/**
- * @note
- * template <class RaygenRecord, class MissRecord, class HitgroupRecord, 
- *         class CallablesRecord, class ExceptionRecord, unsigned int NRay>
- * class Pipeline;
- * こんな感じにして内部にSBTを持つと楽？ただ、こうすると実装をヘッダファイルに
- * 全て書く必要があってすごくやりたくない ...
- * 
- * とりあえずはbindRaygenRecord的な関数だけtemplateで実装して、コーディング側で注意するようにする
- */
-
 class Pipeline {
 public:
     Pipeline();
     explicit Pipeline(const std::string& params_name);
     explicit Pipeline(const OptixPipelineCompileOptions& op);
     explicit Pipeline(const OptixPipelineCompileOptions& c_op, const OptixPipelineLinkOptions& l_op);
+
+    // Disallow copy constructor
+    Pipeline(const Pipeline& pipeline) = delete;
 
     explicit operator OptixPipeline() const { return m_pipeline; }
     explicit operator OptixPipeline&() { return m_pipeline; }
@@ -54,7 +46,11 @@ public:
 
     /** Create pipeline object and calculate the stack sizes of pipeline. */
     void create(const Context& ctx);
+    void createFromPrograms(const Context& ctx, const std::vector<ProgramGroup>& prgs);
     void destroy();
+
+    /** Get program groups */
+    std::vector<ProgramGroup> programs() const;
 
     /** Compile options. */
     void setCompileOptions( const OptixPipelineCompileOptions& op );
@@ -69,7 +65,7 @@ public:
 
     /** Link options */
     void setLinkOptions(const OptixPipelineLinkOptions& op);
-    void setLinkDebugLevel( const OptixCompileDebugLevel& debug_level );
+    void setLinkDebugLevel(const OptixCompileDebugLevel& debug_level);
     OptixPipelineLinkOptions linkOptions() const;
 
     /** Depth of traversal */
@@ -96,13 +92,12 @@ private:
     std::vector<ProgramGroup> m_callables_programs;
     ProgramGroup m_exception_program;
     
-    OptixPipelineCompileOptions m_compile_options = {};
-    OptixPipelineLinkOptions m_link_options = {};
+    OptixPipelineCompileOptions m_compile_options {};
+    OptixPipelineLinkOptions m_link_options {};
     OptixPipeline m_pipeline { nullptr };
     uint32_t m_trace_depth { 5 }; 
     uint32_t m_cc_depth { 0 }; 
     uint32_t m_dc_depth { 0 };
-
 };
 
 }

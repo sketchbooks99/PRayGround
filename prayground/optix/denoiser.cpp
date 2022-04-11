@@ -7,6 +7,8 @@
 
 namespace prayground {
 
+/// @todo Support Optix ~7.2
+
 // --------------------------------------------------------------------
 static inline float catmullRom(float p[4], float t)
 {
@@ -94,7 +96,16 @@ static OptixImage2D createOptixImage2D(const int width, const int height, const 
 // --------------------------------------------------------------------
 Denoiser::Denoiser()
 {
-
+    std::string version;
+    if (OPTIX_VERSION == 70100) version = "7.1";
+    else if (OPTIX_VERSION == 70200) version = "7.2";
+    else if (OPTIX_VERSION == 70300) version = "7.3";
+    else if (OPTIX_VERSION == 70400) version = "7.4";
+    if (OPTIX_VERSION <= 70200)
+    {
+        pgLogFatal("Currently, Denoiser is supported with OptiX 7.3~ (Your version is " + version + ".");
+        std::exit(0);
+    }
 }
 
 // --------------------------------------------------------------------
@@ -104,6 +115,9 @@ void Denoiser::init(
     uint32_t tile_width, uint32_t tile_height,
     bool kp_mode, bool is_temporal)
 {
+#if OPTIX_VERSION <= 70200
+    UNIMPLEMENTED();
+#else
     ASSERT(data.color, "data.color must be set.");
     ASSERT(data.outputs.size() >= 1, "data.outputs must have at least one buffer.");
     ASSERT(data.width, "data.width must be greater than 0.");
@@ -133,7 +147,7 @@ void Denoiser::init(
         {
             model_kind = is_temporal ? OPTIX_DENOISER_MODEL_KIND_TEMPORAL : OPTIX_DENOISER_MODEL_KIND_HDR;
         }
-        OPTIX_CHECK(optixDenoiserCreate(static_cast<OptixDeviceContext>(ctx), model_kind, &options, &m_denoiser));
+        OPTIX_CHECK(optixDenoiserCreate(static_cast<OptixDeviceContext>(ctx), model_kind, &options, &m_denoiser))
     }
 
     {
@@ -232,11 +246,15 @@ void Denoiser::init(
     }
 
     m_viewer.allocate(PixelFormat::RGBA, (int)data.width, (int)data.height);
+#endif
 }
 
 // --------------------------------------------------------------------
 void Denoiser::run()
 {
+#if OPTIX_VERSION <= 70200
+    UNIMPLEMENTED();
+#else 
     if (m_intensity)
     {
         OPTIX_CHECK(optixDenoiserComputeIntensity(
@@ -278,11 +296,15 @@ void Denoiser::run()
     ));
 
     CUDA_SYNC_CHECK();
+#endif
 }
 
 // --------------------------------------------------------------------
 void Denoiser::update(const Data& data)
 {
+#if OPTIX_VERSION <= 70200
+    UNIMPLEMENTED();
+#else
     ASSERT(data.color, "data.color is nullptr");
     ASSERT(data.outputs.size() >= 1, "The number of outputs must be greater than 1.");
     ASSERT(data.width > 0 && data.height, "The dimensions of denoiser must be greater than 1x1.");
@@ -310,6 +332,7 @@ void Denoiser::update(const Data& data)
         if (is_temporal)
             m_layers[i].previousOutput = m_layers[i].output;
     }
+#endif
 }
 
 // --------------------------------------------------------------------
@@ -332,6 +355,9 @@ void Denoiser::draw(const Data& data, int x, int y, int w, int h)
 // --------------------------------------------------------------------
 void Denoiser::destroy()
 {
+#if OPTIX_VERSION <= 70200
+    UNIMPLEMENTED();
+#else
     OPTIX_CHECK(optixDenoiserDestroy(m_denoiser));
 
     CUDA_CHECK(cudaFree(reinterpret_cast<void*>(m_intensity)));
@@ -346,11 +372,15 @@ void Denoiser::destroy()
         CUDA_CHECK(cudaFree(reinterpret_cast<void*>(m_layers[i].input.data)));
         CUDA_CHECK(cudaFree(reinterpret_cast<void*>(m_layers[i].output.data)));
     }
+#endif
 }
 
 // --------------------------------------------------------------------
 void Denoiser::copyFlowFromDevice()
 {
+#if OPTIX_VERSION <= 70200
+    UNIMPLEMENTED();
+#else
     if (m_layers.size() == 0)
         return;
     
@@ -375,11 +405,15 @@ void Denoiser::copyFlowFromDevice()
 
     delete[] image;
     delete[] flow;
+#endif
 }
 
 // --------------------------------------------------------------------
 void Denoiser::copyFromDevice()
 {
+#if OPTIX_VERSION <= 70200
+    UNIMPLEMENTED();
+#else
     const uint64_t frame_byte_size = m_layers[0].output.width * m_layers[0].output.height * sizeof(float4);
     for (size_t i = 0; i < m_layers.size(); i++)
     {
@@ -389,6 +423,7 @@ void Denoiser::copyFromDevice()
             frame_byte_size, 
             cudaMemcpyDeviceToHost));
     }
+#endif
 }
 
 } // ::prayground

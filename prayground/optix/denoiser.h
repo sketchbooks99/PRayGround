@@ -65,8 +65,8 @@ private:
 #else
     OptixDenoiserGuideLayer           m_guide_layer { };
     std::vector< OptixDenoiserLayer > m_layers;
-    std::vector< float* >             m_host_outputs;
 #endif
+    std::vector< float* >             m_host_outputs;
 
     // For drawing result 
     FloatBitmap m_viewer;

@@ -6,6 +6,7 @@ build/
 *.sln
 
 *.out
+*.ini
 
 *.exr
 *.hdr

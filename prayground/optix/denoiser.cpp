@@ -147,7 +147,7 @@ void Denoiser::init(
         {
             model_kind = is_temporal ? OPTIX_DENOISER_MODEL_KIND_TEMPORAL : OPTIX_DENOISER_MODEL_KIND_HDR;
         }
-        OPTIX_CHECK(optixDenoiserCreate(static_cast<OptixDeviceContext>(ctx), model_kind, &options, &m_denoiser))
+        OPTIX_CHECK(optixDenoiserCreate(static_cast<OptixDeviceContext>(ctx), model_kind, &options, &m_denoiser));
     }
 
     {

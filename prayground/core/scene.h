@@ -39,16 +39,28 @@ namespace prayground {
 
         void addObject(Item<std::shared_ptr<Shape>> shape, Item<std::shared_ptr<Material>> material);
         void addLightObject(Item<std::shared_ptr<Shape>> shape, Item<std::shared_ptr<Material>> material);
-        
+
     private:
         struct Object {
+            std::string name;
             Item<std::shared_ptr<Shape>> shape;
             Item<std::shared_ptr<Material>> material;
+            
+            Matrix4f transform;
         };
 
         struct LightObject {
+            std::string name;
             Item<std::shared_ptr<Shape>> shape;
             Item<std::shared_ptr<AreaEmitter>> light;
+
+            Matrix4f transform;
+        };
+
+        template <typename Obj>
+        struct MovingObject {
+            Obj object;
+            Matrix4f end_transform;
         };
 
         // Optix states

@@ -56,8 +56,8 @@ public:
 private:
     void prepareGL();
 
-    std::unique_ptr<PixelT[]> m_data;  // CPU側のデータ
-    PixelT* d_data { nullptr };        // GPU側のデータ
+    std::unique_ptr<PixelT[]> m_data;  // Data on CPU
+    PixelT* d_data { nullptr };        //      on GPU
 
     PixelFormat m_format { PixelFormat::NONE };
     int m_width { 0 };

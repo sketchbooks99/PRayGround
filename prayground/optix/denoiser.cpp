@@ -16,13 +16,9 @@ static inline float catmullRom(float p[4], float t)
 // --------------------------------------------------------------------
 static void addFlow(
     float4* result, 
-    const float4* image, 
-    const float4* flow, 
-    unsigned int width, 
-    unsigned int height, 
-    unsigned int x, 
-    unsigned int y
-)
+    const float4* image, const float4* flow, 
+    uint32_t width, uint32_t height, 
+    uint32_t x, uint32_t y)
 {
     float dst_x = (float)x - flow[x + y * width].x;
     float dst_y = (float)y - flow[x + y * width].y;

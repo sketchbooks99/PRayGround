@@ -23,11 +23,11 @@ public:
     Denoiser();
 
     void init(const Context& ctx,
-                const Data& data, 
-                uint32_t tile_width = 0, 
-                uint32_t tile_height = 0, 
-                bool kp_mode = false,
-                bool is_temporal = false);
+              const Data& data, 
+              uint32_t tile_width = 0, 
+              uint32_t tile_height = 0, 
+              bool kp_mode = false,
+              bool is_temporal = false);
     void run();
     void update(const Data& data);
     void draw(const Data& data);
@@ -58,9 +58,15 @@ private:
     uint32_t            m_tile_height   { 0 };
     uint32_t            m_overlap       { 0 };
 
+#if OPTIX_VERSION <= 70200
+    OptixImage2D        m_inputs[3] {};
+    OptixImage2D        m_output    {};
+    float*              m_host_output = nullptr;
+#else
     OptixDenoiserGuideLayer           m_guide_layer { };
     std::vector< OptixDenoiserLayer > m_layers;
     std::vector< float* >             m_host_outputs;
+#endif
 
     // For drawing result 
     FloatBitmap m_viewer;

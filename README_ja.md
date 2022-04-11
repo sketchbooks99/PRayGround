@@ -18,7 +18,7 @@ PRayGroundは、OptiX 7を用いたC++/CUDAライブラリで、GPUによるイ�
 - C++ compiler which supports C++20 
     - Linux (Tested : g++ 10.3.0)
     - Windows (Tested : Visual Studio 2019, version 16.10.2) 
-- OptiX 7 (Tested : 7.1, 7.2, 7.3, 7.4)
+- OptiX 7 (Tested : 7.3, 7.4)
 - CMake 3.0 minimum (Tested : cmake 3.16.3)
 
 # :inbox_tray: Cloning
@@ -117,7 +117,7 @@ add_subdirectory(apps/<your-app-name>) # Add this line
 | ![](examples/single_gas/single_gas.gif) | <img src=examples/pathtracing/screenshot.png width=320> | <img src=examples/objscene/objscene.jpg width=320/> |
 |[Ray Tracing: The Next Weekend](examples/rayTracingNextWeek/) | [Ray Tracing: The Rest Of Your Life](examples/rayTracingRestOfYourLife/) | [Dynamic update](examples/dynamic_update/) |
 | <img src=examples/rayTracingNextWeek/rtNextWeek.jpg width=320> | <img src=examples/rayTracingRestOfYourLife/rtRestOfYourLife.jpg width=320> | ![](examples/dynamic_update/dynamic_update.gif) | 
-| [Motion blur](examples/motion_blur/) | [Denoiser](examples/denoiser/) | [Spectrum](examples/spectrum/) | 
+| [Motion blur](examples/motion_blur/) | [Denoiser :warning: Support with OptiX 7.3~](examples/denoiser/) | [Spectrum](examples/spectrum/) | 
 | <img src=examples/motion_blur/motion_blur.png width=320> | <img src=examples/denoiser/denoiser.png width=320> | <img src=examples/spectrum/spectrum.jpg width=320> |
 | [Volume](examples/pgVolume/) | | | 
 | <img src=examples/pgVolume/pgVolume.png width=320> | | |

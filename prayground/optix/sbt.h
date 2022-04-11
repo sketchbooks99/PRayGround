@@ -16,7 +16,7 @@ namespace prayground {
 
 template <class Cam>
 struct pgRaygenData {
-    Cam::Data camera;
+    typename Cam::Data camera;
 };
 
 struct pgHitgroupData {

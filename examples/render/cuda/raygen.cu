@@ -3,6 +3,8 @@
 // Generation of light vertices
 extern "C" __device__ void __raygen__lightpath()
 {
+    VCM vcm = params.vcm;
+
     const int frame = params.frame;
     const Vec3ui idx(optixGetLaunchIdx());
     uint32_t seed = tea<4>(idx.y() * params.width + idx.x(), frame);
@@ -12,6 +14,11 @@ extern "C" __device__ void __raygen__lightpath()
     const Vec3f rnd_pos = UniformSampler::get3D(seed);
 
     const AreaEmitterInfo light = params.lights[lightID];
+
+    float radius = vcm.radius;
+    radius /= powf(float(vcm.iteration + 1), 0.5f - (1.0f - vcm.radius_alpha));
+    radius = fmaxf(radius, 1e-7f);
+    const float radius2 = pow2(radius);
 
     
 }

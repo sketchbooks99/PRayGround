@@ -408,8 +408,9 @@ add_subdirectory(examples/render)
 ################################################################
 # Unit test
 ################################################################
-add_subdirectory(tests/math)
+# add_subdirectory(tests/math)
 # add_subdirectory(tests/core)
+add_subdirectory(tests/thrust)
 
 #################################################################
 

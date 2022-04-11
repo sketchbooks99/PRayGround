@@ -3,11 +3,22 @@
 #include <prayground/prayground.h>
 #include "params.h"
 
+// For GUI
+#include <prayground/ext/imgui/imgui.h>
+#include <prayground/ext/imgui/imgui_impl_glfw.h>
+#include <prayground/ext/imgui/imgui_impl_opengl3.h>
+
 using namespace std;
 
 using SBT = pgDefaultSBT<Camera, 2>;
 
 class App : public BaseApp {
+private:
+    using ShapePtr = shared_ptr<Shape>;
+    using MaterialPtr = shared_ptr<Material>;
+    using AreaEmitterPtr = shared_ptr<AreaEmitter>;
+    using TexturePtr = shared_ptr<Texture>;
+
 public:
     void setup();
     void update();
@@ -25,6 +36,7 @@ private:
     void initResultBufferOnDevice();
     void handleCameraUpdate();
     void launchGenLightVertices();
+    void initVCMIteration();
 
     LaunchParams params;
     CUDABuffer<LaunchParams> d_params;
@@ -46,10 +58,10 @@ private:
     float light_gen_time = 0.0f; // Calculation time for light vertices generation
     float camera_time = 0.0f;    // Calculation time for camera path (with VCM, VC, VM)
 
-    map<string, shared_ptr<Shape>> shapes;
-    map<string, shared_ptr<Texture>> textures;
-    map<string, shared_ptr<Material>> materials;
-    map<string, shared_ptr<AreaEmitter>> lights;
+    map<string, ShapePtr> shapes;
+    map<string, TexturePtr> textures;
+    map<string, MaterialPtr> materials;
+    map<string, AreaEmitterPtr> lights;
 
     // Path vertices information on host side
     thrust::host_vector<PathVertex> h_light_vertices;

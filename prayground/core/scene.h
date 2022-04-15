@@ -53,14 +53,27 @@ namespace prayground {
 
         void setupRaygen(ProgramGroup& rg_prg);
 
+        template <ProgramGroup... Prgs>
+        void setupMiss(Prgs&... prgs);
+
+        template <ProgramGroup... Prgs>
+        void linkProgramWithObject(const std::string& obj_name, Prgs&... prgs);
+
         void addBitmap(const std::string& name, PixelFormat fmt, int32_t w, int32_t h);
         void addFloatBitmap(const std::string& name, PixelFormat fmt, int32_t w, int32_t h);
 
         void setCamera(const _CamT& camera);
-        void camera() const;
+        const _CamT& camera() const;
 
         void addObject(const std::string& name, Item<std::shared_ptr<Shape>> shape, Item<std::shared_ptr<Material>> material, 
             const Matrix4f& transform = Matrix4f::identity());
+
+        void addObject(const std::string& name, const std::string& shape_name, Item<std::shared_ptr<Material>> material, 
+            const Matrix4f& transform = Matrix4f::identity());
+
+        void addObject(const std::string& name, Item<std::shared_ptr<shape>> shape, const std::string& mat_name, 
+            const Matrix4f& transform = Matrix4f::identity());
+
         void addLightObject(const std::string& name, Item<std::shared_ptr<Shape>> shape, Item<std::shared_ptr<AreaEmitter>> area,
             const Matrix4f& transform = Matrix4f::identity());
 
@@ -78,6 +91,9 @@ namespace prayground {
             Item<std::shared_ptr<Material>> material;
             
             Matrix4f transform;
+
+            // Base ID for shader binding table record
+            uint32_t sbt_base_id;
         };
 
         struct LightObject {
@@ -86,6 +102,9 @@ namespace prayground {
             Item<std::shared_ptr<AreaEmitter>> light;
 
             Matrix4f transform;
+
+            // Base ID for shader binding table record
+            uint32_t sbt_base_id;
         };
 
         template <typename Obj>

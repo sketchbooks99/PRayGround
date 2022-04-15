@@ -45,15 +45,19 @@ namespace prayground {
     constexpr SurfaceType  operator~(SurfaceType t1)                    { return static_cast<SurfaceType>( ~(unsigned int)t1 ); }
     constexpr unsigned int operator+(SurfaceType t1)                    { return static_cast<unsigned int>(t1); }
 
+    struct SurfaceCallableID {
+        uint32_t sample;
+        uint32_t bsdf;
+        uint32_t pdf;
+    };
+
     struct SurfaceInfo 
     {
         // Surfaceのデータ
         void* data;
 
         // BSDFの重点サンプリングと評価関数用のCallables関数へのID
-        uint32_t sample_id;
-        uint32_t bsdf_id;
-        uint32_t pdf_id;
+        SurfaceCallableID callable_id;
     
         SurfaceType type;
     };

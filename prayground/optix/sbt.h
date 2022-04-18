@@ -14,229 +14,314 @@ namespace prayground {
 
 /** @note Default implementation for shader binding table records. */
 
-template <class Cam>
-struct pgRaygenData {
-    typename Cam::Data camera;
-};
+    template <class Cam>
+    struct pgRaygenData {
+        typename Cam::Data camera;
+    };
 
-struct pgHitgroupData {
-    void* shape_data;
-    SurfaceInfo surface_info;
-};
+    struct pgHitgroupData {
+        void* shape_data;
+        SurfaceInfo surface_info;
+    };
 
-struct pgMissData
-{
-    void* env_data;
-};
+    struct pgMissData
+    {
+        void* env_data;
+    };
 
-struct pgEmptyData
-{
+    struct pgEmptyData
+    {
 
-};
+    };
 
 #ifndef __CUDACC__
 
-namespace {
+    namespace {
+        template <class T>
+        concept HasData = requires(T t)
+        {
+            t.data;
+        };
+    } // nonamed namespace
+
     template <class T>
-    concept HasData = requires(T t)
+    struct Record 
     {
-        t.data;
+        __align__ (OPTIX_SBT_RECORD_ALIGNMENT) char header[OPTIX_SBT_RECORD_HEADER_SIZE];
+        T data;
     };
 
-    template <class Head, class... Args>
-    inline void push_to_vector(std::vector<Head>& v, const Head& head, const Args&... args)
-    {
-        v.emplace_back(head);
-        if constexpr (sizeof...(args) != 0)
-            push_to_vector(v, args...);
-    }
-} // nonamed namespace
+    template <HasData RaygenRecord, HasData MissRecord, HasData HitgroupRecord, 
+              HasData CallablesRecord, HasData ExceptionRecord, uint32_t N>
+    requires (N > 0)
+    class ShaderBindingTable {
+    public:
+        static constexpr uint32_t NRay = N;
 
-template <class T>
-struct Record 
-{
-    __align__ (OPTIX_SBT_RECORD_ALIGNMENT) char header[OPTIX_SBT_RECORD_HEADER_SIZE];
-    T data;
-};
+        ShaderBindingTable() {}
 
-template <HasData RaygenRecord, HasData MissRecord, HasData HitgroupRecord, 
-          HasData CallablesRecord, HasData ExceptionRecord, uint32_t N>
-requires (N > 0)
-class ShaderBindingTable {
-public:
-    static constexpr uint32_t NRay = N;
+        explicit operator OptixShaderBindingTable() const { return m_sbt; }
 
-    ShaderBindingTable() {}
-
-    explicit operator OptixShaderBindingTable() const { return m_sbt; }
-
-    void setRaygenRecord(const RaygenRecord& rg_record)
-    {
-        m_raygen_record = rg_record;
-    }
-    CUdeviceptr raygenRecord() const 
-    {
-        return m_sbt.raygenRecord;
-    }
-
-    template <class... MissRecordArgs>
-    void setMissRecord(const MissRecordArgs&... args)
-    {
-        static_assert(sizeof...(args) == N, 
-            "The number of record must be same with the number of ray types.");        
-        static_assert(std::conjunction<std::is_same<MissRecord, MissRecordArgs>...>::value, 
-            "Data type must be same with 'MissRecord'.");
-
-        push_to_vector(m_miss_records, args...);
-    }
-
-    /// @note 置き換えを行ったらデバイス上のデータも更新する？
-    void replaceMissRecord(const MissRecord& record, const int idx)
-    {
-        if (idx >= m_miss_records.size())
-        {
-            pgLogFatal("The index out of range");
-            return;
+        /* Raygen */
+        void setRaygenRecord(const RaygenRecord& rg_record) {
+            m_raygen_record = rg_record;
         }
-        m_miss_records[idx] = record;
-    }
-
-    MissRecord getMissRecord(const int idx) const {
-        return m_miss_records[idx];
-    }
-
-    template <class... HitgroupRecordArgs> 
-    void addHitgroupRecord(const HitgroupRecordArgs&... args)
-    {
-        static_assert(sizeof...(args) == N, 
-            "The number of hitgroup record must be same with the number of ray types.");        
-        static_assert(std::conjunction<std::is_same<HitgroupRecord, HitgroupRecordArgs>...>::value, 
-            "Record type must be same with 'HitgroupRecord'.");
-        push_to_vector(m_hitgroup_records, args...);
-    }
-
-    /// @note 置き換えを行ったらデバイス上のデータも更新する？
-    void replaceHitgroupRecord(HitgroupRecord record, const int idx)
-    {
-        if (idx >= m_hitgroup_records.size())
-        {
-            pgLogFatal("The index out of range");
-            return;
+        RaygenRecord& raygenRecord() {
+            return m_raygen_record;
         }
-        m_hitgroup_records[idx] = record;
-
-        if (m_sbt.hitgroupRecordBase)
-        {
-            HitgroupRecord* hg_ptr = &reinterpret_cast<HitgroupRecord*>(m_sbt.hitgroupRecordBase)[idx];
-            CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(&hg_ptr->data), 
-                &record.data, sizeof(record.data), cudaMemcpyHostToDevice));
+        const RaygenRecord& raygenRecord() const {
+            return m_raygen_record;
         }
-    }
-
-    template <class... CallablesRecordArgs>
-    void addCallablesRecord(const CallablesRecordArgs&... args)
-    {
-        static_assert(std::conjunction<std::is_same<CallablesRecord, CallablesRecordArgs>...>::value, 
-            "Record type must be same with 'CallablesRecord'.");
-
-        push_to_vector(m_callables_records, args...);
-    }
-
-    /// @note 置き換えを行ったらデバイス上のデータも更新する？
-    void replaceCallablesRecord(const CallablesRecord& record, const int idx)
-    {
-        if (idx >= m_callables_records.size())
-        {
-            pgLogFatal("The index out of range.");
-            return;
+        CUdeviceptr deviceRaygenRecordPtr() const {
+            if (m_sbt.raygenRecord)
+                return m_sbt.raygenRecord;
+            else
+            {
+                THROW("Shader binding table hasn't been created on device yet.");
+                return 0ull;
+            }
         }
-        m_callables_records[idx] = record;
-    }
 
-    void setExceptionRecord(const ExceptionRecord& ex_record)
-    {
-        m_exception_record = ex_record;
-    }
+        /* Miss */
+        template <class... MissRecordArgs>
+        void setMissRecord(const MissRecordArgs&... args) {
+            static_assert(sizeof...(args) == N, 
+                "The number of record must be same with the number of ray types.");        
+            static_assert(std::conjunction<std::is_same<MissRecord, MissRecordArgs>...>::value, 
+                "Data type must be same with 'MissRecord'.");
 
-    void createOnDevice()
-    {
-        CUDABuffer<RaygenRecord> d_raygen_record;
-        CUDABuffer<MissRecord> d_miss_records;
-        CUDABuffer<HitgroupRecord> d_hitgroup_records;
-        CUDABuffer<CallablesRecord> d_callables_records;
-        CUDABuffer<ExceptionRecord> d_exception_record;
+            setToArray(m_miss_records, args...);
+        }
 
-        d_raygen_record.copyToDevice(&m_raygen_record, sizeof(RaygenRecord));
-        d_miss_records.copyToDevice(m_miss_records);
-        d_hitgroup_records.copyToDevice(m_hitgroup_records);
-        d_callables_records.copyToDevice(m_callables_records);
-        d_exception_record.copyToDevice(&m_exception_record, sizeof(ExceptionRecord));
+        /// @note 置き換えを行ったらデバイス上のデータも更新する？
+        void replaceMissRecord(const MissRecord& record, const int idx) {
+            if (idx >= N)
+            {
+                pgLogFatal("The index out of range");
+                return;
+            }
+            m_miss_records[idx] = record;
+        }
+        MissRecord& missRecord(const int idx) {
+            return m_miss_records[idx];
+        }
+        const MissRecord& missRecord(const int idx) const {
+            return m_miss_records[idx];
+        }
+        CUdeviceptr deviceMissRecordPtr() const {
+            if (m_sbt.missRecordBase)
+                return m_sbt.missRecordBase;
+            else
+            {
+                THROW("Shader binding table hasn't been created on device yet.");
+                return 0ull;
+            }
+        }
 
-        m_sbt.raygenRecord = d_raygen_record.devicePtr();
-        m_sbt.missRecordBase = d_miss_records.devicePtr();
-        m_sbt.missRecordCount = static_cast<uint32_t>(m_miss_records.size());
-        m_sbt.missRecordStrideInBytes = static_cast<uint32_t>(sizeof(MissRecord));
-        m_sbt.hitgroupRecordBase = d_hitgroup_records.devicePtr();
-        m_sbt.hitgroupRecordCount = static_cast<uint32_t>(m_hitgroup_records.size());
-        m_sbt.hitgroupRecordStrideInBytes = static_cast<uint32_t>(sizeof(HitgroupRecord));
-        m_sbt.callablesRecordBase = d_callables_records.devicePtr();
-        m_sbt.callablesRecordCount = static_cast<uint32_t>(m_callables_records.size());
-        m_sbt.callablesRecordStrideInBytes = static_cast<uint32_t>(sizeof(CallablesRecord));
-        m_sbt.exceptionRecord = d_exception_record.devicePtr();
+        /* Hitgroup */
+        template <class... HitgroupRecordArgs> 
+        void addHitgroupRecord(const HitgroupRecordArgs&... args) {
+            static_assert(sizeof...(args) == N, 
+                "The number of hitgroup record must be same with the number of ray types.");        
+            static_assert(std::conjunction<std::is_same<HitgroupRecord, HitgroupRecordArgs>...>::value, 
+                "Record type must be same with 'HitgroupRecord'.");
+            pushToVector(m_hitgroup_records, args...);
+        }
 
-        on_device = true;
-    }
+        /// @note 置き換えを行ったらデバイス上のデータも更新する？
+        void replaceHitgroupRecord(const HitgroupRecord& record, const int idx) {
+            if (idx >= m_hitgroup_records.size())
+            {
+                pgLogFatal("The index out of range");
+                return;
+            }
+            m_hitgroup_records[idx] = record;
+        }
 
-    void destroy()
-    {
-        if (m_sbt.raygenRecord) 
-            CUDA_CHECK(cudaFree(reinterpret_cast<void*>(m_sbt.raygenRecord)));
-        if (m_sbt.missRecordBase) 
-            CUDA_CHECK(cudaFree(reinterpret_cast<void*>(m_sbt.missRecordBase)));
-        if (m_sbt.hitgroupRecordBase) 
-            CUDA_CHECK(cudaFree(reinterpret_cast<void*>(m_sbt.hitgroupRecordBase)));
-        if (m_sbt.callablesRecordBase)
-            CUDA_CHECK(cudaFree(reinterpret_cast<void*>(m_sbt.callablesRecordBase)));
-        if (m_sbt.exceptionRecord)
-            CUDA_CHECK(cudaFree(reinterpret_cast<void*>(m_sbt.exceptionRecord)));
-        m_sbt = {};
-        m_raygen_record = {};
-        m_miss_records.clear();
-        m_hitgroup_records.clear();
-        m_callables_records.clear();
-        m_exception_record = {};
-        on_device = false;
-    }
+        void deleteHitgroupRecord(const int idx)
+        {
+            UNIMPLEMENTED();
+            /// @todo Must be free corresponding pointer on device, and set SBT index correctly.
+        }
 
-    OptixShaderBindingTable& sbt()
-    {
-        return m_sbt;
-    }
+        HitgroupRecord& hitgroupRecord(const int idx) 
+        {
+            ASSERT(idx < (int)m_hitgroup_records.size(), "The index out of range.");
+            return m_hitgroup_records[idx];
+        }
+        const HitgroupRecord& hitgroupRecord(const int idx)
+        {
+            ASSERT(idx < (int)m_hitgroup_records.size(), "The index out of range.");
+            return m_hitgroup_records[idx];
+        }
+        CUdeviceptr deviceHitgroupRecordPtr() const
+        {
+            if (m_sbt.hitgroupRecordBase)
+                return m_sbt.hitgroupRecordBase;
+            else
+            {
+                THROW("Shader binding table hasn't been created on device yet.");
+                return 0ull;
+            }
+        }
 
-    bool isOnDevice() const 
-    {
-        return on_device;
-    }
-private:
-    OptixShaderBindingTable m_sbt {};
-    RaygenRecord m_raygen_record {};
-    std::vector<MissRecord> m_miss_records;
-    std::vector<HitgroupRecord> m_hitgroup_records;
-    std::vector<CallablesRecord> m_callables_records;
-    ExceptionRecord m_exception_record {};
-    bool on_device;
-};
+        /* Callables */
+        template <class... CallablesRecordArgs>
+        void addCallablesRecord(const CallablesRecordArgs&... args) {
+            static_assert(std::conjunction<std::is_same<CallablesRecord, CallablesRecordArgs>...>::value, 
+                "Record type must be same with 'CallablesRecord'.");
 
-// Default declaration for easy usage
-template <class Cam>
-using pgRaygenRecord = Record<pgRaygenData<Cam>>;
-using pgMissRecord = Record<pgMissData>;
-using pgHitgroupRecord = Record<pgHitgroupData>;
-using pgCallableRecord = Record<pgEmptyData>;
-using pgExceptionRecord = Record<pgEmptyData>;
+            pushToVector(m_callables_records, args...);
+        }
 
-template <class Cam, uint32_t N>
-using pgDefaultSBT = ShaderBindingTable<pgRaygenRecord<Cam>, pgMissRecord, pgHitgroupRecord, pgCallableRecord, pgExceptionRecord, N>;
+        /// @note 置き換えを行ったらデバイス上のデータも更新する？
+        void replaceCallablesRecord(const CallablesRecord& record, const int idx) {
+            ASSERT(idx < (int)m_callable_records.size(), "The index out of range.");
+            m_callables_records[idx] = record;
+        }
+
+        void deleteCallablesRecord(const int idx)
+        {
+            UNIMPLEMENTED();
+        }
+
+        CallablesRecord& callableRecord(const int idx)
+        {
+            ASSERT(idx < (int)m_callables_records.size(), "The index out of range.");
+            return m_callables_records[idx];
+        }
+        const CallablesRecord& callableRecord(const int idx) const 
+        {
+            ASSERT(idx < (int)m_callables_records.size(), "The index out of range.");
+            return m_callables_records[idx];
+        }
+        CUdeviceptr deviceCallablesRecordPtr() const 
+        {
+            if (m_sbt.callablesRecordBase)
+                return m_sbt.callablesRecordBase;
+            else
+            {
+                THROW("Shader binding table hasn't been created on device yet.");
+                return 0ull;
+            }
+        }
+
+        /* Exception */
+        void setExceptionRecord(const ExceptionRecord& ex_record) {
+            m_exception_record = ex_record;
+        }
+        ExceptionRecord& exceptionRecord()
+        {
+            return m_exception_record;
+        }
+        const ExceptionRecord& exceptionRecord() const
+        {
+            return m_exception_record;
+        }
+        CUdeviceptr deviceExceptionRecordPtr() const
+        {
+            if (m_sbt.exceptionRecord)
+                return m_sbt.exceptionRecord;
+            else
+            {
+                THROW("Shader binding table hasn't been created on device yet.");
+                return 0ull;
+            }
+        }
+
+        void createOnDevice() {
+            CUDABuffer<RaygenRecord> d_raygen_record;
+            CUDABuffer<MissRecord> d_miss_records;
+            CUDABuffer<HitgroupRecord> d_hitgroup_records;
+            CUDABuffer<CallablesRecord> d_callables_records;
+            CUDABuffer<ExceptionRecord> d_exception_record;
+
+            d_raygen_record.copyToDevice(&m_raygen_record, sizeof(RaygenRecord));
+            d_miss_records.copyToDevice(m_miss_records);
+            d_hitgroup_records.copyToDevice(m_hitgroup_records);
+            d_callables_records.copyToDevice(m_callables_records);
+            d_exception_record.copyToDevice(&m_exception_record, sizeof(ExceptionRecord));
+
+            m_sbt.raygenRecord = d_raygen_record.devicePtr();
+            m_sbt.missRecordBase = d_miss_records.devicePtr();
+            m_sbt.missRecordCount = static_cast<uint32_t>(m_miss_records.size());
+            m_sbt.missRecordStrideInBytes = static_cast<uint32_t>(sizeof(MissRecord));
+            m_sbt.hitgroupRecordBase = d_hitgroup_records.devicePtr();
+            m_sbt.hitgroupRecordCount = static_cast<uint32_t>(m_hitgroup_records.size());
+            m_sbt.hitgroupRecordStrideInBytes = static_cast<uint32_t>(sizeof(HitgroupRecord));
+            m_sbt.callablesRecordBase = d_callables_records.devicePtr();
+            m_sbt.callablesRecordCount = static_cast<uint32_t>(m_callables_records.size());
+            m_sbt.callablesRecordStrideInBytes = static_cast<uint32_t>(sizeof(CallablesRecord));
+            m_sbt.exceptionRecord = d_exception_record.devicePtr();
+
+            on_device = true;
+        }
+
+        void destroy() {
+            if (m_sbt.raygenRecord) 
+                CUDA_CHECK(cudaFree(reinterpret_cast<void*>(m_sbt.raygenRecord)));
+            if (m_sbt.missRecordBase) 
+                CUDA_CHECK(cudaFree(reinterpret_cast<void*>(m_sbt.missRecordBase)));
+            if (m_sbt.hitgroupRecordBase) 
+                CUDA_CHECK(cudaFree(reinterpret_cast<void*>(m_sbt.hitgroupRecordBase)));
+            if (m_sbt.callablesRecordBase)
+                CUDA_CHECK(cudaFree(reinterpret_cast<void*>(m_sbt.callablesRecordBase)));
+            if (m_sbt.exceptionRecord)
+                CUDA_CHECK(cudaFree(reinterpret_cast<void*>(m_sbt.exceptionRecord)));
+            m_sbt = {};
+            m_raygen_record = {};
+            m_miss_records.clear();
+            m_hitgroup_records.clear();
+            m_callables_records.clear();
+            m_exception_record = {};
+            on_device = false;
+        }
+
+        OptixShaderBindingTable& sbt() {
+            return m_sbt;
+        }
+
+        bool isOnDevice() {
+            return on_device;
+        }
+    private:
+        template <class Head, class... Args>
+        static void pushToVector(std::vector<Head>& v, const Head& head, const Args&... args)
+        {
+            v.emplace_back(head);
+            if constexpr (sizeof...(args) != 0)
+                pushToVector(v, args...);
+        }
+
+        template <class Head, class... Args>
+        static void setToArray(Head* arr, const int idx, const Head& head, const Args&... args)
+        {
+            arr[idx] = head;
+            if constexpr (sizeof...(args) != 0)
+                setToArray(arr, idx+1, args...);
+        }
+
+        OptixShaderBindingTable m_sbt {};
+
+        RaygenRecord                    m_raygen_record {};
+        MissRecord                      m_miss_records[N];
+        std::vector<HitgroupRecord>     m_hitgroup_records;
+        std::vector<CallablesRecord>    m_callables_records;
+        ExceptionRecord                 m_exception_record {};
+
+        bool on_device;
+    };
+
+    // Default declaration for easy usage
+    template <class Cam>
+    using pgRaygenRecord = Record<pgRaygenData<Cam>>;
+    using pgMissRecord = Record<pgMissData>;
+    using pgHitgroupRecord = Record<pgHitgroupData>;
+    using pgCallableRecord = Record<pgEmptyData>;
+    using pgExceptionRecord = Record<pgEmptyData>;
+
+    template <class Cam, uint32_t N>
+    using pgDefaultSBT = ShaderBindingTable<pgRaygenRecord<Cam>, pgMissRecord, pgHitgroupRecord, pgCallableRecord, pgExceptionRecord, N>;
 
 #endif // __CUDACC__
 

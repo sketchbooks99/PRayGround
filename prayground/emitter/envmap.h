@@ -29,6 +29,7 @@ public:
     void free() override {}
 
     EmitterType type() const override { return EmitterType::Envmap; }
+    void setTexture(const std::shared_ptr<Texture>& texture) { m_texture = texture; }
     std::shared_ptr<Texture> texture() const { return m_texture; }
 
     Data getData() const;

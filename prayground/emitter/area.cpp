@@ -3,8 +3,8 @@
 namespace prayground {
 
     // ---------------------------------------------------------------------------
-    AreaEmitter::AreaEmitter(const std::shared_ptr<Texture>& texture, float intensity, bool twosided)
-    : m_texture(texture), m_intensity(intensity), m_twosided(twosided)
+    AreaEmitter::AreaEmitter(const SurfaceCallableID& surface_callable_id, const std::shared_ptr<Texture>& texture, float intensity, bool twosided)
+        : m_surface_callable_id(surface_callable_id), m_texture(texture), m_intensity(intensity), m_twosided(twosided)
     {
 
     }
@@ -61,5 +61,4 @@ namespace prayground {
     {
         return { m_texture->getData(), m_intensity, m_twosided };
     }
-
-}
+} // namespace prayground

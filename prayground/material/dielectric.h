@@ -23,6 +23,7 @@ public:
 
 #ifndef __CUDACC__
     Dielectric(
+        const SurfaceCallableID& surface_callable_id, 
         const std::shared_ptr<Texture>& texture, float ior, 
         float absorb_coeff = 0.0f, Sellmeier sellmeier = Sellmeier::None);
     ~Dielectric();
@@ -42,6 +43,8 @@ public:
 
     void setTexture(const std::shared_ptr<Texture>& texture);
     std::shared_ptr<Texture> texture() const;
+
+    Data getData() const;
 private:
     std::shared_ptr<Texture> m_texture;
     float m_ior;

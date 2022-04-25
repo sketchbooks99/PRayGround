@@ -10,31 +10,38 @@
 
 namespace prayground {
 
-// Abstract class to compute scattering properties.
-class Material {
-/// @note Make this class be dummy class on device kernels
+    // Abstract class to compute scattering properties.
+    class Material {
+    /// @note Make this class be dummy class on device kernels
 #ifndef __CUDACC__
+    public:
+        Material(const SurfaceCallableID& surface_callable_id)
+            : m_surface_callable_id(surface_callable_id) {}
+        virtual ~Material() {}
 
-public:
-    virtual ~Material() {}
-
-    virtual SurfaceType surfaceType() const = 0;
+        virtual SurfaceType surfaceType() const = 0;
     
-    virtual void copyToDevice() = 0;
+        virtual void copyToDevice() = 0;
 
-    virtual void free()
-    {
-        if (d_data)
+        virtual void free()
         {
-            CUDA_CHECK(cudaFree(d_data));
-            d_data = nullptr;
+            if (d_data)
+            {
+                CUDA_CHECK(cudaFree(d_data));
+                d_data = nullptr;
+            }
         }
-    }
-    
-    void* devicePtr() const { return d_data; }
-protected:
-    void* d_data { nullptr };
-#endif
-};
 
-} // ::prayground
+        const SurfaceCallableID& surfaceCallableID() const
+        {
+            return m_surface_callable_id;
+        }
+    
+        void* devicePtr() const { return d_data; }
+    protected:
+        SurfaceCallableID m_surface_callable_id;
+        void* d_data { nullptr };
+#endif // __CUDACC__
+    };
+
+} // namespace prayground

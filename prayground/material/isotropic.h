@@ -13,8 +13,8 @@ public:
     };
 
 #ifndef __CUDACC__
-    Isotropic_(const float3& albedo)
-        : m_albedo(albedo) {}
+    Isotropic_(const SurfaceCallableID& surface_callable_id, const float3& albedo)
+        : Material(surface_callable_id), m_albedo(albedo) {}
 
     SurfaceType surfaceType() const override
     {
@@ -23,12 +23,14 @@ public:
 
     void copyToDevice() override
     {
-        Data data{ .albedo = m_albedo };
+        Data data = this->getData();
 
         if (!d_data)
             CUDA_CHECK(cudaMalloc(&d_data, sizeof(Data)));
         CUDA_CHECK(cudaMemcpy(d_data, &data, sizeof(Data), cudaMemcpyHostToDevice));
     }
+
+    Data getData() const { return { m_albedo }; }
 private:
     Vec3f m_albedo;
 

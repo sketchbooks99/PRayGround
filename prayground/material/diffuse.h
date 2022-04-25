@@ -13,13 +13,15 @@ public:
     };
 
 #ifndef __CUDACC__
-    Diffuse(const std::shared_ptr<Texture>& texture, bool twosided=true);
+    Diffuse(const SurfaceCallableID& surface_callable_id, const std::shared_ptr<Texture>& texture, bool twosided=true);
     ~Diffuse();
 
     SurfaceType surfaceType() const override;
 
     void copyToDevice() override;
     void free() override;
+
+    Data getData() const;
 private:
     std::shared_ptr<Texture> m_texture;
     bool m_twosided;

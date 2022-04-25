@@ -24,7 +24,8 @@ namespace prayground {
         };
 
 #ifndef __CUDACC__
-        Disney(const std::shared_ptr<Texture>& base, 
+        Disney(const SurfaceCallableID& surface_callable_id, 
+               const std::shared_ptr<Texture>& base, 
                float subsurface=0.8f, float metallic=0.5f,
                float specular=0.0f, float specular_tint=0.0f,
                float roughness=0.4f, float anisotropic=0.0f, 
@@ -72,6 +73,8 @@ namespace prayground {
 
         void setTwosided(bool twosided);
         bool twosided() const;
+
+        Data getData() const;
     private:
         std::shared_ptr<Texture> m_base;
         float m_subsurface;

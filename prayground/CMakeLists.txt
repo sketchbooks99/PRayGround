@@ -23,7 +23,6 @@ set(sources
   core/shape.h 
   core/shape.cpp
   core/scene.h 
-  core/scene.cpp
   core/stream_helpers.h 
   core/texture.h 
   core/util.h

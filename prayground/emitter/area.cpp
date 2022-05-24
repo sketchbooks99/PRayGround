@@ -52,6 +52,11 @@ namespace prayground {
         return m_intensity;
     }
 
+    const SurfaceCallableID& AreaEmitter::surfaceCallableID() const
+    {
+        return m_surface_callable_id;
+    }
+
     void AreaEmitter::free()
     {
         

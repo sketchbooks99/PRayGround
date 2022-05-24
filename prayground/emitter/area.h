@@ -33,6 +33,8 @@ namespace prayground {
         void setIntensity(float intensity);
         float intensity() const;
 
+        const SurfaceCallableID& surfaceCallableID() const;
+
         Data getData() const;
     private:
         SurfaceCallableID m_surface_callable_id;

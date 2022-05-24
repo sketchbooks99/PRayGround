@@ -63,16 +63,20 @@ namespace prayground {
         explicit operator OptixShaderBindingTable() const { return m_sbt; }
 
         /* Raygen */
-        void setRaygenRecord(const RaygenRecord& rg_record) {
+        void setRaygenRecord(const RaygenRecord& rg_record) 
+        {
             m_raygen_record = rg_record;
         }
-        RaygenRecord& raygenRecord() {
+        RaygenRecord& raygenRecord() 
+        {
             return m_raygen_record;
         }
-        const RaygenRecord& raygenRecord() const {
+        const RaygenRecord& raygenRecord() const 
+        {
             return m_raygen_record;
         }
-        CUdeviceptr deviceRaygenRecordPtr() const {
+        CUdeviceptr deviceRaygenRecordPtr() const 
+        {
             if (m_sbt.raygenRecord)
                 return m_sbt.raygenRecord;
             else
@@ -83,18 +87,14 @@ namespace prayground {
         }
 
         /* Miss */
-        template <class... MissRecordArgs>
-        void setMissRecord(const MissRecordArgs&... args) {
-            static_assert(sizeof...(args) == N, 
-                "The number of record must be same with the number of ray types.");        
-            static_assert(std::conjunction<std::is_same<MissRecord, MissRecordArgs>...>::value, 
-                "Data type must be same with 'MissRecord'.");
-
-            setToArray(m_miss_records, args...);
+        void setMissRecord(const std::array<MissRecord, 2>& miss_records)
+        {
+            m_miss_records = miss_record;
         }
 
         /// @note 置き換えを行ったらデバイス上のデータも更新する？
-        void replaceMissRecord(const MissRecord& record, const int idx) {
+        void replaceMissRecord(const MissRecord& record, const int idx) 
+        {
             if (idx >= N)
             {
                 pgLogFatal("The index out of range");
@@ -102,13 +102,16 @@ namespace prayground {
             }
             m_miss_records[idx] = record;
         }
-        MissRecord& missRecord(const int idx) {
+        MissRecord& missRecord(const int idx) 
+        {
             return m_miss_records[idx];
         }
-        const MissRecord& missRecord(const int idx) const {
+        const MissRecord& missRecord(const int idx) const 
+        {
             return m_miss_records[idx];
         }
-        CUdeviceptr deviceMissRecordPtr() const {
+        CUdeviceptr deviceMissRecordPtr() const 
+        {
             if (m_sbt.missRecordBase)
                 return m_sbt.missRecordBase;
             else
@@ -117,19 +120,23 @@ namespace prayground {
                 return 0ull;
             }
         }
+        void updateMissRecordOnDevice()
+        {
+            CUDABuffer<MissRecord> d_miss_records;
+            d_miss_records.copyToDevice(m_miss_records.data(), N * sizeof(MissRecord));
+
+        }
 
         /* Hitgroup */
-        template <class... HitgroupRecordArgs> 
-        void addHitgroupRecord(const HitgroupRecordArgs&... args) {
-            static_assert(sizeof...(args) == N, 
-                "The number of hitgroup record must be same with the number of ray types.");        
-            static_assert(std::conjunction<std::is_same<HitgroupRecord, HitgroupRecordArgs>...>::value, 
-                "Record type must be same with 'HitgroupRecord'.");
-            pushToVector(m_hitgroup_records, args...);
+        void addHitgroupRecord(const std::array<HitgroupRecord, N>& hitgroup_records)
+        {
+            for (uint32_t i = 0; i < N; i++)
+                m_hitgroup_records.emplace_back(hitgroup_records[i]);
         }
 
         /// @note 置き換えを行ったらデバイス上のデータも更新する？
-        void replaceHitgroupRecord(const HitgroupRecord& record, const int idx) {
+        void replaceHitgroupRecord(const HitgroupRecord& record, const int idx) 
+        {
             if (idx >= m_hitgroup_records.size())
             {
                 pgLogFatal("The index out of range");
@@ -142,6 +149,15 @@ namespace prayground {
         {
             UNIMPLEMENTED();
             /// @todo Must be free corresponding pointer on device, and set SBT index correctly.
+        }
+
+        void updateHitgroupRecordOnDevice()
+        {
+            CUDABuffer<HitgroupRecord> d_hitgroup_records;
+            d_hitgroup_records.copyToDevice(m_hitgroup_records);
+            m_sbt.hitgroupRecordBase = d_hitgroup_records.devicePtr(); 
+            m_sbt.hitgroupRecordCount = static_cast<uint32_t>(m_hitgroup_records.size());
+            m_sbt.hitgroupRecordStrideInBytes = static_cast<uint32_t>(sizeof(HitgroupRecord));
         }
 
         HitgroupRecord& hitgroupRecord(const int idx) 
@@ -230,21 +246,15 @@ namespace prayground {
         }
 
         void createOnDevice() {
-            CUDABuffer<RaygenRecord> d_raygen_record;
-            CUDABuffer<MissRecord> d_miss_records;
-            CUDABuffer<HitgroupRecord> d_hitgroup_records;
-            CUDABuffer<CallablesRecord> d_callables_records;
-            CUDABuffer<ExceptionRecord> d_exception_record;
-
             d_raygen_record.copyToDevice(&m_raygen_record, sizeof(RaygenRecord));
-            d_miss_records.copyToDevice(m_miss_records);
+            d_miss_records.copyToDevice(m_miss_records.data(), N * sizeof(MissRecord));
             d_hitgroup_records.copyToDevice(m_hitgroup_records);
             d_callables_records.copyToDevice(m_callables_records);
             d_exception_record.copyToDevice(&m_exception_record, sizeof(ExceptionRecord));
 
             m_sbt.raygenRecord = d_raygen_record.devicePtr();
             m_sbt.missRecordBase = d_miss_records.devicePtr();
-            m_sbt.missRecordCount = static_cast<uint32_t>(m_miss_records.size());
+            m_sbt.missRecordCount = N;
             m_sbt.missRecordStrideInBytes = static_cast<uint32_t>(sizeof(MissRecord));
             m_sbt.hitgroupRecordBase = d_hitgroup_records.devicePtr();
             m_sbt.hitgroupRecordCount = static_cast<uint32_t>(m_hitgroup_records.size());
@@ -277,11 +287,13 @@ namespace prayground {
             on_device = false;
         }
 
-        OptixShaderBindingTable& sbt() {
+        OptixShaderBindingTable& sbt() 
+        {
             return m_sbt;
         }
 
-        bool isOnDevice() {
+        bool isOnDevice() 
+        {
             return on_device;
         }
     private:
@@ -293,21 +305,19 @@ namespace prayground {
                 pushToVector(v, args...);
         }
 
-        template <class Head, class... Args>
-        static void setToArray(Head* arr, const int idx, const Head& head, const Args&... args)
-        {
-            arr[idx] = head;
-            if constexpr (sizeof...(args) != 0)
-                setToArray(arr, idx+1, args...);
-        }
-
         OptixShaderBindingTable m_sbt {};
 
         RaygenRecord                    m_raygen_record {};
-        MissRecord                      m_miss_records[N];
+        std::array<MissRecord, N>       m_miss_records;
         std::vector<HitgroupRecord>     m_hitgroup_records;
         std::vector<CallablesRecord>    m_callables_records;
         ExceptionRecord                 m_exception_record {};
+
+        CUDABuffer<RaygenRecord>        d_raygen_record;
+        CUDABuffer<MissRecord>          d_miss_records;
+        CUDABuffer<HitgroupRecord>      d_hitgroup_records;
+        CUDABuffer<CallablesRecord>     d_callables_records;
+        CUDABuffer<ExceptionRecord>     d_exception_record;
 
         bool on_device;
     };

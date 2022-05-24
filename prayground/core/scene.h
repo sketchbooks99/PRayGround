@@ -81,16 +81,11 @@ namespace prayground {
         void launchRay(const Context& ctx, const Pipeline& ppl, LaunchParams& l_params, CUstream stream,
             uint32_t w, uint32_t h, uint32_t d);
 
+        // Bind program to SBT parameters
         void bindRaygen(ProgramGroup& raygen_prg);
-
-        template <ProgramGroup... Prgs>
-        void bindMiss(Prgs&... prgs);
-
-        template <ProgramGroup... Prgs>
-        void bindProgramWithObject(const std::string& obj_name, Prgs&... prgs);
-
-        void bindCallabes(ProgramGroup& prg);
-
+        void bindMiss(const std::array<ProgramGroup, N>& miss_prgs);
+        void bindProgramWithObject(const std::string& obj_name, std::array<ProgramGroup, N>& hitgroup_prgs);
+        void bindCallables(ProgramGroup& prg);
         void bindException(ProgramGroup& prg);
 
         void setCamera(const _CamT& camera);
@@ -145,7 +140,7 @@ namespace prayground {
         void deleteObject(const std::string& name);
 
         void buildAccel(const Context& ctx, CUstream stream);
-        void buildSBT(const Context& ctx);
+        void buildSBT();
     private:
         template <class T>
         static std::optional<Item<T>> findItem(const std::vector<Item<T>>& items, const std::string& name)
@@ -155,7 +150,7 @@ namespace prayground {
                 if (item.name == name)
                     return item;
             }
-            return std::nullopt_t;
+            return std::nullopt;
         }
 
         template <class Obj>
@@ -166,7 +161,7 @@ namespace prayground {
                 if (obj.shape.first == shape_name)
                     return obj.shape;
             }
-            return std::nullopt_t;
+            return std::nullopt;
         }
 
         template <class Obj, class ReturnT>
@@ -177,7 +172,7 @@ namespace prayground {
                 if (obj.surface.first == mat_name)
                     return obj.surface;
             }
-            return std::nullopt_t;
+            return std::nullopt;
         }
 
         struct SBTUpdateState {
@@ -231,12 +226,18 @@ namespace prayground {
     inline void Scene<_CamT, N>::setup(const Scene::Settings& settings)
     {
         m_settings = settings;
+
+        m_sbt.setRaygenRecord(pgRaygenRecord{});
+        
+        std::array<pgMissRecord, N> ms_records{};
+        m_sbt.setMissRecord(ms_records);
     }
 
     // -------------------------------------------------------------------------------
     template <class _CamT, uint32_t N>
     inline void Scene<_CamT, N>::update()
     {
+        /// @todo : Update primitive parameters and acceleration structure
         UNIMPLEMENTED();
     }
 
@@ -264,31 +265,57 @@ namespace prayground {
         rg_prg.recordPackHeader(&rg_record);
     }
 
-    // -------------------------------------------------------------------------------
     template<class _CamT, uint32_t N>
-    template<ProgramGroup ...Prgs>
-    inline void Scene<_CamT, N>::bindMiss(Prgs & ...prgs)
+    inline void Scene<_CamT, N>::bindMiss(const std::array<ProgramGroup, N>& miss_prgs)
     {
+        for (int i = 0; i < N; i++)
+        {
+            pgMissRecord& record = m_sbt.missRecord(i);
+            miss_prgs[i].recordPackHeader(&record);
+        }
+    }
 
+    template<class _CamT, uint32_t N>
+    inline void Scene<_CamT, N>::bindProgramWithObject(const std::string& obj_name, std::array<ProgramGroup, N>& hitgroup_prgs)
+    {
+        auto findObjectAndBindProgram = [&](auto& objects) -> bool
+        {
+            auto obj = findItem(objects, obj_name);
+            if (!obj)
+                return false;
+
+            for (int i = 0; i < N; i++)
+            {
+                pgHitgroupRecord& record = m_sbt.hitgroupRecord(obj.value().ID + i);
+                hitgroup_prgs[i].recordPackHeader(record);
+            }
+            return true;
+        };
+
+        if (findObjectAndBindProgram(m_objects))                return;
+        if (findObjectAndBindProgram(m_light_objects))          return;
+        if (findObjectAndBindProgram(m_moving_objects))         return;
+        if (findObjectAndBindProgram(m_moving_light_objects))   return;
+
+        pgLogFatal("The object named with '", obj_name, "' is not found. Failed to bind program group to the object.");
     }
 
     // -------------------------------------------------------------------------------
     template<class _CamT, uint32_t N>
-    template<ProgramGroup ...Prgs>
-    inline void Scene<_CamT, N>::bindProgramWithObject(const std::string& obj_name, Prgs & ...prgs)
+    inline void Scene<_CamT, N>::bindCallables(ProgramGroup& prg)
     {
-    }
-
-    // -------------------------------------------------------------------------------
-    template<class _CamT, uint32_t N>
-    inline void Scene<_CamT, N>::bindCallabes(ProgramGroup& prg)
-    {
+        pgCallableRecord record{};
+        prg.recordPackHeader(&record);
+        m_sbt.addCallablesRecord(record);
     }
 
     // -------------------------------------------------------------------------------
     template<class _CamT, uint32_t N>
     inline void Scene<_CamT, N>::bindException(ProgramGroup& prg)
     {
+        pgExceptionRecord record{};
+        prg.recordPackHeader(&record);
+        m_sbt.setExceptionRecord(record);
     }
 
     // -------------------------------------------------------------------------------
@@ -331,13 +358,16 @@ namespace prayground {
     {
         m_objects.emplace_back({ name, object, m_current_sbt_id });
         m_current_sbt_id += N;
-        
+        std::array<pgHitgroupRecord, N> hitgroup_records;
+        m_sbt.addHitgroupRecord(hitgroup_records);
     }
 
     template <class _CamT, uint32_t N>
     inline void Scene<_CamT, N>::addObject(const std::string& name, Pair<std::shared_ptr<Shape>> shape, Pair<std::shared_ptr<Material>> material, const Matrix4f& transform)
     {
         m_objects.emplace_back({ name, {shape, material, material.second->surfaceCallableID(), transform}, m_current_sbt_id });
+        std::array<pgHitgroupRecord, N> hitgroup_records;
+        m_sbt.addHitgroupRecord(hitgroup_records);
         m_current_sbt_id += N;
     }
 
@@ -405,6 +435,8 @@ namespace prayground {
     inline void Scene<_CamT, N>::addLightObject(const std::string& name, const LightObject& light_object)
     {
         m_light_objects.emplace_back({ name, light_object, m_current_sbt_id });
+        std::array<pgHitgroupRecord, N> hitgroup_records{};
+        m_sbt.addHitgroupRecord(hitgrpup_records);
         m_current_sbt_id += N;
     }
 
@@ -412,6 +444,8 @@ namespace prayground {
     inline void Scene<_CamT, N>::addLightObject(const std::string& name, Pair<std::shared_ptr<Shape>> shape, Pair<std::shared_ptr<AreaEmitter>> area, const Matrix4f& transform)
     {
         m_light_objects.emplace_back({ name, {shape, area, transform}, m_current_sbt_id });
+        std::array<pgHitgroupRecord, N> hitgroup_records{};
+        m_sbt.addHitgroupRecord(hitgroup_records);
         m_current_sbt_id += N;
     }
 
@@ -479,6 +513,8 @@ namespace prayground {
     inline void Scene<_CamT, N>::addMovingObject(const std::string& name, const MovingObject& moving_object)
     {
         m_moving_objects.emplace_back({ name, moving_object, m_current_sbt_id });
+        std::array<pgHitgroupRecord, N> hitgroup_records{};
+        m_sbt.addHitgroupRecord(hitgrpup_records);
         m_current_sbt_id += N;
     }
 
@@ -486,6 +522,8 @@ namespace prayground {
     inline void Scene<_CamT, N>::addMovingObject(const std::string& name, Pair<std::shared_ptr<Shape>> shape, Pair<std::shared_ptr<Material>> material, const Matrix4f& begin_transform, const Matrix4f& end_transform, uint16_t num_key)
     {
         m_moving_objects.emplace_back({ name, {shape, material, begin_transform, end_transform, num_key}, m_current_sbt_id });
+        std::array<pgHitgroupRecord, N> hitgroup_records{};
+        m_sbt.addHitgroupRecord(hitgrpup_records);
         m_current_sbt_id += N;
     }
 
@@ -557,6 +595,8 @@ namespace prayground {
     inline void Scene<_CamT, N>::addMovingLightObject(const std::string& name, const MovingLightObject& moving_light_object)
     {
         m_moving_light_objects.emplace_back({ name, moving_light_object, m_current_sbt_id });
+        std::array<pgHitgroupRecord, N> hitgroup_records{};
+        m_sbt.addHitgroupRecord(hitgrpup_records);
         m_current_sbt_id += N;
     }
 
@@ -564,6 +604,8 @@ namespace prayground {
     inline void Scene<_CamT, N>::addMovingLightObject(const std::string& name, Pair<std::shared_ptr<Shape>> shape, Pair<std::shared_ptr<AreaEmitter>> light, const Matrix4f& begin_transform, const Matrix4f& end_transform, uint16_t num_key)
     {
         m_moving_light_objects.emplace_back({ name, {shape, light, begin_transform, end_transform, num_key}, m_current_sbt_id });
+        std::array<pgHitgroupRecord, N> hitgroup_records{};
+        m_sbt.addHitgroupRecord(hitgrpup_records);
         m_current_sbt_id += N;
     }
 
@@ -667,11 +709,64 @@ namespace prayground {
     template<class _CamT, uint32_t N>
     inline void Scene<_CamT, N>::buildAccel(const Context& ctx, CUstream stream)
     {
+
     }
 
     template <class _CamT, uint32_t N>
-    inline void Scene<_CamT, N>::buildSBT(const Context& ctx)
+    inline void Scene<_CamT, N>::buildSBT()
     {
+        // Raygen 
+        RaygenRecord& rg_record = m_sbt.raygenRecord();
+        rg_record.data.camera = m_camera.getData();
+
+        // Miss
+        m_envmap->copyToDevice();
+        for (uint32_t i = 0; i < N; i++)
+        {
+            MissRecord& ms_record = m_sbt.missRecord(i);
+            ms_record.data.env_data = m_envmap->devicePtr();
+        }
+
+        // Hitgroup
+        auto registerSBTData = [&](auto& objects)
+        {
+            for (auto& obj : m_objects)
+            {
+                auto& shape = obj.value.shape;
+                auto& surace = obj.value.surface;
+
+                shape->copyToDevice();
+                shape->setSbtIndex(obj.value.ID);
+                surface->copyToDevice();
+
+                for (int i = 0; i < N; i++)
+                {
+                    pgHitgroupRecord& record = m_sbt.hitgroupRecord(obj.value.ID + i);
+                    record.data =
+                    {
+                        .shape_data = shape->devicePtr(),
+                        .surface_info =
+                        {
+                            .data = surface->devicePtr(),
+                            .callable_id = {
+                                .sample = surface->surfaceCallableID().sample,
+                                .bsdf = surface->surfaceCallableID().bsdf,
+                                .pdf = surface->surfaceCallableID().pdf
+                            },
+                            surface->surfaceType()
+                        }
+                    };
+                }
+            }
+        };
+
+        registerSBTData(m_objects);
+        registerSBTData(m_light_objects);
+        registerSBTData(m_moving_objects);
+        registerSBTData(m_moving_light_objects);
+
+        // Build SBT on device
+        m_sbt.createOnDevice();
     }
 
 } // namespace prayground

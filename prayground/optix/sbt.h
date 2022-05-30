@@ -89,7 +89,7 @@ namespace prayground {
         /* Miss */
         void setMissRecord(const std::array<MissRecord, 2>& miss_records)
         {
-            m_miss_records = miss_record;
+            m_miss_records = miss_records;
         }
 
         /// @note 置き換えを行ったらデバイス上のデータも更新する？
@@ -165,7 +165,7 @@ namespace prayground {
             ASSERT(idx < (int)m_hitgroup_records.size(), "The index out of range.");
             return m_hitgroup_records[idx];
         }
-        const HitgroupRecord& hitgroupRecord(const int idx)
+        const HitgroupRecord& hitgroupRecord(const int idx) const 
         {
             ASSERT(idx < (int)m_hitgroup_records.size(), "The index out of range.");
             return m_hitgroup_records[idx];
@@ -192,8 +192,13 @@ namespace prayground {
 
         /// @note 置き換えを行ったらデバイス上のデータも更新する？
         void replaceCallablesRecord(const CallablesRecord& record, const int idx) {
-            ASSERT(idx < (int)m_callable_records.size(), "The index out of range.");
+            ASSERT(idx < (int)m_callables_records.size(), "The index out of range.");
             m_callables_records[idx] = record;
+        }
+
+        uint32_t numCallablesRecords() const 
+        {
+            return static_cast<uint32_t>(m_callables_records.size());
         }
 
         void deleteCallablesRecord(const int idx)
@@ -327,11 +332,11 @@ namespace prayground {
     using pgRaygenRecord = Record<pgRaygenData<Cam>>;
     using pgMissRecord = Record<pgMissData>;
     using pgHitgroupRecord = Record<pgHitgroupData>;
-    using pgCallableRecord = Record<pgEmptyData>;
+    using pgCallablesRecord = Record<pgEmptyData>;
     using pgExceptionRecord = Record<pgEmptyData>;
 
     template <class Cam, uint32_t N>
-    using pgDefaultSBT = ShaderBindingTable<pgRaygenRecord<Cam>, pgMissRecord, pgHitgroupRecord, pgCallableRecord, pgExceptionRecord, N>;
+    using pgDefaultSBT = ShaderBindingTable<pgRaygenRecord<Cam>, pgMissRecord, pgHitgroupRecord, pgCallablesRecord, pgExceptionRecord, N>;
 
 #endif // __CUDACC__
 

@@ -17,6 +17,7 @@
 	#include "core/bitmap.h"
 	#include "core/camera.h"
 	#include "core/attribute.h"
+	#include "core/scene.h"
 
 	// optix utilities
 	#include "optix/module.h"

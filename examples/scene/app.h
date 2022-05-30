@@ -1,7 +1,9 @@
 #pragma once
 
 #include <prayground/prayground.h>
-#include <prayground/core/scene.h>
+#include "params.h"
+
+using namespace std;
 
 class App : public BaseApp 
 {
@@ -19,7 +21,15 @@ public:
     void keyPressed(int key);
     void keyReleased(int key);
 private:
-    
+    Context context;
+    CUstream stream;
+    Pipeline pipeline;
 
-    Scene<Camera, 2> scene;
+    LaunchParams params;
+
+    Bitmap result_bmp;
+    FloatBitmap accum_bmp;
+
+    static constexpr uint32_t NRay = 2;
+    Scene<Camera, NRay> scene;
 };

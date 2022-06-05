@@ -21,6 +21,9 @@ public:
     void keyPressed(int key);
     void keyReleased(int key);
 private:
+    void initResultBufferOnDevice();
+    void handleCameraUpdate();
+
     Context context;
     CUstream stream;
     Pipeline pipeline;
@@ -32,4 +35,6 @@ private:
 
     static constexpr uint32_t NRay = 2;
     Scene<Camera, NRay> scene;
+
+    bool is_camera_updated;
 };

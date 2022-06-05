@@ -200,12 +200,14 @@ void Camera::mouseDragged(float x, float y, int button)
 
         this->setOrigin(this->lookat() + Vec3f(cam_x, cam_y, cam_z));
     }
+
 }
 
 void Camera::mouseScrolled(float xoffset, float yoffset)
 {
     float zoom = yoffset < 0 ? 1.1f : 1.0f / 1.1f;
     this->setOrigin(this->lookat() + (this->origin() - this->lookat()) * zoom);
+
 }
 
 // --------------------------------------------------------------------------------------

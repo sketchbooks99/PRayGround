@@ -10,7 +10,7 @@
 
 namespace prayground {
 
-    enum class SurfaceType : unsigned int {
+    enum class SurfaceType : uint32_t {
         // None type ( default )
         None            = 0,        
         // Diffuse surface
@@ -38,12 +38,12 @@ namespace prayground {
         Medium          = 1u << 6
     };
 
-    constexpr SurfaceType  operator|(SurfaceType t1, SurfaceType t2)    { return static_cast<SurfaceType>(  (unsigned int)t1 | (unsigned int)t2 ); }
-    constexpr SurfaceType  operator|(unsigned int t1, SurfaceType t2)   { return static_cast<SurfaceType>(                t1 | (unsigned int)t2 ); }
-    constexpr SurfaceType  operator&(SurfaceType t1, SurfaceType t2)    { return static_cast<SurfaceType>(  (unsigned int)t1 & (unsigned int)t2 ); }
-    constexpr SurfaceType  operator&(unsigned int t1, SurfaceType t2)   { return static_cast<SurfaceType>(                t1 & (unsigned int)t2 ); }
-    constexpr SurfaceType  operator~(SurfaceType t1)                    { return static_cast<SurfaceType>( ~(unsigned int)t1 ); }
-    constexpr unsigned int operator+(SurfaceType t1)                    { return static_cast<unsigned int>(t1); }
+    constexpr SurfaceType  operator|(SurfaceType t1, SurfaceType t2)    { return static_cast<SurfaceType>(  (uint32_t)t1 | (uint32_t)t2 ); }
+    constexpr SurfaceType  operator|(uint32_t t1, SurfaceType t2)       { return static_cast<SurfaceType>(            t1 | (uint32_t)t2 ); }
+    constexpr SurfaceType  operator&(SurfaceType t1, SurfaceType t2)    { return static_cast<SurfaceType>(  (uint32_t)t1 & (uint32_t)t2 ); }
+    constexpr SurfaceType  operator&(uint32_t t1, SurfaceType t2)       { return static_cast<SurfaceType>(            t1 & (uint32_t)t2 ); }
+    constexpr SurfaceType  operator~(SurfaceType t1)                    { return static_cast<SurfaceType>( ~(uint32_t)t1 ); }
+    constexpr uint32_t     operator+(SurfaceType t1)                    { return static_cast<uint32_t>(t1); }
 
     struct SurfaceCallableID {
         uint32_t sample;

@@ -12,8 +12,23 @@
 
 namespace prayground {
 
-/** @note Default implementation for shader binding table records. */
+    enum class SBTRecordType : uint32_t {
+        None = 0, 
+        Raygen = 1u << 0,
+        Miss = 1u << 1,
+        Hitgroup = 1u << 2, 
+        Callables = 1u << 3, 
+        Exception = 1u << 4
+    };
 
+    constexpr SBTRecordType  operator|(SBTRecordType t1, SBTRecordType t2)  { return static_cast<SBTRecordType>((uint32_t)t1 | (uint32_t)t2); }
+    constexpr SBTRecordType  operator|(uint32_t t1, SBTRecordType t2)       { return static_cast<SBTRecordType>(          t1 | (uint32_t)t2); }
+    constexpr SBTRecordType  operator&(SBTRecordType t1, SBTRecordType t2)  { return static_cast<SBTRecordType>((uint32_t)t1 & (uint32_t)t2); }
+    constexpr SBTRecordType  operator&(uint32_t t1, SBTRecordType t2)       { return static_cast<SBTRecordType>(          t1 & (uint32_t)t2); }
+    constexpr SBTRecordType  operator~(SBTRecordType t1)                    { return static_cast<SBTRecordType>(~(uint32_t)t1); }
+    constexpr uint32_t       operator+(SBTRecordType t1)                    { return static_cast<uint32_t>(t1); }
+
+    /* Default structs for shader binding table records. */
     template <class Cam>
     struct pgRaygenData {
         typename Cam::Data camera;

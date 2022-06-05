@@ -79,6 +79,7 @@ namespace prayground {
         void UVWFrame(Vec3f& U, Vec3f& V, Vec3f& W) const;
 
         Data getData() const;
+
     protected:
         Vec3f m_origin;
         Vec3f m_lookat;
@@ -88,6 +89,7 @@ namespace prayground {
         float m_nearclip;
         float m_farclip;
         FovAxis m_fovaxis;
+
     private:
         void mouseDragged(float x, float y, int button);
         void mouseScrolled(float xoffset, float yoffset);

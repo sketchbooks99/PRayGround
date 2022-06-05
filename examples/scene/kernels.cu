@@ -14,13 +14,13 @@ static __forceinline__ __device__ SurfaceInteraction* getSurfaceInteraction()
 
 static __forceinline__ __device__ void trace(
 	OptixTraversableHandle handle, const Vec3f& ro, const Vec3f& rd,
-	float tmin, float tmax, float ray_time, uint32_t ray_type, SurfaceInteraction* si)
+	float tmin, float tmax, uint32_t ray_type, SurfaceInteraction* si)
 {
 	uint32_t u0, u1;
 	packPointer(si, u0, u1);
 	optixTrace(
 		handle, ro, rd,
-		tmin, tmax, ray_time,
+		tmin, tmax, 0,
 		OptixVisibilityMask(1), OPTIX_RAY_FLAG_NONE,
 		ray_type, 2, ray_type,
 		u0, u1
@@ -68,7 +68,7 @@ extern "C" __device__ void __raygen__pinhole()
             if ( depth >= params.max_depth )
 				break;
 
-            trace(params.handle, ro, rd, 0.01f, 1e16f, rnd(seed), /* ray_type = */ 0, &si);
+            trace(params.handle, ro, rd, 0.01f, 1e16f, /* ray_type = */ 0, &si);
 
             if (si.trace_terminate) {
                 result += si.emission * throughput;
@@ -124,6 +124,7 @@ extern "C" __device__ void __raygen__pinhole()
 
             ++depth;
 		}
+        i--;
 	}
 
     const uint32_t image_idx = idx.y() * params.width + idx.x();
@@ -393,7 +394,7 @@ extern "C" __device__ float __direct_callable__pdf_glass(SurfaceInteraction * si
 // Area emitter ------------------------------------------------------------------------------------------
 extern "C" __device__ void __direct_callable__area_emitter(SurfaceInteraction * si, void* surface_data)
 {
-    const AreaEmitter::Data* area = reinterpret_cast<AreaEmitter::Data*>(surface_data);
+    const auto* area = reinterpret_cast<AreaEmitter::Data*>(surface_data);
     si->trace_terminate = true;
     float is_emitted = dot(si->wo, si->shading.n) < 0.0f ? 1.0f : 0.0f;
     if (area->twosided)

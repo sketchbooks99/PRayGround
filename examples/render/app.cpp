@@ -132,7 +132,6 @@ void App::setup()
     // VCM settings
     VCM vcm;
 
-
     initResultBufferOnDevice();
 
     // Camera settings

@@ -1,5 +1,28 @@
 #include "app.h"
 
+void App::initResultBufferOnDevice()
+{
+    params.frame = 0;
+
+    result_bmp.allocateDevicePtr();
+    accum_bmp.allocateDevicePtr();
+
+    params.result_buffer = reinterpret_cast<Vec4u*>(result_bmp.devicePtr());
+    params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bmp.devicePtr());
+
+    CUDA_SYNC_CHECK();
+}
+
+void App::handleCameraUpdate()
+{
+    if (!is_camera_updated)
+        return;
+
+    scene.updateSBT(+(SBTRecordType::Raygen));
+
+    initResultBufferOnDevice();
+}
+
 // ------------------------------------------------------------------
 void App::setup()
 {
@@ -49,7 +72,7 @@ void App::setup()
 
     // Raygen program
     ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, module, "__raygen__pinhole");
-    scene.bindRaygen(raygen_prg);
+    scene.bindRaygenProgram(raygen_prg);
     scene.setCamera(camera);
 
     // Create callables program for texture
@@ -63,23 +86,23 @@ void App::setup()
     Callable bitmap_prg = pipeline.createCallablesProgram(context, module, "__direct_callable__bitmap", "");
     Callable constant_prg = pipeline.createCallablesProgram(context, module, "__direct_callable__constant", "");
     Callable checker_prg = pipeline.createCallablesProgram(context, module, "__direct_callable__checker", "");
-    scene.bindCallables(bitmap_prg.program);
-    scene.bindCallables(constant_prg.program);
-    scene.bindCallables(checker_prg.program);
+    scene.bindCallablesProgram(bitmap_prg.program);
+    scene.bindCallablesProgram(constant_prg.program);
+    scene.bindCallablesProgram(checker_prg.program);
 
     // Create callables program for surfaces
     Callable diffuse_sample_bsdf_prg = pipeline.createCallablesProgram(context, module, "__direct_callable__sample_diffuse", "__continuation_callable__bsdf_diffuse");
     Callable diffuse_pdf_prg = pipeline.createCallablesProgram(context, module, "__direct_callable__pdf_diffuse", "");
-    scene.bindCallables(diffuse_sample_bsdf_prg.program);
-    scene.bindCallables(diffuse_pdf_prg.program);
+    scene.bindCallablesProgram(diffuse_sample_bsdf_prg.program);
+    scene.bindCallablesProgram(diffuse_pdf_prg.program);
 
     Callable glass_sample_bsdf_prg = pipeline.createCallablesProgram(context, module, "__direct_callable__sample_glass", "__continuation_callable__bsdf_glass");
     Callable glass_pdf_prg = pipeline.createCallablesProgram(context, module, "__direct_callable__pdf_glass", "");
-    scene.bindCallables(glass_sample_bsdf_prg.program);
-    scene.bindCallables(glass_pdf_prg.program);
+    scene.bindCallablesProgram(glass_sample_bsdf_prg.program);
+    scene.bindCallablesProgram(glass_pdf_prg.program);
 
     Callable area_emitter_prg = pipeline.createCallablesProgram(context, module, "__direct_callable__area_emitter", "");
-    scene.bindCallables(area_emitter_prg.program);
+    scene.bindCallablesProgram(area_emitter_prg.program);
 
     SurfaceCallableID diffuse_id{ diffuse_sample_bsdf_prg.ID, diffuse_sample_bsdf_prg.ID, diffuse_pdf_prg.ID };
     SurfaceCallableID glass_id{ glass_sample_bsdf_prg.ID, glass_sample_bsdf_prg.ID, glass_pdf_prg.ID };
@@ -89,7 +112,7 @@ void App::setup()
     std::array<ProgramGroup, NRay> miss_prgs;
     miss_prgs[0] = pipeline.createMissProgram(context, module, "__miss__envmap");
     miss_prgs[1] = pipeline.createMissProgram(context, module, "__miss__shadow");
-    scene.bindMiss(miss_prgs);
+    scene.bindMissPrograms(miss_prgs);
     scene.setEnvmap(std::make_shared<FloatBitmapTexture>("resources/image/drackenstein_quarry_4k.exr", bitmap_prg.ID));
 
     // Hitgroup program
@@ -119,42 +142,43 @@ void App::setup()
 
     // Objects
     auto wall_plane = make_shared<Plane>(Vec2f(-25.0f), Vec2f(25.0f));
-    scene.addObject("left_wall", wall_plane, green_diffuse,
+    scene.addObject("left_wall", wall_plane, green_diffuse, plane_prgs,
         Matrix4f::translate(-25, 0, 0) * Matrix4f::rotate(math::pi / 2.0f, Vec3f{0, 0, 1}));
-    scene.bindProgramWithObject("left_wall", plane_prgs);
+
     
-    scene.addObject("right_wall", wall_plane, red_diffuse,
+    scene.addObject("right_wall", wall_plane, red_diffuse, plane_prgs, 
         Matrix4f::translate(25, 0, 0)* Matrix4f::rotate(math::pi / 2.0f, Vec3f{ 0, 0, 1 }));
-    scene.bindProgramWithObject("right_wall", plane_prgs);
 
-    scene.addObject("back_wall", wall_plane, white_diffuse,
-        Matrix4f::translate(0, 0, 25)* Matrix4f::rotate(math::pi / 2.0f, Vec3f{ 1, 0, 0 }));
-    scene.bindProgramWithObject("back_wall", plane_prgs);
+    scene.addObject("back_wall", wall_plane, white_diffuse, plane_prgs,
+        Matrix4f::translate(0, 0, -25)* Matrix4f::rotate(math::pi / 2.0f, Vec3f{ 1, 0, 0 }));
 
-    scene.addObject("ceiling", wall_plane, white_diffuse,
+    scene.addObject("ceiling", wall_plane, white_diffuse, plane_prgs,
         Matrix4f::translate(0, 25, 0));
-    scene.bindProgramWithObject("ceiling", plane_prgs);
 
-    scene.addObject("floor", wall_plane, floor_diffuse,
+    scene.addObject("floor", wall_plane, floor_diffuse, plane_prgs,
         Matrix4f::translate(0, -25, 0));
-    scene.bindProgramWithObject("floor", plane_prgs);
 
     scene.addLightObject("ceiling_light", make_shared<Plane>(Vec2f(-5.0f), Vec2f(5.0f)),
         make_shared<AreaEmitter>(area_emitter_id, make_shared<ConstantTexture>(Vec3f(1.0f), constant_prg.ID)), 
-        Matrix4f::translate(0, 24.9f, 0));
-    scene.bindProgramWithObject("ceiling_light", plane_prgs);
+        plane_prgs, Matrix4f::translate(0, 24.9f, 0));
 
     pipeline.create(context);
     scene.buildAccel(context, stream);
     scene.buildSBT();
+
+    params.handle = scene.accelHandle();
 }
 
 // ------------------------------------------------------------------
 void App::update()
 {
+    handleCameraUpdate();
+
     scene.launchRay(context, pipeline, params, stream, result_bmp.width(), result_bmp.height(), 1);
     CUDA_CHECK(cudaStreamSynchronize(stream));
     CUDA_SYNC_CHECK();
+
+    params.frame++;
 
     result_bmp.copyFromDevice();
 }
@@ -174,7 +198,7 @@ void App::mousePressed(float x, float y, int button)
 // ------------------------------------------------------------------
 void App::mouseDragged(float x, float y, int button)
 {
-    
+    if (button == MouseButton::Middle) is_camera_updated = true;
 }
 
 // ------------------------------------------------------------------
@@ -192,7 +216,7 @@ void App::mouseMoved(float x, float y)
 // ------------------------------------------------------------------
 void App::mouseScrolled(float x, float y)
 {
-    
+    is_camera_updated = true;
 }
 
 // ------------------------------------------------------------------

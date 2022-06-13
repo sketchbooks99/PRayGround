@@ -35,6 +35,7 @@ extern "C" __device__ void __raygen__pinhole()
 	const int frame = params.frame;
 
 	const Vec3ui idx(optixGetLaunchIndex());
+    if (idx.y() == 0 && idx.x() == 0) printf("%d\n", frame);
 	uint32_t seed = tea<4>(idx.y() * params.width + idx.x(), frame);
 
 	Vec3f result(0.0f);

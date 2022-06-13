@@ -445,7 +445,7 @@ namespace prayground {
         auto createGas = [&](auto& object, uint32_t ID) -> void
         {
             // Set shader binding table index to shape
-            //object.shape->setSbtIndex(ID);
+            object.shape->setSbtIndex(ID);
 
             // Build geometry accel
             object.instance.allowCompaction();
@@ -460,7 +460,7 @@ namespace prayground {
         auto createMovingGas = [&](auto& moving_object, uint32_t ID) -> void
         {
             // Set shader binding table index to shape 
-            //moving_object.shape->setSbtIndex(ID);
+            moving_object.shape->setSbtIndex(ID);
 
             // Build geometry accel
             moving_object.gas.allowCompaction();
@@ -520,18 +520,18 @@ namespace prayground {
         // Hitgroup
         auto registerSBTData = [&](auto& objects)
         {
-            for (auto& obj : m_objects)
+            for (auto& obj : objects)
             {
                 auto& shape = obj.value.shape;
                 auto& surface = obj.value.surface;
 
                 shape->copyToDevice();
-                shape->setSbtIndex(obj.ID);
                 surface->copyToDevice();
 
                 // Set actual sbt data to records
                 for (int i = 0; i < N; i++)
                 {
+                    pgLog(surface->surfaceType(), obj.ID + i);
                     pgHitgroupRecord& record = m_sbt.hitgroupRecord(obj.ID + i);
                     record.data =
                     {

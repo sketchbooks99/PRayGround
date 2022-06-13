@@ -17,6 +17,7 @@ void App::handleCameraUpdate()
 {
     if (!is_camera_updated)
         return;
+    is_camera_updated = false;
 
     scene.updateSBT(+(SBTRecordType::Raygen));
 
@@ -162,9 +163,10 @@ void App::setup()
         make_shared<AreaEmitter>(area_emitter_id, make_shared<ConstantTexture>(Vec3f(1.0f), constant_prg.ID)), 
         plane_prgs, Matrix4f::translate(0, 24.9f, 0));
 
-    pipeline.create(context);
+    CUDA_CHECK(cudaStreamCreate(&stream));
     scene.buildAccel(context, stream);
     scene.buildSBT();
+    pipeline.create(context);
 
     params.handle = scene.accelHandle();
 }
@@ -181,6 +183,8 @@ void App::update()
     params.frame++;
 
     result_bmp.copyFromDevice();
+
+    pgSetWindowName(toString(pgGetFrameRate()));
 }
 
 // ------------------------------------------------------------------

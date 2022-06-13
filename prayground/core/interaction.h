@@ -124,5 +124,36 @@ namespace prayground {
         MediumInterface medium_interface;
     };
 
-} // ::prayground
+#ifndef __CUDACC__
+    inline std::ostream& operator<<(std::ostream& out, SurfaceType surface_type)
+    {
+        switch (surface_type)
+        {
+        case SurfaceType::None:
+            return out << "SurfaceType::None";
+        case SurfaceType::Diffuse:
+            return out << "SurfaceType::Diffuse";
+        case SurfaceType::Reflection:
+            return out << "SurfaceType::Reflection";
+        case SurfaceType::Refraction:
+            return out << "SurfaceType::Refraction";
+        case SurfaceType::RoughReflection:
+            return out << "SurfaceType::RoughReflection";
+        case SurfaceType::RoughRefraction:
+            return out << "SurfaceType::RoughRefraction";
+        case SurfaceType::Delta:
+            return out << "SurfaceType::Delta";
+        case SurfaceType::Rough:
+            return out << "SurfaceType::Rough";
+        case SurfaceType::Material:
+            return out << "SurfaceType::Material";
+        case SurfaceType::AreaEmitter:
+            return out << "SurfaceType::AreaEmitter";
+        case SurfaceType::Medium:
+            return out << "SurfaceType::Medium";
+        }
+    }
+#endif
+
+} // namespace prayground
 

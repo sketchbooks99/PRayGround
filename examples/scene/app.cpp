@@ -145,7 +145,6 @@ void App::setup()
     auto wall_plane = make_shared<Plane>(Vec2f(-25.0f), Vec2f(25.0f));
     scene.addObject("left_wall", wall_plane, green_diffuse, plane_prgs,
         Matrix4f::translate(-25, 0, 0) * Matrix4f::rotate(math::pi / 2.0f, Vec3f{0, 0, 1}));
-
     
     scene.addObject("right_wall", wall_plane, red_diffuse, plane_prgs, 
         Matrix4f::translate(25, 0, 0)* Matrix4f::rotate(math::pi / 2.0f, Vec3f{ 0, 0, 1 }));

@@ -26,14 +26,14 @@ namespace prayground {
     template <DerivedFromCamera _CamT, uint32_t N>
     class Scene {
     private:
-        // ID is for shader binding table offset
         template <class T>
         struct Item {
             std::string name;
-            uint32_t ID;
-            T value;
+            uint32_t ID; // Used for shader binding table offset
+            T value;     
         };
 
+        /// @todo Add support for multiple materials
         template <class SurfaceT>
         struct Object_ {
             std::shared_ptr<Shape> shape;
@@ -72,6 +72,8 @@ namespace prayground {
 
         void setup();
         void setup(const Settings& settings);
+
+        void load(const std::filesystem::path& filepath);
 
         template <class LaunchParams>
         void launchRay(const Context& ctx, const Pipeline& ppl, LaunchParams& l_params, CUstream stream,
@@ -180,13 +182,24 @@ namespace prayground {
     {
         m_settings = settings;
 
+        // Initialize instance acceleration structure
         m_accel = InstanceAccel{ InstanceAccel::Type::Instances };
 
+        // Initialize raygen and miss record
         pgRaygenRecord<_CamT> rg_record = {};
         m_sbt.setRaygenRecord(rg_record);
         
         std::array<pgMissRecord, N> ms_records{};
         m_sbt.setMissRecord(ms_records);
+    }
+
+    // -------------------------------------------------------------------------------
+    template <DerivedFromCamera _CamT, uint32_t N>
+    inline void load(const std::filesystem::path& filepath)
+    {
+        std::vector<Attribute> material_attributes;
+        std::shared_ptr<TriangleMesh> scene_mesh(new TraingleMesh());
+        scene_mesh->loadWithMtl(filepath, material_attributes);
     }
 
     // -------------------------------------------------------------------------------
@@ -199,9 +212,11 @@ namespace prayground {
         // Check if launch parameter is allocated on device
         if (!d_params.isAllocated() || d_params.size() < sizeof(LaunchParams))
             d_params.allocate(sizeof(LaunchParams));
+
         // Copy a launch parameter to device
         d_params.copyToDeviceAsync(&l_params, sizeof(LaunchParams), stream);
 
+        // Launch raygen kernel on device
         optixLaunch(
             static_cast<OptixPipeline>(ppl), stream,
             d_params.devicePtr(), d_params.size(), &m_sbt.sbt(),
@@ -212,6 +227,7 @@ namespace prayground {
     template<DerivedFromCamera _CamT, uint32_t N>
     inline void Scene<_CamT, N>::bindRaygenProgram(ProgramGroup& rg_prg)
     {
+        // Fill the record header with the raygen program
         pgRaygenRecord<_CamT>& rg_record = m_sbt.raygenRecord();
         rg_prg.recordPackHeader(&rg_record);
     }
@@ -219,6 +235,7 @@ namespace prayground {
     template<DerivedFromCamera _CamT, uint32_t N>
     inline void Scene<_CamT, N>::bindMissPrograms(std::array<ProgramGroup, N>& miss_prgs)
     {
+        // Fill record's headers with the miss programs
         for (int i = 0; i < N; i++)
         {
             pgMissRecord& record = m_sbt.missRecord(i);
@@ -230,6 +247,8 @@ namespace prayground {
     template<DerivedFromCamera _CamT, uint32_t N>
     inline void Scene<_CamT, N>::bindCallablesProgram(ProgramGroup& prg)
     {
+        // Add SBT record and fill the record header at the same time
+        // since the pgCallablesRecord has no data
         pgCallablesRecord record{};
         prg.recordPackHeader(&record);
         m_sbt.addCallablesRecord(record);
@@ -239,6 +258,8 @@ namespace prayground {
     template<DerivedFromCamera _CamT, uint32_t N>
     inline void Scene<_CamT, N>::bindExceptionProgram(ProgramGroup& prg)
     {
+        // Add SBT record and fill the record header at the same time
+        // since the pgExceptionRecord has no data
         pgExceptionRecord record{};
         prg.recordPackHeader(&record);
         m_sbt.setExceptionRecord(record);
@@ -255,7 +276,7 @@ namespace prayground {
     template<DerivedFromCamera _CamT, uint32_t N>
     inline const std::shared_ptr<_CamT>& Scene<_CamT, N>::camera()
     {
-        return camera;
+        return m_camera;
     }
 
     // -------------------------------------------------------------------------------
@@ -300,6 +321,11 @@ namespace prayground {
         addObject(name, obj_val.value.shape, obj_val.value.surface, transform);
     }
 
+    template<DerivedFromCamera _CamT, uint32_t N>
+    inline void Scene<_CamT, N>::updateObjectTransform(const std::string& name, const Matrix4f& transform)
+    {
+    }
+
     // -------------------------------------------------------------------------------
     template <DerivedFromCamera _CamT, uint32_t N>
     inline void Scene<_CamT, N>::addLightObject(const std::string& name, std::shared_ptr<Shape> shape, std::shared_ptr<AreaEmitter> area, 
@@ -328,6 +354,11 @@ namespace prayground {
 
         // Duplicate object with different transform matrix.
         addLightObject(name, Object{ obj_val.value.shape(), obj_val.value.surface, transform });
+    }
+
+    template<DerivedFromCamera _CamT, uint32_t N>
+    inline void Scene<_CamT, N>::updateLightObjectTransform(const std::string& name, const Matrix4f& transform)
+    {
     }
 
     // -------------------------------------------------------------------------------
@@ -366,6 +397,11 @@ namespace prayground {
         addMovingObject(name, obj_val.value.shape, obj_val.value.surface, begin_transform, end_transform, num_key);
     }
 
+    template<DerivedFromCamera _CamT, uint32_t N>
+    inline void Scene<_CamT, N>::updateMovingObjectTransform(const std::string& name, const Matrix4f& begin_transform, const Matrix4f& end_transform)
+    {
+    }
+
     // -------------------------------------------------------------------------------
     template<DerivedFromCamera _CamT, uint32_t N>
     inline void Scene<_CamT, N>::addMovingLightObject(const std::string& name, std::shared_ptr<Shape> shape, std::shared_ptr<AreaEmitter> light, 
@@ -400,6 +436,11 @@ namespace prayground {
 
         // Duplicate object with different transform matrix.
         addMovingLightObject(name, obj.value().shape, obj.value().surface(), begin_transform, end_transform, num_key);
+    }
+
+    template<DerivedFromCamera _CamT, uint32_t N>
+    inline void Scene<_CamT, N>::updateMovingLightObjectTransform(const std::string& name, const Matrix4f& begin_transform, const Matrix4f& end_transform)
+    {
     }
 
     template<DerivedFromCamera _CamT, uint32_t N>
@@ -579,6 +620,62 @@ namespace prayground {
                 &rg_data, sizeof(pgRaygenData<_CamT>),
                 cudaMemcpyHostToDevice
             ));
+        }
+
+        if (+(record_type & SBTRecordType::Miss))
+        {
+            auto* ms_record = reinterpret_cast<pgMissRecord*>(m_sbt.deviceMissRecordPtr());
+
+            pgMissData ms_data;
+            ms_data.env_data = m_envmap->getData();
+            for (uint32_t i = 0; i < N; i++)
+            {
+                CUDA_CHECK(cudaMemcpy(
+                    reinterpret_cast<void*>(&ms_record[i].data),
+                    &ms_data, sizeof(pgMissData),
+                    cudaMemcpyHostToDevice
+                ));
+            }
+        }
+
+        if (+(record_type & SBTRecordType::Hitgroup))
+        {
+            auto updateSBTData = [&](auto& objects)
+            {
+                for (auto& obj : objects)
+                {
+                    auto& shape = obj.value.shape;
+                    auto& surface = obj.value.surface;
+
+                    shape->copyToDevice();
+                    surface->copyToDevice();
+
+                    // Set actual sbt data to records
+                    for (int i = 0; i < N; i++)
+                    {
+                        pgHitgroupData hg_data;
+                        hg_data = {
+                            .shape_data = shape->devicePtr(),
+                            .surface_info =
+                            {
+                                .data = surface->devicePtr(),
+                                .callable_id = {
+                                    .sample = surface->surfaceCallableID().sample,
+                                    .bsdf = surface->surfaceCallableID().bsdf,
+                                    .pdf = surface->surfaceCallableID().pdf
+                                },
+                                .type = surface->surfaceType()
+                            }
+                        };
+                        auto* hg_record = reinterpret_cast<pgHitgroupRecord*>(m_sbt.deviceHitgroupRecordPtr());
+                        CUDA_CHECK(cudaMemcpy(
+                            reinterpret_cast<void*>(&hg_record[obj.ID + i].data),
+                            &hg_data, sizeof(pgHitgroupData),
+                            cudaMemcpyHostToDevice
+                        ));
+                    }
+                }
+            };
         }
     }
 

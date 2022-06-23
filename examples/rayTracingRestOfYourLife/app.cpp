@@ -11,6 +11,8 @@ void App::initResultBufferOnDevice()
     params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bitmap.devicePtr());
 
     CUDA_SYNC_CHECK();
+
+    
 }
 
 void App::handleCameraUpdate()

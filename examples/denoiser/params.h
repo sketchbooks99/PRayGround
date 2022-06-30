@@ -3,7 +3,6 @@
 #include <optix.h>
 #include <prayground/math/vec_math.h>
 #include <prayground/optix/sbt.h>
-#include <prayground/optix/cuda/device_util.cuh>
 #include <prayground/core/interaction.h>
 #include <prayground/math/matrix.h>
 

@@ -102,7 +102,7 @@ namespace prayground {
         }
 
         /* Miss */
-        void setMissRecord(const std::array<MissRecord, 2>& miss_records)
+        void setMissRecord(const std::array<MissRecord, N>& miss_records)
         {
             m_miss_records = miss_records;
         }

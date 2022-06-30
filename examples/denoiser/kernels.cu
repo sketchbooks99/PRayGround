@@ -42,12 +42,6 @@ INLINE DEVICE void trace(
 // --------------------------------------------------------------------------
 // Raygen 
 // --------------------------------------------------------------------------
-static __forceinline__ __device__ void getCameraRay(const Camera::Data& camera, float x, float y, Vec3f& ro, Vec3f& rd)
-{
-    rd = normalize(x * camera.U + y * camera.V + camera.W);
-    ro = camera.origin;
-}
-
 static __forceinline__ __device__ Vec3f reinhardToneMap(const Vec3f& color, const float white)
 {
     const float l = luminance(color);
@@ -109,7 +103,7 @@ extern "C" __device__ void __raygen__pinhole()
             {
                 // Evaluate emission from emitter
                 optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.bsdf_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
                 result += throughput * si.emission;
                 
                 if (depth == 0)
@@ -126,11 +120,11 @@ extern "C" __device__ void __raygen__pinhole()
             {
                 // Sampling scattered direction
                 optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.sample_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.sample, &si, si.surface_info.data);
 
                 // Evaluate BSDF
                 const Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
-                    si.surface_info.bsdf_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
                 throughput *= bsdf_val;
             }
             // Rough surface sampling
@@ -139,7 +133,7 @@ extern "C" __device__ void __raygen__pinhole()
                 uint32_t seed = si.seed;
                 AreaEmitterInfo light;
                 if (params.num_lights > 0) {
-                    const int light_id = rnd_int(seed, 0, params.num_lights - 1);
+                    const int light_id = rndInt(seed, 0, params.num_lights - 1);
                     light = params.lights[light_id];
                 }
 
@@ -149,7 +143,7 @@ extern "C" __device__ void __raygen__pinhole()
 
                 // Importance sampling according to the BSDF
                 optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.sample_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.sample, &si, si.surface_info.data);
 
                 if (rnd(seed) < weight * params.num_lights) {
                     // Light sampling
@@ -168,13 +162,13 @@ extern "C" __device__ void __raygen__pinhole()
 
                 // Evaluate PDF depends on BSDF
                 float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*>(
-                    si.surface_info.pdf_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.pdf, &si, si.surface_info.data);
 
                 pdf_val += weight * bsdf_pdf;
 
                 // Evaluate BSDF
                 Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
-                    si.surface_info.bsdf_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
 
                 if (pdf_val == 0.0f) break;
 
@@ -196,11 +190,11 @@ extern "C" __device__ void __raygen__pinhole()
         }
     }
 
-    const unsigned int image_idx = idx.y * params.width + idx.x;
+    const uint32_t image_idx = idx.y() * params.width + idx.x();
 
-    result.x() = isnan(result.x()) || isinf(result.x()) ? 0.0f : result.x();
-    result.y() = isnan(result.y()) || isinf(result.y()) ? 0.0f : result.y();
-    result.z() = isnan(result.z()) || isinf(result.z()) ? 0.0f : result.z();
+    if (result.x() != result.x()) result.x() = 0.0f;
+    if (result.y() != result.y()) result.y() = 0.0f;
+    if (result.z() != result.z()) result.z() = 0.0f;
 
     Vec3f accum = result / (float)spl;
     albedo = albedo / (float)spl;
@@ -244,15 +238,15 @@ extern "C" __device__ void __miss__envmap()
 
     Vec3f p = normalize(ray.at(t));
 
-    float phi = atan2(p.z, p.x);
-    float theta = asin(p.y);
+    float phi = atan2(p.z(), p.x());
+    float theta = asin(p.y());
     float u = 1.0f - (phi + math::pi) / (2.0f * math::pi);
     float v = 1.0f - (theta + math::pi / 2.0f) * math::inv_pi;
-    si->uv = Vec2f(u, v);
+    si->shading.uv = Vec2f(u, v);
     si->trace_terminate = true;
     si->surface_info.type = SurfaceType::None;
-    si->emission = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
-        env->texture.prg_id, si, env->texture.data;
+    si->emission = optixDirectCall<Vec4f, SurfaceInteraction*, void*>(
+        env->texture.prg_id, si, env->texture.data);
 }
 
 // --------------------------------------------------------------------------
@@ -279,7 +273,7 @@ extern "C" __device__ Vec3f __continuation_callable__bsdf_diffuse(SurfaceInterac
 {
     const auto* diffuse = reinterpret_cast<Diffuse::Data*>(mat_data);
     const Vec4f albedo = optixDirectCall<Vec4f, SurfaceInteraction*, void*>(diffuse->texture.prg_id, si, diffuse->texture.data);
-    si->albedo = Vec3f(albedo) * albedo.w;
+    si->albedo = Vec3f(albedo) * albedo.w();
     si->emission = Vec3f(0.0f);
     const float cosine = fmaxf(0.0f, dot(si->shading.n, si->wi));
     return si->albedo * cosine * math::inv_pi;
@@ -297,7 +291,7 @@ extern "C" __device__ void __direct_callable__sample_dielectric(SurfaceInteracti
 
     float ni = 1.000292f; // air
     float nt = dielectric->ior;  // ior specified 
-    float cosine = dot(si->wi, si->shading.n);
+    float cosine = dot(si->wo, si->shading.n);
     bool into = cosine < 0;
     Vec3f outward_normal = into ? si->shading.n : -si->shading.n;
 
@@ -361,10 +355,10 @@ extern "C" __device__ float __direct_callable__pdf_conductor(SurfaceInteraction*
 // Disney BRDF ------------------------------------------------------------------------------------------
 extern "C" __device__ void __direct_callable__sample_disney(SurfaceInteraction* si, void* mat_data)
 {
-    const DisneyData* disney = reinterpret_cast<DisneyData*>(mat_data);
+    const Disney::Data* disney = reinterpret_cast<Disney::Data*>(mat_data);
 
     if (disney->twosided)
-        si->shading.n = faceforward(si->shading.n, -si->wi, si->shading.n);
+        si->shading.n = faceforward(si->shading.n, -si->wo, si->shading.n);
 
     unsigned int seed = si->seed;
     const Vec2f u = UniformSampler::get2D(seed);
@@ -455,7 +449,7 @@ extern "C" __device__ Vec3f __continuation_callable__bsdf_disney(SurfaceInteract
     const float ax = fmaxf(0.001f, pow2(alpha) / aspect);
     const float ay = fmaxf(0.001f, pow2(alpha) * aspect);
     const Vec3f rho_specular = lerp(Vec3f(1.0f), rho_tint, disney->specular_tint);
-    const Vec3f Fs0 = lerp(0.08f * disney->specular * rho_specular, base_color, disney->metallic);
+    const Vec3f Fs0 = lerp(0.08f * disney->specular * rho_specular, Vec3f(base_color), disney->metallic);
     const Vec3f FHs0 = fresnelSchlickR(LdotH, Fs0);
     const float Ds = GTR2_aniso(NdotH, dot(H, X), dot(H, Y), ax, ay);
     float Gs = smithG_GGX_aniso(NdotL, dot(L, X), dot(L, Y), ax, ay);
@@ -518,11 +512,11 @@ extern "C" __device__ void __direct_callable__area_emitter(SurfaceInteraction* s
     if (area->twosided)
     {
         is_emitted = 1.0f;
-        si->shading.n = faceforward(si->shading.n, -si->wo, si->shading.n);
+        si->shading.n = faceforward(si->shading.n, -si->wi, si->shading.n);
     }
 
     // Get texture
-    auto color = optixDirectCall<Spectrum, SurfaceInteraction*, void*>(
+    auto base = optixDirectCall<Vec4f, SurfaceInteraction*, void*>(
         area->texture.prg_id, si, area->texture.data);
     si->albedo = Vec3f(base);
     
@@ -534,7 +528,7 @@ extern "C" __device__ void __direct_callable__area_emitter(SurfaceInteraction* s
 // --------------------------------------------------------------------------
 extern "C" __device__ Vec4f __direct_callable__bitmap(SurfaceInteraction* si, void* tex_data) {
     const auto* image = reinterpret_cast<BitmapTexture::Data*>(tex_data);
-    float4 c = tex2D<float4>(image->texture, si->uv.x(), si->uv.y());
+    float4 c = tex2D<float4>(image->texture, si->shading.uv.x(), si->shading.uv.y());
     return c;
 }
 
@@ -545,7 +539,7 @@ extern "C" __device__ Vec4f __direct_callable__constant(SurfaceInteraction* si, 
 
 extern "C" __device__ Vec4f __direct_callable__checker(SurfaceInteraction* si, void* tex_data) {
     const auto* checker = reinterpret_cast<CheckerTexture::Data*>(tex_data);
-    const bool is_odd = sinf(si->uv.x() * math::pi * checker->scale) * sinf(si->uv.y() * math::pi * checker->scale) < 0;
+    const bool is_odd = sinf(si->shading.uv.x() * math::pi * checker->scale) * sinf(si->shading.uv.y() * math::pi * checker->scale) < 0;
     return lerp(checker->color1, checker->color2, static_cast<float>(is_odd));
 }
 
@@ -565,8 +559,8 @@ static __forceinline__ __device__ bool hitPlane(
 
     if (min.x() < x && x < max.x() && min.y() < z && z < max.y() && tmin < t && t < tmax)
     {
-        si.uv = Vec2f((x - min.x()) / (max.x() - min.x()), (z - min.y()) / max.y() - min.y());
-        si.n = Vec3f(0, 1, 0);
+        si.shading.uv = Vec2f((x - min.x()) / (max.x() - min.x()), (z - min.y()) / max.y() - min.y());
+        si.shading.n = Vec3f(0, 1, 0);
         si.t = t;
         si.p = o + t*v;
         return true;
@@ -611,12 +605,12 @@ extern "C" __device__ void __closesthit__plane()
     si->p = ray.at(ray.tmax);
     si->shading.n = world_n;
     si->t = ray.tmax;
-    si->wi = ray.d;
-    si->uv = uv;
+    si->wo = ray.d;
+    si->shading.uv = uv;
     si->surface_info = data->surface_info;
 
-    si->dpdu = optixTransformNormalFromObjectToWorldSpace(Vec3f(1, 0, 0));
-    si->dpdv = optixTransformNormalFromObjectToWorldSpace(Vec3f(0, 0, 1));
+    si->shading.dpdu = optixTransformNormalFromObjectToWorldSpace(Vec3f(1, 0, 0));
+    si->shading.dpdv = optixTransformNormalFromObjectToWorldSpace(Vec3f(0, 0, 1));
 }
 
 extern "C" __device__ float __continuation_callable__pdf_plane(
@@ -628,13 +622,13 @@ extern "C" __device__ float __continuation_callable__pdf_plane(
     const Vec3f local_o = area_info.worldToObj.pointMul(origin);
     const Vec3f local_d = area_info.worldToObj.vectorMul(direction);
 
-    if (!hitPlane(plane_data, local_o, local_d, 0.01f, 1e16f, si))
+    if (!hitPlane(plane, local_o, local_d, 0.01f, 1e16f, si))
         return 0.0f;
 
-    const Vec3f corner0 = area_info.objToWorld.pointMul(Vec3f(plane_data->min.x(), 0.0f, plane_data->min.y()));
-    const Vec3f corner1 = area_info.objToWorld.pointMul(Vec3f(plane_data->max.x(), 0.0f, plane_data->min.y()));
-    const Vec3f corner2 = area_info.objToWorld.pointMul(Vec3f(plane_data->min.x(), 0.0f, plane_data->max.y()));
-    si.shading.n = normalize(area_info.objToWorld.vectorMul(si.n));
+    const Vec3f corner0 = area_info.objToWorld.pointMul(Vec3f(plane->min.x(), 0.0f, plane->min.y()));
+    const Vec3f corner1 = area_info.objToWorld.pointMul(Vec3f(plane->max.x(), 0.0f, plane->min.y()));
+    const Vec3f corner2 = area_info.objToWorld.pointMul(Vec3f(plane->min.x(), 0.0f, plane->max.y()));
+    si.shading.n = normalize(area_info.objToWorld.vectorMul(si.shading.n));
     const float area = length(cross(corner1 - corner0, corner2 - corner0));
     const float distance_squared = si.t * si.t;
     const float cosine = fabs(dot(si.shading.n, direction));
@@ -651,7 +645,7 @@ extern "C" __device__ Vec3f __direct_callable__rnd_sample_plane(AreaEmitterInfo 
     const Vec3f local_p = area_info.worldToObj.pointMul(si->p);
     uint32_t seed = si->seed;
     // Get random point on area emitter
-    const Vec3f rnd_p(rnd(seed, plane_data->min.x(), plane_data->max.x()), 0.0f, rnd(seed, plane_data->min.y(), plane_data->max.y()));
+    const Vec3f rnd_p(rnd(seed, plane->min.x(), plane->max.x()), 0.0f, rnd(seed, plane->min.y(), plane->max.y()));
     Vec3f to_light = rnd_p - local_p;
     to_light = area_info.objToWorld.vectorMul(to_light);
     si->seed = seed;
@@ -667,7 +661,7 @@ static __forceinline__ __device__ Vec2f getSphereUV(const Vec3f& p) {
     return Vec2f(u, v);
 }
 
-static __forceinline__ __device__ bool hitSphere(const SphereData* sphere_data, const Vec3f& o, const Vec3f& v, const float tmin, const float tmax, SurfaceInteraction& si)
+static __forceinline__ __device__ bool hitSphere(const Sphere::Data* sphere_data, const Vec3f& o, const Vec3f& v, const float tmin, const float tmax, SurfaceInteraction& si)
 {
     const Vec3f center = sphere_data->center;
     const float radius = sphere_data->radius;
@@ -692,8 +686,8 @@ static __forceinline__ __device__ bool hitSphere(const SphereData* sphere_data, 
 
     si.t = t;
     si.p = o + t * v;
-    si.n = si.p / radius;
-    si.uv = getSphereUV(si.shading.n);
+    si.shading.n = si.p / radius;
+    si.shading.uv = getSphereUV(si.shading.n);
     return true;
 }
 
@@ -721,6 +715,7 @@ extern "C" __device__ void __intersection__sphere() {
             check_second = false;
             optixReportIntersection(t1, 0, Vec3f_as_ints(normal));
         }
+        
 
         if (check_second) {
             float t2 = (-half_b + sqrtd) / a;
@@ -746,8 +741,8 @@ extern "C" __device__ void __closesthit__sphere() {
     si->p = ray.at(ray.tmax);
     si->shading.n = world_n;
     si->t = ray.tmax;
-    si->wi = ray.d;
-    si->uv = getSphereUV(local_n);
+    si->wo = ray.d;
+    si->shading.uv = getSphereUV(local_n);
     si->surface_info = data->surface_info;
 
     float phi = atan2(local_n.z(), local_n.x());
@@ -756,7 +751,7 @@ extern "C" __device__ void __closesthit__sphere() {
     const float u = phi / (2.0f * math::pi);
     const float v = theta / math::pi;
     const Vec3f dpdu = Vec3f(-math::two_pi * local_n.z(), 0, math::two_pi * local_n.x());
-    const Vec3f dpdv = math::pi * Vec3f(local_n.y * cos(phi), -sin(theta), local_n.y * sin(phi));
+    const Vec3f dpdv = math::pi * Vec3f(local_n.y() * cos(phi), -sin(theta), local_n.y() * sin(phi));
     si->shading.dpdu = normalize(optixTransformVectorFromObjectToWorldSpace(dpdu));
     si->shading.dpdv = normalize(optixTransformVectorFromObjectToWorldSpace(dpdv));
 }
@@ -777,7 +772,7 @@ static INLINE DEVICE Vec2f getCylinderUV(
         float phi = atan2(p.z(), p.x());
         if (phi < 0.0f) phi += math::two_pi;
         const float u = phi / math::two_pi;
-        const float v = (p.y + height / 2.0f) / height;
+        const float v = (p.y() + height / 2.0f) / height;
         return Vec2f(u, v);
     }
 }
@@ -832,13 +827,13 @@ extern "C" __device__ void __intersection__cylinder()
             if (hit_disk)
             {
                 const float rHit = sqrtf(P.x()*P.x() + P.z()*P.z());
-                si->dpdu = Vec3f(-math::two_pi * P.y(), 0.0f, math::two_pi * P.z());
-                si->dpdv = Vec3f(P.x(), 0.0f, P.z()) * radius / rHit;
+                si->shading.dpdu = Vec3f(-math::two_pi * P.y(), 0.0f, math::two_pi * P.z());
+                si->shading.dpdv = Vec3f(P.x(), 0.0f, P.z()) * radius / rHit;
             }
             else 
             {
-                si->dpdu = Vec3f(-math::two_pi * P.z(), 0.0f, math::two_pi * P.x());
-                si->dpdv = Vec3f(0.0f, height, 0.0f);
+                si->shading.dpdu = Vec3f(-math::two_pi * P.z(), 0.0f, math::two_pi * P.x());
+                si->shading.dpdv = Vec3f(0.0f, height, 0.0f);
             }
             optixReportIntersection(t1, 0, Vec3f_as_ints(normal), Vec2f_as_ints(uv));
             check_second = false;
@@ -885,15 +880,15 @@ extern "C" __device__ void __closesthit__cylinder()
 
     SurfaceInteraction* si = getSurfaceInteraction();
     si->p = ray.at(ray.tmax);
-    si->shdaing.n = normalize(world_n);
+    si->shading.n = normalize(world_n);
     si->t = ray.tmax;
-    si->wi = ray.d;
-    si->uv = uv;
+    si->wo = ray.d;
+    si->shading.uv = uv;
     si->surface_info = data->surface_info;
 
     // dpdu and dpdv are calculated in intersection shader
-    si->shading.dpdu = normalize(optixTransformVectorFromObjectToWorldSpace(si->dpdu));
-    si->shading.dpdv = normalize(optixTransformVectorFromObjectToWorldSpace(si->dpdv));
+    si->shading.dpdu = normalize(optixTransformVectorFromObjectToWorldSpace(si->shading.dpdu));
+    si->shading.dpdv = normalize(optixTransformVectorFromObjectToWorldSpace(si->shading.dpdv));
 }
 
 // Triangle mesh -------------------------------------------------------------------------------
@@ -931,8 +926,8 @@ extern "C" __device__ void __closesthit__mesh()
     si->p = ray.at(ray.tmax);
     si->shading.n = world_n;
     si->t = ray.tmax;
-    si->wi = ray.d;
-    si->uv = texcoords;
+    si->wo = ray.d;
+    si->shading.uv = texcoords;
     si->surface_info = data->surface_info;
 
     // Calculate partial derivative on texture coordinates

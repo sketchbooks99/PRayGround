@@ -25,10 +25,7 @@ void App::handleCameraUpdate()
         return;
     camera_update = false;
 
-    float3 U, V, W;
-    camera.UVWFrame(U, V, W);
-
-    RaygenRecord* rg_record = reinterpret_cast<RaygenRecord*>(sbt.raygenRecord());
+    RaygenRecord* rg_record = reinterpret_cast<RaygenRecord*>(sbt.deviceRaygenRecordPtr());
     RaygenData rg_data;
     rg_data.camera = camera.getData();
     CUDA_CHECK(cudaMemcpy(&rg_record->data, &rg_data, sizeof(RaygenData), cudaMemcpyHostToDevice));
@@ -57,13 +54,8 @@ void App::setup()
     pipeline.setNumPayloads(5);
     pipeline.setNumAttributes(6);
 
-    // Create modules from cuda source file 
-    Module raygen_module, miss_module, hitgroups_module, textures_module, surfaces_module;
-    raygen_module = pipeline.createModuleFromCudaFile(context, "cuda/raygen.cu");
-    miss_module = pipeline.createModuleFromCudaFile(context, "cuda/miss.cu");
-    hitgroups_module = pipeline.createModuleFromCudaFile(context, "cuda/hitgroups.cu");
-    textures_module = pipeline.createModuleFromCudaFile(context, "cuda/textures.cu");
-    surfaces_module = pipeline.createModuleFromCudaFile(context, "cuda/surfaces.cu");
+    // Create module from cuda source file 
+    Module module = pipeline.createModuleFromCudaFile(context, "kernels.cu");
 
     // Initialize bitmaps to store rendered results
     const int32_t width = pgGetWidth() / 2;
@@ -91,14 +83,14 @@ void App::setup()
     camera.enableTracking(pgGetCurrentWindow());
 
     // Raygen program
-    ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, raygen_module, "__raygen__pinhole");
+    ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, module, "__raygen__pinhole");
     // Shader binding table data for raygen program
     RaygenRecord raygen_record;
     raygen_prg.recordPackHeader(&raygen_record);
     raygen_record.data.camera = camera.getData();
     sbt.setRaygenRecord(raygen_record);
 
-    auto setupCallable = [&](const Module& module, const string& dc, const string& cc) -> uint32_t
+    auto setupCallable = [&](const string& dc, const string& cc) -> uint32_t
     {
         EmptyRecord callable_record = {};
         auto [prg, id] = pipeline.createCallablesProgram(context, module, dc, cc);
@@ -108,48 +100,65 @@ void App::setup()
     };
 
     // Callable programs for textures
-    uint32_t constant_prg_id = setupCallable(textures_module, DC_FUNC_STR("constant"), "");
-    uint32_t checker_prg_id = setupCallable(textures_module, DC_FUNC_STR("checker"), "");
-    uint32_t bitmap_prg_id = setupCallable(textures_module, DC_FUNC_STR("bitmap"), "");
+    uint32_t constant_prg_id = setupCallable(DC_FUNC_STR("constant"), "");
+    uint32_t checker_prg_id = setupCallable(DC_FUNC_STR("checker"), "");
+    uint32_t bitmap_prg_id = setupCallable(DC_FUNC_STR("bitmap"), "");
 
     // Callable programs for surfaces
     // Diffuse
-    uint32_t diffuse_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_diffuse"), CC_FUNC_STR("bsdf_diffuse"));
-    uint32_t diffuse_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_diffuse"), "");
+    uint32_t diffuse_sample_bsdf_prg_id = setupCallable(DC_FUNC_STR("sample_diffuse"), CC_FUNC_STR("bsdf_diffuse"));
+    uint32_t diffuse_pdf_prg_id = setupCallable(DC_FUNC_STR("pdf_diffuse"), "");
     // Conductor
-    uint32_t conductor_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_conductor"), CC_FUNC_STR("bsdf_conductor"));
-    uint32_t conductor_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_conductor"), "");
+    uint32_t conductor_sample_bsdf_prg_id = setupCallable(DC_FUNC_STR("sample_conductor"), CC_FUNC_STR("bsdf_conductor"));
+    uint32_t conductor_pdf_prg_id = setupCallable(DC_FUNC_STR("pdf_conductor"), "");
     // Dielectric
-    uint32_t dielectric_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_dielectric"), CC_FUNC_STR("bsdf_dielectric"));
-    uint32_t dielectric_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_dielectric"), "");
+    uint32_t dielectric_sample_bsdf_prg_id = setupCallable(DC_FUNC_STR("sample_dielectric"), CC_FUNC_STR("bsdf_dielectric"));
+    uint32_t dielectric_pdf_prg_id = setupCallable(DC_FUNC_STR("pdf_dielectric"), "");
     // Disney
-    uint32_t disney_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_disney"), CC_FUNC_STR("bsdf_disney"));
-    uint32_t disney_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_disney"), "");
+    uint32_t disney_sample_bsdf_prg_id = setupCallable(DC_FUNC_STR("sample_disney"), CC_FUNC_STR("bsdf_disney"));
+    uint32_t disney_pdf_prg_id = setupCallable(DC_FUNC_STR("pdf_disney"), "");
     // AreaEmitter
-    uint32_t area_emitter_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("area_emitter"), "");
+    uint32_t area_emitter_prg_id = setupCallable(DC_FUNC_STR("area_emitter"), "");
 
-    auto black = make_shared<ConstantTexture>(make_float3(0.0f), constant_prg_id);
+    SurfaceCallableID diffuse_id{diffuse_sample_bsdf_prg_id, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id};
+    SurfaceCallableID conductor_id{conductor_sample_bsdf_prg_id, conductor_sample_bsdf_prg_id, conductor_pdf_prg_id};
+    SurfaceCallableID dielectric_id{dielectric_sample_bsdf_prg_id, dielectric_sample_bsdf_prg_id, dielectric_pdf_prg_id};
+    SurfaceCallableID disney_id{disney_sample_bsdf_prg_id, disney_sample_bsdf_prg_id, disney_pdf_prg_id};
+    SurfaceCallableID area_emitter_id{area_emitter_prg_id, area_emitter_prg_id, area_emitter_prg_id};
+
+    auto printSurfaceCallableID = [&](const SurfaceCallableID& id)
+    {
+        cout << "Surface callable: " << id.sample << ", " << id.bsdf << ", " << id.pdf << endl;
+    };
+
+    printSurfaceCallableID(diffuse_id);
+    printSurfaceCallableID(conductor_id);
+    printSurfaceCallableID(dielectric_id);
+    printSurfaceCallableID(disney_id);
+    printSurfaceCallableID(area_emitter_id);
+
+    auto black = make_shared<ConstantTexture>(Vec3f(0.0f), constant_prg_id);
     env = EnvironmentEmitter{black};
     env.copyToDevice();
 
     // Miss program
-    ProgramGroup miss_prg = pipeline.createMissProgram(context, miss_module, MS_FUNC_STR("envmap"));
+    ProgramGroup miss_prg = pipeline.createMissProgram(context, module, MS_FUNC_STR("envmap"));
     // Shader binding table data for miss program
     MissRecord miss_record = {};
     miss_prg.recordPackHeader(&miss_record);
     miss_record.data.env_data = env.devicePtr();
-    sbt.setMissRecord(miss_record);
+    sbt.setMissRecord({ miss_record });
 
     // Hitgroup program
     // Plane
-    auto plane_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("plane"), IS_FUNC_STR("plane"));
+    auto plane_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("plane"), IS_FUNC_STR("plane"));
     // Sphere
-    auto sphere_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("sphere"), IS_FUNC_STR("sphere"));
+    auto sphere_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("sphere"), IS_FUNC_STR("sphere"));
     // Triangle mesh
-    auto mesh_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("mesh"));
+    auto mesh_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("mesh"));
 
     // Callable program for direct sampling of area emitter
-    uint32_t plane_sample_pdf_prg_id = setupCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_plane"), CC_FUNC_STR("pdf_plane"));
+    uint32_t plane_sample_pdf_prg_id = setupCallable(DC_FUNC_STR("rnd_sample_plane"), CC_FUNC_STR("pdf_plane"));
 
     struct Primitive
     {
@@ -179,14 +188,12 @@ void App::setup()
             .surface_info = 
             {
                 .data = primitive.material->devicePtr(),
-                .sample_id = primitive.sample_bsdf_id,
-                .bsdf_id = primitive.sample_bsdf_id,
-                .pdf_id = primitive.pdf_id,
+                .callable_id = primitive.material->surfaceCallableID(),
                 .type = primitive.material->surfaceType()
             }
         };
 
-        sbt.addHitgroupRecord(record);
+        sbt.addHitgroupRecord({record});
         sbt_idx++;
 
         // Build GAS and add it to IAS
@@ -199,7 +206,7 @@ void App::setup()
         ias.addInstance(instance);
 
         instance_id++;
-        sbt_offset += DenoiserSBT::NRay;
+        sbt_offset += SBT::NRay;
     };
 
     vector<AreaEmitterInfo> area_emitter_infos;
@@ -224,16 +231,14 @@ void App::setup()
             .surface_info = 
             {
                 .data = area.devicePtr(),
-                .sample_id = area_emitter_prg_id, // not used
-                .bsdf_id = area_emitter_prg_id,
-                .pdf_id = area_emitter_prg_id,    // not used
+                .callable_id = area.surfaceCallableID(),
                 .type = SurfaceType::AreaEmitter
             }
         };
 
         sbt_idx++;
 
-        sbt.addHitgroupRecord(record);
+        sbt.addHitgroupRecord({record});
 
         // Build GAS and add it to IAS
         ShapeInstance instance{shape->type(), shape, transform};
@@ -245,7 +250,7 @@ void App::setup()
         ias.addInstance(instance);
 
         instance_id++;
-        sbt_offset += DenoiserSBT::NRay;
+        sbt_offset += SBT::NRay;
 
         AreaEmitterInfo infos =
         {
@@ -263,34 +268,34 @@ void App::setup()
     auto bunny = new TriangleMesh("resources/model/bunny.obj");
     bunny->smooth();
     shapes.emplace("bunny", bunny);
-    shapes.emplace("wall", new Plane(make_float2(-275, -275), make_float2(275, 275)));
-    shapes.emplace("ceiling_light", new Plane(make_float2(-60, -60), make_float2(60, 60)));
-    shapes.emplace("sphere", new Sphere(make_float3(0.0f), 1.0f));
+    shapes.emplace("wall", new Plane(Vec2f(-275, -275), Vec2f(275, 275)));
+    shapes.emplace("ceiling_light", new Plane(Vec2f(-60, -60), Vec2f(60, 60)));
+    shapes.emplace("sphere", new Sphere(Vec3f(0.0f), 1.0f));
 
     // Textures
-    textures.emplace("green", new ConstantTexture(make_float3(0.05, 0.8, 0.05), constant_prg_id));
-    textures.emplace("red", new ConstantTexture(make_float3(0.8, 0.05, 0.05), constant_prg_id));
-    textures.emplace("wall_white", new ConstantTexture(make_float3(0.8), constant_prg_id));
-    textures.emplace("white", new ConstantTexture(make_float3(1.0f), constant_prg_id));
-    textures.emplace("checker", new CheckerTexture(make_float3(0.9f), make_float3(0.3f), 10, checker_prg_id));
+    textures.emplace("green", new ConstantTexture(Vec3f(0.05, 0.8, 0.05), constant_prg_id));
+    textures.emplace("red", new ConstantTexture(Vec3f(0.8, 0.05, 0.05), constant_prg_id));
+    textures.emplace("wall_white", new ConstantTexture(Vec3f(0.8), constant_prg_id));
+    textures.emplace("white", new ConstantTexture(Vec3f(1.0f), constant_prg_id));
+    textures.emplace("checker", new CheckerTexture(Vec3f(0.9f), Vec3f(0.3f), 10, checker_prg_id));
     textures.emplace("black", black);
-    textures.emplace("gray", new ConstantTexture(make_float3(0.25), constant_prg_id));
-    textures.emplace("orange", new ConstantTexture(make_float3(0.8, 0.7, 0.3), constant_prg_id));
+    textures.emplace("gray", new ConstantTexture(Vec3f(0.25), constant_prg_id));
+    textures.emplace("orange", new ConstantTexture(Vec3f(0.8, 0.7, 0.3), constant_prg_id));
 
     // Materials
-    materials.emplace("green_diffuse", new Diffuse(textures.at("green")));
-    materials.emplace("red_diffuse", new Diffuse(textures.at("red")));
-    materials.emplace("wall_diffuse", new Diffuse(textures.at("wall_white")));
-    materials.emplace("floor_diffuse", new Diffuse(textures.at("checker")));
-    materials.emplace("glass", new Dielectric(textures.at("white"), 1.5f));
-    materials.emplace("metal", new Conductor(textures.at("orange")));
-    auto disney = new Disney(textures.at("gray"));
+    materials.emplace("green_diffuse", new Diffuse(diffuse_id, textures.at("green")));
+    materials.emplace("red_diffuse", new Diffuse(diffuse_id, textures.at("red")));
+    materials.emplace("wall_diffuse", new Diffuse(diffuse_id, textures.at("wall_white")));
+    materials.emplace("floor_diffuse", new Diffuse(diffuse_id, textures.at("checker")));
+    materials.emplace("glass", new Dielectric(dielectric_id, textures.at("white"), 1.5f));
+    materials.emplace("metal", new Conductor(conductor_id, textures.at("orange")));
+    auto disney = new Disney(disney_id, textures.at("gray"));
     disney->setRoughness(0.5f);
     disney->setMetallic(0.9f);
     materials.emplace("gray_disney", disney);
 
     // Area emitter
-    AreaEmitter area{textures.at("white"), 15.0f, true};
+    AreaEmitter area{area_emitter_id, textures.at("white"), 15.0f, true};
 
     // Bunny
     Primitive bunnyP{ shapes.at("bunny"), materials.at("gray_disney"), disney_sample_bsdf_prg_id, disney_pdf_prg_id };
@@ -420,8 +425,8 @@ void App::draw()
     ImGui::Begin("Denoiser");
 
     ImGui::Text("Camera info:");
-    ImGui::Text("Origin: %f %f %f", camera.origin().x, camera.origin().y, camera.origin().z);
-    ImGui::Text("Lookat: %f %f %f", camera.lookat().x, camera.lookat().y, camera.lookat().z);
+    ImGui::Text("Origin: %f %f %f", camera.origin().x(), camera.origin().y(), camera.origin().z());
+    ImGui::Text("Lookat: %f %f %f", camera.lookat().x(), camera.lookat().y(), camera.lookat().z());
 
     ImGui::Text("Frame rate: %.3f s/frame (%.2f FPS)", ImGui::GetIO().DeltaTime, ImGui::GetIO().Framerate);
     ImGui::Text("Frame: %d", params.frame);

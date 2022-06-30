@@ -73,8 +73,6 @@ namespace prayground {
         void setup();
         void setup(const Settings& settings);
 
-        void load(const std::filesystem::path& filepath);
-
         template <class LaunchParams>
         void launchRay(const Context& ctx, const Pipeline& ppl, LaunchParams& l_params, CUstream stream,
             uint32_t w, uint32_t h, uint32_t d);
@@ -191,15 +189,6 @@ namespace prayground {
         
         std::array<pgMissRecord, N> ms_records{};
         m_sbt.setMissRecord(ms_records);
-    }
-
-    // -------------------------------------------------------------------------------
-    template <DerivedFromCamera _CamT, uint32_t N>
-    inline void load(const std::filesystem::path& filepath)
-    {
-        std::vector<Attribute> material_attributes;
-        std::shared_ptr<TriangleMesh> scene_mesh(new TraingleMesh());
-        scene_mesh->loadWithMtl(filepath, material_attributes);
     }
 
     // -------------------------------------------------------------------------------
@@ -324,6 +313,17 @@ namespace prayground {
     template<DerivedFromCamera _CamT, uint32_t N>
     inline void Scene<_CamT, N>::updateObjectTransform(const std::string& name, const Matrix4f& transform)
     {
+        auto obj = findItem(m_objects, name);
+        if (!obj)
+        {
+            pgLogFatal("The object named with", name, "is not found.");
+            return;
+        }
+
+        auto& obj_val = obj.value();
+
+        // Update object's transform matrix.
+        obj_val.value.instance.setTransform(transform);
     }
 
     // -------------------------------------------------------------------------------
@@ -359,6 +359,17 @@ namespace prayground {
     template<DerivedFromCamera _CamT, uint32_t N>
     inline void Scene<_CamT, N>::updateLightObjectTransform(const std::string& name, const Matrix4f& transform)
     {
+        auto obj = findItem(m_light_objects, name);
+        if (!obj)
+        {
+            pgLogFatal("The object named with", name, "is not found.");
+            return;
+        }
+
+        auto& obj_val = obj.value();
+
+        // Update object's transform matrix.
+        obj_val.value.instance.setTransform(transform);
     }
 
     // -------------------------------------------------------------------------------
@@ -400,6 +411,17 @@ namespace prayground {
     template<DerivedFromCamera _CamT, uint32_t N>
     inline void Scene<_CamT, N>::updateMovingObjectTransform(const std::string& name, const Matrix4f& begin_transform, const Matrix4f& end_transform)
     {
+        auto obj = findItem(m_moving_objects, name);
+        if (!obj)
+        {
+            pgLogFatal("The object named with", name, "is not found.");
+            return;
+        }
+
+        auto& obj_val = obj.value();
+
+        // Update object's transform matrix.
+        obj_val.value.matrix_transform.setMatrixMotionTransform(begin_transform, end_transform);
     }
 
     // -------------------------------------------------------------------------------
@@ -441,6 +463,17 @@ namespace prayground {
     template<DerivedFromCamera _CamT, uint32_t N>
     inline void Scene<_CamT, N>::updateMovingLightObjectTransform(const std::string& name, const Matrix4f& begin_transform, const Matrix4f& end_transform)
     {
+        auto obj = findItem(m_moving_light_objects, name);
+        if (!obj)
+        {
+            pgLogFatal("The object named with", name, "is not found.");
+            return;
+        }
+
+        auto& obj_val = obj.value();
+
+        // Update object's transform matrix.
+        obj_val.value.matrix_transform.setMatrixMotionTransform(begin_transform, end_transform);
     }
 
     template<DerivedFromCamera _CamT, uint32_t N>

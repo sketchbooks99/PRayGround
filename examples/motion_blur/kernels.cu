@@ -35,12 +35,6 @@ INLINE DEVICE void trace(
     );
 }
 
-static __forceinline__ __device__ void getCameraRay(const Camera::Data& camera, const float x, const float y, Vec3f& ro, Vec3f& rd)
-{
-    rd = normalize(x * camera.U + y * camera.V + camera.W);
-    ro = camera.origin;
-}
-
 // Raygen ----------------------------------------------------------------
 extern "C" __device__ void __raygen__pinhole()
 {

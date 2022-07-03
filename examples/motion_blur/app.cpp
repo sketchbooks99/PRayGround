@@ -108,7 +108,7 @@ void App::setup()
     MissRecord miss_record;
     miss_prg.recordPackHeader(&miss_record);
     miss_record.data.env_data = env.devicePtr();
-    sbt.setMissRecord(miss_record);
+    sbt.setMissRecord({ miss_record });
 
     uint32_t sbt_offset = 0;
     uint32_t sbt_idx = 0;
@@ -132,7 +132,7 @@ void App::setup()
             .texture = texture->getData()
         };
 
-        sbt.addHitgroupRecord(record);
+        sbt.addHitgroupRecord({ record });
 
         instance.allowCompaction();
         if (is_update)
@@ -217,7 +217,7 @@ void App::setup()
             .texture = white->getData()
         };
 
-        sbt.addHitgroupRecord(record);
+        sbt.addHitgroupRecord({ record });
 
         // 球体用のGASを用意
         GeometryAccel sphere_gas{ShapeType::Custom};

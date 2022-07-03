@@ -35,19 +35,13 @@ INLINE DEVICE void trace(
 }
 
 // Raygen -------------------------------------------------------------------------------
-static __forceinline__ __device__ void getCameraRay(const Camera::Data& camera, const float x, const float y, Vec3f& ro, Vec3f& rd)
-{
-    rd = normalize(x * camera.U + y * camera.V + camera.W);
-    ro = camera.origin;
-}
-
 extern "C" __device__ void __raygen__pinhole()
 {
     const RaygenData* raygen = reinterpret_cast<RaygenData*>(optixGetSbtDataPointer());
 
     const Vec3ui idx(optixGetLaunchIndex());
 
-    Vec3f color(0.0f, 0.0f, 0.0f);
+    Vec3f color(0.0f);
     Vec3f normal(0.0f);
     Vec3f albedo(0.0f);
 
@@ -64,7 +58,7 @@ extern "C" __device__ void __raygen__pinhole()
     color = si.radiance;
     albedo = si.albedo;
 
-    const unsigned int image_index = idx.y() * params.width + idx.x();
+    const uint32_t image_index = idx.y() * params.width + idx.x();
 
     if (color.x() != color.x()) color.x() = 0.0f;
     if (color.y() != color.y()) color.y() = 0.0f;

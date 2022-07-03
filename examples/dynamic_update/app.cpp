@@ -19,7 +19,7 @@ void App::handleCameraUpdate()
         return;
     camera_update = false;
 
-    RaygenRecord* rg_record = reinterpret_cast<RaygenRecord*>(sbt.raygenRecord());
+    RaygenRecord* rg_record = reinterpret_cast<RaygenRecord*>(sbt.deviceRaygenRecordPtr());
     RaygenData rg_data;
     rg_data.camera = camera.getData();
 
@@ -102,7 +102,7 @@ void App::setup()
     MissRecord miss_record;
     miss_prg.recordPackHeader(&miss_record);
     miss_record.data.env_data = env.devicePtr();
-    sbt.setMissRecord(miss_record);
+    sbt.setMissRecord({ miss_record });
 
     uint32_t sbt_offset = 0;
     uint32_t sbt_idx = 0;
@@ -126,7 +126,7 @@ void App::setup()
             .texture = texture->getData()
         };
 
-        sbt.addHitgroupRecord(record);
+        sbt.addHitgroupRecord({ record });
 
         instance.allowCompaction();
         instance.allowUpdate();

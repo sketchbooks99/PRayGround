@@ -172,4 +172,4 @@ inline void pgLogFatal(Head head, Args... args) { Message(MSG_FATAL, "[Fatal]", 
 
 #endif // __CUDACC__
 
-}
+} // namespace prayground

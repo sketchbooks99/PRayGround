@@ -90,6 +90,7 @@ namespace prayground {
         void setEnvmap(const std::shared_ptr<Texture>& texture);
 
         /// @note Should create/deletion functions for object return boolean value?
+        /// @todo Add getter for object array.
         // Object
         void addObject(const std::string& name, std::shared_ptr<Shape> shape, std::shared_ptr<Material> material, 
             std::array<ProgramGroup, N>& hitgroup_prgs, const Matrix4f& transform = Matrix4f::identity());

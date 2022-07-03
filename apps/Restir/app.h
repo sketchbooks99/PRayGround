@@ -1,6 +1,7 @@
 #pragma once
 
 #include <prayground/prayground.h>
+#include "params.h"
 
 class App : public BaseApp 
 {
@@ -18,5 +19,20 @@ public:
     void keyPressed(int key);
     void keyReleased(int key);
 private:
+    void initResultBUfferOnDevice();
+    void handleCameraUpdate();
 
+    Context context;
+    CUstream stream;
+    Pipeline pipeline;
+
+    LaunchParams params;
+
+    Bitmap result_bmp;
+    FloatBitmap accum_bmp;
+
+    static constexpr uint32_t NRay = 2;
+    Scene<Camera, NRay> scene;
+
+    bool is_camera_updated;
 };

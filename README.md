@@ -1,5 +1,3 @@
-:warning: This repository is still under development, and parts of the project are subject to destructive changes.
-
 Languages | English | [日本語](README_ja.md)
 
 # PRayGround

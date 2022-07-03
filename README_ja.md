@@ -1,5 +1,3 @@
-:warning: このリポジトリはまだ開発途中で、一部に破壊的な変更が加わる可能性があります。
-
 Languages | [English](README.md) | 日本語
 
 # PRayGround

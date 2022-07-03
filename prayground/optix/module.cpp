@@ -128,7 +128,7 @@ namespace {
     }
 #endif // CUDA_NVRTC_ENABLED
 
-} // ::nonamed namespace 
+} // nonamed namespace
 
 // ------------------------------------------------------------------
 Module::Module()

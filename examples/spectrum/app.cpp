@@ -19,7 +19,7 @@ void App::handleCameraUpdate()
         return;
     camera_update = false;
 
-    RaygenRecord* rg_record = reinterpret_cast<RaygenRecord*>(sbt.raygenRecord());
+    RaygenRecord* rg_record = reinterpret_cast<RaygenRecord*>(sbt.deviceRaygenRecordPtr());
     RaygenData rg_data;
     rg_data.camera = camera.getData();
 
@@ -127,6 +127,10 @@ void App::setup()
     // AreaEmitter
     uint32_t area_emitter_prg_id = setupCallable(module, DC_FUNC_STR("area_emitter"), "");
 
+    SurfaceCallableID diffuse_id = { 0, diffuse_prg_id, 0 };
+    SurfaceCallableID dielectric_id = { 0, dielectric_prg_id, 0 };
+    SurfaceCallableID area_emitter_id = { 0, area_emitter_prg_id, 0 };
+
     // Shape用のCallableプログラム(主に面光源サンプリング用)
     uint32_t plane_sample_pdf_prg_id = setupCallable(module, DC_FUNC_STR("rnd_sample_plane"), CC_FUNC_STR("pdf_plane"));
 
@@ -142,7 +146,7 @@ void App::setup()
     MissRecord miss_record;
     miss_prg.recordPackHeader(&miss_record);
     miss_record.data.env_data = env.devicePtr();
-    sbt.setMissRecord(miss_record);
+    sbt.setMissRecord({ miss_record });
 
     // Hitgroupプログラム
     // Plane
@@ -180,12 +184,12 @@ void App::setup()
             .surface_info = 
             {
                 .data = primitive.material->devicePtr(),
-                .sample_id = primitive.sample_id,
+                .callable_id = primitive.material->surfaceCallableID(),
                 .type = primitive.material->surfaceType()
             }
         };
 
-        sbt.addHitgroupRecord(record);
+        sbt.addHitgroupRecord({ record });
         sbt_idx++;
 
         // GASをビルドし、IASに追加
@@ -222,20 +226,20 @@ void App::setup()
 
         HitgroupRecord record;
         prg.recordPackHeader(&record);
-        record.data = 
+        record.data =
         {
-            .shape_data = shape->devicePtr(), 
-            .surface_info = 
+            .shape_data = shape->devicePtr(),
+            .surface_info =
             {
                 .data = area.devicePtr(),
-                .sample_id = area_emitter_prg_id,
+                .callable_id = area.surfaceCallableID(),
                 .type = SurfaceType::AreaEmitter
             }
         };
 
         sbt_idx++;
 
-        sbt.addHitgroupRecord(record);
+        sbt.addHitgroupRecord({ record });
 
         // GASをビルドし、IASに追加
         ShapeInstance instance{shape->type(), shape, transform};
@@ -319,7 +323,7 @@ void App::setup()
         const Vec3f pos = Vec3f(rnd(seed, -2.0f, 2.0f), scale * 0.9f, rnd(seed, -2.0f, 2.0f));
         const float rad = rnd(seed, 0.0f, math::pi);
         auto transform = Matrix4f::translate(pos) * Matrix4f::rotate(rad, axis) * Matrix4f::scale(scale);
-        auto mat = make_shared<Dielectric>(tex_white, 2.41f);
+        auto mat = make_shared<Dielectric>(dielectric_id, tex_white, 2.41f);
         mat->setSellmeierType(Sellmeier::Diamond);
         Primitive p{ diamond, mat, dielectric_prg_id };
         setupPrimitive(mesh_prg, p, transform);
@@ -328,9 +332,9 @@ void App::setup()
     // Floor
     {
         auto plane = make_shared<TriangleMesh>("resources/model/plane.obj");
-        auto diffuse = make_shared<Diffuse>(tex_grid);
+        auto diffuse = make_shared<Diffuse>(diffuse_id, tex_grid);
         auto transform = Matrix4f::scale(3.0f);
-        Primitive floor{ plane, diffuse, diffuse_prg_id };
+        Primitive floor{ plane, diffuse };
         setupPrimitive(mesh_prg, floor, transform);
     }
 
@@ -338,7 +342,7 @@ void App::setup()
     {
         auto mesh = make_shared<TriangleMesh>("resources/model/bunny.obj");
         mesh->smooth();
-        auto diffuse = make_shared<Diffuse>(tex_red);
+        auto diffuse = make_shared<Diffuse>(diffuse_id, tex_red);
         auto transform = Matrix4f::translate(-0.5, -0.07f, 0.0f) * Matrix4f::scale(2.0f);
         Primitive p{ mesh, diffuse, diffuse_prg_id };
         setupPrimitive(mesh_prg, p, transform);
@@ -348,7 +352,7 @@ void App::setup()
     {
         auto mesh = make_shared<TriangleMesh>("resources/model/Armadillo.ply");
         mesh->smooth();
-        auto diffuse = make_shared<Diffuse>(tex_green);
+        auto diffuse = make_shared<Diffuse>(diffuse_id, tex_green);
         auto transform = Matrix4f::translate(-0.2f, 0.15f, -0.5f) * Matrix4f::rotate(math::pi * 7/6, {0,1,0}) * Matrix4f::scale(0.003f);
         Primitive p{ mesh, diffuse, diffuse_prg_id };
         setupPrimitive(mesh_prg, p, transform);
@@ -358,7 +362,7 @@ void App::setup()
     {
         auto mesh = make_shared<TriangleMesh>("resources/model/dragon.obj");
         mesh->smooth();
-        auto diffuse = make_shared<Diffuse>(tex_yellow);
+        auto diffuse = make_shared<Diffuse>(diffuse_id, tex_yellow);
         auto transform = Matrix4f::translate(0.5f, 0.13f, 0.7f) * Matrix4f::rotate(math::pi/3, {0,1,0}) * Matrix4f::scale(0.4f);
         Primitive p{ mesh, diffuse, diffuse_prg_id };
         setupPrimitive(mesh_prg, p, transform);
@@ -369,7 +373,7 @@ void App::setup()
         // Shape
         auto plane_light = make_shared<Plane>(Vec2f(-2.0f, -0.2f), Vec2f(2.0f, 0.2f));
         // Area emitter
-        auto plane_area_emitter = AreaEmitter(tex_yellow, 20.0f);
+        auto plane_area_emitter = AreaEmitter(area_emitter_id, tex_yellow, 20.0f);
         Matrix4f transform = Matrix4f::translate(0.0f, 3.0f, 0.0f);
         setupAreaEmitter(plane_prg, plane_light, plane_area_emitter, transform, plane_sample_pdf_prg_id);
     }

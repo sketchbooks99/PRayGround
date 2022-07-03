@@ -28,13 +28,6 @@ INLINE DEVICE void trace(
         u0, u1 );	
 }
 
-static __forceinline__ __device__ void getCameraRay(
-    const Camera::Data& camera, const float x, const float y, Vec3f& ro, Vec3f& rd)
-{
-    rd = normalize(x * camera.U + y * camera.V + camera.W);
-    ro = camera.origin;
-}
-
 static __forceinline__ __device__ Vec3f reinhardToneMap(const Vec3f& color, const float white)
 {
     const float l = luminance(color);
@@ -91,7 +84,7 @@ extern "C" __device__ void __raygen__pinhole()
             {
                 // Evaluating emission from emitter
                 optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.bsdf_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
                 result += si.emission * throughput;
 
                 if (si.trace_terminate)
@@ -102,11 +95,11 @@ extern "C" __device__ void __raygen__pinhole()
             {
                 // Sampling scattered direction
                 optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.sample_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.sample, &si, si.surface_info.data);
                 
                 // Evaluate bsdf
                 Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
-                    si.surface_info.bsdf_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
                 throughput *= bsdf_val;
             }
             // Rough surface sampling with applying MIS
@@ -114,15 +107,15 @@ extern "C" __device__ void __raygen__pinhole()
             {
                 // Importance sampling according to the BSDF
                 optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.sample_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.sample, &si, si.surface_info.data);
 
                 // Evaluate PDF depends on BSDF
                 float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*>(
-                    si.surface_info.pdf_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.pdf, &si, si.surface_info.data);
 
                 // Evaluate BSDF
                 Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
-                    si.surface_info.bsdf_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
 
                 throughput *= bsdf_val / bsdf_pdf;
             }
@@ -179,7 +172,7 @@ extern "C" __device__ void __miss__envmap()
     float theta = asin(p.y());
     float u = 1.0f - (phi + math::pi) / (2.0f * math::pi);
     float v = 1.0f - (theta + math::pi / 2.0f) * math::inv_pi;
-    si->uv = make_float2(u, v);
+    si->shading.uv = make_float2(u, v);
     si->trace_terminate = true;
     si->surface_info.type = SurfaceType::None;
     si->emission = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
@@ -218,7 +211,7 @@ extern "C" __device__ void __closesthit__mesh()
     si->shading.n = world_n;
     si->t = ray.tmax;
     si->wo = ray.d;
-    si->uv = texcoords;
+    si->shading.uv = texcoords;
     si->surface_info = data->surface_info;
 }
 
@@ -348,7 +341,7 @@ extern "C" __device__ void __direct_callable__area_emitter(SurfaceInteraction* s
 // Texture functions -------------------------------------------------------------------------------
 extern "C" __device__ Vec3f __direct_callable__bitmap(SurfaceInteraction* si, void* tex_data) {
     const auto* image = reinterpret_cast<BitmapTexture::Data*>(tex_data);
-    float4 c = tex2D<float4>(image->texture, si->uv.x(), si->uv.y());
+    float4 c = tex2D<float4>(image->texture, si->shading.uv.x(), si->shading.uv.y());
     return Vec3f(c);
 }
 
@@ -359,6 +352,6 @@ extern "C" __device__ Vec3f __direct_callable__constant(SurfaceInteraction* si, 
 
 extern "C" __device__ Vec3f __direct_callable__checker(SurfaceInteraction* si, void* tex_data) {
     const auto* checker = reinterpret_cast<CheckerTexture::Data*>(tex_data);
-    const bool is_odd = sinf(si->uv.x() * math::pi * checker->scale) * sinf(si->uv.y() * math::pi * checker->scale) < 0;
+    const bool is_odd = sinf(si->shading.uv.x() * math::pi * checker->scale) * sinf(si->shading.uv.y() * math::pi * checker->scale) < 0;
     return lerp(checker->color1, checker->color2, (float)is_odd);
 }

@@ -31,13 +31,6 @@ static INLINE DEVICE void trace(
 }
 
 // Raygen ----------------------------------------------------------------
-static __forceinline__ __device__ void getCameraRay(
-    const Camera::Data& camera, const float x, const float y, Vec3f& ro, Vec3f& rd)
-{
-    rd = normalize(x * camera.U + y * camera.V + camera.W);
-    ro = camera.origin;
-}
-
 static __forceinline__ __device__ Vec3f reinhardToneMap(const Vec3f& color, const float white)
 {
     const float l = luminance(color);
@@ -102,7 +95,7 @@ extern "C" __device__ void __raygen__pinhole()
             {
                 // Evaluating emission from emitter
                 optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.bsdf_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
 
                 result += si.emission * throughput;
                 if (si.trace_terminate)
@@ -113,11 +106,11 @@ extern "C" __device__ void __raygen__pinhole()
             {
                 // Sampling scattered direction
                 optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.sample_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.sample, &si, si.surface_info.data);
                 
                 // Evaluate bsdf
                 Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
-                    si.surface_info.bsdf_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
                 throughput *= bsdf_val;
             }
             // Rough surface sampling with applying MIS
@@ -125,15 +118,15 @@ extern "C" __device__ void __raygen__pinhole()
             {
                 // Importance sampling according to the BSDF
                 optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.sample_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.sample, &si, si.surface_info.data);
 
                 // Evaluate PDF of area emitter
                 float pdf = optixDirectCall<float, SurfaceInteraction*, void*>(
-                    si.surface_info.pdf_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.pdf, &si, si.surface_info.data);
 
                 // Evaluate BSDF
                 Vec3f bsdf = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
-                    si.surface_info.bsdf_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
 
                 throughput *= bsdf / pdf;
             }
@@ -190,7 +183,7 @@ extern "C" __device__ void __miss__envmap()
     float theta = asin(p.y());
     float u = 1.0f - (phi + math::pi) / (2.0f * math::pi);
     float v = 1.0f - (theta + math::pi / 2.0f) * math::inv_pi;
-    si->uv = Vec2f(u, v);
+    si->shading.uv = Vec2f(u, v);
     si->trace_terminate = true;
     si->surface_info.type = SurfaceType::None;
     si->emission = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
@@ -211,7 +204,7 @@ static __forceinline__ __device__ bool hitPlane(
 
     if (min.x() < x && x < max.x() && min.y() < z && z < max.y() && tmin < t && t < tmax)
     {
-        si.uv = Vec2f((x - min.x()) / (max.x() - min.x()), (z - min.y()) / max.y() - min.y());
+        si.shading.uv = Vec2f((x - min.x()) / (max.x() - min.x()), (z - min.y()) / max.y() - min.y());
         si.shading.n = Vec3f(0, 1, 0);
         si.t = t;
         si.p = o + t*v;
@@ -258,7 +251,7 @@ extern "C" __device__ void __closesthit__plane()
     si->shading.n = world_n;
     si->t = ray.tmax;
     si->wo = ray.d;
-    si->uv = uv;
+    si->shading.uv = uv;
     si->surface_info = data->surface_info;
 
     si->shading.dpdu = optixTransformNormalFromObjectToWorldSpace(Vec3f(1, 0, 0));
@@ -343,7 +336,7 @@ static __forceinline__ __device__ bool hitSphere(
     si->p = o + t * v;
     si->shading.n = (si->p - center) / radius;
     si->t = t;
-    si->uv = getSphereUV(si->shading.n);
+    si->shading.uv = getSphereUV(si->shading.n);
     return true;
 }
 
@@ -357,7 +350,7 @@ extern "C" __device__ void __intersection__sphere()
 
     SurfaceInteraction si;
     if (hitSphere(&sphere, ray.o, ray.d, ray.tmin, ray.tmax, &si))
-        optixReportIntersection(si.t, 0, Vec3f_as_ints(si.shading.n), Vec2f_as_ints(si.uv));
+        optixReportIntersection(si.t, 0, Vec3f_as_ints(si.shading.n), Vec2f_as_ints(si.shading.uv));
 }
 
 /// From "Ray Tracing: The Next Week" by Peter Shirley
@@ -402,7 +395,7 @@ extern "C" __device__ void __intersection__sphere_medium()
         return;
 
     const float t = si1.t + hit_distance / ray_length;
-    optixReportIntersection(t, 0, Vec3f_as_ints(si1.shading.n), Vec2f_as_ints(si1.uv));
+    optixReportIntersection(t, 0, Vec3f_as_ints(si1.shading.n), Vec2f_as_ints(si1.shading.uv));
 }
 
 extern "C" __device__ void __closesthit__sphere() {
@@ -420,7 +413,7 @@ extern "C" __device__ void __closesthit__sphere() {
     si->shading.n = world_n;
     si->t = ray.tmax;
     si->wo = ray.d;
-    si->uv = getSphereUV(local_n);
+    si->shading.uv = getSphereUV(local_n);
     si->surface_info = data->surface_info;
 
     // Calculate partial derivative on texture coordinates
@@ -490,7 +483,7 @@ static INLINE DEVICE int hitBox(
         Vec2f uv = getBoxUV(p, min, max, min_axis);
         si.p = p;
         si.shading.n = normal;
-        si.uv = uv;
+        si.shading.uv = uv;
         si.t = _tmin;
         return min_axis;
     }
@@ -504,7 +497,7 @@ static INLINE DEVICE int hitBox(
         Vec2f uv = getBoxUV(p, min, max, max_axis);
         si.p = p;
         si.shading.n = normal;
-        si.uv = uv;
+        si.shading.uv = uv;
         si.t = _tmax;
         return max_axis;
     }
@@ -522,7 +515,7 @@ extern "C" __device__ void __intersection__box()
     SurfaceInteraction si;
     int hit_axis = hitBox(&box, ray.o, ray.d, ray.tmin, ray.tmax, si);
     if (hit_axis >= 0)
-        optixReportIntersection(si.t, 0, Vec3f_as_ints(si.shading.n), Vec2f_as_ints(si.uv), hit_axis);
+        optixReportIntersection(si.t, 0, Vec3f_as_ints(si.shading.n), Vec2f_as_ints(si.shading.uv), hit_axis);
 }
 
 /// From "Ray Tracing: The Next Week" by Peter Shirley
@@ -566,7 +559,7 @@ extern "C" __device__ void __intersection__box_medium()
         return;
 
     const float t = si1.t + hit_distance / ray_length;
-    optixReportIntersection(t, 0, Vec3f_as_ints(si1.shading.n), Vec2f_as_ints(si1.uv), 0);
+    optixReportIntersection(t, 0, Vec3f_as_ints(si1.shading.n), Vec2f_as_ints(si1.shading.uv), 0);
 }
 
 extern "C" __device__ void __closesthit__box()
@@ -587,7 +580,7 @@ extern "C" __device__ void __closesthit__box()
     si->shading.n = world_n;
     si->t = ray.tmax;
     si->wo = ray.d;
-    si->uv = uv;
+    si->shading.uv = uv;
     si->surface_info = data->surface_info;
 
     uint32_t hit_axis = getAttribute<5>();
@@ -648,7 +641,7 @@ extern "C" __device__ void __closesthit__mesh()
     si->shading.n = world_n;
     si->t = ray.tmax;
     si->wo = ray.d;
-    si->uv = texcoords;
+    si->shading.uv = texcoords;
     si->surface_info = data->surface_info;
 
     // Calculate partial derivative on texture coordinates
@@ -966,7 +959,7 @@ extern "C" __device__ void __direct_callable__area_emitter(SurfaceInteraction * 
 // Textures ----------------------------------------------------------------
 extern "C" __device__ Vec3f __direct_callable__bitmap(SurfaceInteraction* si, void* tex_data) {
     const BitmapTexture::Data* image = reinterpret_cast<BitmapTexture::Data*>(tex_data);
-    float4 c = tex2D<float4>(image->texture, si->uv.x(), si->uv.y());
+    float4 c = tex2D<float4>(image->texture, si->shading.uv.x(), si->shading.uv.y());
     return Vec3f(c);
 }
 
@@ -977,6 +970,6 @@ extern "C" __device__ Vec3f __direct_callable__constant(SurfaceInteraction* si, 
 
 extern "C" __device__ Vec3f __direct_callable__checker(SurfaceInteraction* si, void* tex_data) {
     const CheckerTexture::Data* checker = reinterpret_cast<CheckerTexture::Data*>(tex_data);
-    const bool is_odd = sinf(si->uv.x() * math::pi * checker->scale) * sinf(si->uv.y() * math::pi * checker->scale) < 0;
+    const bool is_odd = sinf(si->shading.uv.x() * math::pi * checker->scale) * sinf(si->shading.uv.y() * math::pi * checker->scale) < 0;
     return lerp(checker->color1, checker->color2, (float)is_odd);
 }

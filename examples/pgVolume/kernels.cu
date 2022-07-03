@@ -39,15 +39,6 @@ static __forceinline__ __device__ void trace(
 }
 
 /* Raygen function */
-static __forceinline__ __device__ void getCameraRay(
-    const Camera::Data& camera,
-    const float& x, const float& y,
-    Vec3f& ro, Vec3f& rd, uint32_t& seed)
-{
-    rd = normalize(x * camera.U + y * camera.V + camera.W);
-    ro = camera.origin;
-}
-
 extern "C" __device__ void __raygen__medium()
 {
     const RaygenData* raygen = reinterpret_cast<RaygenData*>(optixGetSbtDataPointer());
@@ -71,7 +62,7 @@ extern "C" __device__ void __raygen__medium()
         ) - 1.0f;
 
         Vec3f ro, rd;
-        getCameraRay(raygen->camera, d.x(), d.y(), ro, rd, seed);
+        getCameraRay(raygen->camera, d.x(), d.y(), ro, rd);
 
         Vec3f throughput = Vec3f(1.0f);
 
@@ -99,7 +90,7 @@ extern "C" __device__ void __raygen__medium()
             {
                 // Evaluating emission from emitter
                 optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.sample_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.sample, &si, si.surface_info.data);
                 result += si.emission * throughput;
 
                 if (si.trace_terminate)
@@ -111,7 +102,7 @@ extern "C" __device__ void __raygen__medium()
                 // Sampling scattered direction
                 float pdf;
                 Vec3f bsdf = optixDirectCall<Vec3f, SurfaceInteraction*, void*, float&>(
-                    si.surface_info.sample_id, &si, si.surface_info.data, pdf);
+                    si.surface_info.callable_id.sample, &si, si.surface_info.data, pdf);
                 throughput *= bsdf / pdf;
             }
 
@@ -165,11 +156,11 @@ extern "C" __device__ void __miss__envmap()
     const float theta = asin(p.y());
     const float u = 1.0f - (phi + math::pi) / (2.0f * math::pi);
     const float v = 1.0f - (theta + math::pi / 2.0f) / math::pi;
-    si->uv = Vec2f(u, v);
+    si->shading.uv = Vec2f(u, v);
     si->trace_terminate = true;
     si->surface_info.type = SurfaceType::None;
     si->emission = optixDirectCall<Vec3f, const Vec2f&, void*>(
-        env->texture.prg_id, si->uv, env->texture.data
+        env->texture.prg_id, si->shading.uv, env->texture.data
     );
     si->albedo = si->emission;
 }
@@ -194,7 +185,7 @@ extern "C" __device__ Vec3f __direct_callable__sample_diffuse(SurfaceInteraction
 
     // Get albedo from texture
     const Vec3f albedo = optixDirectCall<Vec3f, const Vec2f&, void*>(
-        diffuse->texture.prg_id, si->uv, diffuse->texture.data);
+        diffuse->texture.prg_id, si->shading.uv, diffuse->texture.data);
     si->albedo = albedo;
     si->emission = Vec3f(0.0f);
 
@@ -235,7 +226,7 @@ extern "C" __device__ void __direct_callable__area_emitter(SurfaceInteraction* s
         is_emitted = dot(si->wo, si->shading.n) < 0.0f ? 1.0f : 0.0f;
     
     const Vec3f base = optixDirectCall<Vec3f, const Vec2f&, void*>(
-        area->texture.prg_id, si->uv, area->texture.data);
+        area->texture.prg_id, si->shading.uv, area->texture.data);
     si->albedo = base;
     si->emission = base * area->intensity * is_emitted;
     si->trace_terminate = true;
@@ -279,7 +270,7 @@ extern "C" __device__ void __closesthit__plane()
     si->shading.n = world_n;
     si->t = ray.tmax;
     si->wo = ray.d;
-    si->uv = uv;
+    si->shading.uv = uv;
     si->surface_info = data->surface_info;
     si->shading.dpdu = optixTransformNormalFromObjectToWorldSpace({1.0f, 0.0f, 0.0f});
     si->shading.dpdv = optixTransformNormalFromObjectToWorldSpace({0.0f, 0.0f, 1.0f});
@@ -344,7 +335,7 @@ extern "C" __device__ void __closesthit__sphere()
     si->shading.n = world_n;
     si->t = ray.tmax;
     si->wo = ray.d;
-    si->uv = getSphereUV(local_n);
+    si->shading.uv = getSphereUV(local_n);
     si->surface_info = data->surface_info;
 
     float phi = atan2(local_n.z(), local_n.x());
@@ -488,12 +479,10 @@ extern "C" __device__ void __closesthit__grid()
     si->wo = ray.d;
     si->surface_info = SurfaceInfo{ 
         data->shape_data, 
-        data->surface_info.sample_id, 
-        data->surface_info.sample_id, 
-        data->surface_info.sample_id, 
+        data->surface_info.callable_id,
         SurfaceType::Medium 
     };
-    si->uv = Vec2f(0.5f);           // arbitrary
+    si->shading.uv = Vec2f(0.5f);  // arbitrary
 }
 
 /* Texture functions */

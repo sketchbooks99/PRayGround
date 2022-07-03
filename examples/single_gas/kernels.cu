@@ -36,13 +36,6 @@ static INLINE DEVICE void trace(
 }
 
 // Raygen ----------------------------------------------------------------
-static __forceinline__ __device__ void getCameraRay(
-    const Camera::Data& camera, const float x, const float y, Vec3f& ro, Vec3f& rd)
-{
-    rd = normalize(x * camera.U + y * camera.V + camera.W);
-    ro = camera.origin;
-}
-
 extern "C" __device__ void __raygen__pinhole()
 {
     const RaygenData* raygen = reinterpret_cast<RaygenData*>(optixGetSbtDataPointer());
@@ -93,7 +86,7 @@ extern "C" __device__ void __miss__envmap()
     float theta = asin(p.y());
     float u = 1.0f - (phi + math::pi) / (2.0f * math::pi);
     float v = 1.0f - (theta + math::pi / 2.0f) / math::pi;
-    si->uv = Vec2f(u, v);
+    si->shading.uv = Vec2f(u, v);
     si->albedo = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
         env->texture.prg_id, si, env->texture.data
     );
@@ -136,7 +129,7 @@ extern "C" __device__ void __closesthit__plane()
 
     si->p = ray.at(ray.tmax);
     si->shading.n = world_n;
-    si->uv = uv;
+    si->shading.uv = uv;
     si->albedo = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
         data->texture.prg_id, si, data->texture.data);
 }
@@ -170,7 +163,7 @@ extern "C" __device__ void __closesthit__mesh()
     SurfaceInteraction* si = getSurfaceInteraction();
     si->p = ray.at(ray.tmax);
     si->shading.n = world_n;
-    si->uv = texcoords;
+    si->shading.uv = texcoords;
     si->albedo = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
         data->texture.prg_id, si, data->texture.data);
 }
@@ -178,7 +171,7 @@ extern "C" __device__ void __closesthit__mesh()
 // Textures ----------------------------------------------------------------
 extern "C" __device__ Vec3f __direct_callable__bitmap(SurfaceInteraction* si, void* tex_data) {
     const auto* image = reinterpret_cast<BitmapTexture::Data*>(tex_data);
-    Vec4f c = tex2D<float4>(image->texture, si->uv.x(), si->uv.y());
+    Vec4f c = tex2D<float4>(image->texture, si->shading.uv.x(), si->shading.uv.y());
     return Vec3f(c);
 }
 
@@ -189,6 +182,6 @@ extern "C" __device__ Vec3f __direct_callable__constant(SurfaceInteraction* si, 
 
 extern "C" __device__ Vec3f __direct_callable__checker(SurfaceInteraction* si, void* tex_data) {
     const auto* checker = reinterpret_cast<CheckerTexture::Data*>(tex_data);
-    const bool is_odd = sinf(si->uv.x() * math::pi * checker->scale) * sinf(si->uv.y() * math::pi * checker->scale) < 0;
+    const bool is_odd = sinf(si->shading.uv.x() * math::pi * checker->scale) * sinf(si->shading.uv.y() * math::pi * checker->scale) < 0;
     return is_odd ? checker->color1 : checker->color2;
 }

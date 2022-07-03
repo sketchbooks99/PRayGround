@@ -21,7 +21,7 @@ void App::handleCameraUpdate()
         return;
     camera_update = false;
 
-    RaygenRecord* rg_record = reinterpret_cast<RaygenRecord*>(sbt.raygenRecord());
+    RaygenRecord* rg_record = reinterpret_cast<RaygenRecord*>(sbt.deviceRaygenRecordPtr());
     RaygenData rg_data;
     rg_data.camera = camera.getData();
 
@@ -104,6 +104,7 @@ void App::setup()
     // Diffuse
     uint32_t diffuse_sample_bsdf_prg_id = setupCallable(DC_FUNC_STR("sample_diffuse"), CC_FUNC_STR("bsdf_diffuse"));
     uint32_t diffuse_pdf_prg_id = setupCallable(DC_FUNC_STR("pdf_diffuse"), "");
+    SurfaceCallableID diffuse_id = { diffuse_sample_bsdf_prg_id, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
 
     // 環境マッピング (Sphere mapping) 用のテクスチャとデータ準備
     auto env_texture = make_shared<ConstantTexture>(Vec3f(3.0f), constant_prg_id);
@@ -117,7 +118,7 @@ void App::setup()
     MissRecord miss_record;
     miss_prg.recordPackHeader(&miss_record);
     miss_record.data.env_data = env.devicePtr();
-    sbt.setMissRecord(miss_record);
+    sbt.setMissRecord({ miss_record });
 
     // Hitgroupプログラム
     // Triangle mesh
@@ -150,7 +151,7 @@ void App::setup()
         else
             texture = make_shared<ConstantTexture>(ma.findOneVec3f("diffuse", Vec3f(0.0f)), constant_prg_id);
         texture->copyToDevice();
-        auto diffuse = make_shared<Diffuse>(texture);
+        auto diffuse = make_shared<Diffuse>(diffuse_id, texture);
         diffuse->copyToDevice();
 
         HitgroupRecord record;
@@ -160,14 +161,12 @@ void App::setup()
             .shape_data = mesh->devicePtr(),
             .surface_info = {
                 .data = diffuse->devicePtr(),
-                .sample_id = diffuse_sample_bsdf_prg_id,
-                .bsdf_id = diffuse_sample_bsdf_prg_id,
-                .pdf_id = diffuse_pdf_prg_id,
+                .callable_id = diffuse->surfaceCallableID(),
                 .type = diffuse->surfaceType()
             }
         };
 
-        sbt.addHitgroupRecord(record);
+        sbt.addHitgroupRecord({ record });
     }
 
     // Geometry acceleration structureの構築　

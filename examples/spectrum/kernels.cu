@@ -46,33 +46,6 @@ static __forceinline__ __device__ void traceSpectrum(
 }
 
 // Raygen ------------------------------------------------------------------------------
-static __forceinline__ __device__ void getCameraRay(
-    const LensCamera::Data& camera, 
-    const float& x, const float& y, 
-    Vec3f& ro, Vec3f& rd)
-{
-    rd = normalize(x * camera.U + y * camera.V + camera.W);
-    ro = camera.origin;
-}
-
-static __forceinline__ __device__ void getLensCameraRay(const LensCamera::Data& camera, const float x, const float y, Vec3f& ro, Vec3f& rd, uint32_t& seed)
-{
-    Vec3f _rd = (camera.aperture / 2.0f) * randomSampleInUnitDisk(seed);
-    Vec3f offset = normalize(camera.U) * _rd.x() + normalize(camera.V) * _rd.y();
-
-    const float theta = math::radians(camera.fov);
-    const float h = tan(theta / 2.0f);
-    const float viewport_height = h;
-    const float viewport_width = camera.aspect * viewport_height;
-
-    Vec3f horizontal = camera.focus_distance * normalize(camera.U) * viewport_width;
-    Vec3f vertical = camera.focus_distance * normalize(camera.V) * viewport_height;
-    Vec3f center = camera.origin - camera.focus_distance * normalize(-camera.W);
-
-    ro = camera.origin + offset;
-    rd = normalize(center + x * horizontal + y * vertical - ro);
-}
-
 static __forceinline__ __device__ float uniformSpectrumPDF()
 {
     return 1.0f / (max_lambda - min_lambda);
@@ -133,7 +106,7 @@ extern "C" __global__ void __raygen__spectrum()
             {
                 // Evaluating emission from emitter
                 optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.sample_id,
+                    si.surface_info.callable_id.bsdf,
                     &si, 
                     si.surface_info.data
                 );
@@ -146,7 +119,7 @@ extern "C" __global__ void __raygen__spectrum()
             {
                 float pdf;
                 float bsdf = optixDirectCall<float, const float&, SurfaceInteraction*, void*, float&>(
-                    si.surface_info.sample_id, lambda, &si, si.surface_info.data, pdf);
+                    si.surface_info.callable_id.bsdf, lambda, &si, si.surface_info.data, pdf);
                 throughput *= bsdf / pdf;
             }
 
@@ -205,7 +178,7 @@ extern "C" __device__ void __miss__envmap()
     const float v = 1.0f - (theta + math::pi / 2.0f) / math::pi;
     
     // Record hit-point information
-    si->uv = Vec2f(u, v);
+    si->shading.uv = Vec2f(u, v);
     si->trace_terminate = true;
     si->surface_info.type = SurfaceType::None;
     // Evaluate texture color for emittance
@@ -460,14 +433,14 @@ extern "C" __device__ Spectrum __direct_callable__constant(SurfaceInteraction* s
 extern "C" __device__ Spectrum __direct_callable__checker(SurfaceInteraction* si, void* tex_data)
 {
     const CheckerTexture::Data* checker = reinterpret_cast<CheckerTexture::Data*>(tex_data);
-    const bool is_odd = sinf(si->uv.x() * math::pi * checker->scale) * sinf(si->uv.y() * math::pi * checker->scale);
+    const bool is_odd = sinf(si->shading.uv.x() * math::pi * checker->scale) * sinf(si->shading.uv.y() * math::pi * checker->scale);
     return is_odd ? checker->color1 : checker->color2;
 }
 
 extern "C" __device__ Spectrum __direct_callable__bitmap(SurfaceInteraction* si, void* tex_data)
 {
     const BitmapTexture::Data* image = reinterpret_cast<BitmapTexture::Data*>(tex_data);
-    Vec4f c = tex2D<float4>(image->texture, si->uv.x(), si->uv.y());
+    Vec4f c = tex2D<float4>(image->texture, si->shading.uv.x(), si->shading.uv.y());
     return reconstructSpectrumFromRGB(Vec3f(c),
         *params.white_spd, *params.cyan_spd, *params.magenta_spd, *params.yellow_spd, 
         *params.red_spd, *params.green_spd, *params.blue_spd
@@ -508,7 +481,7 @@ extern "C" __device__ void __closesthit__mesh()
     si->shading.n = world_n;
     si->t = ray.tmax;
     si->wo = ray.d;
-    si->uv = texcoords;
+    si->shading.uv = texcoords;
     si->surface_info = data->surface_info;
 
     Vec3f dpdu, dpdv;
@@ -594,7 +567,7 @@ extern "C" __device__ void __closesthit__sphere()
     si->shading.n = world_n;
     si->t = ray.tmax;
     si->wo = ray.d;
-    si->uv = getSphereUV(local_n);
+    si->shading.uv = getSphereUV(local_n);
     si->surface_info = data->surface_info;
 
     float phi = atan2(local_n.z(), local_n.x());
@@ -620,7 +593,7 @@ static __forceinline__ __device__ bool hitPlane(
         min.y() < z && z < max.y() && 
         tmin < t && t < tmax)
     {
-        si.uv = Vec2f((x - min.x()) / (max.x() - min.x()), 
+        si.shading.uv = Vec2f((x - min.x()) / (max.x() - min.x()), 
                       (z - min.y()) / (max.y() - min.y()));
         si.shading.n = Vec3f(0, 1, 0);
         si.t = t;
@@ -706,7 +679,7 @@ extern "C" __device__ void __closesthit__plane()
     si->shading.n = world_n;
     si->t = ray.tmax;
     si->wo = ray.d;
-    si->uv = uv;
+    si->shading.uv = uv;
     si->surface_info = data->surface_info;
     si->shading.dpdu = optixTransformNormalFromObjectToWorldSpace({1.0f, 0.0f, 0.0f});
     si->shading.dpdv = optixTransformNormalFromObjectToWorldSpace({0.0f, 0.0f, 1.0f});

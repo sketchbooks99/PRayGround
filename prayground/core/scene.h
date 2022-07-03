@@ -660,7 +660,7 @@ namespace prayground {
             auto* ms_record = reinterpret_cast<pgMissRecord*>(m_sbt.deviceMissRecordPtr());
 
             pgMissData ms_data;
-            ms_data.env_data = m_envmap->getData();
+            ms_data.env_data = m_envmap->devicePtr();
             for (uint32_t i = 0; i < N; i++)
             {
                 CUDA_CHECK(cudaMemcpy(

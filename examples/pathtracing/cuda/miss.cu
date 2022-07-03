@@ -22,7 +22,7 @@ extern "C" __device__ void __miss__envmap()
     float theta = asin(p.y());
     float u = 1.0f - (phi + math::pi) / (2.0f * math::pi);
     float v = 1.0f - (theta + math::pi / 2.0f) / math::pi;
-    si->uv = Vec2f(u, v);
+    si->shading.uv = Vec2f(u, v);
     si->trace_terminate = true;
     si->surface_info.type = SurfaceType::None;
     si->emission = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(

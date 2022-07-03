@@ -21,7 +21,7 @@ void App::handleCameraUpdate()
         return;
     camera_update = false;
 
-    RaygenRecord* rg_record = reinterpret_cast<RaygenRecord*>(sbt.raygenRecord());
+    RaygenRecord* rg_record = reinterpret_cast<RaygenRecord*>(sbt.deviceRaygenRecordPtr());
     RaygenData rg_data;
     rg_data.camera = camera.getData();
 
@@ -125,6 +125,12 @@ void App::setup()
     // AreaEmitter
     uint32_t area_emitter_prg_id = setupCallable(module, DC_FUNC_STR("area_emitter"), "");
 
+    SurfaceCallableID diffuse_id{ diffuse_sample_bsdf_prg_id, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
+    SurfaceCallableID dielectric_id{ dielectric_sample_bsdf_prg_id, dielectric_sample_bsdf_prg_id, dielectric_pdf_prg_id };
+    SurfaceCallableID disney_id{ disney_sample_bsdf_prg_id, disney_sample_bsdf_prg_id, disney_pdf_prg_id };
+    SurfaceCallableID isotropic_id{ isotropic_sample_bsdf_prg_id, isotropic_sample_bsdf_prg_id, isotropic_pdf_prg_id };
+    SurfaceCallableID area_emitter_id{ area_emitter_prg_id, area_emitter_prg_id, area_emitter_prg_id };
+
     // Shape用のCallableプログラム(主に面光源サンプリング用)
     uint32_t plane_sample_pdf_prg_id = setupCallable(module, DC_FUNC_STR("rnd_sample_plane"), CC_FUNC_STR("pdf_plane"));
 
@@ -140,7 +146,7 @@ void App::setup()
     MissRecord miss_record;
     miss_prg.recordPackHeader(&miss_record);
     miss_record.data.env_data = env.devicePtr();
-    sbt.setMissRecord(miss_record);
+    sbt.setMissRecord({ miss_record });
 
     // Hitgroupプログラム
     // Plane
@@ -158,8 +164,6 @@ void App::setup()
     {
         shared_ptr<Shape> shape;
         shared_ptr<Material> material;
-        uint32_t sample_bsdf_id;
-        uint32_t pdf_id;
     };
 
     uint32_t sbt_idx = 0;
@@ -181,14 +185,12 @@ void App::setup()
             .surface_info =
             {
                 .data = primitive.material->devicePtr(),
-                .sample_id = primitive.sample_bsdf_id,
-                .bsdf_id = primitive.sample_bsdf_id,
-                .pdf_id = primitive.pdf_id,
+                .callable_id = primitive.material->surfaceCallableID(),
                 .type = primitive.material->surfaceType()
             }
         };
 
-        sbt.addHitgroupRecord(record);
+        sbt.addHitgroupRecord({ record });
 
         // GASをビルドし、IASに追加
         ShapeInstance instance{ primitive.shape->type(), primitive.shape, transform };
@@ -229,14 +231,16 @@ void App::setup()
             .surface_info = 
             {
                 .data = area.devicePtr(),
-                .sample_id = sample_pdf_id,
-                .bsdf_id = area_emitter_prg_id,
-                .pdf_id = sample_pdf_id,
+                .callable_id = {
+                    .sample = sample_pdf_id, 
+                    .bsdf = area_emitter_prg_id, 
+                    .pdf = sample_pdf_id
+                },
                 .type = SurfaceType::AreaEmitter
             }
         };
 
-        sbt.addHitgroupRecord(record);
+        sbt.addHitgroupRecord({ record });
 
         // GASをビルドし、IASに追加
         ShapeInstance instance{shape->type(), shape, transform};
@@ -288,9 +292,9 @@ void App::setup()
                 ground_boxes->addShape(box);
             }
         }
-        auto diffuse = make_shared<Diffuse>(ground_green);
+        auto diffuse = make_shared<Diffuse>(diffuse_id, ground_green);
         auto transform = Matrix4f::identity();
-        Primitive ground{ ground_boxes, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
+        Primitive ground{ ground_boxes, diffuse};
         setupPrimitive(box_prg, ground, transform);
         sbt_idx++;
     }
@@ -308,9 +312,9 @@ void App::setup()
         }
         sbt_idx++;
         auto white = make_shared<ConstantTexture>(Vec3f(0.73f), constant_prg_id);
-        auto diffuse = make_shared<Diffuse>(white);
+        auto diffuse = make_shared<Diffuse>(diffuse_id, white);
         auto transform = Matrix4f::translate(-100, 270, 395);
-        Primitive crowded_sphere{ spheres, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
+        Primitive crowded_sphere{ spheres, diffuse };
         setupPrimitive(sphere_prg, crowded_sphere, transform);
     }
 
@@ -320,7 +324,7 @@ void App::setup()
         plane->setSbtIndex(sbt_idx);
         sbt_idx++;
         auto white = make_shared<ConstantTexture>(Vec3f(1.0f), constant_prg_id);
-        AreaEmitter light{ white, 7.0f };
+        AreaEmitter light{ area_emitter_id, white, 7.0f };
         auto transform = Matrix4f::translate(0, 554, 0);
         setupAreaEmitter(plane_prg, plane, light, transform, plane_sample_pdf_prg_id);
     }
@@ -331,9 +335,9 @@ void App::setup()
         sphere->setSbtIndex(sbt_idx);
         sbt_idx++;
         auto white = make_shared<ConstantTexture>(Vec3f(1.0f), constant_prg_id);
-        auto glass = make_shared<Dielectric>(white, 1.5f);
+        auto glass = make_shared<Dielectric>(dielectric_id, white, 1.5f);
         auto transform = Matrix4f::identity();
-        Primitive glass_sphere{sphere, glass, dielectric_sample_bsdf_prg_id, dielectric_pdf_prg_id};
+        Primitive glass_sphere{sphere, glass};
         setupPrimitive(sphere_prg, glass_sphere, transform);
     }
 
@@ -343,12 +347,12 @@ void App::setup()
         sphere->setSbtIndex(sbt_idx);
         sbt_idx++;
         auto silver = make_shared<ConstantTexture>(Vec3f(0.8f, 0.8f, 0.9f), constant_prg_id);
-        auto metal = make_shared<Disney>(silver);
+        auto metal = make_shared<Disney>(disney_id, silver);
         metal->setRoughness(0.5f);
         metal->setMetallic(1.0f);
         metal->setSubsurface(0.0f);
         auto transform = Matrix4f::identity();
-        Primitive glass_sphere{ sphere, metal, disney_sample_bsdf_prg_id, disney_pdf_prg_id };
+        Primitive glass_sphere{ sphere, metal };
         setupPrimitive(sphere_prg, glass_sphere, transform);
     }
 
@@ -359,7 +363,7 @@ void App::setup()
         sphere->copyToDevice();
         sbt_idx++;
         auto orange = make_shared<ConstantTexture>(Vec3f(0.7f, 0.3f, 0.1f), constant_prg_id);
-        auto diffuse = make_shared<Diffuse>(orange);
+        auto diffuse = make_shared<Diffuse>(diffuse_id, orange);
         diffuse->copyToDevice();
         auto matrix_transform = Transform{ TransformType::MatrixMotion };
 
@@ -371,14 +375,12 @@ void App::setup()
             .surface_info =
             {
                 .data = diffuse->devicePtr(),
-                .sample_id = diffuse_sample_bsdf_prg_id,
-                .bsdf_id = diffuse_sample_bsdf_prg_id,
-                .pdf_id = diffuse_pdf_prg_id,
+                .callable_id = diffuse_id,
                 .type = diffuse->surfaceType()
             }
         };
 
-        sbt.addHitgroupRecord(record);
+        sbt.addHitgroupRecord({ record });
 
         // 球体用のGASを用意
         GeometryAccel sphere_gas{ ShapeType::Custom };
@@ -419,9 +421,9 @@ void App::setup()
         sphere->setSbtIndex(sbt_idx);
         sbt_idx++;
         auto earth_texture = make_shared<BitmapTexture>("resources/image/earth.jpg", bitmap_prg_id);
-        auto diffuse = make_shared<Diffuse>(earth_texture);
+        auto diffuse = make_shared<Diffuse>(diffuse_id, earth_texture);
         auto transform = Matrix4f::identity();
-        Primitive earth_sphere{sphere, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id};
+        Primitive earth_sphere{ sphere, diffuse };
         setupPrimitive(sphere_prg, earth_sphere, transform);
     }
 
@@ -432,16 +434,16 @@ void App::setup()
         sphere->setSbtIndex(sbt_idx);
         sbt_idx++;
         auto white = make_shared<ConstantTexture>(Vec3f(1.0f), constant_prg_id);
-        auto glass = make_shared<Dielectric>(white, 1.5f);
-        Primitive boundary{ sphere, glass, dielectric_sample_bsdf_prg_id, dielectric_pdf_prg_id };
+        auto glass = make_shared<Dielectric>(dielectric_id, white, 1.5f);
+        Primitive boundary{ sphere, glass };
         setupPrimitive(sphere_prg, boundary, Matrix4f::identity());
 
         // Constant medium that fills inside boundary sphere
         auto medium = make_shared<SphereMedium>(Vec3f(360, 150, 145), 70.0f, 0.2f);
         medium->setSbtIndex(sbt_idx);
         sbt_idx++;
-        auto isotropic = make_shared<Isotropic>(Vec3f(0.2f, 0.4f, 0.9f));
-        Primitive sphere_medium{ medium, isotropic, isotropic_sample_bsdf_prg_id, isotropic_pdf_prg_id };
+        auto isotropic = make_shared<Isotropic>(isotropic_id, Vec3f(0.2f, 0.4f, 0.9f));
+        Primitive sphere_medium{ medium, isotropic };
         setupPrimitive(sphere_medium_prg, sphere_medium, Matrix4f::identity());
     }
 
@@ -452,9 +454,9 @@ void App::setup()
         sbt_idx++;
         // @todo ConstantTexture -> NoiseTexture
         auto noise = make_shared<ConstantTexture>(Vec3f(0.73f), constant_prg_id);
-        auto diffuse = make_shared<Diffuse>(noise);
+        auto diffuse = make_shared<Diffuse>(diffuse_id, noise);
         auto transform = Matrix4f::identity();
-        Primitive earth_sphere{ sphere, diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
+        Primitive earth_sphere{ sphere, diffuse };
         setupPrimitive(sphere_prg, earth_sphere, transform);
     }
 
@@ -463,8 +465,8 @@ void App::setup()
         auto medium = make_shared<BoxMedium>(Vec3f(-5000), Vec3f(5000), 0.0001f);
         medium->setSbtIndex(sbt_idx);
         sbt_idx++;
-        auto isotropic = make_shared<Isotropic>(Vec3f(1.0f));
-        Primitive atomosphere{ medium, isotropic, isotropic_sample_bsdf_prg_id, isotropic_pdf_prg_id };
+        auto isotropic = make_shared<Isotropic>(isotropic_id, Vec3f(1.0f));
+        Primitive atomosphere{ medium, isotropic };
         setupPrimitive(box_medium_prg, atomosphere, Matrix4f::identity());
     }
 

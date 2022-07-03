@@ -20,7 +20,7 @@ extern "C" __device__ void __direct_callable__sample_diffuse(SurfaceInteraction*
 extern "C" __device__ Vec3f __continuation_callable__bsdf_diffuse(SurfaceInteraction* si, void* mat_data)
 {
     const Diffuse::Data* diffuse = reinterpret_cast<Diffuse::Data*>(mat_data);
-    const Vec4f albedo = optixDirectCall<Vec4f, const Vec2f&, void*>(diffuse->texture.prg_id, si->uv, diffuse->texture.data);
+    const Vec4f albedo = optixDirectCall<Vec4f, const Vec2f&, void*>(diffuse->texture.prg_id, si->shading.uv, diffuse->texture.data);
     si->albedo = Vec3f(albedo);
     si->emission = Vec3f(0.0f);
     const float cosine = fmaxf(0.0f, dot(si->shading.n, si->wi));
@@ -65,7 +65,7 @@ extern "C" __device__ Vec3f __continuation_callable__bsdf_dielectric(SurfaceInte
 {
     const Dielectric::Data* dielectric = reinterpret_cast<Dielectric::Data*>(mat_data);
     si->emission = Vec3f(0.0f);
-    Vec4f albedo = optixDirectCall<Vec4f, const Vec2f&, void*>(dielectric->texture.prg_id, si->uv, dielectric->texture.data);
+    Vec4f albedo = optixDirectCall<Vec4f, const Vec2f&, void*>(dielectric->texture.prg_id, si->shading.uv, dielectric->texture.data);
     si->albedo = Vec3f(albedo);
     return si->albedo;
 }
@@ -90,7 +90,7 @@ extern "C" __device__ Vec3f __continuation_callable__bsdf_conductor(SurfaceInter
 {
     const Conductor::Data* conductor = reinterpret_cast<Conductor::Data*>(mat_data);
     si->emission = Vec3f(0.0f);
-    Vec4f albedo = optixDirectCall<Vec4f, const Vec2f&, void*>(conductor->texture.prg_id, si->uv, conductor->texture.data);
+    Vec4f albedo = optixDirectCall<Vec4f, const Vec2f&, void*>(conductor->texture.prg_id, si->shading.uv, conductor->texture.data);
     si->albedo = Vec3f(albedo);
     return si->albedo;
 }
@@ -171,7 +171,7 @@ extern "C" __device__ Vec3f __continuation_callable__bsdf_disney(SurfaceInteract
     const float LdotH /* = VdotH */ = dot(L, H);
 
     Vec4f tmp = optixDirectCall<Vec4f, const Vec2f&, void*>(
-        disney->base.prg_id, si->uv, disney->base.data);
+        disney->base.prg_id, si->shading.uv, disney->base.data);
     const Vec3f base_color = Vec3f(tmp);
     si->albedo = base_color;
 
@@ -269,7 +269,7 @@ extern "C" __device__ void __direct_callable__area_emitter(SurfaceInteraction* s
     }
 
     const Vec4f base = optixDirectCall<Vec4f, const Vec2f&, void*>(
-        area->texture.prg_id, si->uv, area->texture.data);
+        area->texture.prg_id, si->shading.uv, area->texture.data);
     si->albedo = Vec3f(base);
     
     si->emission = si->albedo * area->intensity * is_emitted;

@@ -17,7 +17,7 @@ void App::handleCameraUpdate()
         return;
     camera_update = false;
 
-    RaygenRecord* rg_record = reinterpret_cast<RaygenRecord*>(sbt.raygenRecord());
+    RaygenRecord* rg_record = reinterpret_cast<RaygenRecord*>(sbt.deviceRaygenRecordPtr());
     RaygenData rg_data = { .camera = camera.getData() };
     CUDA_CHECK(cudaMemcpy(
         reinterpret_cast<void*>(&rg_record->data),
@@ -117,7 +117,7 @@ void App::setup()
     MissRecord ms_record;
     ms_prg.recordPackHeader(&ms_record);
     ms_record.data.env_data = env.devicePtr();
-    sbt.setMissRecord(ms_record);
+    sbt.setMissRecord({ ms_record });
 
     // Hitgroup programs
     // Plane
@@ -160,12 +160,12 @@ void App::setup()
             .surface_info =
             {
                 .data = is_mat ? std::get<shared_ptr<Material>>(surface)->devicePtr() : std::get<shared_ptr<AreaEmitter>>(surface)->devicePtr(),
-                .sample_id = sample_id,
+                .callable_id = {sample_id, sample_id, sample_id},
                 .type = is_mat ? std::get<shared_ptr<Material>>(surface)->surfaceType() : SurfaceType::AreaEmitter,
             }
         };
 
-        sbt.addHitgroupRecord(record);
+        sbt.addHitgroupRecord({ record });
         sbt_idx++;
     };
 
@@ -196,7 +196,7 @@ void App::setup()
     textures.emplace("blue", new ConstantTexture(Vec3f(0.5f, 0.5f, 0.9f), constant_prg_id));
 
     // Materials
-    materials.emplace("floor", new Diffuse(textures.at("floor")));
+    materials.emplace("floor", new Diffuse({diffuse_prg_id, 0, 0}, textures.at("floor")));
 
     // Shapes
     shapes.emplace("floor", new Plane(Vec2f(-0.5f), Vec2f(0.5f)));

@@ -41,13 +41,6 @@ static INLINE DEVICE bool shadowTrace(
 }
 
 // Raygen ----------------------------------------------------------------
-static __forceinline__ __device__ void getCameraRay(
-    const Camera::Data& camera, const float x, const float y, Vec3f& ro, Vec3f& rd)
-{
-    rd = normalize(x * camera.U + y * camera.V + camera.W);
-    ro = camera.origin;
-}
-
 static __forceinline__ __device__ Vec3f reinhardToneMap(const Vec3f& color, const float white)
 {
     const float l = luminance(color);
@@ -115,7 +108,7 @@ extern "C" __device__ void __raygen__pinhole()
             {
                 // Evaluating emission from emitter
                 optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.bsdf_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
                 result += si.emission * throughput;
                 if (si.trace_terminate)
                     break;
@@ -124,11 +117,11 @@ extern "C" __device__ void __raygen__pinhole()
             else if (+(si.surface_info.type & SurfaceType::Delta))
             {
                 Vec3f scattered = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
-                    si.surface_info.sample_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.sample, &si, si.surface_info.data);
                 si.wi = scattered;
 
                 Vec3f bsdf = optixContinuationCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
-                    si.surface_info.bsdf_id, &si, si.surface_info.data, Vec3f{});
+                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data, Vec3f{});
                 throughput *= bsdf;
             }
             // Rough surface sampling with applying MIS
@@ -144,12 +137,12 @@ extern "C" __device__ void __raygen__pinhole()
                 float pdf = 0.0f;
                 // BSDF sampling
                 Vec3f scattered = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
-                    si.surface_info.sample_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.sample, &si, si.surface_info.data);
 #if NEE
                 float weight = 0.0f;
 
                 float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*, const Vec3f&>(
-                    si.surface_info.pdf_id, &si, si.surface_info.data, scattered);
+                    si.surface_info.callable_id.pdf, &si, si.surface_info.data, scattered);
 
                 si.wi = scattered;
                 pdf = bsdf_pdf;
@@ -175,11 +168,11 @@ extern "C" __device__ void __raygen__pinhole()
                         {
                             const Vec3f unit_wi = normalize(to_light);
                             const Vec3f bsdf = optixContinuationCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
-                                si.surface_info.bsdf_id, &si, si.surface_info.data, unit_wi);
+                                si.surface_info.callable_id.bsdf, &si, si.surface_info.data, unit_wi);
 
                             // Calculate MIS weight
                             SurfaceInteraction light_si;
-                            light_si.uv = li.uv;
+                            light_si.shading.uv = li.uv;
                             light_si.shading.n = li.n;
                             light_si.wo = unit_wi;
                             light_si.surface_info = light.surface_info;
@@ -195,10 +188,10 @@ extern "C" __device__ void __raygen__pinhole()
                     {
                         si.wi = scattered;
                         const Vec3f bsdf = optixContinuationCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
-                            si.surface_info.bsdf_id, &si, si.surface_info.data, si.wi);
+                            si.surface_info.callable_id.bsdf, &si, si.surface_info.data, si.wi);
 
                         float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*, const Vec3f&>(
-                            si.surface_info.pdf_id, &si, si.surface_info.data, si.wi);
+                            si.surface_info.callable_id.pdf, &si, si.surface_info.data, si.wi);
 
                         throughput *= bsdf / bsdf_pdf;
                     }
@@ -225,10 +218,10 @@ extern "C" __device__ void __raygen__pinhole()
                         {
                             const Vec3f unit_wi = normalize(to_light);
                             const Vec3f bsdf = optixContinuationCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
-                                si.surface_info.bsdf_id, &si, si.surface_info.data, unit_wi);
+                                si.surface_info.callable_id.bsdf, &si, si.surface_info.data, unit_wi);
 
                             float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*, const Vec3f&>(
-                                si.surface_info.pdf_id, &si, si.surface_info.data, unit_wi);
+                                si.surface_info.callable_id.pdf, &si, si.surface_info.data, unit_wi);
 
                             // convert unit of bsdf_pdf from [sr^-1] to [m^-2]
                             const float cos_theta = dot(-unit_wi, li.n);
@@ -239,13 +232,13 @@ extern "C" __device__ void __raygen__pinhole()
                             // Calculate MIS weight
                             const float weight = powerHeuristic(light_pdf, bsdf_pdf);
                             SurfaceInteraction light_si;
-                            light_si.uv = li.uv;
+                            light_si.shading.uv = li.uv;
                             light_si.shading.n = li.n;
                             light_si.wo = unit_wi;
                             light_si.surface_info = light.surface_info;
 
                             optixDirectCall<void, SurfaceInteraction*, void*>(
-                                light_si.surface_info.bsdf_id, &light_si, light_si.surface_info.data);
+                                light_si.surface_info.callable_id.bsdf, &light_si, light_si.surface_info.data);
                             
                             result += weight * light_si.emission * bsdf * throughput / li.pdf;
                         }
@@ -255,10 +248,10 @@ extern "C" __device__ void __raygen__pinhole()
                     {
                         si.wi = scattered;
                         const Vec3f bsdf = optixContinuationCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
-                            si.surface_info.bsdf_id, &si, si.surface_info.data, si.wi);
+                            si.surface_info.callable_id.bsdf, &si, si.surface_info.data, si.wi);
                         
                         float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*, const Vec3f&>(
-                            si.surface_info.pdf_id, &si, si.surface_info.data, si.wi);
+                            si.surface_info.callable_id.pdf, &si, si.surface_info.data, si.wi);
                         const float cos_theta = dot(-si.wi, li.n);
                         const float sample_bsdf_pdf = bsdf_pdf * pow2(dist_to_light) / cos_theta;
 
@@ -274,11 +267,11 @@ extern "C" __device__ void __raygen__pinhole()
 
                 // Evaluate PDF depends on BSDF
                 float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*, const Vec3f&>(
-                    si.surface_info.pdf_id, &si, si.surface_info.data, si.wi);
+                    si.surface_info.callable_id.pdf, &si, si.surface_info.data, si.wi);
 
                 // Evaluate BSDF
                 Vec3f bsdf = optixContinuationCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
-                    si.surface_info.bsdf_id, &si, si.surface_info.data, si.wi);
+                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data, si.wi);
 
                 throughput *= bsdf / bsdf_pdf;
 #endif
@@ -337,7 +330,7 @@ extern "C" __device__ void __miss__envmap()
     const float theta = asin(p.y());
     const float u = 1.0f - (phi + math::pi) / (math::two_pi);
     const float v = 1.0f - (theta + math::pi / 2.0f) / math::pi;
-    si->uv = Vec2f(u, v);
+    si->shading.uv = Vec2f(u, v);
     si->trace_terminate = true;
     si->surface_info.type = SurfaceType::None;
     si->emission = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
@@ -364,7 +357,7 @@ static __forceinline__ __device__ bool hitPlane(
 
     if (min.x() < x && x < max.x() && min.y() < z && z < max.y() && tmin < t && t < tmax)
     {
-        si.uv = Vec2f((x - min.x()) / (max.x() - min.x()), (z - min.y()) / (max.y() - min.y()));
+        si.shading.uv = Vec2f((x - min.x()) / (max.x() - min.x()), (z - min.y()) / (max.y() - min.y()));
         si.shading.n = Vec3f(0, 1, 0);
         si.t = t;
         si.p = o + t * v;
@@ -411,7 +404,7 @@ extern "C" __device__ void __closesthit__plane()
     si->shading.n = world_n;
     si->t = ray.tmax;
     si->wo = ray.d;
-    si->uv = uv;
+    si->shading.uv = uv;
     si->surface_info = data->surface_info;
     si->shading.dpdu = optixTransformNormalFromObjectToWorldSpace({1.0f, 0.0f, 0.0f});
     si->shading.dpdv = optixTransformNormalFromObjectToWorldSpace({0.0f, 0.0f, 1.0f});
@@ -500,7 +493,7 @@ static __forceinline__ __device__ bool hitSphere(
     si.t = t;
     si.p = o + t * v;
     si.shading.n = si.p / radius;
-    si.uv = getSphereUV(si.shading.n);
+    si.shading.uv = getSphereUV(si.shading.n);
     return true;
 }
 
@@ -554,7 +547,7 @@ extern "C" __device__ void __closesthit__sphere() {
     si->shading.n = world_n;
     si->t = ray.tmax;
     si->wo = ray.d;
-    si->uv = getSphereUV(local_n);
+    si->shading.uv = getSphereUV(local_n);
     si->surface_info = data->surface_info;
 
     float phi = atan2(local_n.z(), local_n.x());
@@ -634,7 +627,7 @@ extern "C" __device__ void __closesthit__mesh()
     si->shading.n = world_n;
     si->t = ray.tmax;
     si->wo = ray.d;
-    si->uv = texcoords;
+    si->shading.uv = texcoords;
     si->surface_info = data->surface_info;
 
     Vec3f dpdu, dpdv;
@@ -939,7 +932,7 @@ extern "C" __device__ void __direct_callable__area_emitter(SurfaceInteraction* s
 // Textures ------------------------------------------------------------------------------------------
 extern "C" __device__ Vec3f __direct_callable__bitmap(SurfaceInteraction* si, void* tex_data) {
     const auto* image = (BitmapTexture::Data*)tex_data;
-    float4 c = tex2D<float4>(image->texture, si->uv.x(), si->uv.y());
+    float4 c = tex2D<float4>(image->texture, si->shading.uv.x(), si->shading.uv.y());
     return Vec3f(c);
 }
 
@@ -950,6 +943,6 @@ extern "C" __device__ Vec3f __direct_callable__constant(SurfaceInteraction* si, 
 
 extern "C" __device__ Vec3f __direct_callable__checker(SurfaceInteraction* si, void* tex_data) {
     const auto* checker = (CheckerTexture::Data*)tex_data;
-    const bool is_odd = sinf(si->uv.x() * math::pi * checker->scale) * sinf(si->uv.y() * math::pi * checker->scale) < 0;
+    const bool is_odd = sinf(si->shading.uv.x() * math::pi * checker->scale) * sinf(si->shading.uv.y() * math::pi * checker->scale) < 0;
     return lerp(checker->color1, checker->color2, (float)is_odd);
 }

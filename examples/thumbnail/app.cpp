@@ -40,7 +40,7 @@ void App::handleCameraUpdate()
         return;
     camera_update = false;
 
-    RaygenRecord* rg_record = reinterpret_cast<RaygenRecord*>(sbt.raygenRecord());
+    RaygenRecord* rg_record = reinterpret_cast<RaygenRecord*>(sbt.deviceRaygenRecordPtr());
     RaygenData rg_data;
     rg_data.camera = camera.getData();
 
@@ -143,6 +143,12 @@ void App::setup()
     uint32_t disney_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_disney"), "");
     // AreaEmitter
     uint32_t area_emitter_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("area_emitter"), "");
+
+    SurfaceCallableID diffuse_id = { diffuse_sample_bsdf_prg_id, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
+    SurfaceCallableID conductor_id = { conductor_sample_bsdf_prg_id, conductor_sample_bsdf_prg_id, conductor_pdf_prg_id };
+    SurfaceCallableID dielectric_id = { dielectric_sample_bsdf_prg_id, dielectric_sample_bsdf_prg_id, dielectric_pdf_prg_id };
+    SurfaceCallableID disney_id = { disney_sample_bsdf_prg_id, disney_sample_bsdf_prg_id, disney_pdf_prg_id };
+    SurfaceCallableID area_emitter_id = { area_emitter_prg_id, area_emitter_prg_id, area_emitter_prg_id };
     
     // Callable program for direct sampling of area emitter
     uint32_t plane_sample_pdf_prg_id = setupCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_plane"), CC_FUNC_STR("pdf_plane"));
@@ -158,7 +164,7 @@ void App::setup()
     MissRecord miss_record;
     miss_prg.recordPackHeader(&miss_record);
     miss_record.data.env_data = env.devicePtr();
-    sbt.setMissRecord(miss_record);
+    sbt.setMissRecord({ miss_record });
 
     // Hitgroup program
     // Plane
@@ -174,21 +180,13 @@ void App::setup()
     // Triangle mesh
     auto mesh_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("mesh"));
 
-    struct Primitive
-    {
-        shared_ptr<Shape> shape;
-        shared_ptr<Material> material;
-        uint32_t sample_bsdf_id;
-        uint32_t pdf_id;
-    };
-
     uint32_t sbt_idx = 0;
     uint32_t sbt_offset = 0;
     uint32_t instance_id = 0;
 
     using SurfaceP = variant<shared_ptr<Material>, shared_ptr<AreaEmitter>>;
     auto addHitgroupRecord = [&](
-        ProgramGroup& prg, shared_ptr<Shape> shape, SurfaceP surface, uint32_t sample_bsdf_id, uint32_t pdf_id, shared_ptr<Texture> alpha_texture = nullptr)
+        ProgramGroup& prg, shared_ptr<Shape> shape, SurfaceP surface, shared_ptr<Texture> alpha_texture = nullptr)
     {
         const bool is_mat = holds_alternative<shared_ptr<Material>>(surface);
         if (alpha_texture) alpha_texture->copyToDevice();
@@ -210,15 +208,13 @@ void App::setup()
             .surface_info =
             {
                 .data = is_mat ? std::get<shared_ptr<Material>>(surface)->devicePtr() : std::get<shared_ptr<AreaEmitter>>(surface)->devicePtr(),
-                .sample_id = sample_bsdf_id,
-                .bsdf_id = sample_bsdf_id,
-                .pdf_id = pdf_id,
+                .callable_id = is_mat ? std::get<shared_ptr<Material>>(surface)->surfaceCallableID() : std::get<shared_ptr<AreaEmitter>>(surface)->surfaceCallableID(),
                 .type = is_mat ? std::get<shared_ptr<Material>>(surface)->surfaceType() : SurfaceType::AreaEmitter,
             },
             .alpha_texture = alpha_texture ? alpha_texture->getData() : Texture::Data{ nullptr, bitmap_prg_id }
         };
 
-        sbt.addHitgroupRecord(record);
+        sbt.addHitgroupRecord({ record });
         sbt_idx++;
     };
 
@@ -237,10 +233,10 @@ void App::setup()
         sbt_offset += SBT::NRay * num_sbt;
     };
 
-    auto setupPrimitive = [&](ProgramGroup& prg, const Primitive& p, const Matrix4f& transform, shared_ptr<Texture> alpha_texture = nullptr)
+    auto setupObject = [&](ProgramGroup& prg, shared_ptr<Shape> shape, shared_ptr<Material> material, const Matrix4f& transform, shared_ptr<Texture> alpha_texture = nullptr)
     {
-        addHitgroupRecord(prg, p.shape, p.material, p.sample_bsdf_id, p.pdf_id, alpha_texture);
-        createGAS(p.shape, transform);
+        addHitgroupRecord(prg, shape, material, alpha_texture);
+        createGAS(shape, transform);
     };
 
     vector<AreaEmitterInfo> area_emitter_infos;
@@ -254,7 +250,7 @@ void App::setup()
     {        
         ASSERT(dynamic_pointer_cast<Plane>(shape) || dynamic_pointer_cast<Sphere>(shape), "The shape of area emitter must be a plane or sphere.");
 
-        addHitgroupRecord(prg, shape, area, area_emitter_prg_id, area_emitter_prg_id, alpha_texture);
+        addHitgroupRecord(prg, shape, area, alpha_texture);
         createGAS(shape, transform);
 
         AreaEmitterInfo area_emitter_info = 
@@ -285,33 +281,33 @@ void App::setup()
     textures.emplace("alpha_checker", new CheckerTexture(make_float4(1.0), make_float4(0.0f), 20, checker_prg_id));
     textures.emplace("wood", new BitmapTexture("resources/image/plywood_diff_1k.jpg", bitmap_prg_id));
 
-    materials.emplace("black_diffuse", new Diffuse(textures.at("black")));
-    materials.emplace("white_diffuse", new Diffuse(textures.at("white")));
-    materials.emplace("floor", new Diffuse(textures.at("checker")));
-    materials.emplace("brick", new Diffuse(textures.at("brick")));
-    materials.emplace("alpha_checker", new Diffuse(textures.at("alpha_checker")));
-    materials.emplace("orange", new Diffuse(textures.at("orange")));
-    materials.emplace("green", new Diffuse(textures.at("green")));
-    materials.emplace("silver_metal", new Conductor(textures.at("bright_gray")));
-    materials.emplace("gold", new Conductor(textures.at("yellow")));
-    materials.emplace("glass", new Dielectric(textures.at("white"), 1.5f));
+    materials.emplace("black_diffuse", new Diffuse(diffuse_id, textures.at("black")));
+    materials.emplace("white_diffuse", new Diffuse(diffuse_id, textures.at("white")));
+    materials.emplace("floor", new Diffuse(diffuse_id, textures.at("checker")));
+    materials.emplace("brick", new Diffuse(diffuse_id, textures.at("brick")));
+    materials.emplace("alpha_checker", new Diffuse(diffuse_id, textures.at("alpha_checker")));
+    materials.emplace("orange", new Diffuse(diffuse_id, textures.at("orange")));
+    materials.emplace("green", new Diffuse(diffuse_id, textures.at("green")));
+    materials.emplace("silver_metal", new Conductor(conductor_id, textures.at("bright_gray")));
+    materials.emplace("gold", new Conductor(conductor_id, textures.at("yellow")));
+    materials.emplace("glass", new Dielectric(dielectric_id, textures.at("white"), 1.5f));
 
-    auto aniso_disney = make_shared<Disney>(textures.at("wine_red"));
+    auto aniso_disney = make_shared<Disney>(disney_id, textures.at("wine_red"));
     aniso_disney->setRoughness(0.3f);
     aniso_disney->setSubsurface(0.0f);
     aniso_disney->setMetallic(0.9f);
     aniso_disney->setAnisotropic(0.8f);
     materials.emplace("aniso_disney", aniso_disney);
 
-    materials.emplace("image_diffuse", new Diffuse(textures.at("rtRest")));
+    materials.emplace("image_diffuse", new Diffuse(diffuse_id, textures.at("rtRest")));
 
-    auto wooden_disney = make_shared<Disney>(textures.at("wood"));
+    auto wooden_disney = make_shared<Disney>(disney_id, textures.at("wood"));
     wooden_disney->setMetallic(0.9f);
     wooden_disney->setRoughness(0.02f);
     materials.emplace("wooden_disney", wooden_disney);
     
-    lights.emplace("logo1", new AreaEmitter( textures.at("orange"), 150.0f, true ));
-    lights.emplace("logo2", new AreaEmitter( textures.at("white"),  300.0f, true ));
+    lights.emplace("logo1", new AreaEmitter( area_emitter_id, textures.at("orange"), 150.0f, true ));
+    lights.emplace("logo2", new AreaEmitter( area_emitter_id, textures.at("white"),  300.0f, true ));
 
     shapes.emplace("plane", new Plane(make_float2(-0.5f), make_float2(0.5f)));
     shapes.emplace("sphere", new Sphere(make_float3(0.0f), 1.0f));
@@ -343,73 +339,68 @@ void App::setup()
     float x = -logo_aspect * 10 / 2 + 10;
 
     // Ground plane
-    Primitive p1{ shapes.at("plane"), materials.at("floor"), diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
-    setupPrimitive(plane_prg, p1, Matrix4f::translate(0, -5, 0) * Matrix4f::scale(500));
+    setupObject(plane_prg, shapes.at("plane"), materials.at("floor"), Matrix4f::translate(0, -5, 0)* Matrix4f::scale(500));
 
     // Dragon
-    Primitive p3{ shapes.at("dragon"), materials.at("glass"), dielectric_sample_bsdf_prg_id, dielectric_pdf_prg_id };
-    setupPrimitive(mesh_prg, p3, Matrix4f::translate(-logo_aspect * 10 / 2 + 10, -0.75, 15) *Matrix4f::rotate(math::pi/2, {0, 1, 0})* Matrix4f::scale(15));
+    setupObject(mesh_prg, shapes.at("dragon"), materials.at("glass"),
+        Matrix4f::translate(-logo_aspect * 10 / 2 + 10, -0.75, 15)* Matrix4f::rotate(math::pi / 2, {0, 1, 0})* Matrix4f::scale(15));
     
     // Bunny
-    Primitive p4{ shapes.at("bunny"), materials.at("white_diffuse"), diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
-    setupPrimitive(mesh_prg, p4, Matrix4f::translate(0, -7.5, 15)* Matrix4f::scale(75));
+    setupObject(mesh_prg, shapes.at("bunny"), materials.at("white_diffuse"), Matrix4f::translate(0, -7.5, 15)* Matrix4f::scale(75));
 
     // Buddha
-    Primitive p5{ shapes.at("buddha"), materials.at("gold"), conductor_sample_bsdf_prg_id, conductor_pdf_prg_id };
-    setupPrimitive(mesh_prg, p5, Matrix4f::translate(logo_aspect * 10 / 2 - 10, -10, 15)* Matrix4f::scale(100));
+    setupObject(mesh_prg, shapes.at("buddha"), materials.at("gold"), 
+        Matrix4f::translate(logo_aspect * 10 / 2 - 10, -10, 15)* Matrix4f::scale(100));
 
     // Teapot
-    Primitive p6{ shapes.at("teapot"), materials.at("orange"), diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
-    setupPrimitive(mesh_prg, p6, Matrix4f::translate(-logo_aspect * 10 / 2 + 10, -5, 30)* Matrix4f::scale(3));
+    setupObject(mesh_prg, shapes.at("teapot"), materials.at("orange"), 
+        Matrix4f::translate(-logo_aspect * 10 / 2 + 10, -5, 30)* Matrix4f::scale(3));
 
     // Armadillo
-    Primitive p7{ shapes.at("armadillo"), materials.at("green"), diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
-    setupPrimitive(mesh_prg, p7, Matrix4f::translate(logo_aspect * 10 / 2 - 10, 0.5, 30)* Matrix4f::rotate(math::pi, { 0, 1, 0 }) * Matrix4f::scale(0.1));
+    setupObject(mesh_prg, shapes.at("armadillo"), materials.at("green"),
+        Matrix4f::translate(logo_aspect * 10 / 2 - 10, 0.5, 30)* Matrix4f::rotate(math::pi, {0, 1, 0})* Matrix4f::scale(0.1));
 
     // Mitsuba
     for (auto& attrib : mitsuba_mat_attribs)
     {
         if (attrib.name == "inside") {
-            materials.emplace("inside", new Diffuse(textures.at("white")));
-            addHitgroupRecord(mesh_prg, shapes.at("mitsuba"), materials.at("inside"), diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id);
+            materials.emplace("inside", new Diffuse(diffuse_id, textures.at("white")));
+            addHitgroupRecord(mesh_prg, shapes.at("mitsuba"), materials.at("inside"));
         }
         else if (attrib.name == "case")
         {
             textures.emplace("case", new ConstantTexture(attrib.findOneVec3f("diffuse", Vec3f(0.3, 0.8, 0.7)), constant_prg_id));
-            auto case_disney = make_shared<Disney>(textures.at("case"));
+            auto case_disney = make_shared<Disney>(disney_id, textures.at("case"));
             case_disney->setRoughness(0.3f);
             case_disney->setSubsurface(0.0f);
             case_disney->setMetallic(0.9f);
             case_disney->setAnisotropic(0.8f);
             materials.emplace("case", case_disney);
-            addHitgroupRecord(mesh_prg, shapes.at("mitsuba"), materials.at("case"), disney_sample_bsdf_prg_id, disney_pdf_prg_id);
+            addHitgroupRecord(mesh_prg, shapes.at("mitsuba"), materials.at("case"));
         }
     }
     createGAS(shapes.at("mitsuba"), Matrix4f::translate(0, -4.8, 30) * Matrix4f::scale(5), 2);
 
     // Sphere1
-    Primitive p9{ shapes.at("sphere"), materials.at("brick"), diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
-    setupPrimitive(sphere_prg, p9, Matrix4f::translate(x, 0, 0)* Matrix4f::scale(5));
+    setupObject(sphere_prg, shapes.at("sphere"), materials.at("brick"), Matrix4f::translate(x, 0, 0) * Matrix4f::scale(5));
     
     // Sphere2
-    Primitive p10{ shapes.at("sphere"), materials.at("black_diffuse"), diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
-    setupPrimitive(sphere_alpha_discard_prg, p10, Matrix4f::translate(0, 0, 0)* Matrix4f::scale(5), textures.at("alpha_checker"));
+    setupObject(sphere_alpha_discard_prg, shapes.at("sphere"), materials.at("black_diffuse"), 
+        Matrix4f::translate(0, 0, 0) * Matrix4f::scale(5), textures.at("alpha_checker"));
 
     // Sphere3
-    Primitive p11{ shapes.at("sphere"), materials.at("aniso_disney"), disney_sample_bsdf_prg_id, disney_pdf_prg_id };
-    setupPrimitive(sphere_prg, p11, Matrix4f::translate(-x, 0, 0)* Matrix4f::scale(5));
+    setupObject(sphere_prg, shapes.at("sphere"), materials.at("aniso_disney"), Matrix4f::translate(-x, 0, 0) * Matrix4f::scale(5));
 
     // Cylinder
-    Primitive p12{ shapes.at("cylinder"), materials.at("white_diffuse"), diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
-    setupPrimitive(cylinder_prg, p12, Matrix4f::translate(x, -1, -15)* Matrix4f::scale(8));
+    setupObject(cylinder_prg, shapes.at("cylinder"), materials.at("white_diffuse"), Matrix4f::translate(x, -1, -15) * Matrix4f::scale(8));
 
     // Box
-    Primitive p13{ shapes.at("box"), materials.at("wooden_disney"), disney_sample_bsdf_prg_id, disney_pdf_prg_id };
-    setupPrimitive(box_prg, p13, Matrix4f::translate(0, -0.9f, -15) * Matrix4f::rotate(math::pi / 6, {0, 1, 0}) * Matrix4f::scale(8));
+    setupObject(box_prg, shapes.at("box"), materials.at("wooden_disney"),
+        Matrix4f::translate(0, -0.9f, -15) * Matrix4f::rotate(math::pi / 6, {0, 1, 0}) * Matrix4f::scale(8));
 
     // Plane
-    Primitive p14{ shapes.at("plane"), materials.at("image_diffuse"), diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id};
-    setupPrimitive(plane_prg, p14, Matrix4f::translate(-x, 1, -15) * Matrix4f::rotate(math::pi / 2, { 1,0,0 }) * Matrix4f::rotate(-math::pi / 12, { 0, 1, 0 }) * Matrix4f::scale(10));
+    setupObject(plane_prg, shapes.at("plane"), materials.at("image_diffuse"), 
+        Matrix4f::translate(-x, 1, -15) * Matrix4f::rotate(math::pi / 2, {1,0,0}) * Matrix4f::rotate(-math::pi / 12, {0, 1, 0}) * Matrix4f::scale(10));
 
     setupAreaEmitter(plane_alpha_discard_prg, shapes.at("plane"), lights.at("logo1"), 
         Matrix4f::translate(0, 12.5f, -20) * Matrix4f::rotate(math::pi * 2 / 3, { 1.0f, 0.0f, 0.0f })* Matrix4f::scale(make_float3(logo_aspect * 10, 1, 10)), 

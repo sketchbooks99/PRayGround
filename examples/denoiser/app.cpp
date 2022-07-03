@@ -126,17 +126,6 @@ void App::setup()
     SurfaceCallableID disney_id{disney_sample_bsdf_prg_id, disney_sample_bsdf_prg_id, disney_pdf_prg_id};
     SurfaceCallableID area_emitter_id{area_emitter_prg_id, area_emitter_prg_id, area_emitter_prg_id};
 
-    auto printSurfaceCallableID = [&](const SurfaceCallableID& id)
-    {
-        cout << "Surface callable: " << id.sample << ", " << id.bsdf << ", " << id.pdf << endl;
-    };
-
-    printSurfaceCallableID(diffuse_id);
-    printSurfaceCallableID(conductor_id);
-    printSurfaceCallableID(dielectric_id);
-    printSurfaceCallableID(disney_id);
-    printSurfaceCallableID(area_emitter_id);
-
     auto black = make_shared<ConstantTexture>(Vec3f(0.0f), constant_prg_id);
     env = EnvironmentEmitter{black};
     env.copyToDevice();

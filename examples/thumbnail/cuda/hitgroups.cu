@@ -63,7 +63,7 @@ static INLINE DEVICE int hitBox(
         Vec2f uv = getBoxUV(p, min, max, min_axis);
         si.p = p;
         si.shading.n = normal;
-        si.uv = uv;
+        si.shading.uv = uv;
         si.t = _tmin;
         return min_axis;
     }
@@ -77,7 +77,7 @@ static INLINE DEVICE int hitBox(
         Vec2f uv = getBoxUV(p, min, max, max_axis);
         si.p = p;
         si.shading.n = normal;
-        si.uv = uv;
+        si.shading.uv = uv;
         si.t = _tmax;
         return max_axis;
     }
@@ -95,7 +95,7 @@ extern "C" __device__ void __intersection__box()
     SurfaceInteraction si;
     int hit_axis = hitBox(&box, ray.o, ray.d, ray.tmin, ray.tmax, si);
     if (hit_axis >= 0) {
-        optixReportIntersection(si.t, 0, Vec3f_as_ints(si.shading.n), Vec2f_as_ints(si.uv), hit_axis);
+        optixReportIntersection(si.t, 0, Vec3f_as_ints(si.shading.n), Vec2f_as_ints(si.shading.uv), hit_axis);
     }
 }
 
@@ -118,7 +118,7 @@ extern "C" __device__ void __closesthit__box()
     si->shading.n = world_n;
     si->t = ray.tmax;
     si->wo = ray.d;
-    si->uv = uv;
+    si->shading.uv = uv;
     si->surface_info = data->surface_info;
 
     Vec3f dpdu, dpdv;
@@ -269,7 +269,7 @@ extern "C" __device__ void __closesthit__cylinder()
     si->shading.n = normalize(world_n);
     si->t = ray.tmax;
     si->wo = ray.d;
-    si->uv = uv;
+    si->shading.uv = uv;
     si->surface_info = data->surface_info;
 
     // dpdu and dpdv are calculated in intersection shader
@@ -290,7 +290,7 @@ static __forceinline__ __device__ bool hitPlane(
 
     if (min.x() < x && x < max.x() && min.y() < z && z < max.y() && tmin < t && t < tmax)
     {
-        si.uv = Vec2f((x - min.x()) / (max.x() - min.x()), (z - min.y()) / (max.y() - min.y()));
+        si.shading.uv = Vec2f((x - min.x()) / (max.x() - min.x()), (z - min.y()) / (max.y() - min.y()));
         si.shading.n = Vec3f(0, 1, 0);
         si.t = t;
         si.p = o + t*v;
@@ -339,7 +339,7 @@ extern "C" __device__ void __closesthit__plane()
     si->shading.n = world_n;
     si->t = ray.tmax;
     si->wo = ray.d;
-    si->uv = uv;
+    si->shading.uv = uv;
     si->surface_info = data->surface_info;
     si->shading.dpdu = optixTransformNormalFromObjectToWorldSpace(Vec3f(1.0f, 0.0f, 0.0f));
     si->shading.dpdv = optixTransformNormalFromObjectToWorldSpace(Vec3f(0.0f, 0.0f, 1.0f));
@@ -421,7 +421,7 @@ static __forceinline__ __device__ bool hitSphere(
     si.t = t;
     si.p = o + t * v;
     si.shading.n = si.p / radius;
-    si.uv = getSphereUV(si.shading.n);
+    si.shading.uv = getSphereUV(si.shading.n);
     return true;
 }
 
@@ -478,7 +478,7 @@ extern "C" __device__ void __closesthit__sphere() {
     si->shading.n = world_n;
     si->t = ray.tmax;
     si->wo = ray.d;
-    si->uv = uv;
+    si->shading.uv = uv;
     si->surface_info = data->surface_info;
 
     // Calculate partial derivative on texture coordinates
@@ -559,7 +559,7 @@ extern "C" __device__ void __closesthit__mesh()
     si->shading.n = world_n;
     si->t = ray.tmax;
     si->wo = ray.d;
-    si->uv = texcoords;
+    si->shading.uv = texcoords;
     si->surface_info = data->surface_info;
 
     // Calculate partial derivative on texture coordinates

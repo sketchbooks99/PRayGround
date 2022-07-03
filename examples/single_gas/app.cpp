@@ -66,14 +66,14 @@ void App::setup()
     MissRecord miss_record;
     miss_prg.recordPackHeader(&miss_record);
     miss_record.data.env_data = env->devicePtr();
-    sbt.setMissRecord(miss_record);
+    sbt.setMissRecord({ miss_record });
 
     // Preparing textures
     checker_texture = make_shared<CheckerTexture>(Vec3f(1.0f), Vec3f(0.3f), 15, checker_prg_id);
     checker_texture->copyToDevice();
 
     // Preparing materials and program id
-    area = make_shared<AreaEmitter>(checker_texture);
+    area = make_shared<AreaEmitter>(SurfaceCallableID{ 0, 0, 0 }, checker_texture);
     area->copyToDevice();
 
     // Load mesh from .obj file
@@ -90,7 +90,7 @@ void App::setup()
         .shape_data = bunny->devicePtr(),
         .texture = checker_texture->getData()
     };
-    sbt.addHitgroupRecord(bunny_record);
+    sbt.addHitgroupRecord({ bunny_record });
     
     // Build GAS
     gas = GeometryAccel{ShapeType::Mesh};

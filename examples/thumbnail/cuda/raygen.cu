@@ -2,29 +2,12 @@
 
 using namespace prayground;
 
-static __forceinline__ __device__ void getCameraRay(const LensCamera::Data& camera, const float x, const float y, Vec3f& ro, Vec3f& rd)
+static __forceinline__ __device__ void getCameraRay(
+    const LensCamera::Data& camera, const float x, const float y, Vec3f& ro, Vec3f& rd
+)
 {
     rd = normalize(x * camera.U + y * camera.V + camera.W);
     ro = camera.origin;
-}
-
-static __forceinline__ __device__ void getLensCameraRay(
-    const LensCamera::Data& camera, const float x, const float y, Vec3f& ro, Vec3f& rd, uint32_t& seed)
-{
-    Vec3f _rd = (camera.aperture / 2.0f) * randomSampleInUnitDisk(seed);
-    Vec3f offset = normalize(camera.U) * _rd.x() + normalize(camera.V) * _rd.y();
-
-    const float theta = math::radians(camera.fov);
-    const float h = tan(theta / 2.0f);
-    const float viewport_height = h;
-    const float viewport_width = camera.aspect * viewport_height;
-
-    Vec3f horizontal = camera.focus_distance * normalize(camera.U) * viewport_width;
-    Vec3f vertical = camera.focus_distance * normalize(camera.V) * viewport_height;
-    Vec3f center = camera.origin - camera.focus_distance * normalize(-camera.W);
-
-    ro = camera.origin + offset;
-    rd = normalize(center + x * horizontal + y * vertical - ro);
 }
 
 static __forceinline__ __device__ Vec3f reinhardToneMap(const Vec3f& color, const float white)
@@ -92,7 +75,7 @@ extern "C" __device__ void __raygen__pinhole()
             {
                 // Evaluating emission from emitter
                 optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.bsdf_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
                 result += si.emission * throughput;
 
                 if (si.trace_terminate)
@@ -103,11 +86,11 @@ extern "C" __device__ void __raygen__pinhole()
             {
                 // Sampling scattered direction
                 optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.sample_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.sample , &si, si.surface_info.data);
                 
                 // Evaluate bsdf
                 Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
-                    si.surface_info.bsdf_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
                 throughput *= bsdf_val;
             }
             // Rough surface sampling with applying MIS
@@ -115,15 +98,15 @@ extern "C" __device__ void __raygen__pinhole()
             {
                 // Importance sampling according to the BSDF
                 optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.sample_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.sample, &si, si.surface_info.data);
 
                 // Evaluate PDF depends on BSDF
                 float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*>(
-                    si.surface_info.pdf_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.pdf, &si, si.surface_info.data);
 
                 // Evaluate BSDF
                 Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
-                    si.surface_info.bsdf_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
 
                 throughput *= bsdf_val / bsdf_pdf;
             }
@@ -212,7 +195,7 @@ extern "C" __device__ void __raygen__lens()
             {
                 // Evaluating emission from emitter
                 optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.bsdf_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
                 result += si.emission * throughput;
 
                 if (si.trace_terminate)
@@ -223,11 +206,11 @@ extern "C" __device__ void __raygen__lens()
             {
                 // Sampling scattered direction
                 optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.sample_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.sample, &si, si.surface_info.data);
                 
                 // Evaluate bsdf
                 Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
-                    si.surface_info.bsdf_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
                 throughput *= bsdf_val;
             }
             // Rough surface sampling with applying MIS
@@ -235,15 +218,15 @@ extern "C" __device__ void __raygen__lens()
             {
                 // Importance sampling according to the BSDF
                 optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.sample_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.sample, &si, si.surface_info.data);
 
                 // Evaluate PDF depends on BSDF
                 float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*>(
-                    si.surface_info.pdf_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.pdf, &si, si.surface_info.data);
 
                 // Evaluate BSDF
                 Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
-                    si.surface_info.bsdf_id, &si, si.surface_info.data);
+                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
 
                 throughput *= bsdf_val / bsdf_pdf;
             }

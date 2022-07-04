@@ -26,18 +26,12 @@ struct Triangle {
     Vec3f v1;
     Vec3f v2;
     Vec3f n;
-    Vec2f uv0;
-    Vec2f uv1;
-    Vec2f uv2;
 };
 
 // Should be polygonal light source?
-struct AreaEmitterInfo {
+struct LightInfo {
     Triangle triangle;
-    SurfaceInfo surface_info;
-
-    uint32_t sample_id;
-    uint32_t pdf_id;
+    Vec3f emittance;
 };
 
 struct LaunchParams {
@@ -52,6 +46,6 @@ struct LaunchParams {
     
     OptixTraversableHandle handle;
 
-    AreaEmitterInfo* lights;
+    LightInfo* lights;
     int num_lights;
 };

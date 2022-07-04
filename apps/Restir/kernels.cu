@@ -5,26 +5,19 @@ extern "C" { __constant__ LaunchParams params; }
 
 using SurfaceInteraction = SurfaceInteraction_<Vec3f>;
 
-class Reservoir {
-public:
-    Reservoir()
-    {
-        m_sample = Vec3f(0.0f);
-        m_weight_sum = 0.0f;
-        m_num_strategies = 0;
-    }
+struct Reservoir {
+    int y;          // The output sample (the index of light)
+    float wsum;     // The sum of weights
+    float M;        // The number of samples seen so far
+    float W;        // Probalistic weight
 
-    void update(Vec3f x, float weight, uint32_t& seed)
+    void update(int i, float weight, uint32_t& seed)
     {
-        m_weight_sum += weight;
-        m_num_strategies += 1;
-        if (rnd(seed) < (weight / m_weight_sum))
-            m_sample = x;
+        wsum += weight;
+        M++;
+        if (rnd(seed) < (weight / wsum))
+            y = i;
     }
-private:
-    Vec3f m_sample;
-    float m_weight_sum;
-    int32_t m_num_strategies;
 };
 
 static __forceinline__ __device__ float calcWeight(const Vec3f& sample)
@@ -38,6 +31,55 @@ static __forceinline__ __device__ Reservoir reservoirSampling(int32_t num_strate
     Reservoir r;
     for (int i = 0; i < num_strategies; i++)
         r.update(samples[i], calcWeight(sample), params.seed);
+    return r;
+}
+
+// p^(x) = \rho(x) * Le(x) * G(x), where \rho(x) = BRDF
+static __forceinline__ __device__ float targetPDF(
+    const Vec3f& brdf, SurfaceInteraction* si, const Vec3f& to_light, const LightInfo& light)
+{
+    const float area = length(cross(light.triangle.v1 - light.triangle.v0, light.triangle.v2 - light.triangle.v0)) / 2.0f;
+    const float cos_theta = fmaxf(dot(si->shading.n, normalize(to_light)), 0.0f);
+    const float d = length(to_light);
+    const float G = (d * d) / (area * cos_theta);
+    return length(brdf * light.emittance) * G;
+}
+
+static __forceinline__ __device__ Vec3f randomSampleOnTriangle(uint32_t& seed, const Triangle& triangle)
+{
+    // Uniform sampling of barycentric coordinates on a triangle
+    Vec2f uv = UniformSampler::get2D(seed);
+    return triangle.v0 * (1.0f - uv.x() - uv.y()) + triangle.v1 * uv.x() + triangle.v2 * uv.y();
+}
+
+static __forceinlnie__ __device__ Reservoir reservoirImportanceSampling(
+    SurfaceInteraction* si, int M, uint32_t& seed)
+{
+    Reservoir r{0, 0, 0, 0};
+    for (int i = 0; i < min(params.num_lights, M); i++)
+    {
+        // Sample a light
+        int light_idx = rndInt(seed, 0, params.num_lights - 1);
+        LightInfo light = params.lights[light_idx];
+        const float pdf = 1.0f / params.num_lights;
+        
+        const Vec3f light_p = randomSampleOnTriangle(light.triangle);
+
+        // Get brdf wrt the sampled light
+        Vec3f brdf = optixDirectCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
+            si->surface_info.callable_id.bsdf, si, si.surface_info.data, light_p);
+        // Get target pdf 
+        const float target_pdf = targetPDF(brdf, si, light_p - si->p, light);
+        // update reservoir
+        r.update(light_idx, target_pdf / pdf, seed);
+    }
+
+    LightInfo light = params.lights[r.y];
+    const Vec3f light_p = randomSampleOnTriangle(seed, light.triangle);
+    Vec3f brdf = optixDirectCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
+        si->surface_info.callable_id.bsdf, si, si.surface_info.data, light_p);    
+
+    r.W = ( ( 1.0f / targetPDF(brdf, si, light_p - si->p, light) ) * ( 1.0f / r.M ) * r.wsum );
     return r;
 }
 

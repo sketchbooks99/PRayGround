@@ -16,9 +16,9 @@ using CheckerTexture = CheckerTexture_<Vec3f>;
 
 enum class RayType : uint32_t
 {
-    RADIANCE = 0,
-    SHADOW = 1,
-    N_RAY = 2
+    Radiance = 0,
+    Shadow = 1,
+    NRay = 2
 };
 
 struct Triangle {

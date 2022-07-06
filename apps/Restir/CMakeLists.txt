@@ -1,4 +1,4 @@
-PRAYGROUND_add_executalbe(empty_app target_name
+PRAYGROUND_add_executalbe(Restir target_name
     main.cpp 
     app.cpp 
     app.h

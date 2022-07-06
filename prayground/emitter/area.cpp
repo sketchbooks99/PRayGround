@@ -66,4 +66,5 @@ namespace prayground {
     {
         return { m_texture->getData(), m_intensity, m_twosided };
     }
+
 } // namespace prayground

@@ -3,6 +3,8 @@
 #include <prayground/prayground.h>
 #include "params.h"
 
+using namespace std;
+
 class App : public BaseApp 
 {
 public:
@@ -19,7 +21,7 @@ public:
     void keyPressed(int key);
     void keyReleased(int key);
 private:
-    void initResultBUfferOnDevice();
+    void initResultBufferOnDevice();
     void handleCameraUpdate();
 
     Context context;

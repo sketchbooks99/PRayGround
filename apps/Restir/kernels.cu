@@ -192,9 +192,10 @@ extern "C" __device__ void __raygen__restir()
                 const float area = length(cross(light.triangle.v1 - light.triangle.v0, light.triangle.v2 - light.triangle.v0));
                 const float cos_theta = fmaxf(dot(light.triangle.n, normalize(-to_light)), 0.0f);
                 const float d = length(to_light);
-                const float G = (d * d) / (area * cos_theta);
+                // const float G = (d * d) / (area * cos_theta);
+                const float G = (area * cosine) / (d * d);
                 
-                throughput *= r.W * brdf * G * light.emission * (float)occluded;
+                result += r.W * brdf * G * light.emission * (float)occluded;
             }
 
             ro = si.p;

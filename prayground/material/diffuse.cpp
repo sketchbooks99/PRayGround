@@ -19,6 +19,17 @@ namespace prayground {
     {
         return SurfaceType::Diffuse;
     }
+    
+    SurfaceInfo Diffuse::surfaceInfo() const
+    {
+        ASSERT(d_data, "Material data on device hasn't been allocated yet.");
+
+        return SurfaceInfo{
+            .data = d_data,
+            .callable_id = m_surface_callable_id,
+            .type = SurfaceType::Diffuse
+        };
+    }
 
     // ------------------------------------------------------------------
     void Diffuse::copyToDevice()

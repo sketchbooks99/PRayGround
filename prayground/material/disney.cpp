@@ -34,6 +34,17 @@ namespace prayground {
         return SurfaceType::RoughReflection;
     }
 
+    SurfaceInfo Disney::surfaceInfo() const
+    {
+        ASSERT(d_data, "Material data on device hasn't been allocated yet.");
+
+        return SurfaceInfo{
+            .data = d_data,
+            .callable_id = m_surface_callable_id,
+            .type = SurfaceType::RoughReflection
+        };
+    }
+
     // ------------------------------------------------------------------
     void Disney::copyToDevice()
     {

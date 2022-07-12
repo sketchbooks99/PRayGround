@@ -20,6 +20,8 @@ namespace prayground {
         virtual ~Material() {}
 
         virtual SurfaceType surfaceType() const = 0;
+
+        virtual SurfaceInfo surfaceInfo() const = 0;
     
         virtual void copyToDevice() = 0;
 

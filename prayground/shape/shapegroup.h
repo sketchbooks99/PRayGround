@@ -44,13 +44,15 @@ public:
             for (auto& mesh : m_shapes)
             {
                 // 重複しないindexの数を数える
-                uint32_t sbt_idx = mesh.sbtIndex();
-                auto itr = std::find(sbt_counter.begin(), sbt_counter.end(), sbt_idx);
-                if (sbt_counter.empty() || itr == sbt_counter.end())
-                    sbt_counter.push_back(sbt_idx);
-                
-                std::vector<uint32_t> mesh_sbt_index(mesh.faces().size(), sbt_idx);
-                std::copy(mesh_sbt_index.begin(), mesh_sbt_index.end(), std::back_inserter(sbt_indices));
+                for (auto sbt_idx : mesh.sbtIndices())
+                {
+                    auto itr = std::find(sbt_counter.begin(), sbt_counter.end(), sbt_idx);
+                    if (sbt_counter.empty() || itr == sbt_counter.end())
+                        sbt_counter.push_back(sbt_idx);
+
+                    std::vector<uint32_t> mesh_sbt_index(mesh.faces().size(), sbt_idx);
+                    std::copy(mesh_sbt_index.begin(), mesh_sbt_index.end(), std::back_inserter(sbt_indices));
+                }
             }
             std::vector<uint32_t> triangle_input_flags(m_shapes.size(), OPTIX_GEOMETRY_FLAG_NONE);
 

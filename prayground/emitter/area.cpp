@@ -14,6 +14,17 @@ namespace prayground {
     {
         return SurfaceType::AreaEmitter;
     }
+
+    SurfaceInfo AreaEmitter::surfaceInfo() const
+    {
+        ASSERT(d_data, "Area emitter data on device hasn't been allocated yet.");
+
+        return SurfaceInfo{
+            .data = d_data,
+            .callable_id = m_surface_callable_id,
+            .type = SurfaceType::AreaEmitter
+        };
+    }
         
     // ---------------------------------------------------------------------------
     void AreaEmitter::copyToDevice() 

@@ -173,4 +173,4 @@ namespace prayground {
 
 #endif // __CUDACC__
 
-}
+} // namespace prayground

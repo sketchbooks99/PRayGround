@@ -26,11 +26,11 @@ static __forceinline__ __device__ float calcWeight(const Vec3f& sample)
     return 1.0f;
 }
 
-static __forceinline__ __device__ Reservoir reservoirSampling(int32_t num_strategies, Vec3f sample)
+static __forceinline__ __device__ Reservoir reservoirSampling(int32_t num_strategies, Vec3f sample, int* samples, uint32_t& seed)
 {
     Reservoir r;
     for (int i = 0; i < num_strategies; i++)
-        r.update(samples[i], calcWeight(sample), params.seed);
+        r.update(samples[i], calcWeight(sample), seed);
     return r;
 }
 
@@ -42,7 +42,7 @@ static __forceinline__ __device__ float targetPDF(
     const float cos_theta = fmaxf(dot(light.triangle.n, normalize(-to_light)), 0.0f);
     const float d = length(to_light);
     const float G = (d * d) / (area * cos_theta);
-    return length(brdf * light.emittance) * G;
+    return length(brdf * light.emission) * G;
 }
 
 static __forceinline__ __device__ Vec3f randomSampleOnTriangle(uint32_t& seed, const Triangle& triangle)
@@ -52,7 +52,7 @@ static __forceinline__ __device__ Vec3f randomSampleOnTriangle(uint32_t& seed, c
     return triangle.v0 * (1.0f - uv.x() - uv.y()) + triangle.v1 * uv.x() + triangle.v2 * uv.y();
 }
 
-static __forceinlnie__ __device__ Reservoir reservoirImportanceSampling(
+static __forceinline__ __device__ Reservoir reservoirImportanceSampling(
     SurfaceInteraction* si, int M, uint32_t& seed)
 {
     Reservoir r{0, 0, 0, 0};
@@ -63,11 +63,11 @@ static __forceinlnie__ __device__ Reservoir reservoirImportanceSampling(
         LightInfo light = params.lights[light_idx];
         const float pdf = 1.0f / params.num_lights;
         
-        const Vec3f light_p = randomSampleOnTriangle(light.triangle);
+        const Vec3f light_p = randomSampleOnTriangle(seed, light.triangle);
 
         // Get brdf wrt the sampled light
         Vec3f brdf = optixDirectCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
-            si->surface_info.callable_id.bsdf, si, si.surface_info.data, light_p);
+            si->surface_info.callable_id.bsdf, si, si->surface_info.data, light_p);
         // Get target pdf 
         const float target_pdf = targetPDF(brdf, si, light_p - si->p, light);
         // update reservoir
@@ -77,7 +77,7 @@ static __forceinlnie__ __device__ Reservoir reservoirImportanceSampling(
     LightInfo light = params.lights[r.y];
     const Vec3f light_p = randomSampleOnTriangle(seed, light.triangle);
     Vec3f brdf = optixDirectCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
-        si->surface_info.callable_id.bsdf, si, si.surface_info.data, light_p);    
+        si->surface_info.callable_id.bsdf, si, si->surface_info.data, light_p);    
 
     r.W = ( ( 1.0f / targetPDF(brdf, si, light_p - si->p, light) ) * ( 1.0f / r.M ) * r.wsum );
     return r;
@@ -122,7 +122,7 @@ static __forceinline__ __device__ bool traceShadow(
 // raygen 
 extern "C" __device__ void __raygen__restir()
 {
-    const pgRaygenData<Camera> raygen = reinterpret_cast<RaygenData*>(optixGetSbtDataPointer());
+    const auto* raygen = reinterpret_cast<pgRaygenData<Camera>*>(optixGetSbtDataPointer());
 
     const int frame = params.frame;
     const Vec3ui idx(optixGetLaunchIndex());
@@ -134,7 +134,7 @@ extern "C" __device__ void __raygen__restir()
 
     const int M = 32;
 
-    for (int i = 0; 0 < spl; i++) 
+    for (int i = 0; i < spl; i++) 
     {
         const Vec2f jitter = UniformSampler::get2D(seed) - 0.5f;
 
@@ -160,7 +160,7 @@ extern "C" __device__ void __raygen__restir()
             if ( depth >= params.max_depth )
                 break;
 
-            trace(params.handle, ro, rd, 0.0f, 1e16f, RayType::Radiance, &si);
+            trace(params.handle, ro, rd, 0.0f, 1e16f, &si);
 
             if (si.trace_terminate)
             {
@@ -171,31 +171,45 @@ extern "C" __device__ void __raygen__restir()
             if ( si.surface_info.type == SurfaceType::AreaEmitter )
             {
                 // Evaluation of emittance from area emitter
-                const Vec3f emittance = optixDirectCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
+                const Vec3f emission = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
                     si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
-                result += emittance * throughput;
+                result += emission * throughput;
                 if (si.trace_terminate)
                     break;
             }
             else 
             {
-                Reservoir r = reservoirImportanceSampling(&si, M, seed);
-                LightInfo light = params.lights[r.y];
-                const Vec3f light_p = randomSampleOnTriangle(seed, light.triangle);
-                const Vec3f to_light = light_p - si.p;
-                // Visibility term
-                bool occluded = traceShadow(params.handle, ro, normalize(to_light), 0.01f, length(to_light) - 0.01f, &si);
-                // rho
-                Vec3f brdf = optixDirectCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
-                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data, light_p);
-                // G
-                const float area = length(cross(light.triangle.v1 - light.triangle.v0, light.triangle.v2 - light.triangle.v0));
-                const float cos_theta = fmaxf(dot(light.triangle.n, normalize(-to_light)), 0.0f);
-                const float d = length(to_light);
-                // const float G = (d * d) / (area * cos_theta);
-                const float G = (area * cosine) / (d * d);
+                //Reservoir r = reservoirImportanceSampling(&si, M, seed);
+                //LightInfo light = params.lights[r.y];
+                //const Vec3f light_p = randomSampleOnTriangle(seed, light.triangle);
+                //const Vec3f to_light = light_p - si.p;
+                //// Visibility term
+                //bool occluded = traceShadow(params.handle, ro, normalize(to_light), 0.01f, length(to_light) - 0.01f, &si);
+                //// rho
+                //Vec3f brdf = optixDirectCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
+                //    si.surface_info.callable_id.bsdf, &si, si.surface_info.data, light_p);
+                //// G
+                //const float area = length(cross(light.triangle.v1 - light.triangle.v0, light.triangle.v2 - light.triangle.v0));
+                //const float cos_theta = fmaxf(dot(light.triangle.n, normalize(-to_light)), 0.0f);
+                //const float d = length(to_light);
+                //// const float G = (d * d) / (area * cos_theta);
+                //const float G = (area * cos_theta) / (d * d);
+                //
+                //result += r.W * brdf * G * light.emission * (float)occluded;
                 
-                result += r.W * brdf * G * light.emission * (float)occluded;
+                // Uniform hemisphere sampling
+                si.trace_terminate = false;
+                Vec2f u = UniformSampler::get2D(seed);
+                Vec3f wi = cosineSampleHemisphere(u[0], u[1]);
+                Onb onb(si.shading.n);
+                onb.inverseTransform(wi);
+                si.wi = normalize(wi);
+                si.seed = seed;
+
+                const Vec3f brdf = optixDirectCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
+                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data, si.p + si.wi);
+
+                throughput *= brdf;
             }
 
             ro = si.p;
@@ -229,7 +243,7 @@ extern "C" __device__ void __raygen__restir()
 // Miss -------------------------------------------------------------
 extern "C" __device__ void __miss__envmap()
 {
-    const auto* data = (MissData*)optixGetSbtDataPointer();
+    const auto* data = (pgMissData*)optixGetSbtDataPointer();
     const auto* env = (EnvironmentEmitter::Data*)data->env_data;
     auto* si = getSurfaceInteraction();
 
@@ -265,8 +279,8 @@ extern "C" __device__ void __miss__shadow()
 // Mesh
 extern "C" __device__ void __closesthit__mesh()
 {
-    const auto* data = (HitgroupData*)optixGetSbtDataPointer();
-    const auto* mesh = (Mesh::Data*)data->shape_data;
+    const auto* data = (pgHitgroupData*)optixGetSbtDataPointer();
+    const auto* mesh = (TriangleMesh::Data*)data->shape_data;
     
     Ray ray = getWorldRay();
 
@@ -326,11 +340,22 @@ extern "C" __device__ void __closesthit__shadow()
 }
 
 // Surfaces -----------------------------------------------------------------------
-extern "C" __device__ Vec3f __direct_callable__bsdf_disney(SurfaceInteraction* si, void* mat_data, const Vec3f& p)
+extern "C" __device__ Vec3f __direct_callable__brdf_diffuse(SurfaceInteraction* si, void* mat_data, const Vec3f& p)
+{
+    const auto* diffuse = (Diffuse::Data*)mat_data;
+    si->emission = Vec3f(0.0f);
+
+    const Vec3f wi = normalize(p - si->p);
+    const Vec3f albedo = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
+        diffuse->texture.prg_id, si, diffuse->texture.data);
+    si->albedo = albedo;
+    return albedo * math::inv_pi;
+}
+
+extern "C" __device__ Vec3f __direct_callable__brdf_disney(SurfaceInteraction* si, void* mat_data, const Vec3f& p)
 {
     const auto* disney = (Disney::Data*)mat_data;
     si->emission = Vec3f(0.0f);
-
     
     const Vec3f V = -normalize(si->wo);
     const Vec3f L = normalize(p - si->p);
@@ -347,8 +372,7 @@ extern "C" __device__ Vec3f __direct_callable__bsdf_disney(SurfaceInteraction* s
     const float LdotH = dot(L, H);
 
     const Vec3f base = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
-        disney->base.prg_id, si, disney->base.data
-    );
+        disney->base.prg_id, si, disney->base.data);
     si->albedo = base;
 
     // Diffuse term
@@ -358,7 +382,7 @@ extern "C" __device__ Vec3f __direct_callable__bsdf_disney(SurfaceInteraction* s
     const Vec3f f_diffuse = (base * math::inv_pi) * FVd90 * FLd90;
 
     // Subsurface
-    const float Fss90 = disney->roughenss * LdotH * LdotH;
+    const float Fss90 = disney->roughness * LdotH * LdotH;
     const float FVss90 = fresnelSchlickT(NdotV, Fss90);
     const float FLss90 = fresnelSchlickT(NdotL, Fss90);
     const Vec3f f_subsurface = (base * math::inv_pi) * 1.25f * (FVss90 * FLss90 * ((1.0f / (NdotV * NdotL)) - 0.5f) + 0.5f);
@@ -381,7 +405,7 @@ extern "C" __device__ Vec3f __direct_callable__bsdf_disney(SurfaceInteraction* s
     const float Ds = GTR2_aniso(NdotH, dot(H, X), dot(H, Y), ax, ay);
     float Gs = smithG_GGX_aniso(NdotL, dot(L, X), dot(L, Y), ax, ay);
     Gs *= smithG_GGX_aniso(NdotV, dot(V, X), dot(V, Y), ax, ay);
-    const Vec3f f_specular = FHs0 * Fs * Gs;
+    const Vec3f f_specular = FHs0 * Fs0 * Gs;
 
     // Clearcoat
     const float Fcc = fresnelSchlickR(LdotH, 0.04f);
@@ -392,6 +416,24 @@ extern "C" __device__ Vec3f __direct_callable__bsdf_disney(SurfaceInteraction* s
 
     const Vec3f out = (1.0f - disney->metallic) * (lerp(f_diffuse, f_subsurface, disney->subsurface) + f_sheen) + f_specular + f_clearcoat;
     return out * fmaxf(NdotL, 0.0f);
+}
+
+extern "C" __device__ Vec3f __direct_callable__area_emitter(SurfaceInteraction* si, void* surface_data)
+{
+    const auto* area = reinterpret_cast<AreaEmitter::Data*>(surface_data);
+    si->trace_terminate = true;
+    float is_emitted = dot(si->wo, si->shading.n) < 0.0f ? 1.0f : 0.0f;
+    if (area->twosided)
+    {
+        is_emitted = 1.0f;
+        si->shading.n = faceforward(si->shading.n, -si->wi, si->shading.n);
+    }
+
+    const Vec3f base = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
+        area->texture.prg_id, si, area->texture.data);
+    si->albedo = base;
+    
+    si->emission = base * area->intensity * is_emitted;
 }
 
 // Textures ----------------------------------------------------------------------

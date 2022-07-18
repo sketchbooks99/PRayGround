@@ -15,10 +15,10 @@ void App::initResultBufferOnDevice()
 
 void App::handleCameraUpdate()
 {
-    if (is_camera_updated)
+    if (!is_camera_updated)
         return;
 
-    is_camera_updated = true;
+    is_camera_updated = false;
 
     scene.updateSBT(+(SBTRecordType::Raygen));
 
@@ -96,31 +96,79 @@ void App::setup()
     scene.bindCallablesProgram(disney_brdf_prg.program);
     scene.bindCallablesProgram(area_emitter_prg.program);
 
+    SurfaceCallableID diffuse_id{ diffuse_brdf_prg.ID, diffuse_brdf_prg.ID, diffuse_brdf_prg.ID };
+    SurfaceCallableID disney_id{ disney_brdf_prg.ID, disney_brdf_prg.ID, disney_brdf_prg.ID };
+    SurfaceCallableID area_id{ area_emitter_prg.ID, area_emitter_prg.ID, area_emitter_prg.ID };
+
     // Miss program
     array<ProgramGroup, NRay> miss_prgs;
     miss_prgs[0] = pipeline.createMissProgram(context, module, "__miss__envmap");
     miss_prgs[1] = pipeline.createMissProgram(context, module, "__miss__shadow");
     scene.bindMissPrograms(miss_prgs);
-    scene.setEnvmap(make_shared<ConstantTexture>(Vec3f(0.0f), constant_prg.ID));
+    
+    // Create envmap
+    scene.setEnvmap(make_shared<ConstantTexture>(Vec3f(0.8f), constant_prg.ID));
 
     // Hitgroup program
     array<ProgramGroup, NRay> mesh_prgs;
     mesh_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__mesh");
     mesh_prgs[1] = pipeline.createHitgroupProgram(context, module, "__closesthit__shadow");
 
+    // Load obj scene
+    std::vector<Attributes> material_attribs;
+    shared_ptr<TriangleMesh> scene_mesh(new TriangleMesh());
+    scene_mesh->loadWithMtl("C:/Users/lunae/Documents/3DScenes/San-Miguel/san-miguel.obj", material_attribs);
+    
+    cudaTextureDesc tex_desc = {};
+    tex_desc.addressMode[0] = cudaAddressModeWrap;
+    tex_desc.addressMode[1] = cudaAddressModeWrap;
+    tex_desc.filterMode = cudaFilterModeLinear;
+    tex_desc.normalizedCoords = 1;
+    tex_desc.sRGB = 1;
 
+    // Create materials from .obj file
+    std::vector<shared_ptr<Material>> scene_materials;
+    for (const auto& ma : material_attribs)
+    {
+        shared_ptr<Texture> texture;
+        string diffuse_texname = ma.findOneString("diffuse_texture", "");
+        if (!diffuse_texname.empty())
+            texture = make_shared<BitmapTexture>(diffuse_texname, tex_desc, bitmap_prg.ID);
+        else
+            texture = make_shared<ConstantTexture>(ma.findOneVec3f("diffuse", Vec3f(1.0f, 0.0f, 1.0f)), constant_prg.ID);
+        auto diffuse = make_shared<Diffuse>(diffuse_id, texture);
+        scene_materials.emplace_back(diffuse);
+    }
+    
+    scene.addObject("Scene mesh", scene_mesh, scene_materials, mesh_prgs, Matrix4f::scale(10));
+
+    CUDA_CHECK(cudaStreamCreate(&stream));
+    scene.copyDataToDevice();
+    scene.buildAccel(context, stream);
+    scene.buildSBT();
+    pipeline.create(context);
+
+    params.handle = scene.accelHandle();
 }
 
 // ------------------------------------------------------------------
 void App::update()
 {
+    handleCameraUpdate();
 
+    scene.launchRay(context, pipeline, params, stream, result_bmp.width(), result_bmp.height(), 1);
+    CUDA_CHECK(cudaStreamSynchronize(stream));
+    CUDA_SYNC_CHECK();
+
+    params.frame++;
+
+    result_bmp.copyFromDevice();
 }
 
 // ------------------------------------------------------------------
 void App::draw()
 {
-
+    result_bmp.draw(0, 0);
 }
 
 // ------------------------------------------------------------------
@@ -132,7 +180,7 @@ void App::mousePressed(float x, float y, int button)
 // ------------------------------------------------------------------
 void App::mouseDragged(float x, float y, int button)
 {
-    
+    if (button == MouseButton::Middle) is_camera_updated = true;
 }
 
 // ------------------------------------------------------------------
@@ -150,7 +198,7 @@ void App::mouseMoved(float x, float y)
 // ------------------------------------------------------------------
 void App::mouseScrolled(float x, float y)
 {
-    
+    is_camera_updated = true;
 }
 
 // ------------------------------------------------------------------

@@ -31,7 +31,7 @@ struct Triangle {
 // Should be polygonal light source?
 struct LightInfo {
     Triangle triangle;
-    Vec3f emittance;
+    Vec3f emission;
 };
 
 struct LaunchParams {

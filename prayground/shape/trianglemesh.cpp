@@ -135,8 +135,6 @@ TriangleMesh::Data TriangleMesh::getData()
     d_normals = d_normals_buf.devicePtr();
     d_texcoords = d_texcoords_buf.devicePtr();
 
-    PG_LOG(d_vertices);
-
     // device side pointer of mesh data
     Data data = {
         .vertices = d_vertices_buf.deviceData(),
@@ -161,8 +159,6 @@ void TriangleMesh::addFaces(const std::vector<Face>& faces)
 
 void TriangleMesh::addFaces(const std::vector<Face>& faces, const std::vector<uint32_t>& sbt_indices)
 {
-    ASSERT(faces.size() == sbt_indices.size(), 
-        "The number of faces and sbt_indices must be same, when 2 or more sbt_indices are set. (must be a per-face mode).");
     std::copy(faces.begin(), faces.end(), std::back_inserter(m_faces));
     std::copy(sbt_indices.begin(), sbt_indices.end(), std::back_inserter(m_sbt_indices));
 }
@@ -325,7 +321,7 @@ void TriangleMesh::smooth()
 void TriangleMesh::offsetSbtIndex(uint32_t sbt_base)
 {
     if (m_sbt_indices.empty())
-        m_sbt_index += sbt_base;
+        m_sbt_indices.push_back(sbt_base);
     else
     {
         for (auto& idx : m_sbt_indices)
@@ -335,6 +331,8 @@ void TriangleMesh::offsetSbtIndex(uint32_t sbt_base)
 
 uint32_t TriangleMesh::numMaterials() const
 {
+    ASSERT(m_sbt_indices.size() != 0, "Any sbt indices aren't set");
+
     std::vector<uint32_t> sbt_counter;
     for (auto& sbt_idx : m_sbt_indices)
     {
@@ -348,8 +346,6 @@ uint32_t TriangleMesh::numMaterials() const
 
 void TriangleMesh::addSbtIndices(const std::vector<uint32_t>& sbt_indices)
 {
-    ASSERT(sbt_indices.size() + m_sbt_indices.size() == m_faces.size(), 
-        "The total sbt_indices will exceed the number of faces. Sbt_indices and faces must be a same length.");
     std::copy(sbt_indices.begin(), sbt_indices.end(), std::back_inserter(m_sbt_indices));
 }
 

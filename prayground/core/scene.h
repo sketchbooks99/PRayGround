@@ -12,6 +12,8 @@
 #include <prayground/emitter/area.h>
 #include <prayground/emitter/envmap.h>
 
+#include <prayground/shape/trianglemesh.h>
+
 #include <prayground/optix/pipeline.h>
 #include <prayground/optix/sbt.h>
 #include <prayground/optix/geometry_accel.h>
@@ -663,7 +665,8 @@ namespace prayground {
                 auto& surfaces = obj.value.surfaces;
 
                 shape->copyToDevice();
-                for (auto& surface : surfaces) surface->copyToDevice();
+                for (auto& surface : surfaces) 
+                    surface->copyToDevice();
             }
         };
 
@@ -683,7 +686,18 @@ namespace prayground {
         auto createGas = [&](auto& object, uint32_t ID) -> void
         {
             // Set shader binding table index to shape
-            object.shape->setSbtIndex(ID);
+            if (object.shape->type() == ShapeType::Mesh)
+            {
+                auto mesh = std::dynamic_pointer_cast<TriangleMesh>(object.shape);
+                if (mesh->numMaterials() > 1)
+                    mesh->offsetSbtIndex(ID);
+                else
+                    mesh->setSbtIndex(ID);
+            }
+            else
+            {
+                object.shape->setSbtIndex(ID);
+            }
 
             // Build geometry accel
             object.instance.allowCompaction();
@@ -697,8 +711,19 @@ namespace prayground {
 
         auto createMovingGas = [&](auto& moving_object, uint32_t ID) -> void
         {
-            // Set shader binding table index to shape 
-            moving_object.shape->setSbtIndex(ID);
+            // Set shader binding table index to shape
+            if (moving_object.shape->type() == ShapeType::Mesh)
+            {
+                auto mesh = std::dynamic_pointer_cast<TriangleMesh>(moving_object.shape);
+                if (mesh->numMaterials() > 1)
+                    mesh->offsetSbtIndex(ID);
+                else
+                    mesh->setSbtIndex(ID);
+            }
+            else
+            {
+                moving_object.shape->setSbtIndex(ID);
+            }
 
             // Build geometry accel
             moving_object.gas.allowCompaction();

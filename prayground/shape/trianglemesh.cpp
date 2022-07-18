@@ -31,12 +31,7 @@ TriangleMesh::TriangleMesh(
       m_texcoords(texcoords), 
       m_sbt_indices(sbt_indices)
 {
-    if (sbt_indices.size() > 1)
-    {
-        ASSERT(faces.size() == sbt_indices.size(), 
-            "The number of faces and sbt_indices must be same, when 2 or more sbt_indices are set. (must be a per-face mode).");
-        is_per_face_material = true;
-    }
+    
 }
 
 // ------------------------------------------------------------------
@@ -65,24 +60,12 @@ OptixBuildInput TriangleMesh::createBuildInput()
     OptixBuildInput bi = {};
     CUDABuffer<uint32_t> d_sbt_indices_buf;
 
-    if (is_per_face_material)
-    {
-        ASSERT(m_faces.size() == m_sbt_indices.size(), 
-            "The number of faces and sbt_indices must be same when per-face mode is enabled.");
-        d_sbt_indices_buf.copyToDevice(m_sbt_indices);
-    }
-    else
-    {
-        m_num_materials = 1;
-        uint32_t* sbt_indices = new uint32_t[1];
-        sbt_indices[0] = m_sbt_index;
-        d_sbt_indices_buf.copyToDevice(sbt_indices, sizeof(uint32_t));
-        delete[] sbt_indices;
-    }
+    d_sbt_indices_buf.copyToDevice(m_sbt_indices);
     d_sbt_indices = d_sbt_indices_buf.devicePtr();
 
-    uint32_t* triangle_input_flags = new uint32_t[m_num_materials];
-    for (uint32_t i = 0; i < m_num_materials; i++)
+    uint32_t num_materials = this->numMaterials();
+    uint32_t* triangle_input_flags = new uint32_t[num_materials];
+    for (uint32_t i = 0; i < num_materials; i++)
         triangle_input_flags[i] = OPTIX_GEOMETRY_FLAG_NONE;
     
     bi.type = static_cast<OptixBuildInputType>(this->type());
@@ -95,7 +78,7 @@ OptixBuildInput TriangleMesh::createBuildInput()
     bi.triangleArray.indexStrideInBytes = sizeof(Face);
     bi.triangleArray.numIndexTriplets = static_cast<uint32_t>(m_faces.size());
     bi.triangleArray.indexBuffer = d_faces;
-    bi.triangleArray.numSbtRecords = m_num_materials;
+    bi.triangleArray.numSbtRecords = num_materials;
     bi.triangleArray.sbtIndexOffsetBuffer = d_sbt_indices;
     bi.triangleArray.sbtIndexOffsetSizeInBytes = sizeof(uint32_t);
     bi.triangleArray.sbtIndexOffsetStrideInBytes = sizeof(uint32_t);
@@ -114,6 +97,27 @@ AABB TriangleMesh::bound() const
     return AABB{};
 }
 
+void TriangleMesh::setSbtIndex(const uint32_t sbt_idx)
+{
+    if (m_sbt_indices.size() > 1)
+    {
+        PG_LOG_WARN("Two or more number of indices have been already set.");
+        return;
+    }
+
+    if (m_sbt_indices.size() == 1)
+        m_sbt_indices.back() = sbt_idx;
+    else if (m_sbt_indices.empty())
+        m_sbt_indices.emplace_back(sbt_idx);
+}
+
+uint32_t TriangleMesh::sbtIndex() const
+{
+    ASSERT(m_sbt_indices.size() != 1, "Detected invalid number of SBT indices. TriangleMesh::sbtIndex() can be called when the only ONE SBT index is set.");
+
+    return m_sbt_indices.back();
+}
+
 // ------------------------------------------------------------------
 TriangleMesh::Data TriangleMesh::getData()
 {
@@ -130,6 +134,8 @@ TriangleMesh::Data TriangleMesh::getData()
     d_faces = d_faces_buf.devicePtr();
     d_normals = d_normals_buf.devicePtr();
     d_texcoords = d_texcoords_buf.devicePtr();
+
+    PG_LOG(d_vertices);
 
     // device side pointer of mesh data
     Data data = {
@@ -184,7 +190,6 @@ void TriangleMesh::addFace(const Face& face)
 
 void TriangleMesh::addFace(const Face& face, uint32_t sbt_index)
 {
-    ASSERT(is_per_face_material, "Please turn on per-face material mode by mesh.setPerFaceMaterial(true)");
     m_faces.emplace_back(face);
     m_sbt_indices.emplace_back(sbt_index);
 }
@@ -258,8 +263,6 @@ void TriangleMesh::loadWithMtl(
 
     const size_t current_num_attribs = material_attribs.size();
     loadObjWithMtl(filepath.value(), m_vertices, m_faces, m_normals, m_texcoords, m_sbt_indices, material_attribs, mtlpath);
-    is_per_face_material = true;
-    m_num_materials = material_attribs.size() - current_num_attribs;
 
     // Calculate normals if they are empty.
     if (m_normals.empty())
@@ -319,16 +322,6 @@ void TriangleMesh::smooth()
     }
 }
 
-void TriangleMesh::setPerFaceMaterial(bool is_per_face)
-{
-    is_per_face_material = is_per_face;
-}
-
-void TriangleMesh::setNumMaterials(uint32_t num_materials)
-{
-    m_num_materials = num_materials;
-}
-
 void TriangleMesh::offsetSbtIndex(uint32_t sbt_base)
 {
     if (m_sbt_indices.empty())
@@ -338,6 +331,19 @@ void TriangleMesh::offsetSbtIndex(uint32_t sbt_base)
         for (auto& idx : m_sbt_indices)
             idx += sbt_base;
     }
+}
+
+uint32_t TriangleMesh::numMaterials() const
+{
+    std::vector<uint32_t> sbt_counter;
+    for (auto& sbt_idx : m_sbt_indices)
+    {
+        // èdï°ÇµÇ»Ç¢indexÇÃêîÇêîÇ¶ÇÈ
+        auto itr = std::find(sbt_counter.begin(), sbt_counter.end(), sbt_idx);
+        if (sbt_counter.empty() || itr == sbt_counter.end())
+            sbt_counter.push_back(sbt_idx);
+    }
+    return static_cast<uint32_t>(sbt_counter.size());
 }
 
 void TriangleMesh::addSbtIndices(const std::vector<uint32_t>& sbt_indices)

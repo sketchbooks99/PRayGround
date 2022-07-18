@@ -164,11 +164,35 @@ inline void pgLogFatal(Head head, Args... args) { Message(MSG_FATAL, "[Fatal]", 
         if (!(bool)(cond)) {                                \
             std::stringstream ss;                           \
             ss << "Assertion failed at "                    \
-               << "' (" __FILE__ << ":" << __LINE__ << ")"  \
+               << "(" __FILE__ << ":" << __LINE__ << ")"    \
                << ", " << msg;                              \
             throw std::runtime_error(ss.str());             \
         }                                                   \
     } while (0)
+
+#define PG_LOG(msg, ...)                                        \
+    do {                                                        \
+        std::stringstream ss;                                   \
+        ss << "(" __FILE__ << ":" << __LINE__ << ") :";         \
+        Message(MSG_NORMAL, ss.str(), msg, __VA_ARGS__);        \
+    }                                                           \
+    while (0)
+
+#define PG_LOG_WARN(msg, ...)                                   \
+    do {                                                        \
+        std::stringstream ss;                                   \
+        ss << "(" __FILE__ << ":" << __LINE__ << ") :";         \
+        Message(MSG_WARNING, ss.str(), msg, __VA_ARGS__);       \
+    }                                                           \
+    while (0)
+
+#define PG_LOG_FATAL(msg, ...)                                  \
+    do {                                                        \
+        std::stringstream ss;                                   \
+        ss << "(" __FILE__ << ":" << __LINE__ << ") :";         \
+        Message(MSG_FATAL, ss.str(), msg, __VA_ARGS__);         \
+    }                                                           \
+    while (0)
 
 #endif // __CUDACC__
 

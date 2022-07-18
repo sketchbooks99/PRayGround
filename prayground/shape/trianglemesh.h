@@ -48,6 +48,9 @@ public:
 
     AABB bound() const override;
 
+    void setSbtIndex(const uint32_t sbt_idx) override;
+    uint32_t sbtIndex() const override;
+
     Data getData();
 
     /**
@@ -76,31 +79,28 @@ public:
     virtual void smooth();
 
     // For binding multiple materials to single mesh object
-    void setPerFaceMaterial(bool is_per_face);
-    void setNumMaterials(uint32_t num_materials);
     void addSbtIndices(const std::vector<uint32_t>& sbt_indices);
     void offsetSbtIndex(uint32_t sbt_base);
+    uint32_t numMaterials() const;
 
-    std::vector<Vec3f> vertices() const { return m_vertices; } 
-    std::vector<Face> faces() const { return m_faces; } 
-    std::vector<Vec3f> normals() const { return m_normals; }
-    std::vector<Vec2f> texcoords() const { return m_texcoords; }
+    const std::vector<Vec3f>& vertices() const { return m_vertices; } 
+    const std::vector<Face>& faces() const { return m_faces; } 
+    const std::vector<Vec3f>& normals() const { return m_normals; }
+    const std::vector<Vec2f>& texcoords() const { return m_texcoords; }
+    const std::vector<uint32_t>& sbtIndices() const { return m_sbt_indices; }
 
     CUdeviceptr deviceVertices() const { return d_vertices; }
     CUdeviceptr deviceFaces() const { return d_faces; }
     CUdeviceptr deviceNormals() const { return d_normals; }
     CUdeviceptr deivceTexcoords() const { return d_texcoords; }
+    CUdeviceptr deviceSbtIndices() const { return d_sbt_indices; }
 
 protected:
     std::vector<Vec3f> m_vertices;
     std::vector<Face> m_faces;
     std::vector<Vec3f> m_normals;
     std::vector<Vec2f> m_texcoords;
-
-    // For binding multiple materials to single mesh object
     std::vector<uint32_t> m_sbt_indices;
-    bool is_per_face_material{ false };
-    uint32_t m_num_materials { 0 };
 
     CUdeviceptr d_vertices { 0 };
     CUdeviceptr d_faces { 0 };

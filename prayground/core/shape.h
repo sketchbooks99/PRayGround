@@ -34,8 +34,8 @@ namespace prayground {
 
         virtual void free();
 
-        void setSbtIndex(const uint32_t sbt_index);
-        uint32_t sbtIndex() const;
+        virtual void setSbtIndex(const uint32_t sbt_index);
+        virtual uint32_t sbtIndex() const;
 
         void* devicePtr() const;
 

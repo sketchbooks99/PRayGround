@@ -134,12 +134,16 @@ void App::setup()
     auto red_constant = make_shared<ConstantTexture>(Vec3f(0.8f, 0.05f, 0.05f), constant_prg.ID);
     auto white_constant = make_shared<ConstantTexture>(Vec3f(0.8f), constant_prg.ID);
     auto floor_checker = make_shared<CheckerTexture>(Vec3f(0.3f), Vec3f(0.8f), 10, checker_prg.ID);
+    auto blue_constant = make_shared<ConstantTexture>(Vec3f(0.05f, 0.05f, 0.8f), constant_prg.ID);
+    auto black_constant = make_shared<ConstantTexture>(Vec3f(0.0f), constant_prg.ID);
 
     // Materials
     auto green_diffuse = make_shared<Diffuse>(diffuse_id, green_constant);
     auto red_diffuse = make_shared<Diffuse>(diffuse_id, red_constant);
     auto white_diffuse = make_shared<Diffuse>(diffuse_id, white_constant);
     auto floor_diffuse = make_shared<Diffuse>(diffuse_id, floor_checker);
+    auto blue_diffuse = make_shared<Diffuse>(diffuse_id, blue_constant);
+    auto black_diffuse = make_shared<Diffuse>(diffuse_id, black_constant);
 
     // Shapes
     auto wall_plane = make_shared<Plane>(Vec2f(-25.0f), Vec2f(25.0f));
@@ -159,13 +163,13 @@ void App::setup()
         Vec3f v1 = UniformSampler::get3D(seed) * size + location;
         Vec3f v2 = UniformSampler::get3D(seed) * size + location;
         vertices.push_back(v0); vertices.push_back(v1); vertices.push_back(v2);
-        
+
         int i0 = i * 3 + 0;
         int i1 = i * 3 + 1;
         int i2 = i * 3 + 2;
         Face face{ {i0, i1, i2}, {i0, i1, i2}, {i0, i1, i2 } };
         faces.push_back(face);
-        
+
         Vec3f n = normalize(cross(v2 - v0, v1 - v0));
         normals.push_back(n); normals.push_back(n); normals.push_back(n);
 
@@ -179,9 +183,9 @@ void App::setup()
 
     auto mesh = make_shared<TriangleMesh>(vertices, faces, normals, texcoords, sbt_indices);
     vector<shared_ptr<Material>> mesh_materials;
-    mesh_materials.push_back(green_diffuse);
     mesh_materials.push_back(red_diffuse);
-    mesh_materials.push_back(white_diffuse);
+    mesh_materials.push_back(black_diffuse);
+    mesh_materials.push_back(blue_diffuse);
 
     // Objects
     scene.addObject("left_wall", wall_plane, green_diffuse, plane_prgs,

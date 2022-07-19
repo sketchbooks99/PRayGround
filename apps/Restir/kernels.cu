@@ -160,7 +160,7 @@ extern "C" __device__ void __raygen__restir()
             if ( depth >= params.max_depth )
                 break;
 
-            trace(params.handle, ro, rd, 0.0f, 1e16f, &si);
+            trace(params.handle, ro, rd, 0.01f, 1e16f, &si);
 
             if (si.trace_terminate)
             {
@@ -179,35 +179,22 @@ extern "C" __device__ void __raygen__restir()
             }
             else 
             {
-                //Reservoir r = reservoirImportanceSampling(&si, M, seed);
-                //LightInfo light = params.lights[r.y];
-                //const Vec3f light_p = randomSampleOnTriangle(seed, light.triangle);
-                //const Vec3f to_light = light_p - si.p;
-                //// Visibility term
-                //bool occluded = traceShadow(params.handle, ro, normalize(to_light), 0.01f, length(to_light) - 0.01f, &si);
-                //// rho
-                //Vec3f brdf = optixDirectCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
-                //    si.surface_info.callable_id.bsdf, &si, si.surface_info.data, light_p);
-                //// G
-                //const float area = length(cross(light.triangle.v1 - light.triangle.v0, light.triangle.v2 - light.triangle.v0));
-                //const float cos_theta = fmaxf(dot(light.triangle.n, normalize(-to_light)), 0.0f);
-                //const float d = length(to_light);
-                //// const float G = (d * d) / (area * cos_theta);
-                //const float G = (area * cos_theta) / (d * d);
-                //
-                //result += r.W * brdf * G * light.emission * (float)occluded;
+                Reservoir r = reservoirImportanceSampling(&si, M, seed);
+                LightInfo light = params.lights[r.y];
+                const Vec3f light_p = randomSampleOnTriangle(seed, light.triangle);
+                const Vec3f to_light = light_p - si.p;
+                // Visibility term
+                bool occluded = traceShadow(params.handle, ro, normalize(to_light), 0.01f, length(to_light) - 0.01f, &si);
+                // rho
+                Vec3f brdf = optixDirectCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
+                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data, light_p);
+                // G
+                const float area = length(cross(light.triangle.v1 - light.triangle.v0, light.triangle.v2 - light.triangle.v0));
+                const float cos_theta = fmaxf(dot(light.triangle.n, normalize(-to_light)), 0.0f);
+                const float d = length(to_light);
+                const float G = (area * cos_theta) / (d * d);
                 
-                // Uniform hemisphere sampling
-                si.trace_terminate = false;
-                Vec2f u = UniformSampler::get2D(seed);
-                Vec3f wi = cosineSampleHemisphere(u[0], u[1]);
-                Onb onb(si.shading.n);
-                onb.inverseTransform(wi);
-                si.wi = normalize(wi);
-                si.seed = seed;
-
-                const Vec3f brdf = optixDirectCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
-                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data, si.p + si.wi);
+                result += r.W * brdf * G * light.emission * (float)occluded;
 
                 throughput *= brdf;
             }

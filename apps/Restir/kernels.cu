@@ -179,6 +179,7 @@ extern "C" __device__ void __raygen__restir()
             }
             else 
             {
+                /*
                 Reservoir r = reservoirImportanceSampling(&si, M, seed);
                 LightInfo light = params.lights[r.y];
                 const Vec3f light_p = randomSampleOnTriangle(seed, light.triangle);
@@ -195,6 +196,19 @@ extern "C" __device__ void __raygen__restir()
                 const float G = (area * cos_theta) / (d * d);
                 
                 result += r.W * brdf * G * light.emission * (float)occluded;
+                */
+
+                // Uniform hemisphere sampling
+                si.trace_terminate = false;
+                Vec2f u = UniformSampler::get2D(seed);
+                Vec3f wi = cosineSampleHemisphere(u[0], u[1]);
+                Onb onb(si.shading.n);
+                onb.inverseTransform(wi);
+                si.wi = normalize(wi);
+                si.seed = seed;
+
+                const Vec3f brdf = optixDirectCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
+                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data, si.p + si.wi);
 
                 throughput *= brdf;
             }

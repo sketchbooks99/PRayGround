@@ -131,6 +131,12 @@ namespace prayground {
         void updateMovingLightTransform(const std::string& name, const Matrix4f& begin_transform, const Matrix4f& end_transform);
         bool deleteMovingLight(const std::string& name);
 
+        // Collect area emitters from whole lights
+        std::vector<std::shared_ptr<AreaEmitter>> areaEmitters() const;
+
+        // The total number of lights contains light and moving_lights
+        uint32_t numLights() const;
+
         void copyDataToDevice();
 
         void buildAccel(const Context& ctx, CUstream stream);
@@ -628,6 +634,30 @@ namespace prayground {
 
     // -------------------------------------------------------------------------------
     template<DerivedFromCamera _CamT, uint32_t N>
+    inline std::vector<std::shared_ptr<AreaEmitter>> Scene<_CamT, N>::areaEmitters() const
+    {
+        std::vector<std::shared_ptr<AreaEmitter>> area_emitters;
+
+        auto collectEmitters = [&](auto& lights)
+        {
+            for (auto l : lights)
+                area_emitters.push_back(l.value.emitter);
+        };
+
+        collectEmitters(m_lights); 
+        collectEmitters(m_moving_lights);
+
+        return area_emitters;
+    }
+
+    template<DerivedFromCamera _CamT, uint32_t N>
+    inline uint32_t Scene<_CamT, N>::numLights() const
+    {
+        return static_cast<uint32_t>(m_lights.size() + m_moving_lights.size());
+    }
+
+    // -------------------------------------------------------------------------------
+    template<DerivedFromCamera _CamT, uint32_t N>
     inline void Scene<_CamT, N>::copyDataToDevice()
     {
         auto copyObjectDataToDevice = [&](auto& objects)
@@ -797,11 +827,15 @@ namespace prayground {
             return;
         }
 
+        // Update raygen data on device
         if (+(record_type & SBTRecordType::Raygen))
         {
+            // Get device pointer to the SBT record
             auto* rg_record = reinterpret_cast<pgRaygenRecord<_CamT>*>(m_sbt.deviceRaygenRecordPtr());
             pgRaygenData<_CamT> rg_data;
             rg_data.camera = m_camera->getData();
+
+            // Upload camera data to device
             CUDA_CHECK(cudaMemcpy(
                 reinterpret_cast<void*>(&rg_record->data),
                 &rg_data, sizeof(pgRaygenData<_CamT>),
@@ -809,12 +843,16 @@ namespace prayground {
             ));
         }
 
+        // Update miss data on device
         if (+(record_type & SBTRecordType::Miss))
         {
+            // Get device pointer to the SBT record
             auto* ms_record = reinterpret_cast<pgMissRecord*>(m_sbt.deviceMissRecordPtr());
 
             pgMissData ms_data;
             ms_data.env_data = m_envmap->devicePtr();
+            
+            // Upload envmap data to device for each ray types
             for (uint32_t i = 0; i < N; i++)
             {
                 CUDA_CHECK(cudaMemcpy(
@@ -825,10 +863,11 @@ namespace prayground {
             }
         }
 
-        std::vector<pgHitgroupData> hitgroup_datas;
+        // Update hitgroup data on device
         if (+(record_type & SBTRecordType::Hitgroup))
         {
-            auto correctObjectSBTData = [&](auto& objects)
+            std::vector<pgHitgroupData> hitgroup_datas;
+            auto collectObjectSBTData = [&](auto& objects)
             {
                 for (auto& object : objects)
                 {
@@ -837,7 +876,7 @@ namespace prayground {
 
                     shape->copyToDevice();
 
-                    // Set actual sbt data to records
+                    // Set hitgroup data to records
                     for (auto& m : materials) {
                         m->copyToDevice();
                         pgHitgroupData hg_data;
@@ -848,7 +887,7 @@ namespace prayground {
                 }
             };
 
-            auto correctLightSBTData = [&](auto& lights)
+            auto collectLightSBTData = [&](auto& lights)
             {
                 for (auto& light : lights)
                 {
@@ -861,10 +900,10 @@ namespace prayground {
                 }
             };
 
-            correctObjectSBTData(m_objects);
-            correctObjectSBTData(m_moving_objects);
-            correctLightSBTData(m_lights);
-            correctLightSBTData(m_moving_lights);
+            collectObjectSBTData(m_objects);
+            collectObjectSBTData(m_moving_objects);
+            collectLightSBTData(m_lights);
+            collectLightSBTData(m_moving_lights);
             
             /* Copy hitgroup data with the header-part stride.
              * "+ OPTIX_SBT_RECORD_HEADER_SIZE" is for making dst a pointer to the 0th hitgroup data.

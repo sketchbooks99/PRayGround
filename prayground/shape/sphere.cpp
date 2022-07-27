@@ -42,7 +42,12 @@ OptixBuildInput Sphere::createBuildInput()
 {
     if (d_aabb_buffer) cuda_free(d_aabb_buffer);
     return createSingleCustomBuildInput(d_aabb_buffer, this->bound(), m_sbt_index);
-} 
+}
+uint32_t Sphere::numPrimitives() const
+{
+    return 1u;
+}
+
 
 // ------------------------------------------------------------------
 AABB Sphere::bound() const 

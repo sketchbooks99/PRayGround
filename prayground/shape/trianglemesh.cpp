@@ -92,6 +92,11 @@ namespace prayground {
         cuda_frees(d_vertices, d_normals, d_faces, d_texcoords);
     }
 
+    uint32_t TriangleMesh::numPrimitives() const
+    {
+        return static_cast<uint32_t>(m_faces.size());
+    }
+
     AABB TriangleMesh::bound() const 
     {
         return AABB{};
@@ -339,7 +344,6 @@ namespace prayground {
         std::vector<uint32_t> sbt_counter;
         for (auto& sbt_idx : m_sbt_indices)
         {
-            // d•¡‚µ‚È‚¢index‚Ì”‚ğ”‚¦‚é
             auto itr = std::find(sbt_counter.begin(), sbt_counter.end(), sbt_idx);
             if (sbt_counter.empty() || itr == sbt_counter.end())
                 sbt_counter.push_back(sbt_idx);

@@ -42,6 +42,11 @@ OptixBuildInput Box::createBuildInput()
     return createSingleCustomBuildInput(d_aabb_buffer, this->bound(), m_sbt_index);
 }
 
+uint32_t Box::numPrimitives() const
+{
+    return 1u;
+}
+
 // ------------------------------------------------------------------
 void Box::free()
 {

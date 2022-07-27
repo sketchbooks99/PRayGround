@@ -46,6 +46,8 @@ public:
     void copyToDevice() override;
     void free() override;
 
+    uint32_t numPrimitives() const override;
+
     AABB bound() const override;
 
     void setSbtIndex(const uint32_t sbt_idx) override;

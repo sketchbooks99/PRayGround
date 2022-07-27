@@ -153,10 +153,23 @@ void App::setup()
     /// @todo : Add many lights to the scene
     random_device seed_gen;
     mt19937 engine(seed_gen);
+    uniform_real_distribution<> dist(0.0, 1.0);
     for (int i = 0; i < 1000; i++)
     {
-        Vec3f v0, v1, v2;
-        /// @todo : Create triangles with std::uniform_real_distribution<>
+        LightInfo light;
+
+        Vec3f color(dist(engine), dist(engine), dist(engine));
+        float intensity = dist(engine) * 25.0f;
+        light.emission = color * intensity;
+
+        Vec3f center = (Vec3f(dist(engine), dist(engine), dist(engine)) - 1.0f) * 50.0f;
+        Vec3f v0 = (Vec3f(dist(engine), dist(engine), dist(engine)) - 1.0f) + center;
+        Vec3f v1 = (Vec3f(dist(engine), dist(engine), dist(engine)) - 1.0f) + center;
+        Vec3f v2 = (Vec3f(dist(engine), dist(engine), dist(engine)) - 1.0f) + center;
+        Vec3f n = normalize(cross(v2 - v0, v1 - v0));
+        light.triangle = { v0, v1, v2, n };
+
+
     }
 
     CUDA_CHECK(cudaStreamCreate(&stream));

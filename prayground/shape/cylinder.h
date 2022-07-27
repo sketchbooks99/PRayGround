@@ -22,6 +22,8 @@ public:
 
     OptixBuildInput createBuildInput() override;
 
+    uint32_t numPrimitives() const override;
+
     AABB bound() const override;
 
     Data getData() const;

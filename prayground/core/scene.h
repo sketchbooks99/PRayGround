@@ -52,13 +52,13 @@ namespace prayground {
 
         struct Light {
             std::shared_ptr<Shape> shape;
-            std::shared_ptr<AreaEmitter> emitter;
+            std::vector<std::shared_ptr<AreaEmitter>> emitters;
             ShapeInstance instance;
         };
 
         struct MovingLight {
             std::shared_ptr<Shape> shape;
-            std::shared_ptr<AreaEmitter> emitter;
+            std::vector<std::shared_ptr<AreaEmitter>> emitters;
 
             Instance instance;
             GeometryAccel gas;
@@ -109,7 +109,9 @@ namespace prayground {
         bool deleteObject(const std::string& name);
 
         // Light object
-        void addLight(const std::string& name, std::shared_ptr<Shape> shape, std::shared_ptr<AreaEmitter> light,
+        void addLight(const std::string& name, std::shared_ptr<Shape> shape, std::shared_ptr<AreaEmitter> emitter,
+            std::array<ProgramGroup, N>& hitgroup_prgs, const Matrix4f& transform = Matrix4f::identity());
+        void addLight(const std::string& name, std::shared_ptr<Shape> shape, const std::vector<std::shared_ptr<AreaEmitter>>& emitters,
             std::array<ProgramGroup, N>& hitgroup_prgs, const Matrix4f& transform = Matrix4f::identity());
         void duplicateLight(const std::string& orig_name, const std::string& name, const Matrix4f& transform = Matrix4f::identity());
         void updateLightTransform(const std::string& name, const Matrix4f& transform);
@@ -125,7 +127,9 @@ namespace prayground {
         bool deleteMovingObject(const std::string& name);
 
         // Moving light (especially for motion blur)
-        void addMovingLight(const std::string& name, std::shared_ptr<Shape> shape, std::shared_ptr<AreaEmitter> light,
+        void addMovingLight(const std::string& name, std::shared_ptr<Shape> shape, std::shared_ptr<AreaEmitter> emitter,
+            std::array<ProgramGroup, N>& hitgroup_prgs, const Matrix4f& begin_transform, const Matrix4f& end_transform, uint16_t num_key = 2);
+        void addMovingLight(const std::string& name, std::shared_ptr<Shape> shape, const std::vector<std::shared_ptr<AreaEmitter>>& emitters,
             std::array<ProgramGroup, N>& hitgroup_prgs, const Matrix4f& begin_transform, const Matrix4f& end_transform, uint16_t num_key = 2);
         void duplicateMovingLight(const std::string& orig_name, const std::string& name, const Matrix4f& begin_transform, const Matrix4f& end_transform, uint16_t num_key = 2);
         void updateMovingLightTransform(const std::string& name, const Matrix4f& begin_transform, const Matrix4f& end_transform);
@@ -194,6 +198,7 @@ namespace prayground {
         // Area lights
         std::vector<Item<Light>>        m_lights;
         std::vector<Item<MovingLight>>  m_moving_lights;
+        uint32_t                        m_num_lights;
 
         // Flag represents scene states should be updated.
         bool should_accel_updated;
@@ -318,9 +323,7 @@ namespace prayground {
         if (!m_envmap) 
             m_envmap = make_shared<EnvironmentEmitter>(texture);
         else
-        {
             m_envmap->setTexture(texture);
-        }
     }
 
     // -------------------------------------------------------------------------------
@@ -363,7 +366,7 @@ namespace prayground {
         auto& obj_val = obj.value();
 
         // Duplicate object with different transform matrix.
-        addObject(name, obj_val.value.shape, obj_val.value.surfaces, transform);
+        addObject(name, obj_val.value.shape, obj_val.value.materials, transform);
     }
 
     template<DerivedFromCamera _CamT, uint32_t N>
@@ -392,8 +395,8 @@ namespace prayground {
 
         auto object = item.value();
         uint32_t deleted_sbt_id = object.ID;
-        uint32_t num_surfaces = static_cast<uint32_t>(object.value.surfaces->size());
-        uint32_t offset = N * num_surfaces;
+        uint32_t num_materials = static_cast<uint32_t>(object.value.materials.size());
+        uint32_t offset = N * num_materials;
 
         // Offset SBT index in all objects
         for (auto& obj : m_objects) { if (obj.ID > deleted_sbt_id) obj.ID -= offset; }
@@ -406,18 +409,30 @@ namespace prayground {
 
     // -------------------------------------------------------------------------------
     template <DerivedFromCamera _CamT, uint32_t N>
-    inline void Scene<_CamT, N>::addLight(const std::string& name, std::shared_ptr<Shape> shape, std::shared_ptr<AreaEmitter> light, 
+    inline void Scene<_CamT, N>::addLight(const std::string& name, std::shared_ptr<Shape> shape, std::shared_ptr<AreaEmitter> emitter, 
+        std::array<ProgramGroup, N>& hitgroup_prgs, const Matrix4f& transform)
+    {
+        std::vector<std::shared_ptr<AreaEmitter>> emitters(1, emitter);
+        addLight(name, shape, emitters, hitgroup_prgs, transform);
+    }
+
+    template<DerivedFromCamera _CamT, uint32_t N>
+    inline void Scene<_CamT, N>::addLight(const std::string& name, std::shared_ptr<Shape> shape, const std::vector<std::shared_ptr<AreaEmitter>>& emitters, 
         std::array<ProgramGroup, N>& hitgroup_prgs, const Matrix4f& transform)
     {
         ShapeInstance instance{ shape->type(), shape, transform };
-        m_lights.emplace_back(Item<Light>{ name, m_current_sbt_id, Light{ shape, light, instance } });
+        m_lights.emplace_back(Item<Light>{ name, m_current_sbt_id, Light{ shape, emitters, instance } });
 
-        std::array<pgHitgroupRecord, N> hitgroup_records;
-        for (uint32_t i = 0; i < N; i++)
-            hitgroup_prgs[i].recordPackHeader(&hitgroup_records[i]);
-        m_sbt.addHitgroupRecord(hitgroup_records);
-
-        m_current_sbt_id += N;
+        // Add hitgroup record data
+        for (const auto& e : emitters)
+        {
+            std::array<pgHitgroupRecord, N> hitgroup_records;
+            for (uint32_t i = 0; i < N; i++)
+                hitgroup_prgs[i].recordPackHeader(&hitgroup_records[i]);
+            m_sbt.addHitgroupRecord(hitgroup_records);
+        }
+        m_current_sbt_id += N * (uint32_t)emitters.size();
+        m_num_lights += shape->numPrimitives();
     }
 
     template<DerivedFromCamera _CamT, uint32_t N>
@@ -426,14 +441,14 @@ namespace prayground {
         auto obj = findItem(m_lights, orig_name);
         if (!obj)
         {
-            pgLogFatal("The object named with", orig_name, "is not found.");
+            PG_LOG_FATAL("The object named with", orig_name, "is not found.");
             return;
         }
 
         auto& obj_val = obj.value();
 
         // Duplicate object with different transform matrix.
-        addLight(name, Light{ obj_val.value.shape(), obj_val.value.emitter, transform });
+        addLight(name, Light{ obj_val.value.shape, obj_val.value.emitters, transform });
     }
 
     template<DerivedFromCamera _CamT, uint32_t N>
@@ -442,7 +457,7 @@ namespace prayground {
         auto obj = findItem(m_lights, name);
         if (!obj)
         {
-            pgLogFatal("The object named with", name, "is not found.");
+            PG_LOG_FATAL("The object named with", name, "is not found.");
             return;
         }
 
@@ -460,13 +475,19 @@ namespace prayground {
         if (!item)
             return false;
 
-        uint32_t deleted_sbt_id = item.value().ID;
+        auto light = item.value();
+
+        uint32_t deleted_sbt_id = light.ID;
+        uint32_t num_emitters = static_cast<uint32_t>(light.value.emitters.size());
+        uint32_t offset = N * num_emitters;
+
+        m_num_lights -= light.value.shape->numPrimitives();
 
         // Offset SBT index in all objects
-        for (auto& obj : m_objects) { if (obj.ID > deleted_sbt_id) obj.ID -= N; }
-        for (auto& obj : m_lights) { if (obj.ID > deleted_sbt_id) obj.ID -= N; }
-        for (auto& obj : m_moving_objects) { if (obj.ID > deleted_sbt_id) obj.ID -= N; }
-        for (auto& obj : m_moving_lights) { if (obj.ID > deleted_sbt_id) obj.ID -= N; }
+        for (auto& obj : m_objects) { if (obj.ID > deleted_sbt_id) obj.ID -= offset; }
+        for (auto& obj : m_lights) { if (obj.ID > deleted_sbt_id) obj.ID -= offset; }
+        for (auto& obj : m_moving_objects) { if (obj.ID > deleted_sbt_id) obj.ID -= offset; }
+        for (auto& obj : m_moving_lights) { if (obj.ID > deleted_sbt_id) obj.ID -= offset; }
 
         return true;
     }
@@ -492,7 +513,7 @@ namespace prayground {
         matrix_transform.setMatrixMotionTransform(begin_transform, end_transform);
         matrix_transform.setNumKey(num_key);
 
-        m_moving_objects.emplace_back({ name, MovingObject{shape, materials, Instance{}, gas, matrix_transform}, m_current_sbt_id });
+        m_moving_objects.emplace_back(Item<MovingObject>{ name, m_current_sbt_id, MovingObject{shape, materials, Instance{}, gas, matrix_transform} });
 
         // Add hitgroup record data
         for (const auto& m : materials)
@@ -518,7 +539,7 @@ namespace prayground {
         auto& obj_val = obj.value();
 
         // Duplicate object with different transform matrix.
-        addMovingObject(name, obj_val.value.shape, obj_val.value.surface, begin_transform, end_transform, num_key);
+        addMovingObject(name, obj_val.value.shape, obj_val.value.materials, begin_transform, end_transform, num_key);
     }
 
     template<DerivedFromCamera _CamT, uint32_t N>
@@ -547,8 +568,8 @@ namespace prayground {
 
         auto object = item.value();
         uint32_t deleted_sbt_id = object.ID;
-        uint32_t num_surfaces = static_cast<uint32_t>(object.value.surfaces->size());
-        uint32_t offset = N * num_surfaces;
+        uint32_t num_materials = static_cast<uint32_t>(object.value.materials.size());
+        uint32_t offset = N * num_materials;
 
         // Offset SBT index in all objects
         for (auto& obj : m_objects) { if (obj.ID > deleted_sbt_id) obj.ID -= offset; }
@@ -561,24 +582,36 @@ namespace prayground {
 
     // -------------------------------------------------------------------------------
     template<DerivedFromCamera _CamT, uint32_t N>
-    inline void Scene<_CamT, N>::addMovingLight(const std::string& name, std::shared_ptr<Shape> shape, std::shared_ptr<AreaEmitter> light, 
+    inline void Scene<_CamT, N>::addMovingLight(const std::string& name, std::shared_ptr<Shape> shape, std::shared_ptr<AreaEmitter> emitter, 
+        std::array<ProgramGroup, N>& hitgroup_prgs, const Matrix4f& begin_transform, const Matrix4f& end_transform, uint16_t num_key)
+    {
+        std::vector<std::shared_ptr<AreaEmitter>> emitters(1, emitter);
+        addMovingLight(name, shape, emitters, hitgroup_prgs, begin_transform, end_transform, num_key);
+    }
+
+    template<DerivedFromCamera _CamT, uint32_t N>
+    inline void Scene<_CamT, N>::addMovingLight(const std::string& name, std::shared_ptr<Shape> shape, const std::vector<std::shared_ptr<AreaEmitter>>& emitters, 
         std::array<ProgramGroup, N>& hitgroup_prgs, const Matrix4f& begin_transform, const Matrix4f& end_transform, uint16_t num_key)
     {
         GeometryAccel gas{ shape->type() };
         gas.addShape(shape);
 
-        // Create transform to represents moving object
+        // Create transform to reprensents moving object.
         Transform matrix_transform{ TransformType::MatrixMotion };
         matrix_transform.setMatrixMotionTransform(begin_transform, end_transform);
         matrix_transform.setNumKey(num_key);
 
-        m_moving_lights.emplace_back({ name, MovingLight{shape, light, Instance{}, gas, matrix_transform}, m_current_sbt_id });
+        m_moving_lights.emplace_back(Item<MovingLight>{ name, m_current_sbt_id, MovingLight{shape, emitters, Instance{}, gas, matrix_transform} });
 
-        std::array<pgHitgroupRecord, N> hitgroup_records;
-        for (uint32_t i = 0; i < N; i++)
-            hitgroup_prgs[i].recordPackHeader(&hitgroup_records[i]);
-        m_sbt.addHitgroupRecord(hitgroup_records);
-        m_current_sbt_id += N;
+        // Add hitgroup record data
+        for (const auto& e : emitters)
+        {
+            std::array<pgHitgroupRecord, N> hitgroup_records;
+            for (uint32_t i = 0; i < N; i++)
+                hitgroup_prgs[i].recordPackHeader(&hitgroup_records[i]);
+            m_sbt.addHitgroupRecord(hitgroup_records);
+        }
+        m_current_sbt_id += N * (uint32_t)emitters.size();
     }
 
     template<DerivedFromCamera _CamT, uint32_t N>
@@ -594,7 +627,7 @@ namespace prayground {
         auto& obj_val = obj.value();
 
         // Duplicate object with different transform matrix.
-        addMovingLight(name, obj.value().shape, obj.value().emitter, begin_transform, end_transform, num_key);
+        addMovingLight(name, obj.value().shape, obj.value().emitters, begin_transform, end_transform, num_key);
     }
 
     template<DerivedFromCamera _CamT, uint32_t N>
@@ -621,13 +654,18 @@ namespace prayground {
         if (!item)
             return false;
 
-        uint32_t deleted_sbt_id = item.value().ID;
+        auto light = item.value();
+        uint32_t deleted_sbt_id = light.ID;
+        uint32_t num_emitters = static_cast<uint32_t>(light.value.emitters.size());
+        uint32_t offset = N * num_emitters;
+
+        m_num_lights -= light.value.shape->numPrimitives();
 
         // Offset SBT index in all objects
-        for (auto& obj : m_objects) { if (obj.ID > deleted_sbt_id) obj.ID -= N; }
-        for (auto& obj : m_lights) { if (obj.ID > deleted_sbt_id) obj.ID -= N; }
-        for (auto& obj : m_moving_objects) { if (obj.ID > deleted_sbt_id) obj.ID -= N; }
-        for (auto& obj : m_moving_lights) { if (obj.ID > deleted_sbt_id) obj.ID -= N; }
+        for (auto& obj : m_objects) { if (obj.ID > deleted_sbt_id) obj.ID -= offset; }
+        for (auto& obj : m_lights) { if (obj.ID > deleted_sbt_id) obj.ID -= offset; }
+        for (auto& obj : m_moving_objects) { if (obj.ID > deleted_sbt_id) obj.ID -= offset; }
+        for (auto& obj : m_moving_lights) { if (obj.ID > deleted_sbt_id) obj.ID -= offset; }
 
         return true;
     }
@@ -640,8 +678,8 @@ namespace prayground {
 
         auto collectEmitters = [&](auto& lights)
         {
-            for (auto l : lights)
-                area_emitters.push_back(l.value.emitter);
+            for (auto& l : lights)
+                std::copy(l.value.emitters.begin(), l.value.emitters.end(), std::back_inserter(area_emitters));
         };
 
         collectEmitters(m_lights); 
@@ -653,7 +691,7 @@ namespace prayground {
     template<DerivedFromCamera _CamT, uint32_t N>
     inline uint32_t Scene<_CamT, N>::numLights() const
     {
-        return static_cast<uint32_t>(m_lights.size() + m_moving_lights.size());
+        return m_num_lights;
     }
 
     // -------------------------------------------------------------------------------
@@ -678,7 +716,8 @@ namespace prayground {
             for (auto& light : lights)
             {
                 light.value.shape->copyToDevice();
-                light.value.emitter->copyToDevice();
+                for (auto& e : light.value.emitters)
+                    e->copyToDevice();
             }
         };
 
@@ -794,17 +833,22 @@ namespace prayground {
             for (auto& light : lights)
             {
                 auto shape = light.value.shape;
-                auto emitter = light.value.emitter;
+                auto& emitters = light.value.emitters;
 
                 if (!shape->devicePtr())
                     shape->copyToDevice();
-                if (!emitter->devicePtr())
-                    emitter->copyToDevice();
 
-                for (uint32_t i = 0; i < N; i++)
+                uint32_t ID = light.ID;
+                for (auto& e : emitters)
                 {
-                    pgHitgroupRecord& record = m_sbt.hitgroupRecord(light.ID + i);
-                    record.data = { shape->devicePtr(), emitter->surfaceInfo() };
+                    if (!e->devicePtr())
+                        e->copyToDevice();
+                    for (uint32_t i = 0; i < N; i++)
+                    {
+                        pgHitgroupRecord& record = m_sbt.hitgroupRecord(ID + i);
+                        record.data = { shape->devicePtr(), e->surfaceInfo() };
+                    }
+                    ID += N;
                 }
             }
         };
@@ -891,12 +935,19 @@ namespace prayground {
             {
                 for (auto& light : lights)
                 {
-                    light.value.shape->copyToDevice();
-                    light.value.emitter->copyToDevice();
-                    pgHitgroupData hg_data;
-                    hg_data = { light.value.shape->devicePtr(), light.value.emitter->devicePtr() };
-                    for (uint32_t i = 0; i < N; i++)
-                        hitgroup_datas.emplace_back(hg_data);
+                    auto shape = light.value.shape;
+                    auto& emitters = light.value.emitters;
+
+                     shape->copyToDevice();
+
+                    // Set hitgroup data to records
+                    for (auto& e : emitters) {
+                        e->copyToDevice();
+                        pgHitgroupData hg_data;
+                        hg_data = { shape->devicePtr(), e->surfaceInfo() };
+                        for (uint32_t i = 0; i < N; i++)
+                            hitgroup_datas.emplace_back(hg_data);
+                    }
                 }
             };
 

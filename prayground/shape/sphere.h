@@ -18,6 +18,8 @@ public:
     constexpr ShapeType type() override;
     OptixBuildInput createBuildInput() override;
 
+    uint32_t numPrimitives() const override;
+
     void copyToDevice() override;
 
     AABB bound() const override;

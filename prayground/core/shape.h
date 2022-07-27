@@ -32,6 +32,8 @@ namespace prayground {
 
         virtual OptixBuildInput createBuildInput() = 0;
 
+        virtual uint32_t numPrimitives() const = 0;
+
         virtual void free();
 
         virtual void setSbtIndex(const uint32_t sbt_index);

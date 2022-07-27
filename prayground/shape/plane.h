@@ -23,6 +23,8 @@ public:
 
     OptixBuildInput createBuildInput() override;
 
+    uint32_t numPrimitives() const override;
+
     void copyToDevice() override;
     void free() override;
 

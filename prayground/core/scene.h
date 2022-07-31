@@ -900,6 +900,7 @@ namespace prayground {
             // Get device pointer to the SBT record
             auto* ms_record = reinterpret_cast<pgMissRecord*>(m_sbt.deviceMissRecordPtr());
 
+            m_envmap->copyToDevice();
             pgMissData ms_data;
             ms_data.env_data = m_envmap->devicePtr();
             

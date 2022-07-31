@@ -417,7 +417,7 @@ namespace prayground {
     }
 
     template<DerivedFromCamera _CamT, uint32_t N>
-    inline void Scene<_CamT, N>::addLight(const std::string& name, std::shared_ptr<Shape> shape, const std::vector<std::shared_ptr<AreaEmitter>>& emitters, 
+    inline void Scene<_CamT, N>::addLight(const std::string& name, std::shared_ptr<Shape> shape, const std::vector<std::shared_ptr<AreaEmitter>>& emitters,
         std::array<ProgramGroup, N>& hitgroup_prgs, const Matrix4f& transform)
     {
         ShapeInstance instance{ shape->type(), shape, transform };

@@ -151,8 +151,15 @@ void App::setup()
     scene.addObject("Scene mesh", scene_mesh, scene_materials, mesh_prgs, Matrix4f::scale(10));
 
     /// @todo : Add many lights to the scene
+    vector<LightInfo> light_infos;
+    vector<shared_ptr<AreaEmitter>> emitters;
+    vector<Vec3f> vertices;
+    vector<Vec2f> texcoords;
+    vector<Vec3f> normals;
+    vector<Face> faces;
+    vector<uint32_t> sbt_indices;
     random_device seed_gen;
-    mt19937 engine(seed_gen);
+    mt19937 engine(seed_gen());
     uniform_real_distribution<> dist(0.0, 1.0);
     for (int i = 0; i < 1000; i++)
     {
@@ -169,8 +176,24 @@ void App::setup()
         Vec3f n = normalize(cross(v2 - v0, v1 - v0));
         light.triangle = { v0, v1, v2, n };
 
+        light_infos.push_back(light);
 
+        vertices.push_back(v0); vertices.push_back(v1); vertices.push_back(v2);
+        normals.push_back(n); normals.push_back(n); normals.push_back(n);
+        texcoords.push_back(Vec2f(0, 0)); texcoords.push_back(Vec2f(0, 1)); texcoords.push_back(Vec2f(1, 1));
+        int3 index(i * 3 + 0, i * 3 + 1, i * 3 + 2);
+        faces.push_back(Face(index, index, index));
+        sbt_indices.push_back((uint32_t)i);
+
+        auto color_texture = make_shared<ConstantTexture>(color, constant_prg.ID);
+        emitters.push_back(make_shared<AreaEmitter>(area_id, color_texture, intensity));
     }
+
+    std::shared_ptr<TriangleMesh> light_mesh(new TriangleMesh(vertices, faces, normals, texcoords, sbt_indices));
+    scene.addLight("lights", light_mesh, emitters, mesh_prgs, Matrix4f::identity());
+
+    CUDABuffer<LightInfo> d_light_infos;
+    d_light_infos.copyToDevice(light_infos);
 
     CUDA_CHECK(cudaStreamCreate(&stream));
     scene.copyDataToDevice();
@@ -179,6 +202,8 @@ void App::setup()
     pipeline.create(context);
 
     params.handle = scene.accelHandle();
+    params.lights = d_light_infos.deviceData();
+    params.num_lights = static_cast<int>(light_infos.size());
 
     // Initialize ImGui
     IMGUI_CHECKVERSION();

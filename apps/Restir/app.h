@@ -36,5 +36,7 @@ private:
     static constexpr uint32_t NRay = 2;
     Scene<Camera, NRay> scene;
 
+    shared_ptr<ConstantTexture> envmap_texture;
+
     bool is_camera_updated;
 };

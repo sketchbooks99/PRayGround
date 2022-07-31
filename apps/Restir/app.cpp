@@ -114,7 +114,8 @@ void App::setup()
     scene.bindMissPrograms(miss_prgs);
 
     // Create envmap
-    scene.setEnvmap(make_shared<ConstantTexture>(Vec3f(10.0f), constant_prg.ID));
+    envmap_texture = make_shared<ConstantTexture>(Vec3f(10.0f), constant_prg.ID);
+    scene.setEnvmap(envmap_texture);
 
     // Hitgroup program
     array<ProgramGroup, NRay> mesh_prgs;
@@ -252,6 +253,14 @@ void App::draw()
     {
         camera->setLookat(cam_lookat[0], cam_lookat[1], cam_lookat[2]);
         is_camera_updated = true;
+    }
+
+    float envmap_color[3] = {envmap_texture->color().x(), envmap_texture->color().y(), envmap_texture->color().z()};
+    if (ImGui::ColorEdit3("Envmap color", envmap_color))
+    {
+        envmap_texture->setColor(Vec3f(envmap_color[0], envmap_color[1], envmap_color[2]));
+        scene.updateSBT(+(SBTRecordType::Miss));
+        initResultBufferOnDevice();
     }
 
     ImGui::End();

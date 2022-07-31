@@ -97,6 +97,7 @@ namespace prayground {
 
         // Automatically load and create envmap texture from file
         void setEnvmap(const std::shared_ptr<Texture>& texture);
+        std::shared_ptr<EnvironmentEmitter> envmap() const;
 
         /// @note Should create/deletion functions for object return boolean value?
         // Object
@@ -324,6 +325,12 @@ namespace prayground {
             m_envmap = make_shared<EnvironmentEmitter>(texture);
         else
             m_envmap->setTexture(texture);
+    }
+
+    template<DerivedFromCamera _CamT, uint32_t N>
+    inline std::shared_ptr<EnvironmentEmitter> Scene<_CamT, N>::envmap() const
+    {
+        return m_envmap;
     }
 
     // -------------------------------------------------------------------------------
@@ -962,7 +969,7 @@ namespace prayground {
              * Array of pgHitgroupRecord ...
              *                 | pgHitgroupRecord        | pgHitgroupRecord        | ...
              * record inside : | header | pgHitgroupData | header | pgHitgroupData | ...
-             *                            Å™ "+ OPTIX_SBT_RECORD_HEADER_SIZE" makes 'dst' start here */
+             *                            ÔøΩÔøΩ "+ OPTIX_SBT_RECORD_HEADER_SIZE" makes 'dst' start here */
             CUDA_CHECK(cudaMemcpy2D(
                 /* dst = */ reinterpret_cast<void*>(m_sbt.deviceHitgroupRecordPtr() + OPTIX_SBT_RECORD_HEADER_SIZE), /* dpitch = */ sizeof(pgHitgroupRecord),
                 /* src = */ hitgroup_datas.data(), /* spitch = */ sizeof(pgHitgroupData),

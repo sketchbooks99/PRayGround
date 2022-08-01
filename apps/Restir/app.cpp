@@ -114,7 +114,7 @@ void App::setup()
     scene.bindMissPrograms(miss_prgs);
 
     // Create envmap
-    envmap_texture = make_shared<ConstantTexture>(Vec3f(10.0f), constant_prg.ID);
+    envmap_texture = make_shared<ConstantTexture>(Vec3f(0.0f), constant_prg.ID);
     scene.setEnvmap(envmap_texture);
 
     // Hitgroup program
@@ -170,10 +170,11 @@ void App::setup()
         float intensity = dist(engine) * 25.0f;
         light.emission = color * intensity;
 
-        Vec3f center = (Vec3f(dist(engine), dist(engine), dist(engine)) - 1.0f) * 50.0f;
-        Vec3f v0 = (Vec3f(dist(engine), dist(engine), dist(engine)) - 1.0f) + center;
-        Vec3f v1 = (Vec3f(dist(engine), dist(engine), dist(engine)) - 1.0f) + center;
-        Vec3f v2 = (Vec3f(dist(engine), dist(engine), dist(engine)) - 1.0f) + center;
+        float scale = dist(engine) * 5.0f;
+        Vec3f center = (Vec3f(dist(engine), dist(engine), dist(engine)) * 2.0f - 1.0f) * 50.0f + Vec3f(100.0f, 50.0f, 100.0f);
+        Vec3f v0 = (Vec3f(dist(engine), dist(engine), dist(engine)) * 2.0f - 1.0f) * scale + center;
+        Vec3f v1 = (Vec3f(dist(engine), dist(engine), dist(engine)) * 2.0f - 1.0f) * scale + center;
+        Vec3f v2 = (Vec3f(dist(engine), dist(engine), dist(engine)) * 2.0f - 1.0f) * scale + center;
         Vec3f n = normalize(cross(v2 - v0, v1 - v0));
         light.triangle = { v0, v1, v2, n };
 

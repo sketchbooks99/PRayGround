@@ -63,7 +63,7 @@ void App::setup()
     params.width = result_bmp.width();
     params.height = result_bmp.height();
     params.samples_per_launch = 1;
-    params.max_depth = 10;
+    params.max_depth = 3;
     params.frame = 0;
     params.result_buffer = reinterpret_cast<Vec4u*>(result_bmp.devicePtr());
     params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bmp.devicePtr());
@@ -96,16 +96,31 @@ void App::setup()
     scene.bindCallablesProgram(checker_prg.program);
 
     // Create callables program for surfaces
-    Callables diffuse_brdf_prg = pipeline.createCallablesProgram(context, module, "__direct_callable__brdf_diffuse", "");
-    Callables disney_brdf_prg = pipeline.createCallablesProgram(context, module, "__direct_callable__brdf_disney", "");
-    Callables area_emitter_prg = pipeline.createCallablesProgram(context, module, "__direct_callable__area_emitter", "");
-    scene.bindCallablesProgram(diffuse_brdf_prg.program);
-    scene.bindCallablesProgram(disney_brdf_prg.program);
-    scene.bindCallablesProgram(area_emitter_prg.program);
+    SurfaceCallableID diffuse_id, disney_id, area_id;
+    // Diffuse
+    {
+        Callables brdf_sample = pipeline.createCallablesProgram(context, module, "__direct_callable__sample_diffuse", "__continuation_callable__brdf_diffuse");
+        Callables pdf = pipeline.createCallablesProgram(context, module, "__direct_callable__pdf_diffuse", "");
+        diffuse_id = { brdf_sample.ID, brdf_sample.ID, pdf.ID };
+        scene.bindCallablesProgram(brdf_sample.program);
+        scene.bindCallablesProgram(pdf.program);
+    }
 
-    SurfaceCallableID diffuse_id{ diffuse_brdf_prg.ID, diffuse_brdf_prg.ID, diffuse_brdf_prg.ID };
-    SurfaceCallableID disney_id{ disney_brdf_prg.ID, disney_brdf_prg.ID, disney_brdf_prg.ID };
-    SurfaceCallableID area_id{ area_emitter_prg.ID, area_emitter_prg.ID, area_emitter_prg.ID };
+    // Disney
+    {
+        Callables brdf_sample = pipeline.createCallablesProgram(context, module, "__direct_callable__sample_disney", "__continuation_callable__brdf_disney");
+        Callables pdf = pipeline.createCallablesProgram(context, module, "__direct_callable__pdf_disney", "");
+        disney_id = { brdf_sample.ID, brdf_sample.ID, pdf.ID };
+        scene.bindCallablesProgram(brdf_sample.program);
+        scene.bindCallablesProgram(pdf.program);
+    }
+
+    // Area emitter
+    {
+        Callables brdf = pipeline.createCallablesProgram(context, module, "__direct_callable__area_emitter", "");
+        area_id = { brdf.ID, brdf.ID, brdf.ID };
+        scene.bindCallablesProgram(brdf.program);
+    }
 
     // Miss program
     array<ProgramGroup, NRay> miss_prgs;
@@ -162,7 +177,8 @@ void App::setup()
     random_device seed_gen;
     mt19937 engine(seed_gen());
     uniform_real_distribution<> dist(0.0, 1.0);
-    for (int i = 0; i < 1000; i++)
+    constexpr int NUM_LIGHTS = 1000;
+    for (int i = 0; i < NUM_LIGHTS; i++)
     {
         LightInfo light;
 

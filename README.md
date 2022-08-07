@@ -111,7 +111,7 @@ add_subdirectory(apps/<your-app-name>) # Add this line
 
 # :art: Examples
 
-> **Warning**
+> **Warning**  
 > The 3D models and textures used in the examples are not contained in this repository.
 
 | [Single GAS](examples/single_gas/) | [Path tracing](examples/pathtracing/) | [Obj scene](examples/objscene/) |

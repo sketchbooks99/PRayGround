@@ -124,6 +124,12 @@ namespace prayground {
         }
 
         CUVec toCUVec() const { return CUVec{ e[0], e[1] }; }
+
+        void toArray(T out_data[2]) const
+        {
+            out_data[0] = e[0];
+            out_data[1] = e[1];
+        }
         
     private:
         T e[2];
@@ -196,6 +202,13 @@ namespace prayground {
         }
 
         CUVec toCUVec() const { return CUVec{e[0], e[1], e[2]}; }
+
+        void toArray(T out_data[3]) const
+        {
+            out_data[0] = e[0];
+            out_data[1] = e[1];
+            out_data[2] = e[2];
+        }
 
     private:
         T e[3];
@@ -275,6 +288,14 @@ namespace prayground {
         }
 
         CUVec toCUVec() const { return CUVec{e[0], e[1], e[2], e[3]}; }
+
+        void toArray(T out_data[4]) const
+        {
+            out_data[0] = e[0];
+            out_data[1] = e[1];
+            out_data[2] = e[2];
+            out_data[3] = e[3];
+        }
     private:
         T e[4];
     };

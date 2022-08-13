@@ -45,8 +45,10 @@ namespace prayground {
         Vec4f findOneVec4f(const std::string& name, const Vec4f& d) const;
         const std::string* findString(const std::string&, int* n) const;
         std::string findOneString(const std::string& name, const std::string& d) const;
+        
     public:
         std::string name;
+
     private:
         std::vector<std::shared_ptr<AttribItem<bool>>> m_bools;
         std::vector<std::shared_ptr<AttribItem<int>>> m_ints;

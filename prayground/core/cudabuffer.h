@@ -10,8 +10,8 @@ namespace prayground {
      * @brief
      * The class to easily manage data on the device from host.
      * 
-     * CUDABufferのみデバイス側のポインタをCUdeviceptrで管理している
-     * 型変換後のデバイス側のポインタを取得したい場合はdeviceData()を使う
+     * Only \c CUDABuffer manage a pointer on device as CUdeviceptr.
+     * If you'd like to get typed pointer (T*), use deviceData()
      */
     template <class T>
     class CUDABuffer {

@@ -4,7 +4,7 @@
 #include <vector_types.h>
 #include <prayground/math/vec.h>
 #include <prayground/optix/macros.h>
-#include <prayground/optix/helpers.h>
+#include <prayground/optix/util.h>
 #include <prayground/core/util.h>
 
 #ifndef __CUDACC__

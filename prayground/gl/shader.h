@@ -1,6 +1,6 @@
 #pragma once 
 
-#include <glad/glad.h>
+#include <prayground/gl/util.h>
 #include <prayground/core/util.h>
 #include <prayground/math/matrix.h>
 #include <unordered_map>

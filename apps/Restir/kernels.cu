@@ -88,7 +88,7 @@ static __forceinline__ __device__ Reservoir reservoirImportanceSampling(
     //r.W = fmaxf(( 1.0f / targetPDF(brdf, si, light_p - si->p, light) ) * ( 1.0f / (float)r.M ) * r.wsum, 0.0f);
     r.W = fmaxf( (1.0f / targetPDF(brdf, si, light_p - si->p, light)) * (1.0f / (float)r.M) * r.wsum, 0.0f);
     if (r.W != r.W) 
-        r.W = 1.0f;
+        r.W = 0.0f;
 
     //printf("Reservoir: r.y: %d, r.wsum: %f, r.M: %d, r.W: %f\n", r.y, r.wsum, r.M, r.W);
     return r;
@@ -168,7 +168,7 @@ extern "C" __device__ void __raygen__restir()
         int depth = 0;
         for (;;) 
         {
-            if ( depth >= params.max_depth )
+            if ( depth >= params.max_depth || si.trace_terminate)
                 break;
 
             trace(params.handle, ro, rd, 0.01f, 1e16f, &si);
@@ -197,16 +197,19 @@ extern "C" __device__ void __raygen__restir()
                 const Vec3f to_light = light_p - si.p;
 
                 const float nDl = dot(si.shading.n, normalize(to_light));
-                const float LnDl = -dot(light.triangle.n, normalize(to_light));
+
+                Vec3f LN = light.triangle.n;
+                LN = faceforward(LN, normalize(to_light), LN);
+                const float LnDl = dot(LN, normalize(to_light));
                 // rho
                 Vec3f brdf = optixContinuationCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
                     si.surface_info.callable_id.bsdf, &si, si.surface_info.data, light_p);
-                
+
                 float weight = 0.0f;
                 if (nDl > 0.0f && LnDl > 0.0f)
                 {
                     // Visibility term
-                    bool occluded = traceShadow(params.handle, ro, normalize(to_light), 0.01f, length(to_light) - 0.01f, &si);
+                    bool occluded = traceShadow(params.handle, si.p, normalize(to_light), 0.01f, length(to_light) - 0.01f, &si);
                     if (!occluded)
                     {
                         // G
@@ -214,16 +217,18 @@ extern "C" __device__ void __raygen__restir()
                         //const float cos_theta = fmaxf(dot(light.triangle.n, normalize(to_light)), 0.0f);
                         const float d = length(to_light);
                         const float G = area * nDl / (d * d);
-                        //weight = nDl * LnDl * area / (d * d);
-                        weight = G;
+                        weight = nDl * LnDl * area / (d * d);
                     }
                 }
                 //result += light.emission * brdf * weight;
                 //result += r.W * light.emission * brdf * weight;
-                result += r.W * light.emission * brdf * weight;
+                result += r.W * light.emission * brdf;
+
+                //printf("r.W: %f, light.emission: %f %f %f, brdf: %f %f %f, weight: %f\n",
+                    //r.W, light.emission.x(), light.emission.y(), light.emission.z(), brdf.x(), brdf.y(), brdf.z(), weight);
 
                 // Uniform hemisphere sampling
-                si.trace_terminate = false;
+                si.trace_terminate = true;
                 Vec2f u = UniformSampler::get2D(seed);
                 Vec3f wi = cosineSampleHemisphere(u[0], u[1]);
                 Onb onb(si.shading.n);

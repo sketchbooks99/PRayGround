@@ -140,7 +140,7 @@ void App::setup()
     // Load obj scene
     std::vector<Attributes> material_attribs;
     shared_ptr<TriangleMesh> scene_mesh(new TriangleMesh());
-    scene_mesh->loadWithMtl("C:/Users/lunae/Documents/3DScenes/San-Miguel/san-miguel.obj", material_attribs);
+    scene_mesh->loadWithMtl("C:/Users/lunae/Documents/3DScenes/Sponza/sponza.obj", material_attribs);
 
     cudaTextureDesc tex_desc = {};
     tex_desc.addressMode[0] = cudaAddressModeWrap;
@@ -164,7 +164,7 @@ void App::setup()
         scene_materials.emplace_back(diffuse);
     }
 
-    scene.addObject("Scene mesh", scene_mesh, scene_materials, mesh_prgs, Matrix4f::scale(10));
+    scene.addObject("Scene mesh", scene_mesh, scene_materials, mesh_prgs, Matrix4f::scale(2));
 
     /// @todo : Add many lights to the scene
     vector<LightInfo> light_infos;
@@ -186,8 +186,8 @@ void App::setup()
         float intensity = dist(engine) * 25.0f;
         light.emission = color * intensity;
 
-        float scale = dist(engine) * 5.0f;
-        Vec3f center = (Vec3f(dist(engine), dist(engine), dist(engine)) * 2.0f - 1.0f) * 50.0f + Vec3f(100.0f, 50.0f, 100.0f);
+        float scale = dist(engine) * 25.0f;
+        Vec3f center = (Vec3f(dist(engine), dist(engine), dist(engine)) * 2.0f - 1.0f) * 250.0f;
         Vec3f v0 = (Vec3f(dist(engine), dist(engine), dist(engine)) * 2.0f - 1.0f) * scale + center;
         Vec3f v1 = (Vec3f(dist(engine), dist(engine), dist(engine)) * 2.0f - 1.0f) * scale + center;
         Vec3f v2 = (Vec3f(dist(engine), dist(engine), dist(engine)) * 2.0f - 1.0f) * scale + center;

@@ -41,6 +41,8 @@ struct LaunchParams {
     uint32_t max_depth;
     int frame;
 
+    float white;
+
     Vec4u* result_buffer;
     Vec4f* accum_buffer;
     

@@ -65,13 +65,14 @@ void App::setup()
     params.samples_per_launch = 1;
     params.max_depth = 3;
     params.frame = 0;
+    params.white = 10.0f;
     params.result_buffer = reinterpret_cast<Vec4u*>(result_bmp.devicePtr());
     params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bmp.devicePtr());
 
     // Initialize camera
     shared_ptr<Camera> camera(new Camera);
-    camera->setOrigin(78, 10, 84);
-    camera->setLookat(85, 11, 75);
+    camera->setOrigin(-1500, 300, 0);
+    camera->setLookat(1000, 300, 0);
     camera->setUp(0, 1, 0);
     camera->setFov(40);
     camera->setAspect((float)width / height);
@@ -174,23 +175,23 @@ void App::setup()
     vector<Vec3f> normals;
     vector<Face> faces;
     vector<uint32_t> sbt_indices;
-    random_device seed_gen;
-    mt19937 engine(seed_gen());
-    uniform_real_distribution<> dist(0.0, 1.0);
+
+    uint32_t seed = tea<4>(0, 0);
+
     constexpr int NUM_LIGHTS = 1000;
     for (int i = 0; i < NUM_LIGHTS; i++)
     {
         LightInfo light;
 
-        Vec3f color(dist(engine), dist(engine), dist(engine));
-        float intensity = dist(engine) * 25.0f;
+        Vec3f color(rnd(seed), rnd(seed), rnd(seed));
+        float intensity = rnd(seed) * 100.0f;
         light.emission = color * intensity;
 
-        float scale = dist(engine) * 25.0f;
-        Vec3f center = (Vec3f(dist(engine), dist(engine), dist(engine)) * 2.0f - 1.0f) * 250.0f;
-        Vec3f v0 = (Vec3f(dist(engine), dist(engine), dist(engine)) * 2.0f - 1.0f) * scale + center;
-        Vec3f v1 = (Vec3f(dist(engine), dist(engine), dist(engine)) * 2.0f - 1.0f) * scale + center;
-        Vec3f v2 = (Vec3f(dist(engine), dist(engine), dist(engine)) * 2.0f - 1.0f) * scale + center;
+        float scale = rnd(seed) * 1000.0f;
+        Vec3f center = (Vec3f(rnd(seed), rnd(seed) * 0.5f + 0.5f, rnd(seed)) * 2.0f - 1.0f) * 500.0f;
+        Vec3f v0 = (Vec3f(rnd(seed), rnd(seed), rnd(seed)) * 2.0f - 1.0f) * scale + center;
+        Vec3f v1 = (Vec3f(rnd(seed), rnd(seed), rnd(seed)) * 2.0f - 1.0f) * scale + center;
+        Vec3f v2 = (Vec3f(rnd(seed), rnd(seed), rnd(seed)) * 2.0f - 1.0f) * scale + center;
         Vec3f n = normalize(cross(v2 - v0, v1 - v0));
         light.triangle = { v0, v1, v2, n };
 
@@ -239,6 +240,8 @@ void App::update()
 {
     handleCameraUpdate();
 
+    pgSetWindowName("fps: " + toString(pgGetFrameRate()) + ", frame: " + toString(params.frame));
+
     scene.launchRay(context, pipeline, params, stream, result_bmp.width(), result_bmp.height(), 1);
     CUDA_CHECK(cudaStreamSynchronize(stream));
     CUDA_SYNC_CHECK();
@@ -246,6 +249,12 @@ void App::update()
     params.frame++;
 
     result_bmp.copyFromDevice();
+
+    if (params.frame == 10000)
+    {
+        result_bmp.write(pgPathJoin(pgAppDir(), "simplepath.jpg"));
+        pgExit();
+    }
 }
 
 // ------------------------------------------------------------------
@@ -259,14 +268,14 @@ void App::draw()
 
     auto camera = scene.camera();
     float cam_origin[3] = { camera->origin().x(), camera->origin().y(), camera->origin().z() };
-    if (ImGui::SliderFloat3("Camera origin", cam_origin, -500, 500))
+    if (ImGui::SliderFloat3("Camera origin", cam_origin, -1000, 1000))
     {
         camera->setOrigin(cam_origin[0], cam_origin[1], cam_origin[2]);
         is_camera_updated = true;
     }
 
     float cam_lookat[3] = { camera->lookat().x(), camera->lookat().y(), camera->lookat().z() };
-    if (ImGui::SliderFloat3("Camera lookat", cam_lookat, -100, 100))
+    if (ImGui::SliderFloat3("Camera lookat", cam_lookat, -1000, 1000))
     {
         camera->setLookat(cam_lookat[0], cam_lookat[1], cam_lookat[2]);
         is_camera_updated = true;
@@ -277,6 +286,11 @@ void App::draw()
     {
         envmap_texture->setColor(Vec3f(envmap_color[0], envmap_color[1], envmap_color[2]));
         scene.updateSBT(+(SBTRecordType::Miss));
+        initResultBufferOnDevice();
+    }
+
+    if (ImGui::SliderFloat("White", &params.white, 1.0f, 1000.0f))
+    {
         initResultBufferOnDevice();
     }
 

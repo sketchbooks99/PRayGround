@@ -7,9 +7,17 @@ using SurfaceInteraction = SurfaceInteraction_<Vec3f>;
 
 struct Reservoir {
     int y;          // The output sample (the index of light)
-    float wsum;     // The sum of weights
     int M;          // The number of samples seen so far
-    float W;        // Probalistic weight
+    float wsum;     // The sum of weights
+    float W;        // Probabilistic weight
+
+    void init()
+    {
+        y = 0;
+        M = 0; 
+        wsum = 0.0f;
+        W = 0.0f;
+    }
 
     void update(int i, float weight, uint32_t& seed)
     {
@@ -45,7 +53,8 @@ static __forceinline__ __device__ float targetPDF(
     const float d = length(to_light);
     const float G = (d * d) / (area * cos_theta);
 
-    return length(brdf * light.emission) * G;
+    //return length(brdf * light.emission) * G;
+    return fmaxf(length(brdf * light.emission) / (d * d) * cos_theta, 0.0f);
 }
 
 static __forceinline__ __device__ Vec3f randomSampleOnTriangle(uint32_t& seed, const Triangle& triangle)
@@ -71,9 +80,7 @@ static __forceinline__ __device__ Reservoir reservoirImportanceSampling(
         // Get brdf wrt the sampled light
         Vec3f brdf = optixContinuationCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
             si->surface_info.callable_id.bsdf, si, si->surface_info.data, light_p);
-        float pdf = optixDirectCall<float, SurfaceInteraction*, void*, const Vec3f&>(
-            si->surface_info.callable_id.pdf, si, si->surface_info.data, light_p);
-        pdf = fmaxf(pdf, 0.001f);
+        float pdf = 1.0f / params.num_lights;
         // Get target pdf 
         const float target_pdf = targetPDF(brdf, si, light_p - si->p, light);
         // update reservoir
@@ -85,10 +92,8 @@ static __forceinline__ __device__ Reservoir reservoirImportanceSampling(
     Vec3f brdf = optixContinuationCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
         si->surface_info.callable_id.bsdf, si, si->surface_info.data, light_p);
 
-    // r.W = ( ( 1.0f / targetPDF(brdf, si, light_p - si->p, light) ) * ( 1.0f / r.M ) * r.wsum );
-    //r.W = fmaxf(( 1.0f / targetPDF(brdf, si, light_p - si->p, light) ) * ( 1.0f / (float)r.M ) * r.wsum, 0.0f);
-    r.W = fmaxf( (1.0f / targetPDF(brdf, si, light_p - si->p, light)) * (1.0f / (float)r.M) * r.wsum, 0.0f);
-    if (r.W != r.W) 
+    r.W = fmaxf( (1.0f / targetPDF(brdf, si, light_p - si->p, light)) * (1.0f / r.M) * r.wsum, 0.0f);
+    if (isinf(r.W) || isnan(r.W))
         r.W = 0.0f;
 
     //printf("Reservoir: r.y: %d, r.wsum: %f, r.M: %d, r.W: %f\n", r.y, r.wsum, r.M, r.W);
@@ -293,7 +298,7 @@ extern "C" __device__ void __raygen__restir()
 
             if (si.trace_terminate || depth >= params.max_depth)
             {
-                //result += si.emission * throughput;
+                result += si.emission * throughput;
                 break;
             }
 
@@ -309,35 +314,41 @@ extern "C" __device__ void __raygen__restir()
             else 
             {
                 Reservoir r = reservoirImportanceSampling(&si, M, seed);
+                if (r.W == 0.0f)
+                    break;
+
                 LightInfo light = params.lights[r.y];
                 const Vec3f light_p = randomSampleOnTriangle(seed, light.triangle);
                 const Vec3f to_light = light_p - si.p;
+                const float d = length(to_light);
 
-                si.shading.n = faceforward(si.shading.n, to_light, si.shading.n);
-                const float nDl = dot(si.shading.n, normalize(to_light));
+                float weight = 0.0f;
+                const bool occluded = traceShadow(params.handle, si.p, normalize(to_light), 0.001f, d - 0.001f, &si);
+                if (!occluded)
+                {
+                    const float nDl = dot(si.shading.n, normalize(to_light));
 
-                Vec3f LN = light.triangle.n;
-                LN = faceforward(LN, normalize(to_light), LN);
-                const float LnDl = dot(LN, normalize(to_light));
-                // rho
+                    Vec3f LN = light.triangle.n;
+                    LN = faceforward(LN, normalize(to_light), LN);
+                    const float LnDl = dot(LN, normalize(to_light));
+                    // rho
+                    if (nDl > 0.0f && LnDl > 0.0f)
+                    {
+                        const float area = length(cross(light.triangle.v1 - light.triangle.v0, light.triangle.v2 - light.triangle.v0)) * 0.5f;
+                        const float d = length(to_light);
+                        weight = LnDl * nDl * area / (math::pi * d * d);
+                    }
+                }
                 Vec3f brdf = optixContinuationCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
                     si.surface_info.callable_id.bsdf, &si, si.surface_info.data, light_p);
-
-                const float area = length(cross(light.triangle.v1 - light.triangle.v0, light.triangle.v2 - light.triangle.v0)) * 0.5f;
-                const float d = length(to_light);
-                const float G = area * LnDl * nDl / (math::pi * d * d);
-                const float weight = LnDl * nDl * area / (math::pi * d * d);
-                //result += r.W * light.emission * brdf * weight;
-                //result += r.W * light.emission * weight;
-                //result += weight * 100000.0f;
-                radiance += weight * light.emission;
-                //printf("LnDl: %f, nDl: %f, area: %f, d: %f, weight: %f, r.y: %d\n", LnDl, nDl, area, d, weight, r.y);
-
-                //printf("r.W: %f, light.emission: %f %f %f, brdf: %f %f %f, weight: %f\n",
-                    //r.W, light.emission.x(), light.emission.y(), light.emission.z(), brdf.x(), brdf.y(), brdf.z(), weight);
+                float pdf = optixDirectCall<float, SurfaceInteraction*, void*, const Vec3f&>(
+                    si.surface_info.callable_id.pdf, &si, si.surface_info.data, light_p);
+                
+                if (pdf > 0.0f && !isinf(r.W) && !isnan(r.W))
+                    result += (r.W * light.emission * brdf * weight) / pdf;
 
                 // Uniform hemisphere sampling
-                si.trace_terminate = false;
+                si.trace_terminate = true;
                 Vec2f u = UniformSampler::get2D(seed);
                 Vec3f wi = cosineSampleHemisphere(u[0], u[1]);
                 Onb onb(si.shading.n);

@@ -187,8 +187,8 @@ void App::setup()
         float intensity = rnd(seed) * 100.0f;
         light.emission = color * intensity;
 
-        float scale = rnd(seed) * 1000.0f;
-        Vec3f center = (Vec3f(rnd(seed), rnd(seed) * 0.5f + 0.5f, rnd(seed)) * 2.0f - 1.0f) * 500.0f;
+        float scale = rnd(seed) * 100.0f;
+        Vec3f center = (Vec3f(rnd(seed), rnd(seed) * 0.5f + 0.5f, rnd(seed)) * 2.0f - 1.0f) * 2500.0f;
         Vec3f v0 = (Vec3f(rnd(seed), rnd(seed), rnd(seed)) * 2.0f - 1.0f) * scale + center;
         Vec3f v1 = (Vec3f(rnd(seed), rnd(seed), rnd(seed)) * 2.0f - 1.0f) * scale + center;
         Vec3f v2 = (Vec3f(rnd(seed), rnd(seed), rnd(seed)) * 2.0f - 1.0f) * scale + center;
@@ -252,7 +252,7 @@ void App::update()
 
     if (params.frame == 10000)
     {
-        result_bmp.write(pgPathJoin(pgAppDir(), "simplepath.jpg"));
+        result_bmp.write(pgPathJoin(pgAppDir(), "restir.jpg"));
         pgExit();
     }
 }

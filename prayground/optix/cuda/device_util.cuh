@@ -4,7 +4,7 @@
 #include <cuda_runtime.h>
 #include <vector_types.h>
 #include <prayground/core/util.h>
-#include <prayground/optix/helpers.h>
+#include <prayground/optix/util.h>
 #include <prayground/math/util.h>
 #include <prayground/math/vec.h>
 

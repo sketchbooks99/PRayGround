@@ -48,8 +48,13 @@ set(sources
   app/app_runner.cpp
 
   # OpenGL libraries ==========
+  gl/primitive.h 
+  gl/primitive.cpp
   gl/shader.h 
   gl/shader.cpp
+  gl/texture.h
+  gl/texture.cpp
+  gl/util.h
 
   # Optix wrapper libraries ==========
   optix/context.h 
@@ -58,7 +63,7 @@ set(sources
   optix/denoiser.cpp
   optix/geometry_accel.h 
   optix/geometry_accel.cpp
-  optix/helpers.h 
+  optix/util.h 
   optix/instance_accel.h 
   optix/instance_accel.cpp
   optix/instance.h 

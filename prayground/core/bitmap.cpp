@@ -143,11 +143,15 @@ namespace prayground {
             pgLog("Loading JPG file '" + filepath.value().string() + "' ...");
         else if (ext == ".bmp" || ext == ".BMP")
             pgLog("Loading BMP file '" + filepath.value().string() + "' ...");
+        else if (ext == ".tga" || ext == ".TGA")
+            pgLog("Loading TGA file '" + filepath.value().string() + "' ...");
         else if (ext == ".exr" || ext == ".EXR" || ext == ".hdr" || ext == ".HDR")
         {
-            pgLogFatal("EXR format can be loaded only in Bitmap_<float>.");
+            pgLogFatal("Loading HDR image is supported with Bitmap_<float>. Detected file format is", ext);
             return;
         }
+
+        // Load image from file
         uint8_t* raw_data;
         raw_data = stbi_load(filepath.value().string().c_str(), &m_width, &m_height, &m_channels, static_cast<int>(m_format));
         if (m_format == PixelFormat::NONE) 
@@ -168,7 +172,7 @@ namespace prayground {
 
         auto ext = pgGetExtension(filepath.value());
 
-        // EXR/HDR 形式の場合はそのまま読み込む
+        // Load float image
         if (ext == ".exr" || ext == ".EXR" || ext == ".hdr" || ext == ".HDR")
         {
             std::string kind = ext == ".exr" || ext == ".EXR" ? "EXR" : "HDR";
@@ -200,7 +204,7 @@ namespace prayground {
                 m_data.reset(raw_data);
             }
         }
-        // PNG/JPG/BMP 形式の場合は uint8_t* [0, 255] -> float* [0, 1] に変換 
+        // Convert image data from 8bit per channel [0, 255] to 32 bit [0, 1]
         else
         {
             if (ext == ".png" || ext == ".PNG")
@@ -209,6 +213,8 @@ namespace prayground {
                 pgLog("Loading JPG file '" + filepath.value().string() + "' ...");
             else if (ext == ".bmp" || ext == ".BMP")
                 pgLog("Loading BMP file '" + filepath.value().string() + "' ...");
+            else if (ext == ".tga" || ext == ".TGA")
+                pgLog("Loading TGA file '" + filepath.value().string() + "' ...");
 
             uint8_t* raw_data = stbi_load(filepath.value().string().c_str(), &m_width, &m_height, &m_channels, static_cast<int>(m_format));
             if (m_format == PixelFormat::NONE)
@@ -241,7 +247,7 @@ namespace prayground {
     {
         std::string ext = pgGetExtension(filepath);
 
-        bool supported = ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" || ext == ".bmp" || ext == ".BMP";
+        bool supported = ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" || ext == ".bmp" || ext == ".BMP" || ext == ".tga" || ext == ".TGA";
         if (!supported)
         {
             pgLogFatal("This extension '" + ext + "' is not suppoted with Bitmap_<unsigned char>");
@@ -252,20 +258,15 @@ namespace prayground {
         memcpy(data, m_data.get(), m_width * m_height * m_channels);
 
         if (ext == ".png" || ext == ".PNG")
-        {
             stbi_write_png(filepath.string().c_str(), m_width, m_height, m_channels, data, m_width * m_channels);
-            delete[] data;
-        }
         else if (ext == ".jpg" || ext == ".JPG")
-        {
             stbi_write_jpg(filepath.string().c_str(), m_width, m_height, m_channels, data, quality);
-            delete[] data;
-        }
         else if (ext == ".bmp" || ext == ".BMP")
-        {
             stbi_write_bmp(filepath.string().c_str(), m_width, m_height, m_channels, data);
-            delete[] data;
-        }
+        else if (ext == ".tga" || ext == ".TGA")
+            stbi_write_tga(filepath.string().c_str(), m_width, m_height, m_channels, data);
+
+        delete[] data;
 
         pgLog("Wrote bitmap to '" + filepath.string() + "'");
     }
@@ -275,7 +276,7 @@ namespace prayground {
     {
         std::string ext = pgGetExtension(filepath);
     
-        bool supported = ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" || ext == ".bmp" || ext == ".BMP" || 
+        bool supported = ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" || ext == ".bmp" || ext == ".BMP" || ext == ".tga" || ext == ".TGA" ||
                          ext == ".exr" || ext == ".EXR" || ext == ".hdr" || ext == ".HDR";
 
         if (!supported)
@@ -289,7 +290,7 @@ namespace prayground {
         memcpy(data, m_data.get(), m_width * m_height * m_channels * sizeof(float));
 
         // PNG/JPG/BMP の場合は float [0, 1] -> uint8_t [0, 255] に変換する
-        if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" || ext == ".bmp" || ext == ".BMP") 
+        if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" || ext == ".bmp" || ext == ".BMP" || ext == ".tga" || ext == ".TGA")
         {
             uint8_t* uc_data = new uint8_t[m_width * m_height * m_channels];
             for (int i=0; i<m_width; i++)
@@ -314,6 +315,8 @@ namespace prayground {
                 stbi_write_jpg(filepath.string().c_str(), m_width, m_height, m_channels, uc_data, quality);
             else if (ext == ".bmp" || ext == ".BMP")
                 stbi_write_bmp(filepath.string().c_str(), m_width, m_height, m_channels, uc_data);
+            else if (ext == ".tga" || ext == ".TGA")
+                stbi_write_tga(filepath.string().c_str(), m_width, m_height, m_channels, uc_data);
 
             delete[] uc_data;
             delete[] data;
@@ -359,10 +362,10 @@ namespace prayground {
     {
         // Prepare vertices data
         int window_width = pgGetWidth(), window_height = pgGetHeight();
-        GLfloat x0 = -1.0f + (static_cast<float>(x) / window_width) * 2.0f;
-        GLfloat x1 = -1.0f + (static_cast<float>(x + width) / window_width) * 2.0f;
-        GLfloat y0 =  1.0f - (static_cast<float>(y + height) / window_height) * 2.0f;
-        GLfloat y1 =  1.0f - (static_cast<float>(y) / window_height) * 2.0f;
+        GLfloat x0 = -1.0f + ((static_cast<float>(x) / window_width) * 2.0f);
+        GLfloat x1 = -1.0f + ((static_cast<float>(x + width) / window_width) * 2.0f);
+        GLfloat y0 =  1.0f - ((static_cast<float>(y + height) / window_height) * 2.0f);
+        GLfloat y1 =  1.0f - ((static_cast<float>(y) / window_height) * 2.0f);
         GLfloat vertices[] = {
             // position     // texcoord (vertically flipped)
             x0, y0, 0.0f,   0.0f, 1.0f,
@@ -505,7 +508,7 @@ namespace prayground {
 
         glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
         glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat)*20, nullptr, GL_DYNAMIC_DRAW);
-
+        
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint)*6, nullptr, GL_DYNAMIC_DRAW);
 

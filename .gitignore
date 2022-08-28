@@ -2,6 +2,8 @@ build/
 */.vscode/
 .vscode/
 
+resources/
+
 *.vcxproj*
 *.sln
 

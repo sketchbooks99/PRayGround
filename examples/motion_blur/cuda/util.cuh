@@ -5,7 +5,7 @@
 #include <prayground/math/vec_math.h>
 #include <prayground/math/util.h>
 #include <prayground/math/random.h>
-#include <prayground/optix/helpers.h>
+#include <prayground/optix/util.h>
 #include <prayground/optix/macros.h>
 #include "../params.h"
 

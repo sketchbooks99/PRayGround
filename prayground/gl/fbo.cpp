@@ -1,6 +1,11 @@
 #include "fbo.h"
 
-namespace gl 
-{
+namespace prayground {
 
-} // ::gl
+    namespace gl {
+
+        
+
+    } // namespace gl
+
+} // namespace prayground

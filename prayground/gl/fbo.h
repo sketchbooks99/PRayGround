@@ -23,9 +23,9 @@ namespace prayground {
             void end();
 
         private:
-            uint32_t mColorTexture;
-            uint32_t mDepthTexture;
-            uint32_t mStencilTexture;
+            uint32_t m_color_texture;
+            uint32_t m_depth_texture;
+            uint32_t m_stencil_texture;
         };
 
     } // namespace prayground

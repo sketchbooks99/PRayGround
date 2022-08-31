@@ -35,7 +35,10 @@ namespace prayground {
         AreaEmitter     = 1u << 5,
 
         // Medium
-        Medium          = 1u << 6
+        Medium          = 1u << 6,
+
+        // Envmap
+        Envmap          = 1u << 7
     };
 
     constexpr SurfaceType  operator|(SurfaceType t1, SurfaceType t2)    { return static_cast<SurfaceType>(  (uint32_t)t1 | (uint32_t)t2 ); }

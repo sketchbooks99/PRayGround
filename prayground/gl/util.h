@@ -6,7 +6,7 @@
 namespace prayground {
     namespace gl {
 
-        std::string typeToString(GLuint gltype)
+        inline std::string typeToString(GLuint gltype)
         {
             switch (gltype)
             {

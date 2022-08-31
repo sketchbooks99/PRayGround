@@ -35,7 +35,7 @@ namespace prayground {
     HOSTDEVICE INLINE float dequantizeUnsigned8Bits( const unsigned char i )
     {
        enum { N = (1 << 8) - 1 };
-       return min((float)i / (float)N), 1.f)
+       return fminf((float)i / (float)N, 1.f);
     }
 
     HOSTDEVICE INLINE unsigned char quantizeUnsigned8Bits(float x)

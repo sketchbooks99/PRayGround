@@ -293,6 +293,7 @@ extern "C" __device__ void __raygen__restir()
         for (;;) 
         {
             trace(params.handle, ro, rd, 0.01f, 1e16f, &si);
+
             result += si.emission;
             result += radiance * throughput;
 
@@ -344,8 +345,10 @@ extern "C" __device__ void __raygen__restir()
                 float pdf = optixDirectCall<float, SurfaceInteraction*, void*, const Vec3f&>(
                     si.surface_info.callable_id.pdf, &si, si.surface_info.data, light_p);
                 
-                if (pdf > 0.0f && !isinf(r.W) && !isnan(r.W))
+                if (pdf > 0.0f && !isinf(r.W) && !isnan(r.W)) {
                     result += (r.W * light.emission * brdf * weight) / pdf;
+                    break;
+                }
 
                 // Uniform hemisphere sampling
                 si.trace_terminate = true;
@@ -356,7 +359,7 @@ extern "C" __device__ void __raygen__restir()
                 si.wi = normalize(wi);
                 si.seed = seed;
 
-                throughput *= brdf;
+                throughput *= brdf / pdf;
             }
 
             ro = si.p;
@@ -369,9 +372,8 @@ extern "C" __device__ void __raygen__restir()
     const uint32_t image_idx = idx.y() * params.width + idx.x();
 
     // Nan | Inf check
-    if (result.x() != result.x()) result.x() = 0.0f;
-    if (result.y() != result.y()) result.y() = 0.0f;
-    if (result.z() != result.z()) result.z() = 0.0f;
+    if (!result.isValid()) 
+        result = Vec3f(0.0f);
 
     Vec3f accum = result / static_cast<float>(spl);
 
@@ -412,7 +414,7 @@ extern "C" __device__ void __miss__envmap()
     const float v = 1.0f - (theta + math::pi / 2.0f) / math::pi;
     si->shading.uv = Vec2f(u, v);
     si->trace_terminate = true;
-    si->surface_info.type = SurfaceType::None;
+    si->surface_info.type = SurfaceType::Envmap;
     si->emission = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
         env->texture.prg_id, si, env->texture.data);
 }

@@ -84,8 +84,10 @@ set(sources
   # Shapes ==========
   shape/box.h
   shape/box.cpp
+  shape/curves.h 
+  shape/curves.cpp
   shape/cylinder.h 
-  shape/cylinder.cpp 
+  shape/cylinder.cpp
   shape/plane.h 
   shape/plane.cpp 
   shape/shapegroup.h

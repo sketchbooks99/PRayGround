@@ -16,6 +16,12 @@ namespace prayground {
             float* widths;
         };
 
+        enum class Type : uint32_t {
+            Linear = OPTIX_PRIMITIVE_TYPE_ROUND_LINEAR,
+            QuadlicBspline = OPTIX_PRIMITIVE_TYPE_ROUND_QUADRATIC_BSPLINE,
+            CubicBspline = OPTIX_PRIMITIVE_TYPE_ROUND_CUBIC_BSPLINE
+        };
+
 #ifndef __CUDACC__
 
         Curves();
@@ -37,7 +43,7 @@ namespace prayground {
 
         AABB bound() const override;
 
-        Data getData() const;
+        Data getData();
 
         void addVertices(const std::vector<Vec3f>& vertices);
         void addIndices(const std::vector<int32_t>& indices);
@@ -58,7 +64,7 @@ namespace prayground {
         const std::vector<Vec3f>& vertices() const { return m_vertices; }
         const std::vector<int32_t>& indices() const { return m_indices; }
         const std::vector<Vec3f>& normals() const { return m_normals; }
-        const std::vector<Vec2f>& widths() const { return m_widths; }
+        const std::vector<float>& widths() const { return m_widths; }
         const std::vector<uint32_t>& sbtIndices() const { return m_sbt_indices; }
 
         CUdeviceptr deviceVertices() const { return d_vertices; }
@@ -75,7 +81,7 @@ namespace prayground {
         std::vector<uint32_t> m_sbt_indices;
 
         CUdeviceptr d_vertices { 0 };
-        CUdeviceptr d_normals { 0 };
+        CUdeviceptr d_indices { 0 };
         CUdeviceptr d_normals { 0 };
         CUdeviceptr d_widths { 0 };
         CUdeviceptr d_sbt_indices { 0 };

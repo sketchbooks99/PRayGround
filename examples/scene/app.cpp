@@ -106,7 +106,6 @@ void App::setup()
     scene.bindCallablesProgram(area_emitter_prg.program);
 
     SurfaceCallableID diffuse_id{ diffuse_sample_bsdf_prg.ID, diffuse_sample_bsdf_prg.ID, diffuse_pdf_prg.ID };
-    SurfaceCallableID glass_id{ glass_sample_bsdf_prg.ID, glass_sample_bsdf_prg.ID, glass_pdf_prg.ID };
     SurfaceCallableID area_emitter_id{ area_emitter_prg.ID, area_emitter_prg.ID, area_emitter_prg.ID };
 
     // Miss program

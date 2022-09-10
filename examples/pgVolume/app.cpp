@@ -102,8 +102,6 @@ void App::setup()
     uint32_t diffuse_prg_id = setupCallable(DC_FUNC_STR("sample_diffuse"), "");
     // Medium
     uint32_t medium_prg_id = setupCallable(DC_FUNC_STR("sample_medium"), "");
-    // Area emitter
-    uint32_t area_emitter_prg_id = setupCallable(DC_FUNC_STR("area_emitter"), "");
     
     textures.emplace("env", new FloatBitmapTexture("resources/image/drackenstein_quarry_4k.exr", bitmap_prg_id));
     //textures.emplace("env", new ConstantTexture(Vec3f(0.1f), constant_prg_id));
@@ -120,10 +118,6 @@ void App::setup()
     sbt.setMissRecord({ ms_record });
 
     // Hitgroup programs
-    // Plane
-    auto plane_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("plane"), IS_FUNC_STR("plane"));
-    // Sphere
-    auto sphere_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("sphere"), IS_FUNC_STR("sphere"));
     // Grid medium
     auto grid_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("grid"), IS_FUNC_STR("grid"));
     

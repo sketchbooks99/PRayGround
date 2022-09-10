@@ -39,6 +39,11 @@ OptixBuildInput BoxMedium::createBuildInput()
     return createSingleCustomBuildInput(d_aabb_buffer, this->bound(), m_sbt_index);
 }
 
+uint32_t BoxMedium::numPrimitives() const
+{
+    return 1;
+}
+
 AABB BoxMedium::bound() const 
 {
     return AABB(m_min, m_max);

@@ -274,7 +274,7 @@ namespace prayground {
     inline void Scene<_CamT, N>::bindMissPrograms(std::array<ProgramGroup, N>& miss_prgs)
     {
         // Fill record's headers with the miss programs
-        for (int i = 0; i < N; i++)
+        for (uint32_t i = 0; i < N; i++)
         {
             pgMissRecord& record = m_sbt.missRecord(i);
             miss_prgs[i].recordPackHeader(&record);
@@ -350,7 +350,7 @@ namespace prayground {
         m_objects.emplace_back(Item<Object>{ name, m_current_sbt_id, Object{ shape, materials, instance } });
 
         // Add hitgroup record data
-        for (const auto& m : materials)
+        for ([[maybe_unused]] const auto& m : materials)
         {
             std::array<pgHitgroupRecord, N> hitgroup_records;
             for (uint32_t i = 0; i < N; i++)
@@ -431,7 +431,7 @@ namespace prayground {
         m_lights.emplace_back(Item<Light>{ name, m_current_sbt_id, Light{ shape, emitters, instance } });
 
         // Add hitgroup record data
-        for (const auto& e : emitters)
+        for ([[maybe_unused]] const auto& e : emitters)
         {
             std::array<pgHitgroupRecord, N> hitgroup_records;
             for (uint32_t i = 0; i < N; i++)

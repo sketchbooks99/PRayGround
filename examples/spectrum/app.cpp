@@ -151,8 +151,6 @@ void App::setup()
     // Hitgroupプログラム
     // Plane
     auto plane_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("plane"), IS_FUNC_STR("plane"));
-    // Sphere
-    auto sphere_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("sphere"), IS_FUNC_STR("sphere"));
     // Triangle mesh
     auto mesh_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("mesh"));
 

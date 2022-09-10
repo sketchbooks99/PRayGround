@@ -102,7 +102,6 @@ void App::setup()
     // Callable programs for textures
     uint32_t constant_prg_id = setupCallable(DC_FUNC_STR("constant"), "");
     uint32_t checker_prg_id = setupCallable(DC_FUNC_STR("checker"), "");
-    uint32_t bitmap_prg_id = setupCallable(DC_FUNC_STR("bitmap"), "");
 
     // Callable programs for surfaces
     // Diffuse

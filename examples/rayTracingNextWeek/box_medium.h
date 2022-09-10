@@ -23,6 +23,8 @@ namespace prayground {
 
         OptixBuildInput createBuildInput() override;
 
+        uint32_t numPrimitives() const override;
+
         AABB bound() const override;
 
         const Vec3f& min() const;

@@ -48,6 +48,11 @@ namespace prayground {
             CUDA_CHECK(cudaMemcpy(d_data, &data, sizeof(Data), cudaMemcpyHostToDevice));
         }
 
+        uint32_t numPrimitives() const override
+        {
+            return 1;
+        }
+
         void free() override 
         {
             if (d_density) CUDA_CHECK(cudaFree(d_density));

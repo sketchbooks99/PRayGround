@@ -14,6 +14,8 @@ using namespace prayground;
 using ConstantTexture = ConstantTexture_<Vec3f>;
 using CheckerTexture = CheckerTexture_<Vec3f>;
 
+constexpr int32_t NUM_CANDIDATES = 8;
+
 enum class RayType : uint32_t
 {
     Radiance = 0,
@@ -34,6 +36,31 @@ struct LightInfo {
     Vec3f emission;
 };
 
+struct Reservoir {
+    int y;          // The output sample (the index of light)
+    int M;          // The number of samples seen so far
+    float wsum;     // The sum of weights
+    float W;        // Probabilistic weight
+
+    void init()
+    {
+        y = 0;
+        M = 0; 
+        wsum = 0.0f;
+        W = 0.0f;
+    }
+
+    void update(int i, float weight, uint32_t& seed)
+    {
+        if (weight == 0.0f)
+            return;
+        wsum += weight;
+        M++;
+        if (rnd(seed) < (weight / wsum))
+            y = i;
+    }
+};
+
 struct LaunchParams {
     uint32_t width;
     uint32_t height;
@@ -50,4 +77,7 @@ struct LaunchParams {
 
     LightInfo* lights;
     int num_lights;
+    
+    // Streamed reservoir
+    //Reservoir reservoirs[NUM_CANDIDATES];
 };

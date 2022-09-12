@@ -167,7 +167,7 @@ void App::setup()
 
     scene.addObject("Scene mesh", scene_mesh, scene_materials, mesh_prgs, Matrix4f::scale(2));
 
-    /// @todo : Add many lights to the scene
+    // Vertex data to construct triangle mesh of many lights
     vector<LightInfo> light_infos;
     vector<shared_ptr<AreaEmitter>> emitters;
     vector<Vec3f> vertices;
@@ -184,7 +184,7 @@ void App::setup()
         LightInfo light;
 
         Vec3f color(rnd(seed), rnd(seed), rnd(seed));
-        float intensity = rnd(seed) * 100.0f;
+        float intensity = rnd(seed) * 10.0f;
         light.emission = color * intensity;
 
         float scale = rnd(seed) * 100.0f;

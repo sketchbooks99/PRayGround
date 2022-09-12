@@ -5,28 +5,48 @@ extern "C" { __constant__ LaunchParams params; }
 
 using SurfaceInteraction = SurfaceInteraction_<Vec3f>;
 
-struct Reservoir {
-    int y;          // The output sample (the index of light)
-    int M;          // The number of samples seen so far
-    float wsum;     // The sum of weights
-    float W;        // Probabilistic weight
+static __forceinline__ __device__ SurfaceInteraction* getSurfaceInteraction()
+{
+    const uint32_t u0 = getPayload<0>();
+    const uint32_t u1 = getPayload<1>();
+    return reinterpret_cast<SurfaceInteraction*>(unpackPointer(u0, u1));
+}
 
-    void init()
-    {
-        y = 0;
-        M = 0; 
-        wsum = 0.0f;
-        W = 0.0f;
-    }
+static __forceinline__ __device__ Vec3f reinhardTonemap(const Vec3f& color, const float white)
+{
+    const float l = luminance(color);
+    return (color / (Vec3f(1.0f) + color)) * (1.0f + (color / pow2(params.white)));
+}
 
-    void update(int i, float weight, uint32_t& seed)
-    {
-        wsum += weight;
-        M++;
-        if (rnd(seed) < (weight / wsum))
-            y = i;
-    }
-};
+
+static __forceinline__ __device__ void trace(
+    OptixTraversableHandle handle, const Vec3f& ro, const Vec3f& rd,
+    float tmin, float tmax, SurfaceInteraction* si)
+{
+    uint32_t u0, u1;
+    packPointer(si, u0, u1);
+    optixTrace(
+        handle, ro, rd,
+        tmin, tmax, 0,
+        OptixVisibilityMask(1), OPTIX_RAY_FLAG_NONE,
+        (uint32_t)RayType::Radiance, (uint32_t)RayType::NRay, (uint32_t)RayType::Radiance,
+        u0, u1);
+}
+
+static __forceinline__ __device__ bool traceShadow(
+    OptixTraversableHandle handle, const Vec3f& ro, const Vec3f& rd,
+    float tmin, float tmax, SurfaceInteraction* si)
+{
+    uint32_t hit = 0u;
+    optixTrace(
+        handle, ro, rd,
+        tmin, tmax, 0.0f,
+        OptixVisibilityMask(1), OPTIX_RAY_FLAG_TERMINATE_ON_FIRST_HIT,
+        (uint32_t)RayType::Shadow, (uint32_t)RayType::NRay, (uint32_t)RayType::Shadow,
+        hit
+    );
+    return static_cast<bool>(hit);
+}
 
 static __forceinline__ __device__ float calcWeight(const Vec3f& sample)
 {
@@ -51,9 +71,7 @@ static __forceinline__ __device__ float targetPDF(
     const float area = length(cross(light.triangle.v1 - light.triangle.v0, light.triangle.v2 - light.triangle.v0)) * 0.5f;
     const float cos_theta = fmaxf(dot(light.triangle.n, normalize(-to_light)), 0.0001f);
     const float d = length(to_light);
-    const float G = (d * d) / (area * cos_theta);
 
-    //return length(brdf * light.emission) * G;
     return fmaxf(length(brdf * light.emission) / (d * d) * cos_theta, 0.0f);
 }
 
@@ -77,6 +95,13 @@ static __forceinline__ __device__ Reservoir reservoirImportanceSampling(
         /// @todo : Occlusion test must be here. 
         const Vec3f light_p = randomSampleOnTriangle(seed, light.triangle);
 
+        const Vec3f to_light = light_p - si->p;
+        const float d = length(to_light);
+
+        const bool occluded = traceShadow(params.handle, si->p, normalize(to_light), 0.001f, d - 0.001f, si);
+        if (occluded)
+            continue;
+
         // Get brdf wrt the sampled light
         Vec3f brdf = optixContinuationCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
             si->surface_info.callable_id.bsdf, si, si->surface_info.data, light_p);
@@ -96,7 +121,6 @@ static __forceinline__ __device__ Reservoir reservoirImportanceSampling(
     if (isinf(r.W) || isnan(r.W))
         r.W = 0.0f;
 
-    //printf("Reservoir: r.y: %d, r.wsum: %f, r.M: %d, r.W: %f\n", r.y, r.wsum, r.M, r.W);
     return r;
 }
 
@@ -111,48 +135,6 @@ Reservoir combineResevoirs(SurfaceInteraction* si, const Reservoir* r, int num_r
             si->surface_info.callable_id.bsdf, si, si->surface_info.data, light_p);
         s.update(r[i].y, targetPDF(brdf, si, light_p - si->p, light) * r[i].W * r[i].M, seed);
     }
-}
-
-static __forceinline__ __device__ SurfaceInteraction* getSurfaceInteraction()
-{
-    const uint32_t u0 = getPayload<0>();
-    const uint32_t u1 = getPayload<1>();
-    return reinterpret_cast<SurfaceInteraction*>(unpackPointer(u0, u1));
-}
-
-static __forceinline__ __device__ void trace(
-    OptixTraversableHandle handle, const Vec3f& ro, const Vec3f& rd, 
-    float tmin, float tmax, SurfaceInteraction* si)
-{
-    uint32_t u0, u1;
-    packPointer(si, u0, u1);
-    optixTrace(
-        handle, ro, rd, 
-        tmin, tmax, 0, 
-        OptixVisibilityMask(1), OPTIX_RAY_FLAG_NONE, 
-        (uint32_t)RayType::Radiance, (uint32_t)RayType::NRay, (uint32_t)RayType::Radiance, 
-        u0, u1);
-}
-
-static __forceinline__ __device__ bool traceShadow(
-    OptixTraversableHandle handle, const Vec3f& ro, const Vec3f& rd,
-    float tmin, float tmax, SurfaceInteraction* si)
-{
-    uint32_t hit = 0u;
-    optixTrace(
-        handle, ro, rd, 
-        tmin, tmax, 0.0f,
-        OptixVisibilityMask(1), OPTIX_RAY_FLAG_TERMINATE_ON_FIRST_HIT,
-        (uint32_t)RayType::Shadow, (uint32_t)RayType::NRay, (uint32_t)RayType::Shadow,
-        hit
-    );
-    return static_cast<bool>(hit);
-}
-
-static __forceinline__ __device__ Vec3f reinhardTonemap(const Vec3f& color, const float white)
-{
-    const float l = luminance(color);
-    return (color / (Vec3f(1.0f) + color)) * (1.0f + (color / pow2(params.white)));
 }
 
 extern "C" __device__ void __raygen__path()
@@ -324,9 +306,9 @@ extern "C" __device__ void __raygen__restir()
                 const float d = length(to_light);
 
                 float weight = 0.0f;
-                const bool occluded = traceShadow(params.handle, si.p, normalize(to_light), 0.001f, d - 0.001f, &si);
-                if (!occluded)
-                {
+                //const bool occluded = traceShadow(params.handle, si.p, normalize(to_light), 0.001f, d - 0.001f, &si);
+                //if (!occluded)
+                //{
                     const float nDl = dot(si.shading.n, normalize(to_light));
 
                     Vec3f LN = light.triangle.n;
@@ -339,7 +321,7 @@ extern "C" __device__ void __raygen__restir()
                         const float d = length(to_light);
                         weight = LnDl * nDl * area / (math::pi * d * d);
                     }
-                }
+                //}
                 Vec3f brdf = optixContinuationCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
                     si.surface_info.callable_id.bsdf, &si, si.surface_info.data, light_p);
                 float pdf = optixDirectCall<float, SurfaceInteraction*, void*, const Vec3f&>(

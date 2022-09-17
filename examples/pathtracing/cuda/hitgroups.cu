@@ -2,7 +2,7 @@
 
 extern "C" __device__ void __closesthit__shadow()
 {
-    optixSetPayload_0(1);
+    setPayload<0>(1);
 }
 
 // Plane -------------------------------------------------------------------------------
@@ -96,18 +96,30 @@ extern "C" __device__ float __continuation_callable__pdf_plane(const AreaEmitter
 }
 
 // グローバル空間における si.p -> 光源上の点 のベクトルを返す
-extern "C" __device__ Vec3f __direct_callable__rnd_sample_plane(AreaEmitterInfo area_info, SurfaceInteraction * si)
+extern "C" __device__ LightInteraction __direct_callable__rnd_sample_plane(const AreaEmitterInfo& area_info, SurfaceInteraction* si)
 {
+    LightInteraction li;
     const Plane::Data* plane = reinterpret_cast<Plane::Data*>(area_info.shape_data);
-    // サーフェスの原点をローカル空間に移す
-    const Vec3f local_p = area_info.worldToObj.pointMul(si->p);
-    unsigned int seed = si->seed;
-    // 平面光源上のランダムな点を取得
-    const Vec3f rnd_p = Vec3f(rnd(seed, plane->min.x(), plane->max.x()), 0.0f, rnd(seed, plane->min.y(), plane->max.y()));
-    Vec3f to_light = rnd_p - local_p;
-    to_light = area_info.objToWorld.vectorMul(to_light);
-    si->seed = seed;
-    return to_light;
+
+    const Vec3f corner0 = area_info.objToWorld.pointMul(Vec3f(plane->min.x(), 0.0f, plane->min.y()));
+    const Vec3f corner1 = area_info.objToWorld.pointMul(Vec3f(plane->max.x(), 0.0f, plane->min.y()));
+    const Vec3f corner2 = area_info.objToWorld.pointMul(Vec3f(plane->min.x(), 0.0f, plane->max.y()));
+
+    const Vec2f uv = UniformSampler::get2D(si->seed);
+    const Vec3f rnd_p = Vec3f(
+        lerp(plane->min.x(), plane->max.x(), uv[0]),
+        0.0f, 
+        lerp(plane->min.y(), plane->max.y(), uv[1])
+    );
+
+    li.p = area_info.objToWorld.pointMul(rnd_p);
+    li.wi = normalize(li.p - si->p);
+    li.n = normalize(area_info.objToWorld.vectorMul(Vec3f(0, 1, 0)));
+    li.uv = uv;
+    const float d = length(li.p - si->p);
+    const float area = length(cross(corner1 - corner0, corner2 - corner0));
+    li.pdf = pow2(d) / area;
+    return li;
 }
 
 // Sphere -------------------------------------------------------------------------------
@@ -230,19 +242,34 @@ extern "C" __device__ float __continuation_callable__pdf_sphere(const AreaEmitte
     return 1.0f / solid_angle;
 }
 
-extern "C" __device__ Vec3f __direct_callable__rnd_sample_sphere(AreaEmitterInfo area_info, SurfaceInteraction* si)
+extern "C" __device__ LightInteraction __direct_callable__rnd_sample_sphere(const AreaEmitterInfo& area_info, SurfaceInteraction* si)
 {
+
+    LightInteraction li;
     const Sphere::Data* sphere = reinterpret_cast<Sphere::Data*>(area_info.shape_data);
-    const Vec3f center = sphere->center;
+
     const Vec3f local_o = area_info.worldToObj.pointMul(si->p);
-    const Vec3f oc = center - local_o;
-    float distance_squared = dot(oc, oc);
-    Onb onb(normalize(oc));
-    uint32_t seed = si->seed;
-    Vec3f to_light = randomSampleToSphere(seed, sphere->radius, distance_squared);
-    onb.inverseTransform(to_light);
-    si->seed = seed;
-    return normalize(area_info.objToWorld.vectorMul(to_light));
+    Vec3f to_light = sphere->center - local_o;
+    const float d2 = lengthSquared(to_light);
+
+    Onb onb(to_light);
+    Vec3f rnd_vec = randomSampleToSphere(si->seed, sphere->radius, d2);
+    onb.inverseTransform(rnd_vec);
+
+    SurfaceInteraction local_si;
+    if (!hitSphere(sphere, local_o, rnd_vec, 0.001f, 1e10f, local_si))
+        li.pdf = 0.0f;
+
+    li.n = normalize(area_info.objToWorld.vectorMul(local_si.shading.n));
+    li.p = area_info.objToWorld.pointMul(local_o + rnd_vec * length(to_light));
+    li.wi = area_info.objToWorld.vectorMul(rnd_vec);
+    li.uv = local_si.shading.uv;
+    
+    const float cos_theta_max = sqrtf(1.0f - pow2(sphere->radius) / lengthSquared(sphere->center - local_o));
+    const float solid_angle = 2.0f * math::pi * (1.0f - cos_theta_max);
+    li.pdf = 1.0f / solid_angle;
+
+    return li;
 }
 
 // Cylinder -------------------------------------------------------------------------------

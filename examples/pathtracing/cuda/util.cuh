@@ -5,6 +5,15 @@
 
 using SurfaceInteraction = SurfaceInteraction_<Vec3f>;
 
+struct LightInteraction
+{
+    Vec3f p;
+    Vec3f n;
+    Vec2f uv;
+    Vec3f wi;
+    float pdf;
+};
+
 extern "C" { __constant__ LaunchParams params; }
 
 INLINE DEVICE SurfaceInteraction* getSurfaceInteraction()
@@ -26,6 +35,24 @@ INLINE DEVICE void trace(
         tmin, tmax, 0.0f, 
         OptixVisibilityMask( 1 ),
         OPTIX_RAY_FLAG_NONE,
-        ray_type, 1, ray_type,        
+        ray_type, 2, ray_type,        
         u0, u1 );	
+}
+
+INLINE DEVICE bool traceShadow(OptixTraversableHandle handle, const Vec3f& ro, const Vec3f& rd, float tmin, float tmax)
+{
+    uint32_t is_hit;
+    optixTrace(
+        handle,
+        ro,
+        rd,
+        tmin,
+        tmax,
+        0.0f,
+        OptixVisibilityMask(1),
+        OPTIX_RAY_FLAG_NONE,
+        1, 2, 1,
+        is_hit
+    );
+    return static_cast<bool>(is_hit);
 }

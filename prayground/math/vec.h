@@ -143,7 +143,7 @@ namespace prayground {
 
         bool isValid() const
         {
-            return !(containsNan() || contiansInf());
+            return !(containsNan() || containsInf());
         }
         
     private:
@@ -237,7 +237,7 @@ namespace prayground {
 
         bool isValid() const
         {
-            return !(containsNan() || contiansInf());
+            return !(containsNan() || containsInf());
         }
 
     private:
@@ -339,7 +339,7 @@ namespace prayground {
 
         bool isValid() const
         {
-            return !(containsNan() || contiansInf());
+            return !(containsNan() || containsInf());
         }
     private:
         T e[4];

@@ -33,6 +33,7 @@ extern "C" __device__ void __raygen__pinhole()
         getCameraRay(raygen->camera, d.x(), d.y(), ro, rd);
 
         Vec3f throughput(1.0f);
+        Vec3f radiance(0.0f);
 
         SurfaceInteraction si;
         si.seed = seed;
@@ -46,15 +47,15 @@ extern "C" __device__ void __raygen__pinhole()
         int depth = 0;
         for ( ;; ) {
 
-            if ( depth >= params.max_depth )
-				break;
+            if (depth >= params.max_depth)
+                break;
 
             trace(params.handle, ro, rd, 0.01f, tmax, 0, &si);
 
-            if (si.trace_terminate) {
-                result += si.emission * throughput;
-                break;
-            }
+            //if (si.trace_terminate) {
+            //    result += si.emission;
+            //    break;
+            //}
 
             // Get emission from area emitter
             if ( si.surface_info.type == SurfaceType::AreaEmitter )
@@ -62,7 +63,8 @@ extern "C" __device__ void __raygen__pinhole()
                 // Evaluating emission from emitter
                 optixDirectCall<void, SurfaceInteraction*, void*>(
                     si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
-                result += si.emission * throughput;
+                //result += si.emission * throughput;
+                //result += si.emission;
 
                 if (depth == 0) {
                     albedo = si.albedo;
@@ -91,20 +93,87 @@ extern "C" __device__ void __raygen__pinhole()
             // Rough surface sampling with applying MIS
             else if ( +(si.surface_info.type & (SurfaceType::Rough | SurfaceType::Diffuse)) )
             {
+                int light_id = rndInt(si.seed, 0, params.num_lights - 1);
+                AreaEmitterInfo light = params.lights[light_id];
+
+                // Explicit light sampling
+                LightInteraction li = optixDirectCall<LightInteraction, const AreaEmitterInfo&, SurfaceInteraction*>
+                    (light.sample_id, light, &si);
+
+                const float dist_to_light = length(li.p - si.p);
+                const Vec3f to_light = normalize(li.p - si.p);
+                const float NdotL = dot(si.shading.n, to_light);    // Cosine between surface normal and light vector
+
+                float LNdotL = -dot(li.n, to_light);                // Cosine between light normal and light vector
+                if (light.twosided)
+                {
+                    li.n = faceforward(li.n, to_light, li.n);
+                    LNdotL = dot(li.n, to_light);
+                }
+
+                if (light_id == 1)
+                {
+                    printf("Contribution from sphere: NdotL: %f, LNdotL: %f, pdf: %f\n", NdotL, LNdotL, li.pdf);
+                }
+
+                bool is_contributed = false;
+                if (NdotL > 0.0f && LNdotL > 0.0f)
+                {
+                    const bool occluded = traceShadow(params.handle, si.p, to_light, 0.001f, dist_to_light - 0.001f);
+                    if (!occluded)
+                    {
+                        SurfaceInteraction light_si;
+                        light_si.p = li.p;
+                        light_si.shading.n = li.n;
+                        light_si.shading.uv = li.uv;
+                        light_si.wo = to_light;
+                        
+                        // Get emittance from sampled area emitter
+                        optixDirectCall<void, SurfaceInteraction*, void*>(
+                            light.surface_info.callable_id.bsdf, &light_si, light.surface_info.data);
+
+                        Vec3f contrib_from_light = light_si.emission * NdotL * LNdotL / (math::pi * li.pdf);
+
+                        si.wi = to_light;
+
+                        float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*>(
+                            si.surface_info.callable_id.pdf, &si, si.surface_info.data);
+
+                        // Evaluate BSDF
+                        Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
+                            si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
+
+                        radiance += contrib_from_light;
+                        throughput *= bsdf_val / bsdf_pdf;
+
+                        is_contributed = true;
+                    }
+                }
+
                 // Importance sampling according to the BSDF
                 optixDirectCall<void, SurfaceInteraction*, void*>(
                     si.surface_info.callable_id.sample, &si, si.surface_info.data);
 
-                // Evaluate PDF depends on BSDF
-                float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*>(
-                    si.surface_info.callable_id.pdf, &si, si.surface_info.data);
+                if (!is_contributed)
+                {
+                    // Evaluate PDF depends on BSDF
+                    float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*>(
+                        si.surface_info.callable_id.pdf, &si, si.surface_info.data);
 
-                // Evaluate BSDF
-                Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
-                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
+                    // Evaluate BSDF
+                    Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
+                        si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
 
-                throughput *= bsdf_val / bsdf_pdf;
+                    throughput *= bsdf_val / bsdf_pdf;
+                }
+
             }
+
+            result += si.emission;
+            result += radiance * throughput;
+
+            if (si.trace_terminate || depth >= params.max_depth)
+                break;
 
             if (depth == 0) {
                 albedo += si.albedo;
@@ -126,9 +195,7 @@ extern "C" __device__ void __raygen__pinhole()
 
     const uint32_t image_index = idx.y() * params.width + idx.x();
 
-    if (result.x() != result.x()) result.x() = 0.0f;
-    if (result.y() != result.y()) result.y() = 0.0f;
-    if (result.z() != result.z()) result.z() = 0.0f;
+    //if (!result.isValid()) result = Vec3f(0.0f);
 
     Vec3f accum_color = result / static_cast<float>(params.samples_per_launch);
 

@@ -35,7 +35,7 @@ namespace prayground {
     /**
      * @struct float4
      */
-    inline std::ostream& operator<<(std::ostream& out, const float3& v)
+    inline std::ostream& operator<<(std::ostream& out, const float4& v)
     {
         return out << v.x << ' ' << v.y << ' ' << v.z << ' ' << v.w;
     }

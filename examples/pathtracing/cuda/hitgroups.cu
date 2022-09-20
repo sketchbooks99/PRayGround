@@ -101,9 +101,9 @@ extern "C" __device__ LightInteraction __direct_callable__rnd_sample_plane(const
     LightInteraction li;
     const Plane::Data* plane = reinterpret_cast<Plane::Data*>(area_info.shape_data);
 
-    const Vec3f corner0 = area_info.objToWorld.pointMul(Vec3f(plane->min.x(), 0.0f, plane->min.y()));
-    const Vec3f corner1 = area_info.objToWorld.pointMul(Vec3f(plane->max.x(), 0.0f, plane->min.y()));
-    const Vec3f corner2 = area_info.objToWorld.pointMul(Vec3f(plane->min.x(), 0.0f, plane->max.y()));
+    const Vec3f corner0(plane->min.x(), 0.0f, plane->min.y());
+    const Vec3f corner1(plane->max.x(), 0.0f, plane->min.y());
+    const Vec3f corner2(plane->min.x(), 0.0f, plane->max.y());
 
     const Vec2f uv = UniformSampler::get2D(si->seed);
     const Vec3f rnd_p = Vec3f(
@@ -111,14 +111,16 @@ extern "C" __device__ LightInteraction __direct_callable__rnd_sample_plane(const
         0.0f, 
         lerp(plane->min.y(), plane->max.y(), uv[1])
     );
-
     li.p = area_info.objToWorld.pointMul(rnd_p);
     li.wi = normalize(li.p - si->p);
-    li.n = normalize(area_info.objToWorld.vectorMul(Vec3f(0, 1, 0)));
+    li.n = normalize(area_info.objToWorld.normalMul(Vec3f(0, 1, 0)));
     li.uv = uv;
-    const float d = length(li.p - si->p);
+
+    const Vec3f local_o = area_info.worldToObj.pointMul(si->p);
+    const float d2 = lengthSquared(rnd_p - local_o);
     const float area = length(cross(corner1 - corner0, corner2 - corner0));
-    li.pdf = pow2(d) / area;
+    li.pdf = d2 / area;
+
     return li;
 }
 
@@ -132,7 +134,7 @@ static __forceinline__ __device__ Vec2f getSphereUV(const Vec3f& p) {
 }
 
 static __forceinline__ __device__ bool hitSphere(
-    const Sphere::Data* sphere, const Vec3f& o, const Vec3f& v, const float tmin, const float tmax, SurfaceInteraction& si)
+    const Sphere::Data* sphere, const Vec3f& o, const Vec3f& v, const float tmin, const float tmax, LightInteraction& li)
 {
     const Vec3f center = sphere->center;
     const float radius = sphere->radius;
@@ -155,10 +157,9 @@ static __forceinline__ __device__ bool hitSphere(
             return false;
     }
 
-    si.t = t;
-    si.p = o + t * v;
-    si.shading.n = si.p / radius;
-    si.shading.uv = getSphereUV(si.shading.n);
+    li.p = o + t * v;
+    li.n = li.p / radius;
+    li.uv = getSphereUV(li.n);
     return true;
 }
 
@@ -225,49 +226,35 @@ extern "C" __device__ void __closesthit__sphere() {
     si->shading.dpdv = normalize(optixTransformVectorFromObjectToWorldSpace(dpdv));
 }
 
-extern "C" __device__ float __continuation_callable__pdf_sphere(const AreaEmitterInfo& area_info, const Vec3f& origin, const Vec3f& direction)
-{
-    const Sphere::Data* sphere = reinterpret_cast<Sphere::Data*>(area_info.shape_data);
-    SurfaceInteraction si;
-    const Vec3f local_o = area_info.worldToObj.pointMul(origin);
-    const Vec3f local_d = area_info.worldToObj.vectorMul(direction);
-    
-    if (!hitSphere(sphere, local_o, local_d, 0.01f, 1e16f, si))
-        return 0.0f;
-
-    const Vec3f center = sphere->center;
-    const float radius = sphere->radius;
-    const float cos_theta_max = sqrtf(1.0f - radius * radius / pow2(length(center - local_o)));
-    const float solid_angle = 2.0f * math::pi * (1.0f - cos_theta_max);
-    return 1.0f / solid_angle;
-}
-
 extern "C" __device__ LightInteraction __direct_callable__rnd_sample_sphere(const AreaEmitterInfo& area_info, SurfaceInteraction* si)
 {
-
     LightInteraction li;
     const Sphere::Data* sphere = reinterpret_cast<Sphere::Data*>(area_info.shape_data);
 
+    // Move surface point to object space
     const Vec3f local_o = area_info.worldToObj.pointMul(si->p);
     Vec3f to_light = sphere->center - local_o;
     const float d2 = lengthSquared(to_light);
 
-    Onb onb(to_light);
+    // Sample ray towards a sphere
+    Onb onb(normalize(to_light));
     Vec3f rnd_vec = randomSampleToSphere(si->seed, sphere->radius, d2);
     onb.inverseTransform(rnd_vec);
 
-    SurfaceInteraction local_si;
-    if (!hitSphere(sphere, local_o, rnd_vec, 0.001f, 1e10f, local_si))
+    // Get surface information (point, normal, texcoord) on the sphere, and calculate PDF
+    if (!hitSphere(sphere, local_o, rnd_vec, 0.001f, 1e10f, li))
         li.pdf = 0.0f;
-
-    li.n = normalize(area_info.objToWorld.vectorMul(local_si.shading.n));
-    li.p = area_info.objToWorld.pointMul(local_o + rnd_vec * length(to_light));
-    li.wi = area_info.objToWorld.vectorMul(rnd_vec);
-    li.uv = local_si.shading.uv;
+    else
+    {
+        const float cos_theta_max = sqrtf(1.0f - pow2(sphere->radius) / lengthSquared(sphere->center - local_o));
+        const float solid_angle = 2.0f * math::pi * (1.0f - cos_theta_max);
+        li.pdf = 1.0f / solid_angle;
+    }
     
-    const float cos_theta_max = sqrtf(1.0f - pow2(sphere->radius) / lengthSquared(sphere->center - local_o));
-    const float solid_angle = 2.0f * math::pi * (1.0f - cos_theta_max);
-    li.pdf = 1.0f / solid_angle;
+    // Move to world space
+    li.n = normalize(area_info.objToWorld.normalMul(li.n));
+    li.p = area_info.objToWorld.pointMul(li.p);
+    li.wi = normalize(area_info.objToWorld.vectorMul(rnd_vec));
 
     return li;
 }

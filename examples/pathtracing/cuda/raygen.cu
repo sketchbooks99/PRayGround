@@ -6,7 +6,7 @@ static __forceinline__ __device__ Vec3f reinhardToneMap(const Vec3f& color, cons
     return (color * 1.0f) / (1.0f + l / white);
 }
 
-// Simple path tracer w/o MIS, NEE
+// Simple path tracer w/ NEE
 extern "C" __device__ void __raygen__pinhole()
 {
     const RaygenData* raygen = reinterpret_cast<RaygenData*>(optixGetSbtDataPointer());
@@ -45,26 +45,19 @@ extern "C" __device__ void __raygen__pinhole()
         float tmax = raygen->camera.farclip / dot(rd, normalize(raygen->camera.lookat - ro));
 
         int depth = 0;
-        for ( ;; ) {
+        for (;; ) {
 
             if (depth >= params.max_depth)
                 break;
 
             trace(params.handle, ro, rd, 0.01f, tmax, 0, &si);
 
-            //if (si.trace_terminate) {
-            //    result += si.emission;
-            //    break;
-            //}
-
             // Get emission from area emitter
-            if ( si.surface_info.type == SurfaceType::AreaEmitter )
+            if (si.surface_info.type == SurfaceType::AreaEmitter)
             {
                 // Evaluating emission from emitter
                 optixDirectCall<void, SurfaceInteraction*, void*>(
                     si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
-                //result += si.emission * throughput;
-                //result += si.emission;
 
                 if (depth == 0) {
                     albedo = si.albedo;
@@ -74,9 +67,6 @@ extern "C" __device__ void __raygen__pinhole()
                     p_depth = p_depth / raygen->camera.farclip;
                     normal = si.shading.n;
                 }
-
-                if (si.trace_terminate)
-                    break;
             }
             // Specular sampling
             else if (+(si.surface_info.type & SurfaceType::Delta))
@@ -84,14 +74,14 @@ extern "C" __device__ void __raygen__pinhole()
                 // Sampling scattered direction
                 optixDirectCall<void, SurfaceInteraction*, void*>(
                     si.surface_info.callable_id.sample, &si, si.surface_info.data);
-                
+
                 // Evaluate bsdf
                 Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
                     si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
                 throughput *= bsdf_val;
             }
             // Rough surface sampling with applying MIS
-            else if ( +(si.surface_info.type & (SurfaceType::Rough | SurfaceType::Diffuse)) )
+            else if (+(si.surface_info.type & (SurfaceType::Rough | SurfaceType::Diffuse)))
             {
                 int light_id = rndInt(si.seed, 0, params.num_lights - 1);
                 AreaEmitterInfo light = params.lights[light_id];
@@ -101,50 +91,43 @@ extern "C" __device__ void __raygen__pinhole()
                     (light.sample_id, light, &si);
 
                 const float dist_to_light = length(li.p - si.p);
-                const Vec3f to_light = normalize(li.p - si.p);
-                const float NdotL = dot(si.shading.n, to_light);    // Cosine between surface normal and light vector
+                const float NdotL = dot(si.shading.n, li.wi);    // Cosine between surface normal and light vector
 
-                float LNdotL = -dot(li.n, to_light);                // Cosine between light normal and light vector
+                float LNdotL = -dot(li.n, li.wi);                // Cosine between light normal and light vector
                 if (light.twosided)
                 {
-                    li.n = faceforward(li.n, to_light, li.n);
-                    LNdotL = dot(li.n, to_light);
-                }
-
-                if (light_id == 1)
-                {
-                    printf("Contribution from sphere: NdotL: %f, LNdotL: %f, pdf: %f\n", NdotL, LNdotL, li.pdf);
+                    li.n = faceforward(li.n, li.wi, li.n);
+                    LNdotL = dot(li.n, li.wi);
                 }
 
                 bool is_contributed = false;
-                if (NdotL > 0.0f && LNdotL > 0.0f)
+                if (NdotL > 0.0f && LNdotL > 0.0f && li.pdf > 0.0f)
                 {
-                    const bool occluded = traceShadow(params.handle, si.p, to_light, 0.001f, dist_to_light - 0.001f);
+                    const bool occluded = traceShadow(params.handle, si.p, li.wi, 0.001f, dist_to_light - 0.001f);
                     if (!occluded)
                     {
                         SurfaceInteraction light_si;
                         light_si.p = li.p;
                         light_si.shading.n = li.n;
                         light_si.shading.uv = li.uv;
-                        light_si.wo = to_light;
-                        
+                        light_si.wo = si.wo;
+                        light_si.wi = li.wi;
+
                         // Get emittance from sampled area emitter
                         optixDirectCall<void, SurfaceInteraction*, void*>(
                             light.surface_info.callable_id.bsdf, &light_si, light.surface_info.data);
 
-                        Vec3f contrib_from_light = light_si.emission * NdotL * LNdotL / (math::pi * li.pdf);
+                        Vec3f contrib_from_light = light_si.emission * NdotL * LNdotL / li.pdf;
 
-                        si.wi = to_light;
-
-                        float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*>(
-                            si.surface_info.callable_id.pdf, &si, si.surface_info.data);
+                        si.wi = li.wi;
 
                         // Evaluate BSDF
                         Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
                             si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
 
                         radiance += contrib_from_light;
-                        throughput *= bsdf_val / bsdf_pdf;
+                        si.radiance_evaled = true;
+                        throughput *= bsdf_val;
 
                         is_contributed = true;
                     }
@@ -156,20 +139,15 @@ extern "C" __device__ void __raygen__pinhole()
 
                 if (!is_contributed)
                 {
-                    // Evaluate PDF depends on BSDF
-                    float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*>(
-                        si.surface_info.callable_id.pdf, &si, si.surface_info.data);
-
                     // Evaluate BSDF
                     Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
                         si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
 
-                    throughput *= bsdf_val / bsdf_pdf;
+                    throughput *= bsdf_val;
                 }
-
             }
 
-            result += si.emission;
+            result += si.emission * throughput;
             result += radiance * throughput;
 
             if (si.trace_terminate || depth >= params.max_depth)
@@ -195,7 +173,7 @@ extern "C" __device__ void __raygen__pinhole()
 
     const uint32_t image_index = idx.y() * params.width + idx.x();
 
-    //if (!result.isValid()) result = Vec3f(0.0f);
+    if (!result.isValid()) result = Vec3f(0.0f);
 
     Vec3f accum_color = result / static_cast<float>(params.samples_per_launch);
 

@@ -545,7 +545,8 @@ void App::close()
 // ----------------------------------------------------------------
 void App::mouseDragged(float x, float y, int button)
 {
-    camera_update = true;
+    if (button == MouseButton::Middle)
+        camera_update = true;
 }
 
 // ----------------------------------------------------------------

@@ -13,6 +13,12 @@
 
 namespace prayground {
 
+    enum class EnvmapSampleType : uint32_t {
+        Uniform = 0, 
+        SphericalHarmonic = 1, 
+        Pixel = 2
+    };
+
     class EnvironmentEmitter final : public Emitter {
     public:
         struct Data {

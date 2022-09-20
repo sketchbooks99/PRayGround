@@ -57,7 +57,6 @@ extern "C" __device__ void __direct_callable__sample_dielectric(SurfaceInteracti
         si->wi = reflect(si->wo, outward_normal);
     else    
         si->wi = refract(si->wo, outward_normal, cosine, ni, nt);
-    si->radiance_evaled = false;
     si->trace_terminate = false;
     si->seed = seed;
 }
@@ -85,7 +84,6 @@ extern "C" __device__ void __direct_callable__sample_conductor(SurfaceInteractio
 
     si->wi = reflect(si->wo, si->shading.n);
     si->trace_terminate = false;
-    si->radiance_evaled = false;
 }
 
 extern "C" __device__ Vec3f __continuation_callable__bsdf_conductor(SurfaceInteraction* si, void* mat_data)
@@ -135,7 +133,6 @@ extern "C" __device__ void __direct_callable__sample_disney(SurfaceInteraction* 
         onb.inverseTransform(h);
         si->wi = normalize(reflect(si->wo, h));
     }
-    si->radiance_evaled = false;
     si->trace_terminate = false;
     si->seed = seed;
 }

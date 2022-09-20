@@ -19,7 +19,6 @@ namespace prayground {
         EmitterType type() const override { return EmitterType::Point; }
 
         void copyToDevice() override;
-        void free() override;
 
         Data getData() const;
 

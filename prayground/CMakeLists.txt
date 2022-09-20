@@ -132,6 +132,8 @@ set(sources
   emitter/area.cpp 
   emitter/envmap.h
   emitter/envmap.cpp
+  emitter/point.h 
+  emitter/point.cpp
   emitter/cuda/area.cuh 
   emitter/cuda/envmap.cuh
   

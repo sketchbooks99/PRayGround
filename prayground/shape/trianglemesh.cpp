@@ -140,8 +140,6 @@ namespace prayground {
         d_normals = d_normals_buf.devicePtr();
         d_texcoords = d_texcoords_buf.devicePtr();
 
-        PG_LOG(d_vertices);
-
         // device side pointer of mesh data
         Data data = {
             .vertices = d_vertices_buf.deviceData(),

@@ -362,10 +362,10 @@ namespace prayground {
     {
         // Prepare vertices data
         int window_width = pgGetWidth(), window_height = pgGetHeight();
-        GLfloat x0 = -1.0f + (static_cast<float>(x) / window_width) * 2.0f;
-        GLfloat x1 = -1.0f + (static_cast<float>(x + width) / window_width) * 2.0f;
-        GLfloat y0 =  1.0f - (static_cast<float>(y + height) / window_height) * 2.0f;
-        GLfloat y1 =  1.0f - (static_cast<float>(y) / window_height) * 2.0f;
+        GLfloat x0 = -1.0f + ((static_cast<float>(x) / window_width) * 2.0f);
+        GLfloat x1 = -1.0f + ((static_cast<float>(x + width) / window_width) * 2.0f);
+        GLfloat y0 =  1.0f - ((static_cast<float>(y + height) / window_height) * 2.0f);
+        GLfloat y1 =  1.0f - ((static_cast<float>(y) / window_height) * 2.0f);
         GLfloat vertices[] = {
             // position     // texcoord (vertically flipped)
             x0, y0, 0.0f,   0.0f, 1.0f,
@@ -508,7 +508,7 @@ namespace prayground {
 
         glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
         glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat)*20, nullptr, GL_DYNAMIC_DRAW);
-
+        
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint)*6, nullptr, GL_DYNAMIC_DRAW);
 

@@ -85,8 +85,8 @@ public:
     void offsetSbtIndex(uint32_t sbt_base);
     uint32_t numMaterials() const;
 
-    const std::vector<Vec3f>& vertices() const { return m_vertices; } 
-    const std::vector<Face>& faces() const { return m_faces; } 
+    const std::vector<Vec3f>& vertices() const { return m_vertices; }
+    const std::vector<Face>& faces() const { return m_faces; }
     const std::vector<Vec3f>& normals() const { return m_normals; }
     const std::vector<Vec2f>& texcoords() const { return m_texcoords; }
     const std::vector<uint32_t>& sbtIndices() const { return m_sbt_indices; }

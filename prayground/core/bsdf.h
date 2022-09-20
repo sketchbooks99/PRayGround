@@ -35,6 +35,17 @@ namespace prayground {
         return Vec3f(x, y, z);
     }
 
+    HOSTDEVICE INLINE Vec3f randomSampleOnUnitSphere(uint32_t& seed)
+    {
+        const float theta = 2.0f * math::pi * rnd(seed);
+        const float phi = 2.0f * math::pi * acosf(1.0f - 2.0f * rnd(seed));
+        const float x = sinf(phi) * cosf(theta);
+        const float y = sinf(phi) * sinf(theta);
+        const float z = cosf(theta);
+
+        return Vec3f(x, y, z);
+    }
+
     HOSTDEVICE INLINE Vec3f randomSampleInUnitDisk(unsigned int& seed)
     {
         const float theta = rnd(seed) * math::two_pi;
@@ -46,7 +57,7 @@ namespace prayground {
     {
         float phi = math::two_pi * rnd(seed);
         float z = sqrtf(rnd(seed));
-        float r = sqrtf(fmaxf(0.0f, 1.0f - z * z));
+        float r = sqrtf(1.0f - z * z);
         return Vec3f(r * cosf(phi), r * sinf(phi), z);
     }
 

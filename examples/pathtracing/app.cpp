@@ -77,7 +77,7 @@ void App::setup()
     params.width = result_bitmap.width();
     params.height = result_bitmap.height();
     params.samples_per_launch = 1;
-    params.max_depth = 10;
+    params.max_depth = 5;
     params.white = 1.0f;
 
     initResultBufferOnDevice();
@@ -153,12 +153,14 @@ void App::setup()
 
     // Missプログラム
     ProgramGroup miss_prg = pipeline.createMissProgram(context, miss_module, MS_FUNC_STR("envmap"));
+    ProgramGroup miss_shadow_prg = pipeline.createMissProgram(context, miss_module, MS_FUNC_STR("shadow"));
     // Missプログラム用のShader Binding Tableデータ
     MissRecord miss_record;
     miss_prg.recordPackHeader(&miss_record);
     miss_record.data.env_data = env.devicePtr();
     MissRecord miss_shadow_record;
-    miss_prg.recordPackHeader(&miss_shadow_record);
+    miss_shadow_prg.recordPackHeader(&miss_shadow_record);
+    miss_shadow_record.data.env_data = env.devicePtr();
     sbt.setMissRecord({ miss_record, miss_shadow_record });
 
     // Hitgroupプログラム
@@ -191,28 +193,31 @@ void App::setup()
     {
         // データをGPU側に用意
         primitive.shape->copyToDevice();
-        primitive.shape->setSbtIndex(sbt_idx);
+        primitive.shape->setSbtIndex(0);
+        //primitive.shape->setSbtIndex(sbt_idx);
         primitive.material->copyToDevice();
 
         // Shader Binding Table へのデータの登録
         HitgroupRecord record;
         prg.recordPackHeader(&record);
-        record.data = 
+        HitgroupData hg_data = 
         {
-            .shape_data = primitive.shape->devicePtr(), 
-            .surface_info = 
+            .shape_data = primitive.shape->devicePtr(),
+            .surface_info =
             {
                 .data = primitive.material->devicePtr(),
                 .callable_id = primitive.material->surfaceCallableID(),
                 .type = primitive.material->surfaceType()
             }
         };
+        record.data = hg_data;
 
         HitgroupRecord shadow_record;
         shadow_prg.recordPackHeader(&shadow_record);
+        shadow_record.data = hg_data;
 
         sbt.addHitgroupRecord({ record, shadow_record });
-        sbt_idx++;
+        sbt_idx += SBT::NRay;
 
         // GASをビルドし、IASに追加
         ShapeInstance instance{primitive.shape->type(), primitive.shape, transform};
@@ -236,28 +241,34 @@ void App::setup()
         uint32_t sample_pdf_id
     )
     {        
-        ASSERT(dynamic_pointer_cast<Plane>(shape) || dynamic_pointer_cast<Sphere>(shape), "The shape of area emitter must be a plane or sphere.");
+        const bool is_plane = dynamic_pointer_cast<Plane>(shape) != nullptr;
+        const bool is_sphere = dynamic_pointer_cast<Sphere>(shape) != nullptr;
+
+        ASSERT(is_plane || is_sphere, "The shape of area emitter must be a plane or sphere.");
 
         shape->copyToDevice();
-        shape->setSbtIndex(sbt_idx);
+        shape->setSbtIndex(0);
+        //shape->setSbtIndex(sbt_idx);
         area.copyToDevice();
 
         HitgroupRecord record;
         prg.recordPackHeader(&record);
-        record.data = 
+        HitgroupData hg_data = 
         {
-            .shape_data = shape->devicePtr(), 
-            .surface_info = 
+            .shape_data = shape->devicePtr(),
+            .surface_info =
             {
                 .data = area.devicePtr(),
                 .callable_id = area_emitter_id,
                 .type = SurfaceType::AreaEmitter
             }
         };
+        record.data = hg_data;
 
         HitgroupRecord shadow_record = {};
         shadow_prg.recordPackHeader(&shadow_record);
-        sbt_idx++;
+        shadow_record.data = hg_data;
+        sbt_idx += SBT::NRay;
 
         sbt.addHitgroupRecord({ record, shadow_record });
 
@@ -279,7 +290,9 @@ void App::setup()
             .objToWorld = transform,
             .worldToObj = transform.inverse(), 
             .sample_id = sample_pdf_id,
-            .pdf_id = sample_pdf_id
+            .pdf_id = sample_pdf_id, 
+            .twosided = is_plane, 
+            .surface_info = area.surfaceInfo()
         };
         area_emitter_infos.push_back(area_emitter_info);
     };
@@ -326,7 +339,7 @@ void App::setup()
         auto teapot_constant = make_shared<ConstantTexture>(Vec3f(0.325f, 0.702f, 0.709f), constant_prg_id);
         teapot_constant->copyToDevice();
         // Material
-        auto teapot_diffuse = make_shared<Diffuse>(diffuse_id, teapot_constant);
+        auto teapot_diffuse = make_shared<Diffuse>(diffuse_id, teapot_constant, false);
         // Transform
         Matrix4f transform = Matrix4f::translate(-250.0f, -275.0f, -150.0f) * Matrix4f::scale(40.0f);
         Primitive primitive { teapot, teapot_diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
@@ -532,7 +545,8 @@ void App::close()
 // ----------------------------------------------------------------
 void App::mouseDragged(float x, float y, int button)
 {
-    camera_update = true;
+    if (button == MouseButton::Middle)
+        camera_update = true;
 }
 
 // ----------------------------------------------------------------

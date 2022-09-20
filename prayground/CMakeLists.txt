@@ -48,8 +48,13 @@ set(sources
   app/app_runner.cpp
 
   # OpenGL libraries ==========
+  gl/primitive.h 
+  gl/primitive.cpp
   gl/shader.h 
   gl/shader.cpp
+  gl/texture.h
+  gl/texture.cpp
+  gl/util.h
 
   # Optix wrapper libraries ==========
   optix/context.h 
@@ -58,7 +63,7 @@ set(sources
   optix/denoiser.cpp
   optix/geometry_accel.h 
   optix/geometry_accel.cpp
-  optix/helpers.h 
+  optix/util.h 
   optix/instance_accel.h 
   optix/instance_accel.cpp
   optix/instance.h 
@@ -79,8 +84,10 @@ set(sources
   # Shapes ==========
   shape/box.h
   shape/box.cpp
+  shape/curves.h 
+  shape/curves.cpp
   shape/cylinder.h 
-  shape/cylinder.cpp 
+  shape/cylinder.cpp
   shape/plane.h 
   shape/plane.cpp 
   shape/shapegroup.h
@@ -125,6 +132,8 @@ set(sources
   emitter/area.cpp 
   emitter/envmap.h
   emitter/envmap.cpp
+  emitter/point.h 
+  emitter/point.cpp
   emitter/cuda/area.cuh 
   emitter/cuda/envmap.cuh
   

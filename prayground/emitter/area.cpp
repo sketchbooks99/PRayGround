@@ -68,11 +68,6 @@ namespace prayground {
         return m_surface_callable_id;
     }
 
-    void AreaEmitter::free()
-    {
-        
-    }
-
     AreaEmitter::Data AreaEmitter::getData() const 
     {
         return { m_texture->getData(), m_intensity, m_twosided };

@@ -14,7 +14,7 @@ namespace prayground {
         }
 
         static HOSTDEVICE Vec2f get2D(uint32_t& prev)
-        {            
+        {
             return Vec2f{rnd(prev), rnd(prev)};
         }
 

@@ -13,13 +13,11 @@ namespace prayground {
         const std::vector<Vec3f>& vertices, 
         const std::vector<int32_t>& indices, 
         const std::vector<Vec3f>& normals, 
-        const std::vector<float>& widths, 
-        const std::vector<uint32_t>& sbt_indices) 
+        const std::vector<float>& widths) 
         : m_vertices(vertices)
         , m_indices(indices)
         , m_normals(normals)
         , m_widths(widths)
-        , m_sbt_indices(sbt_indices)
     {
 
     }
@@ -31,10 +29,21 @@ namespace prayground {
 
     void Curves::copyToDevice()
     {
+        Data data = this->getData();
+
+        if (!d_data)
+            CUDA_CHECK(cudaMalloc(&d_data, sizeof(Data)));
+        CUDA_CHECK(cudaMemcpy(
+            d_data,
+            &data, sizeof(Data),
+            cudaMemcpyHostToDevice
+        ));
     }
 
     void Curves::free()
     {
+        Shape::free();
+        cuda_frees(d_vertices, d_normals, d_indices, d_widths);
     }
 
     OptixBuildInput Curves::createBuildInput()
@@ -58,7 +67,7 @@ namespace prayground {
 
     uint32_t Curves::numPrimitives() const
     {
-        return 1;
+        return m_indices.size();
     }
 
     AABB Curves::bound() const
@@ -83,6 +92,7 @@ namespace prayground {
         d_normals = d_normals_buf.devicePtr();
         d_widths = d_widths_buf.devicePtr();
 
+        // Device side pointer of curve mesh data
         Data data = {
             .vertices = d_vertices_buf.deviceData(),
             .indices = d_indices_buf.deviceData(),
@@ -95,51 +105,46 @@ namespace prayground {
 
     void Curves::addVertices(const std::vector<Vec3f>& vertices)
     {
+        std::copy(vertices.begin(), vertices.end(), std::back_inserter(m_vertices));
     }
 
     void Curves::addIndices(const std::vector<int32_t>& indices)
     {
+        std::copy(indices.begin(), indices.end(), std::back_inserter(m_indices));
     }
 
     void Curves::addNormals(const std::vector<Vec3f>& normals)
     {
+        std::copy(normals.begin(), normals.end(), std::back_inserter(m_normals));
     }
 
     void Curves::addWidths(const std::vector<float>& widths)
     {
+        std::copy(widths.begin(), widths.end(), std::back_inserter(m_widths));
     }
 
     void Curves::addVertex(const Vec3f& v)
     {
+        m_vertices.emplace_back(v);
     }
 
     void Curves::addIndex(int32_t i)
     {
+        m_indices.emplace_back(i);
     }
 
     void Curves::addNormal(const Vec3f& n)
     {
+        m_normals.emplace_back(n);
     }
 
     void Curves::addWidth(float w)
     {
+        m_widths.emplace_back(w);
     }
 
     void Curves::load(const std::filesystem::path& filename)
     {
-    }
-
-    void Curves::addSbtIndices(const std::vector<uint32_t>& sbt_indices)
-    {
-    }
-
-    void Curves::offsetSbtIndex(uint32_t sbt_base)
-    {
-    }
-
-    uint32_t Curves::numMaterials() const
-    {
-        return uint32_t();
     }
 
 } // namespace prayground

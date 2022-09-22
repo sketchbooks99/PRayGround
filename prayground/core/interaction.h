@@ -105,12 +105,13 @@ namespace prayground {
         /** Shading frame */
         Shading shading;
 
+        /* For propagating random seed among path */
         uint32_t seed;
 
         SurfaceInfo surface_info;
 
-        bool trace_terminate;
-        bool radiance_evaled; // For NEE
+        //bool trace_terminate;
+        //bool radiance_evaled; // For NEE
     };
 
     struct MediumInteraction {

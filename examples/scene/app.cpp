@@ -30,6 +30,7 @@ void App::setup()
     // Initialize CUDA
     stream = 0; 
     CUDA_CHECK(cudaFree(0));
+
     // Initialize OptixDeviceContext
     OPTIX_CHECK(optixInit());
     context.disableValidation();
@@ -41,6 +42,7 @@ void App::setup()
     pipeline.setNumPayloads(5);
     pipeline.setNumAttributes(5);
 
+    // Create module
     Module module;
     module = pipeline.createModuleFromCudaFile(context, "kernels.cu");
 
@@ -129,6 +131,14 @@ void App::setup()
     plane_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", "__intersection__plane");
     plane_prgs[1] = pipeline.createHitgroupProgram(context, module, "__closesthit__shadow", "__intersection__plane");
 
+    std::array<ProgramGroup, NRay> box_prgs;
+    box_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", "__intersection__box");
+    box_prgs[1] = pipeline.createHitgroupProgram(context, module, "__closesthit__shadow", "__intersection__box");
+
+    std::array<ProgramGroup, NRay> curve_prgs;
+    curve_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__curves");
+    curve_prgs[1] = pipeline.createHitgroupProgram(context, module, "__closesthit__shadow");
+
     // Textures
     auto green_constant = make_shared<ConstantTexture>(Vec3f(0.05f, 0.8f, 0.05f), constant_prg.ID);
     auto red_constant = make_shared<ConstantTexture>(Vec3f(0.8f, 0.05f, 0.05f), constant_prg.ID);
@@ -148,62 +158,16 @@ void App::setup()
     // Shapes
     auto wall_plane = make_shared<Plane>(Vec2f(-25.0f), Vec2f(25.0f));
     
-    uint32_t seed = tea<4>(0, 0);
-    constexpr int NUM_TRIANGLES = 100;
-    std::vector<Vec3f> vertices;
-    std::vector<Face> faces;
-    std::vector<Vec3f> normals;
-    std::vector<Vec2f> texcoords;
-    std::vector<uint32_t> sbt_indices;
-    for (int i = 0; i < NUM_TRIANGLES; i++)
-    {
-        Vec3f location = UniformSampler::get3D(seed) * 40.0f - 20.0f;
-        float size = rnd(seed, 1, 10);
-        Vec3f v0 = UniformSampler::get3D(seed) * size + location;
-        Vec3f v1 = UniformSampler::get3D(seed) * size + location;
-        Vec3f v2 = UniformSampler::get3D(seed) * size + location;
-        vertices.push_back(v0); vertices.push_back(v1); vertices.push_back(v2);
+    // Groud floor
+    scene.addObject("floor", make_shared<Plane>(-500, 500), 
+        floor_diffuse, plane_prgs, Matrix4f::identity());
 
-        int i0 = i * 3 + 0;
-        int i1 = i * 3 + 1;
-        int i2 = i * 3 + 2;
-        Face face{ {i0, i1, i2}, {i0, i1, i2}, {i0, i1, i2 } };
-        faces.push_back(face);
+    // Sphere
+    scene.addObject("sphere", make_shared<Sphere>(30),
+        white_diffuse, sphere_prgs, Matrix4f::translate(0, 50, 0));
 
-        Vec3f n = normalize(cross(v2 - v0, v1 - v0));
-        normals.push_back(n); normals.push_back(n); normals.push_back(n);
-
-        Vec2f texcoord0(0.0f, 0.0f);
-        Vec2f texcoord1(0.0f, 1.0f);
-        Vec2f texcoord2(1.0f, 1.0f);
-        texcoords.push_back(texcoord0); texcoords.push_back(texcoord1); texcoords.push_back(texcoord2);
-
-        sbt_indices.push_back(rndInt(seed, 0, 2));
-    }
-
-    auto mesh = make_shared<TriangleMesh>(vertices, faces, normals, texcoords, sbt_indices);
-    vector<shared_ptr<Material>> mesh_materials;
-    mesh_materials.push_back(red_diffuse);
-    mesh_materials.push_back(black_diffuse);
-    mesh_materials.push_back(blue_diffuse);
-
-    // Objects
-    scene.addObject("left_wall", wall_plane, green_diffuse, plane_prgs,
-        Matrix4f::translate(-25, 0, 0) * Matrix4f::rotate(math::pi / 2.0f, Vec3f{0, 0, 1}));
-    
-    scene.addObject("right_wall", wall_plane, red_diffuse, plane_prgs, 
-        Matrix4f::translate(25, 0, 0)* Matrix4f::rotate(math::pi / 2.0f, Vec3f{ 0, 0, 1 }));
-
-    scene.addObject("back_wall", wall_plane, white_diffuse, plane_prgs,
-        Matrix4f::translate(0, 0, -25)* Matrix4f::rotate(math::pi / 2.0f, Vec3f{ 1, 0, 0 }));
-
-    scene.addObject("ceiling", wall_plane, white_diffuse, plane_prgs,
-        Matrix4f::translate(0, 25, 0));
-
-    scene.addObject("floor", wall_plane, floor_diffuse, plane_prgs,
-        Matrix4f::translate(0, -25, 0));
-
-    scene.addObject("triangles", mesh, mesh_materials, mesh_prgs, Matrix4f::identity());
+    scene.addObject("box", make_shared<Box>(Vec3f(-15, 15, 15), Vec3f(15, 15, 15)),
+        green_diffuse, box_prgs, Matrix4f::translate(50, 50, 0));
 
     scene.addLight("ceiling_light", make_shared<Plane>(Vec2f(-5.0f), Vec2f(5.0f)),
         make_shared<AreaEmitter>(area_emitter_id, make_shared<ConstantTexture>(Vec3f(1.0f), constant_prg.ID)), 

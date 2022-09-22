@@ -182,6 +182,7 @@ extern "C" __device__ void __miss__shadow()
 }
 
 // Hitgroups 
+// Plane
 extern "C" __device__ void __intersection__plane()
 {
     const pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
@@ -211,6 +212,7 @@ static __forceinline__ __device__ Vec2f getSphereUV(const Vec3f& p) {
     return Vec2f(u, v);
 }
 
+// Sphere
 extern "C" __device__ void __intersection__sphere() {
     const pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
     const Sphere::Data* sphere = reinterpret_cast<Sphere::Data*>(data->shape_data);
@@ -245,6 +247,56 @@ extern "C" __device__ void __intersection__sphere() {
                 optixReportIntersection(t2, 0, Vec3f_as_ints(normal), Vec2f_as_ints(uv));
             }
         }
+    }
+}
+
+// Box
+extern "C" __device__ void __closesthit__box()
+{
+    pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
+    Box::Data* box = reinterpret_cast<Box::Data*>(data->shape_data);
+
+    Ray ray = getLocalRay();
+
+    int min_axis = -1, max_axis = -1;
+    float tmin = ray.tmin;
+    float tmax = ray.tmax;
+    for (int i = 0; i < 3; i++)
+    {
+        float t0, t1;
+        if (ray.d[i] == 0.0f)
+        {
+            t0 = fminf(box->min[i] - ray.o[i], box->max[i] - ray.o[i]);
+            t1 = fmaxf(box->min[i] - ray.o[i], box->max[i] - ray.o[i]);
+        }
+        else
+        {
+            t0 = fminf((box->min[i] - ray.o[i]) / ray.d[i], (box->max[i] - ray.o[i]) / ray.d[i]);
+            t1 = fmaxf((box->min[i] - ray.o[i]) / ray.d[i], (box->max[i] - ray.o[i]) / ray.d[i]);
+        }
+
+        // Update min/max axis by obtained t0/t1
+        min_axis = t0 > tmin ? i : min_axis;
+        max_axis = t1 < tmax ? i : max_axis;
+
+        // Update tmin/tmax 
+        tmin = fmaxf(t0, tmin);
+        tmax = fminf(t1, tmax);
+
+        // No intersection
+        if (tmax < tmin)
+            return;
+    }
+
+    Vec3f center = (box->min + box->max) / 2.0f;
+
+    if ((ray.tmin < tmin && tmin < ray.tmax) && (-1 < min_axis && min_axis < 3))
+    {
+        Vec3f p = ray.at(tmin);
+        Vec3f center_axis = p;
+        center_axis[min_axis] = center[min_axis];
+        Vec3f n = normalize(p - center_axis);
+        Vec2f uv = 
     }
 }
 

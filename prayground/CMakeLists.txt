@@ -95,11 +95,7 @@ set(sources
   shape/sphere.cpp
   shape/trianglemesh.h
   shape/trianglemesh.cpp
-  shape/cuda/cylinder.cuh 
-  shape/cuda/plane.cuh 
-  shape/cuda/sphere.cuh 
-  shape/cuda/trianglemesh.cuh
-  shape/cuda/box.cuh
+  shape/cuda/shapes.cuh
  
   # Materials ==========
   material/conductor.h 

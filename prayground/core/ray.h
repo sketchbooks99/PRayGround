@@ -6,7 +6,11 @@
 namespace prayground {
 
     struct Ray {
-        HOSTDEVICE INLINE Vec3f at(const float time) { return o + d*time; }
+        Ray() = default;
+        Ray(const Vec3f& o, const Vec3f& d, float tmin, float tmax, float t = 0.0f)
+            : o(o), d(d), tmin(tmin), tmax(tmax), t(t) {}
+
+        HOSTDEVICE INLINE Vec3f at(const float time) const { return o + d * time; }
 
         /* Position of ray origin in world coordinates. */
         Vec3f o;

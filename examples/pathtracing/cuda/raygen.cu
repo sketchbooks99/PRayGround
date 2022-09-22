@@ -39,8 +39,7 @@ extern "C" __device__ void __raygen__pinhole()
         si.seed = seed;
         si.emission = Vec3f(0.0f);
         si.albedo = Vec3f(0.0f);
-        si.trace_terminate = false;
-        si.radiance_evaled = false;
+        bool trace_terminate = false;
 
         float tmax = raygen->camera.farclip / dot(rd, normalize(raygen->camera.lookat - ro));
 
@@ -126,7 +125,6 @@ extern "C" __device__ void __raygen__pinhole()
                             si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
 
                         radiance += contrib_from_light;
-                        si.radiance_evaled = true;
                         throughput *= bsdf_val;
 
                         is_contributed = true;

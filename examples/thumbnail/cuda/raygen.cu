@@ -53,7 +53,6 @@ extern "C" __device__ void __raygen__pinhole()
         si.emission = Vec3f(0.0f);
         si.albedo = Vec3f(0.0f);
         si.trace_terminate = false;
-        si.radiance_evaled = false;
 
         float tmax = raygen->camera.farclip / dot(rd, normalize(raygen->camera.lookat - ro));
 

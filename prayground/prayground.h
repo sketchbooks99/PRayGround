@@ -65,6 +65,7 @@
 #include "shape/cylinder.h"
 #include "shape/box.h"
 #include "shape/shapegroup.h"
+#include "shape/cuda/shapes.cuh" // Contains default intersection test program for custom primitives
 
 // material include 
 #include "material/conductor.h"

@@ -13,7 +13,23 @@
 #define PG_MAX_NUM_ATTRIBUTES_STR "8"
 #define PG_MAX_NUM_PAYLOADS_STR "8"
 
+#ifdef __CUDACC__
+
 namespace prayground {
+
+    INLINE DEVICE void* unpackPointer( uint32_t i0, uint32_t i1 )
+    {
+        const uint64_t uptr = static_cast<uint64_t>( i0 ) << 32 | i1;
+        void* ptr = reinterpret_cast<void*>( uptr );
+        return ptr;
+    }
+
+    INLINE DEVICE void packPointer(void* ptr, uint32_t& i0, uint32_t& i1)
+    {
+        const uint64_t uptr = reinterpret_cast<uint64_t>( ptr );
+        i0 = uptr >> 32;
+        i1 = uptr & 0x00000000ffffffff;
+    }
 
     template <uint32_t i>
     INLINE DEVICE uint32_t getAttribute()
@@ -189,45 +205,6 @@ namespace prayground {
         T c(a); a = b; b = c;
     }
 
-    INLINE DEVICE void* unpackPointer( uint32_t i0, uint32_t i1 )
-    {
-        const uint64_t uptr = static_cast<uint64_t>( i0 ) << 32 | i1;
-        void* ptr = reinterpret_cast<void*>( uptr );
-        return ptr;
-    }
-
-    INLINE DEVICE void packPointer(void* ptr, uint32_t& i0, uint32_t& i1)
-    {
-        const uint64_t uptr = reinterpret_cast<uint64_t>( ptr );
-        i0 = uptr >> 32;
-        i1 = uptr & 0x00000000ffffffff;
-    }
-
-    template <typename... Payloads>
-    INLINE DEVICE auto pgTrace(
-        OptixTraversableHandle handle,
-        Vec3f                  ray_origin,
-        Vec3f                  ray_direction,
-        float                  tmin,
-        float                  tmax,
-        uint32_t               ray_type,
-        uint32_t               ray_count, 
-        Payloads...            payloads
-    ) -> decltype(std::initializer_list<uint32_t>{payloads...}, void())
-    {
-        optixTrace(
-            handle,
-            ray_origin,
-            ray_direction,
-            tmin,
-            tmax,
-            0.0f,                // rayTime
-            OptixVisibilityMask( 1 ),
-            OPTIX_RAY_FLAG_NONE,
-            ray_type,        
-            ray_count,           
-            ray_type, 
-            payloads...);
-    }
-
 } // namespace prayground
+
+#endif

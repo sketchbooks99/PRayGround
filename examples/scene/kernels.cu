@@ -60,7 +60,6 @@ extern "C" __device__ void __raygen__pinhole()
 		si.emission = 0.0f;
 		si.albedo = 0.0f;
 		si.trace_terminate = false;
-		si.radiance_evaled = false;
 
 		int depth = 0;
 		for (;;)
@@ -182,142 +181,23 @@ extern "C" __device__ void __miss__shadow()
 }
 
 // Hitgroups 
-// Plane
-extern "C" __device__ void __intersection__plane()
-{
-    const pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
-    const Plane::Data* plane = reinterpret_cast<Plane::Data*>(data->shape_data);
-
-    const Vec2f min = plane->min;
-    const Vec2f max = plane->max;
-
-    Ray ray = getLocalRay();
-
-    const float t = -ray.o.y() / ray.d.y();
-
-    const float x = ray.o.x() + t * ray.d.x();
-    const float z = ray.o.z() + t * ray.d.z();
-
-    Vec2f uv(x / (max.x() - min.x()), z / (max.y() - min.y()));
-
-    if (min.x() < x && x < max.x() && min.y() < z && z < max.y() && ray.tmin < t && t < ray.tmax)
-        optixReportIntersection(t, 0, Vec3f_as_ints(Vec3f(0, 1, 0)), Vec2f_as_ints(uv));
-}
-
-static __forceinline__ __device__ Vec2f getSphereUV(const Vec3f& p) {
-    float phi = atan2(p.z(), p.x());
-    float theta = asin(p.y());
-    float u = 1.0f - (phi + math::pi) / (2.0f * math::pi);
-    float v = 1.0f - (theta + math::pi / 2.0f) / math::pi;
-    return Vec2f(u, v);
-}
-
-// Sphere
-extern "C" __device__ void __intersection__sphere() {
-    const pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
-    const Sphere::Data* sphere = reinterpret_cast<Sphere::Data*>(data->shape_data);
-
-    const Vec3f center = sphere->center;
-    const float radius = sphere->radius;
-
-    Ray ray = getLocalRay();
-
-    const Vec3f oc = ray.o - center;
-    const float a = dot(ray.d, ray.d);
-    const float half_b = dot(oc, ray.d);
-    const float c = dot(oc, oc) - radius * radius;
-    const float discriminant = half_b * half_b - a * c;
-
-    if (discriminant > 0.0f) {
-        float sqrtd = sqrtf(discriminant);
-        float t1 = (-half_b - sqrtd) / a;
-        bool check_second = true;
-        if (t1 > ray.tmin && t1 < ray.tmax) {
-            Vec3f normal = normalize((ray.at(t1) - center) / radius);
-            Vec2f uv = getSphereUV(normal);
-            check_second = false;
-            optixReportIntersection(t1, 0, Vec3f_as_ints(normal), Vec2f_as_ints(uv));
-        }
-
-        if (check_second) {
-            float t2 = (-half_b + sqrtd) / a;
-            if (t2 > ray.tmin && t2 < ray.tmax) {
-                Vec3f normal = normalize((ray.at(t2) - center) / radius);
-                Vec2f uv = getSphereUV(normal);
-                optixReportIntersection(t2, 0, Vec3f_as_ints(normal), Vec2f_as_ints(uv));
-            }
-        }
-    }
-}
-
-// Box
-extern "C" __device__ void __closesthit__box()
-{
-    pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
-    Box::Data* box = reinterpret_cast<Box::Data*>(data->shape_data);
-
-    Ray ray = getLocalRay();
-
-    int min_axis = -1, max_axis = -1;
-    float tmin = ray.tmin;
-    float tmax = ray.tmax;
-    for (int i = 0; i < 3; i++)
-    {
-        float t0, t1;
-        if (ray.d[i] == 0.0f)
-        {
-            t0 = fminf(box->min[i] - ray.o[i], box->max[i] - ray.o[i]);
-            t1 = fmaxf(box->min[i] - ray.o[i], box->max[i] - ray.o[i]);
-        }
-        else
-        {
-            t0 = fminf((box->min[i] - ray.o[i]) / ray.d[i], (box->max[i] - ray.o[i]) / ray.d[i]);
-            t1 = fmaxf((box->min[i] - ray.o[i]) / ray.d[i], (box->max[i] - ray.o[i]) / ray.d[i]);
-        }
-
-        // Update min/max axis by obtained t0/t1
-        min_axis = t0 > tmin ? i : min_axis;
-        max_axis = t1 < tmax ? i : max_axis;
-
-        // Update tmin/tmax 
-        tmin = fmaxf(t0, tmin);
-        tmax = fminf(t1, tmax);
-
-        // No intersection
-        if (tmax < tmin)
-            return;
-    }
-
-    Vec3f center = (box->min + box->max) / 2.0f;
-
-    if ((ray.tmin < tmin && tmin < ray.tmax) && (-1 < min_axis && min_axis < 3))
-    {
-        Vec3f p = ray.at(tmin);
-        Vec3f center_axis = p;
-        center_axis[min_axis] = center[min_axis];
-        Vec3f n = normalize(p - center_axis);
-        Vec2f uv = 
-    }
-}
-
 extern "C" __device__ void __closesthit__custom()
 {
     pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
 
     Ray ray = getWorldRay();
 
-    Vec3f local_n = getVec3fFromAttribute<0>();
-    Vec3f world_n = optixTransformNormalFromObjectToWorldSpace(local_n);
-    world_n = normalize(world_n);
-    Vec2f uv = getVec2fFromAttribute<3>();
+    Shading* shading = getPtrFromTwoAttributes<Shading, 0>();
+    shading->n = optixTransformNormalFromObjectToWorldSpace(shading->n);
+    shading->dpdu = optixTransformVectorFromObjectToWorldSpace(shading->dpdu);
+    shading->dpdv = optixTransformVectorFromObjectToWorldSpace(shading->dpdv);
 
     auto* si = getSurfaceInteraction();
 
     si->p = ray.at(ray.tmax);
-    si->shading.n = world_n;
+    si->shading = *shading;
     si->t = ray.tmax;
     si->wo = ray.d;
-    si->shading.uv = uv;
     si->surface_info = data->surface_info;
 }
 
@@ -354,10 +234,21 @@ extern "C" __device__ void __closesthit__mesh()
     SurfaceInteraction* si = getSurfaceInteraction();
     si->p = ray.at(ray.tmax);
     si->shading.n = world_n;
+    si->shading.uv = texcoords;
     si->t = ray.tmax;
     si->wo = ray.d;
-    si->shading.uv = texcoords;
     si->surface_info = data->surface_info;
+}
+
+extern "C" __device__ void __closesthit__curves()
+{
+    const pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
+    const Curves::Data* curves = reinterpret_cast<Curves::Data*>(data->shape_data);
+
+    // Get segment ID
+    const uint32_t primitive_id = optixGetPrimitiveIndex();
+
+
 }
 
 extern "C" __device__ void __closesthit__shadow()
@@ -423,7 +314,6 @@ extern "C" __device__ void __direct_callable__sample_glass(SurfaceInteraction * 
         si->wi = reflect(si->wo, outward_normal);
     else
         si->wi = refract(si->wo, outward_normal, cosine, ni, nt);
-    si->radiance_evaled = false;
     si->trace_terminate = false;
     si->seed = seed;
 }

@@ -116,23 +116,23 @@ void App::setup()
     };
 
     // Callables programs for texture
-    uint32_t constant_prg_id = setupCallable(module, DC_FUNC_STR("constant"), "");
-    uint32_t bitmap_prg_id = setupCallable(module, DC_FUNC_STR("bitmap"), "");
+    uint32_t constant_prg_id = setupCallable(module, DC_FUNC_TEXT("constant"), "");
+    uint32_t bitmap_prg_id = setupCallable(module, DC_FUNC_TEXT("bitmap"), "");
 
     // Callables programs for surfaces
     // Diffuse
-    uint32_t diffuse_prg_id = setupCallable(module, DC_FUNC_STR("sample_diffuse"), "");
+    uint32_t diffuse_prg_id = setupCallable(module, DC_FUNC_TEXT("sample_diffuse"), "");
     // Dielectric
-    uint32_t dielectric_prg_id = setupCallable(module, DC_FUNC_STR("sample_dielectric"), "");
+    uint32_t dielectric_prg_id = setupCallable(module, DC_FUNC_TEXT("sample_dielectric"), "");
     // AreaEmitter
-    uint32_t area_emitter_prg_id = setupCallable(module, DC_FUNC_STR("area_emitter"), "");
+    uint32_t area_emitter_prg_id = setupCallable(module, DC_FUNC_TEXT("area_emitter"), "");
 
     SurfaceCallableID diffuse_id = { 0, diffuse_prg_id, 0 };
     SurfaceCallableID dielectric_id = { 0, dielectric_prg_id, 0 };
     SurfaceCallableID area_emitter_id = { 0, area_emitter_prg_id, 0 };
 
     // Shape用のCallableプログラム(主に面光源サンプリング用)
-    uint32_t plane_sample_pdf_prg_id = setupCallable(module, DC_FUNC_STR("rnd_sample_plane"), CC_FUNC_STR("pdf_plane"));
+    uint32_t plane_sample_pdf_prg_id = setupCallable(module, DC_FUNC_TEXT("rnd_sample_plane"), CC_FUNC_TEXT("pdf_plane"));
 
     // 環境マッピング (Sphere mapping) 用のテクスチャとデータ準備
     auto env_texture = make_shared<FloatBitmapTexture>("resources/image/sepulchral_chapel_rotunda_4k.exr", bitmap_prg_id);
@@ -141,7 +141,7 @@ void App::setup()
     env.copyToDevice();
 
     // Missプログラム
-    ProgramGroup miss_prg = pipeline.createMissProgram(context, module, MS_FUNC_STR("envmap"));
+    ProgramGroup miss_prg = pipeline.createMissProgram(context, module, MS_FUNC_TEXT("envmap"));
     // Missプログラム用のShader Binding Tableデータ
     MissRecord miss_record;
     miss_prg.recordPackHeader(&miss_record);
@@ -150,11 +150,11 @@ void App::setup()
 
     // Hitgroupプログラム
     // Plane
-    auto plane_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("plane"), IS_FUNC_STR("plane"));
+    auto plane_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_TEXT("plane"), IS_FUNC_TEXT("plane"));
     // Sphere
-    auto sphere_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("sphere"), IS_FUNC_STR("sphere"));
+    auto sphere_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_TEXT("sphere"), IS_FUNC_TEXT("sphere"));
     // Triangle mesh
-    auto mesh_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("mesh"));
+    auto mesh_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_TEXT("mesh"));
 
     struct Primitive
     {

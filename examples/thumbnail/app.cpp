@@ -124,25 +124,25 @@ void App::setup()
     };
 
     // Callable programs for textures
-    uint32_t constant_prg_id = setupCallable(textures_module, DC_FUNC_STR("constant"), "");
-    uint32_t checker_prg_id = setupCallable(textures_module, DC_FUNC_STR("checker"), "");
-    uint32_t bitmap_prg_id = setupCallable(textures_module, DC_FUNC_STR("bitmap"), "");
+    uint32_t constant_prg_id = setupCallable(textures_module, DC_FUNC_TEXT("constant"), "");
+    uint32_t checker_prg_id = setupCallable(textures_module, DC_FUNC_TEXT("checker"), "");
+    uint32_t bitmap_prg_id = setupCallable(textures_module, DC_FUNC_TEXT("bitmap"), "");
 
     // Callable programs for surfaces 
     // Diffuse
-    uint32_t diffuse_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_diffuse"), CC_FUNC_STR("bsdf_diffuse"));
-    uint32_t diffuse_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_diffuse"), "");
+    uint32_t diffuse_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_TEXT("sample_diffuse"), CC_FUNC_TEXT("bsdf_diffuse"));
+    uint32_t diffuse_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_TEXT("pdf_diffuse"), "");
     // Conductor
-    uint32_t conductor_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_conductor"), CC_FUNC_STR("bsdf_conductor"));
-    uint32_t conductor_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_conductor"), "");
+    uint32_t conductor_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_TEXT("sample_conductor"), CC_FUNC_TEXT("bsdf_conductor"));
+    uint32_t conductor_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_TEXT("pdf_conductor"), "");
     // Dielectric
-    uint32_t dielectric_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_dielectric"), CC_FUNC_STR("bsdf_dielectric"));
-    uint32_t dielectric_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_dielectric"), "");
+    uint32_t dielectric_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_TEXT("sample_dielectric"), CC_FUNC_TEXT("bsdf_dielectric"));
+    uint32_t dielectric_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_TEXT("pdf_dielectric"), "");
     // Disney
-    uint32_t disney_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_disney"), CC_FUNC_STR("bsdf_disney"));
-    uint32_t disney_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_disney"), "");
+    uint32_t disney_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_TEXT("sample_disney"), CC_FUNC_TEXT("bsdf_disney"));
+    uint32_t disney_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_TEXT("pdf_disney"), "");
     // AreaEmitter
-    uint32_t area_emitter_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("area_emitter"), "");
+    uint32_t area_emitter_prg_id = setupCallable(surfaces_module, DC_FUNC_TEXT("area_emitter"), "");
 
     SurfaceCallableID diffuse_id = { diffuse_sample_bsdf_prg_id, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
     SurfaceCallableID conductor_id = { conductor_sample_bsdf_prg_id, conductor_sample_bsdf_prg_id, conductor_pdf_prg_id };
@@ -151,7 +151,7 @@ void App::setup()
     SurfaceCallableID area_emitter_id = { area_emitter_prg_id, area_emitter_prg_id, area_emitter_prg_id };
     
     // Callable program for direct sampling of area emitter
-    uint32_t plane_sample_pdf_prg_id = setupCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_plane"), CC_FUNC_STR("pdf_plane"));
+    uint32_t plane_sample_pdf_prg_id = setupCallable(hitgroups_module, DC_FUNC_TEXT("rnd_sample_plane"), CC_FUNC_TEXT("pdf_plane"));
 
     textures.emplace("env", new FloatBitmapTexture("resources/image/christmas_photo_studio_01_4k.exr", bitmap_prg_id));
 
@@ -159,7 +159,7 @@ void App::setup()
     env.copyToDevice();
 
     // Miss program
-    ProgramGroup miss_prg = pipeline.createMissProgram(context, miss_module, MS_FUNC_STR("envmap"));
+    ProgramGroup miss_prg = pipeline.createMissProgram(context, miss_module, MS_FUNC_TEXT("envmap"));
     // Shader binding table data for miss program
     MissRecord miss_record;
     miss_prg.recordPackHeader(&miss_record);
@@ -168,17 +168,17 @@ void App::setup()
 
     // Hitgroup program
     // Plane
-    auto plane_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("plane"), IS_FUNC_STR("plane"));
-    auto plane_alpha_discard_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("plane"), IS_FUNC_STR("plane"), AH_FUNC_STR("alpha_discard"));
+    auto plane_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("plane"), IS_FUNC_TEXT("plane"));
+    auto plane_alpha_discard_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("plane"), IS_FUNC_TEXT("plane"), AH_FUNC_TEXT("alpha_discard"));
     // Sphere
-    auto sphere_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("sphere"), IS_FUNC_STR("sphere"));
-    auto sphere_alpha_discard_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("sphere"), IS_FUNC_STR("sphere"), AH_FUNC_STR("alpha_discard"));
+    auto sphere_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("sphere"), IS_FUNC_TEXT("sphere"));
+    auto sphere_alpha_discard_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("sphere"), IS_FUNC_TEXT("sphere"), AH_FUNC_TEXT("alpha_discard"));
     // Box
-    auto box_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("box"), IS_FUNC_STR("box"));
+    auto box_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("box"), IS_FUNC_TEXT("box"));
     // Cylinder
-    auto cylinder_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("cylinder"), IS_FUNC_STR("cylinder"));
+    auto cylinder_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("cylinder"), IS_FUNC_TEXT("cylinder"));
     // Triangle mesh
-    auto mesh_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("mesh"));
+    auto mesh_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("mesh"));
 
     uint32_t sbt_idx = 0;
     uint32_t sbt_offset = 0;

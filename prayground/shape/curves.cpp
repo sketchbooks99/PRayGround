@@ -7,17 +7,21 @@ namespace prayground {
 
     namespace fs = std::filesystem;
 
-    Curves::Curves() {}
+    Curves::Curves(Curves::Type curve_type)
+        : m_curve_type(curve_type)
+    {}
 
     Curves::Curves(
+        Curves::Type curve_type,
         const std::vector<Vec3f>& vertices, 
         const std::vector<int32_t>& indices, 
-        const std::vector<Vec3f>& normals, 
-        const std::vector<float>& widths) 
-        : m_vertices(vertices)
+        const std::vector<float>& widths,
+        const std::vector<Vec3f>& normals) 
+        : m_curve_type(curve_type)
+        , m_vertices(vertices)
         , m_indices(indices)
-        , m_normals(normals)
         , m_widths(widths)
+        , m_normals(normals)
     {
 
     }
@@ -51,6 +55,7 @@ namespace prayground {
         OptixBuildInput bi = {};
 
         bi.type = static_cast<OptixBuildInputType>(this->type());
+        bi.curveArray.curveType = static_cast<OptixPrimitiveType>(m_curve_type);
         bi.curveArray.vertexBuffers = &d_vertices;
         bi.curveArray.vertexStrideInBytes = sizeof(Vec3f);
         bi.curveArray.numVertices = static_cast<uint32_t>(m_vertices.size());
@@ -79,25 +84,25 @@ namespace prayground {
     {
         CUDABuffer<Vec3f> d_vertices_buf;
         CUDABuffer<int> d_indices_buf;
-        CUDABuffer<Vec3f> d_normals_buf;
         CUDABuffer<float> d_widths_buf;
+        CUDABuffer<Vec3f> d_normals_buf;
 
         d_vertices_buf.copyToDevice(m_vertices);
         d_indices_buf.copyToDevice(m_indices);
-        d_normals_buf.copyToDevice(m_normals);
         d_widths_buf.copyToDevice(m_widths);
+        d_normals_buf.copyToDevice(m_normals);
 
         d_vertices = d_vertices_buf.devicePtr();
         d_indices = d_indices_buf.devicePtr();
-        d_normals = d_normals_buf.devicePtr();
         d_widths = d_widths_buf.devicePtr();
+        d_normals = d_normals_buf.devicePtr();
 
         // Device side pointer of curve mesh data
         Data data = {
             .vertices = d_vertices_buf.deviceData(),
             .indices = d_indices_buf.deviceData(),
-            .normals = d_normals_buf.deviceData(),
             .widths = d_widths_buf.deviceData(),
+            .normals = d_normals_buf.deviceData()
         };
 
         return data;
@@ -145,6 +150,27 @@ namespace prayground {
 
     void Curves::load(const std::filesystem::path& filename)
     {
+    }
+
+    Curves::Type Curves::curveType() const
+    {
+        return Curves::Type();
+    }
+
+    uint32_t Curves::getNumVertexPerSegment(Curves::Type curves_type)
+    {
+        switch (curves_type)
+        {
+        case Curves::Type::Linear:
+            return 2;
+        case Curves::Type::QuadlicBspline:
+            return 3;
+        case Curves::Type::CubicBspline:
+        case Curves::Type::CatmullRom:
+            return 4;
+        default:
+            return 0;
+        }
     }
 
 } // namespace prayground

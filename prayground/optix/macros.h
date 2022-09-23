@@ -61,14 +61,14 @@
 #define DC_FUNC(name) __direct_callable__ ## name
 #define CC_FUNC(name) __continuation_callable__ ## name
 
-#define RG_FUNC_STR(name) "__raygen__" name
-#define IS_FUNC_STR(name) "__intersection__" name
-#define AH_FUNC_STR(name) "__anyhit__" name
-#define CH_FUNC_STR(name) "__closesthit__" name
-#define MS_FUNC_STR(name) "__miss__" name
-#define EX_FUNC_STR(name) "__exception__" name
-#define DC_FUNC_STR(name) "__direct_callable__" name
-#define CC_FUNC_STR(name) "__continuation_callable__" name
+#define RG_FUNC_TEXT(name) "__raygen__" name
+#define IS_FUNC_TEXT(name) "__intersection__" name
+#define AH_FUNC_TEXT(name) "__anyhit__" name
+#define CH_FUNC_TEXT(name) "__closesthit__" name
+#define MS_FUNC_TEXT(name) "__miss__" name
+#define EX_FUNC_TEXT(name) "__exception__" name
+#define DC_FUNC_TEXT(name) "__direct_callable__" name
+#define CC_FUNC_TEXT(name) "__continuation_callable__" name
 
 #ifndef __CUDACC__
 

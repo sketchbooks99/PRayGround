@@ -71,12 +71,14 @@ extern "C" __device__ LightInteraction __direct_callable__rnd_sample_sphere(cons
     return li;
 }
 
-// Custom shape
-extern "C" DEVICE void CH_FUNC(custom)()
+// Custom shape -------------------------------------------------------------------------------
+extern "C" DEVICE void __closesthit__custom()
 {
     const pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
     Ray ray = getWorldRay();
 
+    // Get shading infomation from intersection test implmented in prayground library 
+    // ref: prayground/shape/cuda/shapes.cuh
     Shading* shading = getPtrFromTwoAttributes<Shading, 0>();
 
     SurfaceInteraction* si = getSurfaceInteraction();

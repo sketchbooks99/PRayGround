@@ -110,25 +110,25 @@ void App::setup()
     };
 
     // テクスチャ用のCallableプログラム
-    uint32_t constant_prg_id = setupCallable(textures_module, DC_FUNC_STR("constant"), "");
-    uint32_t checker_prg_id = setupCallable(textures_module, DC_FUNC_STR("checker"), "");
-    uint32_t bitmap_prg_id = setupCallable(textures_module, DC_FUNC_STR("bitmap"), "");
+    uint32_t constant_prg_id = setupCallable(textures_module, DC_FUNC_TEXT("constant"), "");
+    uint32_t checker_prg_id = setupCallable(textures_module, DC_FUNC_TEXT("checker"), "");
+    uint32_t bitmap_prg_id = setupCallable(textures_module, DC_FUNC_TEXT("bitmap"), "");
 
     // Surface用のCallableプログラム 
     // Diffuse
-    uint32_t diffuse_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_diffuse"), CC_FUNC_STR("bsdf_diffuse"));
-    uint32_t diffuse_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_diffuse"), "");
+    uint32_t diffuse_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_TEXT("sample_diffuse"), CC_FUNC_TEXT("bsdf_diffuse"));
+    uint32_t diffuse_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_TEXT("pdf_diffuse"), "");
     // Conductor
-    uint32_t conductor_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_conductor"), CC_FUNC_STR("bsdf_conductor"));
-    uint32_t conductor_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_conductor"), "");
+    uint32_t conductor_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_TEXT("sample_conductor"), CC_FUNC_TEXT("bsdf_conductor"));
+    uint32_t conductor_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_TEXT("pdf_conductor"), "");
     // Dielectric
-    uint32_t dielectric_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_dielectric"), CC_FUNC_STR("bsdf_dielectric"));
-    uint32_t dielectric_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_dielectric"), "");
+    uint32_t dielectric_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_TEXT("sample_dielectric"), CC_FUNC_TEXT("bsdf_dielectric"));
+    uint32_t dielectric_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_TEXT("pdf_dielectric"), "");
     // Disney
-    uint32_t disney_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_disney"), CC_FUNC_STR("bsdf_disney"));
-    uint32_t disney_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_disney"), "");
+    uint32_t disney_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_TEXT("sample_disney"), CC_FUNC_TEXT("bsdf_disney"));
+    uint32_t disney_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_TEXT("pdf_disney"), "");
     // AreaEmitter
-    uint32_t area_emitter_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("area_emitter"), "");
+    uint32_t area_emitter_prg_id = setupCallable(surfaces_module, DC_FUNC_TEXT("area_emitter"), "");
 
     SurfaceCallableID diffuse_id{ diffuse_sample_bsdf_prg_id, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
     SurfaceCallableID conductor_id{ conductor_sample_bsdf_prg_id, conductor_sample_bsdf_prg_id, conductor_pdf_prg_id };
@@ -137,8 +137,8 @@ void App::setup()
     SurfaceCallableID area_emitter_id{ area_emitter_prg_id, area_emitter_prg_id, area_emitter_prg_id };
 
     // Shape用のCallableプログラム(主に面光源サンプリング用)
-    uint32_t plane_sample_pdf_prg_id = setupCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_plane"), "");
-    uint32_t sphere_sample_pdf_prg_id = setupCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_sphere"), "");
+    uint32_t plane_sample_pdf_prg_id = setupCallable(hitgroups_module, DC_FUNC_TEXT("rnd_sample_plane"), "");
+    uint32_t sphere_sample_pdf_prg_id = setupCallable(hitgroups_module, DC_FUNC_TEXT("rnd_sample_sphere"), "");
 
     // 環境マッピング (Sphere mapping) 用のテクスチャとデータ準備
     // 画像ファイルはリポジトリには含まれていないので、任意の画像データを設定してください
@@ -152,8 +152,8 @@ void App::setup()
     env.copyToDevice();
 
     // Missプログラム
-    ProgramGroup miss_prg = pipeline.createMissProgram(context, miss_module, MS_FUNC_STR("envmap"));
-    ProgramGroup miss_shadow_prg = pipeline.createMissProgram(context, miss_module, MS_FUNC_STR("shadow"));
+    ProgramGroup miss_prg = pipeline.createMissProgram(context, miss_module, MS_FUNC_TEXT("envmap"));
+    ProgramGroup miss_shadow_prg = pipeline.createMissProgram(context, miss_module, MS_FUNC_TEXT("shadow"));
     // Missプログラム用のShader Binding Tableデータ
     MissRecord miss_record;
     miss_prg.recordPackHeader(&miss_record);
@@ -165,17 +165,17 @@ void App::setup()
 
     // Hitgroupプログラム
     // Plane
-    auto plane_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("custom"), PG_INTERSECTION_TEXT("plane"));
-    auto plane_shadow_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("shadow"), PG_INTERSECTION_TEXT("plane"));
+    auto plane_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("custom"), PG_INTERSECTION_TEXT("plane"));
+    auto plane_shadow_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("shadow"), PG_INTERSECTION_TEXT("plane"));
     // Sphere
-    auto sphere_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("custom"), PG_INTERSECTION_TEXT("sphere"));
-    auto sphere_shadow_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("shadow"), PG_INTERSECTION_TEXT("sphere"));
+    auto sphere_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("custom"), PG_INTERSECTION_TEXT("sphere"));
+    auto sphere_shadow_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("shadow"), PG_INTERSECTION_TEXT("sphere"));
     // Cylinder
-    auto cylinder_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("custom"), PG_INTERSECTION_TEXT("cylinder"));
-    auto cylinder_shadow_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("shadow"), PG_INTERSECTION_TEXT("cylinder"));
+    auto cylinder_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("custom"), PG_INTERSECTION_TEXT("cylinder"));
+    auto cylinder_shadow_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("shadow"), PG_INTERSECTION_TEXT("cylinder"));
     // Triangle mesh
-    auto mesh_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("mesh"));
-    auto mesh_shadow_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("shadow"));
+    auto mesh_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("mesh"));
+    auto mesh_shadow_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("shadow"));
 
     struct Primitive
     {

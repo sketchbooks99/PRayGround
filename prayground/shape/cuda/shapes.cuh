@@ -459,6 +459,29 @@ namespace prayground {
         }
     }
 
+    // ----------------------------------------------------------------------------------------
+    // Curves
+    // ----------------------------------------------------------------------------------------
+    static INLINE DEVICE Vec3f getNormalCurvesLinear(const uint32_t primitive_idx)
+    {
+        const OptixTraversableHandle gas = optixGetGASTraversableHandle();
+        const uint32_t gas_sbt_idx = optixGetSbtGASIndex();
+        float4 control_points[2];
+
+        optixGetLinearCurveVertexData(gas, primitive_idx, gas_sbt_idx, 0.0f, control_points);
+    }
+
+    // Return shading frame contains the NORMAL, TEXCOORD, derivatives on point/normal (dpdu, dpdv, dndu, dndv)
+    static INLINE DEVICE Shading getShadingCurvesLinear(const uint32_t primitive_idx)
+    {
+
+    }
+
+    static INLINE DEVICE Shading getShadingCurves(const uint32_t primitive_idx, OptixPrimitiveType primitive_type)
+    {
+
+    }
+
 } // namespace prayground
 
 #endif // __CUDACC__

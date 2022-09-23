@@ -124,16 +124,16 @@ void App::setup()
     mesh_prgs[1] = pipeline.createHitgroupProgram(context, module, "__closesthit__shadow");
 
     std::array<ProgramGroup, NRay> sphere_prgs;
-    sphere_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", "__intersection__sphere");
-    sphere_prgs[1] = pipeline.createHitgroupProgram(context, module, "__closesthit__shadow", "__intersection__sphere");
+    sphere_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", PG_INTERSECTION_TEXT("sphere"));
+    sphere_prgs[1] = pipeline.createHitgroupProgram(context, module, "__closesthit__shadow", PG_INTERSECTION_TEXT("sphere"));
 
     std::array<ProgramGroup, NRay> plane_prgs;
-    plane_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", "__intersection__plane");
-    plane_prgs[1] = pipeline.createHitgroupProgram(context, module, "__closesthit__shadow", "__intersection__plane");
+    plane_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", PG_INTERSECTION_TEXT("plane"));
+    plane_prgs[1] = pipeline.createHitgroupProgram(context, module, "__closesthit__shadow", PG_INTERSECTION_TEXT("plane"));
 
     std::array<ProgramGroup, NRay> box_prgs;
-    box_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", "__intersection__box");
-    box_prgs[1] = pipeline.createHitgroupProgram(context, module, "__closesthit__shadow", "__intersection__box");
+    box_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", PG_INTERSECTION_TEXT("box"));
+    box_prgs[1] = pipeline.createHitgroupProgram(context, module, "__closesthit__shadow", PG_INTERSECTION_TEXT("box"));
 
     std::array<ProgramGroup, NRay> curve_prgs;
     curve_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__curves");
@@ -159,12 +159,49 @@ void App::setup()
     auto wall_plane = make_shared<Plane>(Vec2f(-25.0f), Vec2f(25.0f));
     
     // Groud floor
-    scene.addObject("floor", make_shared<Plane>(-500, 500), 
+    scene.addObject("floor", make_shared<Plane>(Vec2f(-500, -500), Vec2f(500, 500)), 
         floor_diffuse, plane_prgs, Matrix4f::identity());
 
     // Sphere
     scene.addObject("sphere", make_shared<Sphere>(30),
         white_diffuse, sphere_prgs, Matrix4f::translate(0, 50, 0));
+
+    // Carpet far with curves
+    constexpr int32_t NUM_SEGMENTS = 10;
+    constexpr float CURVE_HEIGHT = 20.0f;
+    shared_ptr<Curves> floor_curves(new Curves(Curves::Type::QuadlicBspline));
+
+    int32_t idx = 0;
+    uint32_t seed = tea<4>(0, 0);
+    for (int x = -500; x <= 500; x += 10)
+    {
+        for (int z = -500; z <= 500; z += 10)
+        {
+            int32_t num_vertices_per_curve = NUM_SEGMENTS + (int)Curves::getNumVertexPerSegment(floor_curves->curveType());
+            float y_interval = CURVE_HEIGHT / (float)(num_vertices_per_curve - 1);
+            for (int s = 0; s < num_vertices_per_curve; s++)
+            {
+                float y = s * y_interval;
+                const float coeff = (float)s / NUM_SEGMENTS;
+                const float inv_coeff = (float)(num_vertices_per_curve - s) / num_vertices_per_curve;
+                float xoffset = rnd(seed, -5, 5) * sinf(math::pi * coeff);
+                float zoffset = rnd(seed, -5, 5) * cosf(math::pi * coeff);
+                xoffset *= coeff;
+                zoffset *= coeff;
+                const Vec3f v(x + xoffset, y, z + zoffset);
+                const float w = inv_coeff * 8.0f;
+                
+                floor_curves->addVertex(v);
+                floor_curves->addWidth(w);
+
+                idx++;
+                if (s < NUM_SEGMENTS)
+                    floor_curves->addIndex(idx);
+            }
+        }
+    }
+
+    scene.addObject("carpet", floor_curves, white_diffuse, curve_prgs);
 
     scene.addObject("box", make_shared<Box>(Vec3f(-15, 15, 15), Vec3f(15, 15, 15)),
         green_diffuse, box_prgs, Matrix4f::translate(50, 50, 0));

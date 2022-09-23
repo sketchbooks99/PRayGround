@@ -93,17 +93,17 @@ void App::setup()
     };
 
     // Callable programs for textures
-    uint32_t constant_prg_id = setupCallable(DC_FUNC_STR("constant"), "");
-    uint32_t checker_prg_id = setupCallable(DC_FUNC_STR("checker"), "");
-    uint32_t bitmap_prg_id = setupCallable(DC_FUNC_STR("bitmap"), "");
+    uint32_t constant_prg_id = setupCallable(DC_FUNC_TEXT("constant"), "");
+    uint32_t checker_prg_id = setupCallable(DC_FUNC_TEXT("checker"), "");
+    uint32_t bitmap_prg_id = setupCallable(DC_FUNC_TEXT("bitmap"), "");
 
     // Callable programs for materials
     // Diffuse
-    uint32_t diffuse_prg_id = setupCallable(DC_FUNC_STR("sample_diffuse"), "");
+    uint32_t diffuse_prg_id = setupCallable(DC_FUNC_TEXT("sample_diffuse"), "");
     // Medium
-    uint32_t medium_prg_id = setupCallable(DC_FUNC_STR("sample_medium"), "");
+    uint32_t medium_prg_id = setupCallable(DC_FUNC_TEXT("sample_medium"), "");
     // Area emitter
-    uint32_t area_emitter_prg_id = setupCallable(DC_FUNC_STR("area_emitter"), "");
+    uint32_t area_emitter_prg_id = setupCallable(DC_FUNC_TEXT("area_emitter"), "");
     
     textures.emplace("env", new FloatBitmapTexture("resources/image/drackenstein_quarry_4k.exr", bitmap_prg_id));
     //textures.emplace("env", new ConstantTexture(Vec3f(0.1f), constant_prg_id));
@@ -121,11 +121,11 @@ void App::setup()
 
     // Hitgroup programs
     // Plane
-    auto plane_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("plane"), IS_FUNC_STR("plane"));
+    auto plane_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_TEXT("plane"), IS_FUNC_TEXT("plane"));
     // Sphere
-    auto sphere_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("sphere"), IS_FUNC_STR("sphere"));
+    auto sphere_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_TEXT("sphere"), IS_FUNC_TEXT("sphere"));
     // Grid medium
-    auto grid_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("grid"), IS_FUNC_STR("grid"));
+    auto grid_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_TEXT("grid"), IS_FUNC_TEXT("grid"));
     
     using SurfaceP = variant<shared_ptr<Material>, shared_ptr<AreaEmitter>>;
     struct Primitive

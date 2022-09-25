@@ -19,7 +19,7 @@ namespace prayground {
     // ----------------------------------------------------------------------------------------
     // Cylinder
     // ----------------------------------------------------------------------------------------
-    static INLINE DEVICE Vec2f getCylinderUV(
+    INLINE DEVICE Vec2f getCylinderUV(
         const Vec3f& p, const Cylinder::Data& cylinder, const bool hit_disk)
     {
         if (hit_disk)
@@ -39,7 +39,7 @@ namespace prayground {
         }
     }
 
-    static INLINE DEVICE bool intersectionCylinder(
+    INLINE DEVICE bool intersectionCylinder(
         const Cylinder::Data* cylinder, const Ray& ray, Shading* shading, float* time
     )
     {
@@ -155,7 +155,7 @@ namespace prayground {
     // ----------------------------------------------------------------------------------------
     // Box
     // ----------------------------------------------------------------------------------------
-    static INLINE DEVICE Vec2f getBoxUV(const Vec3f& p, const Box::Data& box, const int axis)
+    INLINE DEVICE Vec2f getBoxUV(const Vec3f& p, const Box::Data& box, const int axis)
     {
         int u_axis = (axis + 1) % 3;
         int v_axis = (axis + 2) % 3;
@@ -172,7 +172,7 @@ namespace prayground {
     }
 
     /* Return a hitting axis of box face, X=0, Y=1, Z=2 */
-    static INLINE DEVICE bool intersectionBox(
+    INLINE DEVICE bool intersectionBox(
         const Box::Data* box, const Ray& ray, Shading* shading, float* time
     )
     {
@@ -301,14 +301,14 @@ namespace prayground {
     // ----------------------------------------------------------------------------------------
     // Plane
     // ----------------------------------------------------------------------------------------
-    static INLINE DEVICE Vec2f getPlaneUV(const Vec2f p, const Plane::Data& plane)
+    INLINE DEVICE Vec2f getPlaneUV(const Vec2f p, const Plane::Data& plane)
     {
         const float u = (p.x() - plane.min.x()) / (plane.max.x() - plane.min.x());
         const float v = (p.y() - plane.min.y()) / (plane.max.y() - plane.min.y());
         return Vec2f(u, v);
     }
 
-    static INLINE DEVICE bool intersectionPlane(const Plane::Data* plane, const Ray& ray, Shading* shading, float* time)
+    INLINE DEVICE bool intersectionPlane(const Plane::Data* plane, const Ray& ray, Shading* shading, float* time)
     {
         const float t = -ray.o.y() / ray.d.y();
         const float x = ray.o.x() + t * ray.d.x();
@@ -372,7 +372,7 @@ namespace prayground {
     // ----------------------------------------------------------------------------------------
     // Sphere
     // ----------------------------------------------------------------------------------------
-    static INLINE DEVICE Vec2f getSphereUV(const Vec3f& p) {
+    INLINE DEVICE Vec2f getSphereUV(const Vec3f& p) {
         float phi = atan2(p.z(), p.x());
         if (phi < 0) phi += 2.0f * math::pi;
         float theta = acos(p.y());
@@ -381,7 +381,7 @@ namespace prayground {
         return Vec2f(u, v);
     }
 
-    static INLINE DEVICE bool intersectionSphere(
+    INLINE DEVICE bool intersectionSphere(
         const Sphere::Data* sphere, const Ray& ray, Shading* shading, float* time)
     {
         const Vec3f oc = ray.o - sphere->center;
@@ -462,24 +462,59 @@ namespace prayground {
     // ----------------------------------------------------------------------------------------
     // Curves
     // ----------------------------------------------------------------------------------------
-    static INLINE DEVICE Vec3f getNormalCurvesLinear(const uint32_t primitive_idx)
+    
+    // Return shading frame contains the NORMAL, TEXCOORD, derivatives on point/normal (dpdu, dpdv, dndu, dndv)
+    INLINE DEVICE Shading getShadingCurvesLinear(const uint32_t primitive_idx)
     {
         const OptixTraversableHandle gas = optixGetGASTraversableHandle();
         const uint32_t gas_sbt_idx = optixGetSbtGASIndex();
         float4 control_points[2];
 
         optixGetLinearCurveVertexData(gas, primitive_idx, gas_sbt_idx, 0.0f, control_points);
+
+        LinearInterpolator interpolator;
+        interpolator.initialize(control_points);
+
+        const float u = optixGetCurveParameter;
+
+        Vec4f v0 = control_points[0], v1 = control_points[1];
+        Vec4f velocity = v1 - v0;
+
+        Ray ray = getLocalRay();
+        Vec3f hit_point = ray.at(ray.tmax);
+
+        // Curve point and width on the intersection detected
+        Vec3f p = Vec3f(v0) + u * Vec3f(velocity);
+        float w = v0.w() + u * velocity.w();
+
+        float dd = dot(Vec3f(velocity), Vec3f(velocity));
+
+        Vec3f o1 = hit_point - p;
+        o1 -= (dot(o1, Vec3f(velocity)) / dd) * Vec3f(velocity);
+        o1 *= w / length(o1);
+        hit_point = p + o1;
+
+        Ray ray = getLocalRay();
+        Vec3f hit_point = ray.at(ray.tmax);
+        Vec3f n = dd * o1 - (velocity.w() * w) * Vec3f(velocity);
+
+        Shading shading;
+        shading.u = Vec2f(0.0f, u);
+        shading.n = n;
+        shading.dpdv = normalize(Vec3f(velocity));
+        shading.dpdu = cross(shading.n, shading.dpdv);
     }
 
-    // Return shading frame contains the NORMAL, TEXCOORD, derivatives on point/normal (dpdu, dpdv, dndu, dndv)
-    static INLINE DEVICE Shading getShadingCurvesLinear(const uint32_t primitive_idx)
+    INLINE DEVICE Shading getShadingCurves(const uint32_t primitive_idx, OptixPrimitiveType primitive_type)
     {
-
-    }
-
-    static INLINE DEVICE Shading getShadingCurves(const uint32_t primitive_idx, OptixPrimitiveType primitive_type)
-    {
-
+        switch (primitive_type)
+        {
+        case OPTIX_PRIMITIVE_TYPE_ROUND_QUADRATIC_BSPLINE:
+        case OPTIX_PRIMITIVE_TYPE_ROUND_LINEAR:
+            return getShadingCurvesLinear(primitive_idx);
+        case OPTIX_PRIMITIVE_TYPE_ROUND_CUBIC_BSPLINE:
+        case OPTIX_PRIMITIVE_TYPE_ROUND_CATMULLROM:
+        }
     }
 
 } // namespace prayground

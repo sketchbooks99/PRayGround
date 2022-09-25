@@ -39,6 +39,11 @@ OptixBuildInput SphereMedium::createBuildInput()
     return createSingleCustomBuildInput(d_aabb_buffer, this->bound(), m_sbt_index);
 }
 
+uint32_t SphereMedium::numPrimitives() const
+{
+    return 1;
+}
+
 AABB SphereMedium::bound() const 
 {
     return AABB(m_center - m_radius, m_center + m_radius);

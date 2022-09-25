@@ -4,7 +4,7 @@
 
 #ifndef __CUDACC__
     #include <prayground/app/window.h>
-#else __CUDACC__
+#else 
     // For random sampling for lens camera ray
     #include <prayground/core/bsdf.h>
 #endif

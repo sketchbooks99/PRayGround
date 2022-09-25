@@ -3,6 +3,7 @@
 #ifndef __CUDACC__
 #include <prayground/core/shape.h>
 #include <prayground/core/cudabuffer.h>
+#include <filesystem>
 #endif
 
 namespace prayground {

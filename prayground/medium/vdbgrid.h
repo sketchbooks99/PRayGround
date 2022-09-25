@@ -103,6 +103,11 @@ namespace prayground {
             return createSingleCustomBuildInput(d_aabb_buffer, this->bound(), m_sbt_index);
         }
 
+        uint32_t numPrimitives() const override 
+        {
+            return 1;
+        }
+
         Data getData() 
         {
             // Copy density data to device

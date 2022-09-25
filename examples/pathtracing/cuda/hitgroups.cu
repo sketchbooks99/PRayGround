@@ -72,29 +72,6 @@ extern "C" __device__ void __closesthit__plane()
     si->shading.dpdv = optixTransformNormalFromObjectToWorldSpace(Vec3f(0.0f, 0.0f, 1.0f));
 }
 
-extern "C" __device__ float __continuation_callable__pdf_plane(const AreaEmitterInfo& area_info, const Vec3f& origin, const Vec3f& direction)
-{
-    const Plane::Data* plane = reinterpret_cast<Plane::Data*>(area_info.shape_data);
-
-    SurfaceInteraction si;
-    const Vec3f local_o = area_info.worldToObj.pointMul(origin);
-    const Vec3f local_d = area_info.worldToObj.vectorMul(direction);
-
-    if (!hitPlane(plane, local_o, local_d, 0.01f, 1e16f, si))
-        return 0.0f;
-
-    const Vec3f corner0 = area_info.objToWorld.pointMul(Vec3f(plane->min.x(), 0.0f, plane->min.y()));
-    const Vec3f corner1 = area_info.objToWorld.pointMul(Vec3f(plane->max.x(), 0.0f, plane->min.y()));
-    const Vec3f corner2 = area_info.objToWorld.pointMul(Vec3f(plane->min.x(), 0.0f, plane->max.y()));
-    si.shading.n = normalize(area_info.objToWorld.vectorMul(si.shading.n));
-    const float area = length(cross(corner1 - corner0, corner2 - corner0));
-    const float distance_squared = si.t * si.t;
-    const float cosine = fabs(dot(si.shading.n, direction));
-    if (cosine < math::eps)
-        return 0.0f;
-    return distance_squared / (cosine * area);
-}
-
 // グローバル空間における si.p -> 光源上の点 のベクトルを返す
 extern "C" __device__ LightInteraction __direct_callable__rnd_sample_plane(const AreaEmitterInfo& area_info, SurfaceInteraction* si)
 {

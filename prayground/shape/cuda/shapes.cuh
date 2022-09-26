@@ -213,14 +213,16 @@ namespace prayground {
         Vec3f center = (min + max) / 2.0f;
         int axis = min_axis;
         float t = tmin;
-        // Check if the smaller ray time is valid
+        // Check the near intersection
         if ((t < ray.tmin || ray.tmax < t) || (axis < 0 || 2 < axis))
         {
             axis = max_axis;
             t = tmax;
-            // Check if the bigger ray time is valid
+            // Check the far intersection
             if ((t < ray.tmin || ray.tmax < t) || (axis < 0 || 2 < axis))
+            {
                 return false;
+            }
         }
 
         Vec3f p = ray.at(t);
@@ -464,54 +466,50 @@ namespace prayground {
     // ----------------------------------------------------------------------------------------
     
     // Return shading frame contains the NORMAL, TEXCOORD, derivatives on point/normal (dpdu, dpdv, dndu, dndv)
-    INLINE DEVICE Shading getShadingCurvesLinear(const uint32_t primitive_idx)
+    INLINE DEVICE Shading getShadingCurvesLinear(Vec3f& hit_point, const uint32_t primitive_idx)
     {
         const OptixTraversableHandle gas = optixGetGASTraversableHandle();
         const uint32_t gas_sbt_idx = optixGetSbtGASIndex();
         float4 control_points[2];
 
+        // Get vertex data using SBT index at GAS and primitive index
         optixGetLinearCurveVertexData(gas, primitive_idx, gas_sbt_idx, 0.0f, control_points);
 
-        LinearInterpolator interpolator;
-        interpolator.initialize(control_points);
-
-        const float u = optixGetCurveParameter;
+        // Get curve parameter [0, 1]
+        const float u = optixGetCurveParameter();
 
         Vec4f v0 = control_points[0], v1 = control_points[1];
         Vec4f velocity = v1 - v0;
 
-        Ray ray = getLocalRay();
-        Vec3f hit_point = ray.at(ray.tmax);
-
-        // Curve point and width on the intersection detected
+        // Curve point and width on the intersection point
         Vec3f p = Vec3f(v0) + u * Vec3f(velocity);
         float w = v0.w() + u * velocity.w();
 
         float dd = dot(Vec3f(velocity), Vec3f(velocity));
-
+        
         Vec3f o1 = hit_point - p;
         o1 -= (dot(o1, Vec3f(velocity)) / dd) * Vec3f(velocity);
         o1 *= w / length(o1);
         hit_point = p + o1;
 
-        Ray ray = getLocalRay();
-        Vec3f hit_point = ray.at(ray.tmax);
         Vec3f n = dd * o1 - (velocity.w() * w) * Vec3f(velocity);
 
         Shading shading;
-        shading.u = Vec2f(0.0f, u);
+        shading.uv = Vec2f(0.0f, u);
         shading.n = n;
         shading.dpdv = normalize(Vec3f(velocity));
         shading.dpdu = cross(shading.n, shading.dpdv);
+
+        return shading;
     }
 
-    INLINE DEVICE Shading getShadingCurves(const uint32_t primitive_idx, OptixPrimitiveType primitive_type)
+    INLINE DEVICE Shading getShadingCurves(Vec3f& hit_point, const uint32_t primitive_idx, OptixPrimitiveType primitive_type)
     {
         switch (primitive_type)
         {
         case OPTIX_PRIMITIVE_TYPE_ROUND_QUADRATIC_BSPLINE:
         case OPTIX_PRIMITIVE_TYPE_ROUND_LINEAR:
-            return getShadingCurvesLinear(primitive_idx);
+            return getShadingCurvesLinear(hit_point, primitive_idx);
         case OPTIX_PRIMITIVE_TYPE_ROUND_CUBIC_BSPLINE:
         case OPTIX_PRIMITIVE_TYPE_ROUND_CATMULLROM:
         }

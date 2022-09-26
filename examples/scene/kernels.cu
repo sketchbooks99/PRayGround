@@ -188,6 +188,7 @@ extern "C" __device__ void __closesthit__custom()
     Ray ray = getWorldRay();
 
     Shading* shading = getPtrFromTwoAttributes<Shading, 0>();
+    // Transform shading frame to world space
     shading->n = optixTransformNormalFromObjectToWorldSpace(shading->n);
     shading->dpdu = optixTransformVectorFromObjectToWorldSpace(shading->dpdu);
     shading->dpdv = optixTransformVectorFromObjectToWorldSpace(shading->dpdv);
@@ -248,7 +249,21 @@ extern "C" __device__ void __closesthit__curves()
     // Get segment ID
     const uint32_t primitive_id = optixGetPrimitiveIndex();
 
+    Ray ray = getWorldRay();
+    Vec3f hit_point = optixTransformPointFromWorldToObjectSpace(ray.at(ray.tmax));
 
+    Shading shading = getShadingCurves(hit_point, primitive_id, optixGetPrimitiveType());
+    // Transform shading frame to world space
+    shading.n = optixTransformNormalFromObjectToWorldSpace(shading.n);
+    shading.dpdu = optixTransformVectorFromObjectToWorldSpace(shading.dpdu);
+    shading.dpdv = optixTransformVectorFromObjectToWorldSpace(shading.dpdv);
+
+    SurfaceInteraction* si = getSurfaceInteraction();
+    si->p = optixTransformPointFromObjectToWorldSpace(hit_point);
+    si->shading = shading;
+    si->t = ray.tmax;
+    si->wo = ray.d;
+    si->surface_info = data->surface_info;
 }
 
 extern "C" __device__ void __closesthit__shadow()

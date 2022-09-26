@@ -65,6 +65,7 @@ namespace prayground {
         bi.curveArray.normalStrideInBytes = sizeof(Vec3f);
         bi.curveArray.indexBuffer = d_indices;
         bi.curveArray.indexStrideInBytes = sizeof(int32_t);
+        bi.curveArray.numPrimitives = static_cast<uint32_t>(m_indices.size());
         bi.curveArray.flag = OPTIX_GEOMETRY_FLAG_NONE;
         bi.curveArray.primitiveIndexOffset = 0;
         return bi;
@@ -150,11 +151,6 @@ namespace prayground {
 
     void Curves::load(const std::filesystem::path& filename)
     {
-    }
-
-    Curves::Type Curves::curveType() const
-    {
-        return Curves::Type();
     }
 
     uint32_t Curves::getNumVertexPerSegment(Curves::Type curves_type)

@@ -252,7 +252,7 @@ extern "C" __device__ void __closesthit__curves()
     Ray ray = getWorldRay();
     Vec3f hit_point = optixTransformPointFromWorldToObjectSpace(ray.at(ray.tmax));
 
-    Shading shading = getShadingCurves(hit_point, primitive_id, optixGetPrimitiveType());
+    Shading shading = getCurvesShading(hit_point, primitive_id, optixGetPrimitiveType());
     // Transform shading frame to world space
     shading.n = optixTransformNormalFromObjectToWorldSpace(shading.n);
     shading.dpdu = optixTransformVectorFromObjectToWorldSpace(shading.dpdu);

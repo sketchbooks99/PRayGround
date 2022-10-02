@@ -136,7 +136,7 @@ void App::setup()
     box_prgs[1] = pipeline.createHitgroupProgram(context, module, "__closesthit__shadow", PG_INTERSECTION_TEXT("box"));
 
     std::array<ProgramGroup, NRay> curve_prgs;
-    Module curve_module = pipeline.createBuiltinIntersectionModule(context, OPTIX_PRIMITIVE_TYPE_ROUND_LINEAR);
+    Module curve_module = pipeline.createBuiltinIntersectionModule(context, OPTIX_PRIMITIVE_TYPE_ROUND_CUBIC_BSPLINE);
     curve_prgs[0] = pipeline.createHitgroupProgram(context, { module, "__closesthit__curves" }, { curve_module, "" });
     curve_prgs[1] = pipeline.createHitgroupProgram(context, { module, "__closesthit__shadow" }, { curve_module, "" });
 
@@ -146,7 +146,7 @@ void App::setup()
     auto white_constant = make_shared<ConstantTexture>(Vec3f(0.8f), constant_prg.ID);
     auto floor_checker = make_shared<CheckerTexture>(Vec3f(0.3f), Vec3f(0.8f), 10, checker_prg.ID);
     auto blue_constant = make_shared<ConstantTexture>(Vec3f(0.05f, 0.05f, 0.8f), constant_prg.ID);
-    auto black_constant = make_shared<ConstantTexture>(Vec3f(0.0f), constant_prg.ID);
+    auto black_constant = make_shared<ConstantTexture>(Vec3f(0.05f), constant_prg.ID);
 
     // Materials
     auto green_diffuse = make_shared<Diffuse>(diffuse_id, green_constant);
@@ -165,21 +165,22 @@ void App::setup()
 
     // Sphere
     scene.addObject("sphere", make_shared<Sphere>(30),
-        white_diffuse, sphere_prgs, Matrix4f::translate(0, 50, 0));
+        black_diffuse, sphere_prgs, Matrix4f::translate(0, 100, 0));
 
     // Carpet far with curves
     constexpr int32_t NUM_SEGMENTS = 10;
-    constexpr float CURVE_HEIGHT = 20.0f;
-    shared_ptr<Curves> floor_curves(new Curves(Curves::Type::Linear));
+    constexpr float CURVE_HEIGHT = 100.0f;
+    shared_ptr<Curves> floor_curves(new Curves(Curves::Type::CubicBSpline));
 
-    int32_t idx = 0;
     uint32_t seed = tea<4>(0, 0);
-    for (int x = -500; x <= 500; x += 10)
+
+    for (int x = -500; x <= 500; x += 25)
     {
-        for (int z = -500; z <= 500; z += 10)
+        for (int z = -500; z <= 500; z += 25)
         {
             int32_t num_vertices_per_curve = NUM_SEGMENTS + (int32_t)Curves::getNumVertexPerSegment(floor_curves->curveType());
             float y_interval = CURVE_HEIGHT / (float)(num_vertices_per_curve - 1);
+            int32_t base_idx = (int32_t)floor_curves->vertices().size();
             for (int s = 0; s < num_vertices_per_curve; s++)
             {
                 float y = s * y_interval;
@@ -190,25 +191,24 @@ void App::setup()
                 xoffset *= coeff;
                 zoffset *= coeff;
                 const Vec3f v(x + xoffset, y, z + zoffset);
-                const float w = inv_coeff * 8.0f;
+                const float w = inv_coeff * 4.0f;
                 
                 floor_curves->addVertex(v);
                 floor_curves->addWidth(w);
 
-                idx++;
-                if (s < NUM_SEGMENTS)
-                    floor_curves->addIndex(idx);
+                if (s < (num_vertices_per_curve - (int32_t)Curves::getNumVertexPerSegment(floor_curves->curveType())))
+                    floor_curves->addIndex(base_idx + s);
             }
         }
     }
 
-    scene.addObject("carpet", floor_curves, white_diffuse, curve_prgs);
+    scene.addObject("carpet", floor_curves, red_diffuse, curve_prgs, Matrix4f::identity());
 
-    scene.addObject("box", make_shared<Box>(Vec3f(-15), Vec3f(15)),
-        green_diffuse, box_prgs, Matrix4f::translate(50, 50, 0));
+    //scene.addObject("box", make_shared<Box>(Vec3f(-15), Vec3f(15)),
+    //    green_diffuse, box_prgs, Matrix4f::translate(50, 50, 0));
 
     scene.addLight("ceiling_light", make_shared<Plane>(Vec2f(-100.0f), Vec2f(100.0f)),
-        make_shared<AreaEmitter>(area_emitter_id, make_shared<ConstantTexture>(Vec3f(1.0f), constant_prg.ID)), 
+        make_shared<AreaEmitter>(area_emitter_id, make_shared<ConstantTexture>(Vec3f(1.0f), constant_prg.ID), 5.0f), 
         plane_prgs, Matrix4f::translate(0, 300.0f, 0));
 
     CUDA_CHECK(cudaStreamCreate(&stream));

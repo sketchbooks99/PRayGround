@@ -286,7 +286,7 @@ namespace prayground {
         T& w() { return e[3]; }
         const T& w() const { return e[3]; }
 
-        const Vec4& operator-() const { return Vec4{ -e[0], -e[1], -e[2] }; }
+        const Vec4& operator-() const { return Vec4{ -e[0], -e[1], -e[2], -e[3]}; }
 
         Vec4& operator+=(const Vec4& v)
         {
@@ -667,7 +667,7 @@ namespace prayground {
     template <typename T>
     INLINE HOSTDEVICE T dot(const Vec4<T>& a, const Vec4<T>& b)
     {
-        return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+        return a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3];
     }
 
     template <typename T>

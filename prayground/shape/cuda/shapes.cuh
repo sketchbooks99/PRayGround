@@ -16,6 +16,10 @@
 
 namespace prayground {
 
+    class LinearInterpolator;
+    class QuadricInterpolator;
+    class CubicInterpolator;
+
     // ----------------------------------------------------------------------------------------
     // Cylinder
     // ----------------------------------------------------------------------------------------
@@ -464,54 +468,290 @@ namespace prayground {
     // ----------------------------------------------------------------------------------------
     // Curves
     // ----------------------------------------------------------------------------------------
-    
-    // Return shading frame contains the NORMAL, TEXCOORD, derivatives on point/normal (dpdu, dpdv, dndu, dndv)
-    INLINE DEVICE Shading getShadingCurvesLinear(Vec3f& hit_point, const uint32_t primitive_idx)
-    {
-        const OptixTraversableHandle gas = optixGetGASTraversableHandle();
-        const uint32_t gas_sbt_idx = optixGetSbtGASIndex();
-        float4 control_points[2];
 
-        // Get vertex data using SBT index at GAS and primitive index
-        optixGetLinearCurveVertexData(gas, primitive_idx, gas_sbt_idx, 0.0f, control_points);
+    // Interpolator for getting curves information from optixGetCurveParameter();
+    // Elements in each interpolator contains 3D position, and 1D radius(width) of curve parameter
+    // LinearInterpolator
+    struct LinearInterpolator {
+        // Constructor
+        INLINE DEVICE LinearInterpolator() {}
 
-        // Get curve parameter [0, 1]
-        const float u = optixGetCurveParameter();
+        INLINE DEVICE void initialize(const Vec4f* q)
+        {
+            e[0] = q[0];
+            e[1] = q[1] - q[0];
+        }
 
-        Vec4f v0 = control_points[0], v1 = control_points[1];
-        Vec4f velocity = v1 - v0;
+        INLINE DEVICE Vec4f evaluate(float u) const
+        {
+            return e[0] + u * e[1];
+        }
 
-        // Curve point and width on the intersection point
-        Vec3f p = Vec3f(v0) + u * Vec3f(velocity);
-        float w = v0.w() + u * velocity.w();
+        INLINE DEVICE Vec3f position(float u) const
+        {
+            return Vec3f(evaluate(u));
+        }
 
-        float dd = dot(Vec3f(velocity), Vec3f(velocity));
+        INLINE DEVICE float radius(float u) const
+        {
+            return evaluate(u).w();
+        }
+
+        INLINE DEVICE Vec4f derivative(float u) const
+        {
+            return e[1];
+        }
+
+        INLINE DEVICE Vec3f dPosition(float u) const
+        {
+            return Vec3f(derivative(u));
+        }
+
+        INLINE DEVICE float dRadius(float u) const
+        {
+            return derivative(u).w();
+        }
+
+        Vec4f e[2];
+    };
+
+    // QuadricInterpolator
+    struct QuadraticInterpolator {
+        INLINE DEVICE QuadraticInterpolator() {}
+
+        INLINE DEVICE void initializeFromBSpline(const Vec4f* q)
+        {
+            e[0] = (q[0] - 2.0f * q[1] + q[2]) / 2.0f;
+            e[1] = (-2.0f * q[0] + 2.0f * q[1]) / 2.0f;
+            e[2] = (q[0] + q[1]) / 2.0f;
+        }
+
+        INLINE DEVICE void exportToBSpline(Vec4f ret[3]) const
+        {
+            ret[0] = e[0] - e[1] / 2.0f;
+            ret[1] = e[0] + e[1] / 2.0f;
+            ret[2] = e[0] + 1.5f * e[1] + 2.0f * e[2];
+        }
+
+        INLINE DEVICE Vec4f evaluate(float u) const
+        {
+            return (e[0] * u + e[1]) * u + e[2];
+        }
+
+        INLINE DEVICE Vec3f position(float u) const
+        {
+            return Vec3f(evaluate(u));
+        }
+
+        INLINE DEVICE float radius(float u) const
+        {
+            return evaluate(u).w();
+        }
+
+        INLINE DEVICE Vec4f derivative(float u) const
+        {
+            return 2.0f * e[0] * u + e[1];
+        }
+
+        INLINE DEVICE Vec3f dPosition(float u) const
+        {
+            return Vec3f(derivative(u));
+        }
+
+        INLINE DEVICE float dRadius(float u) const
+        {
+            return derivative(u).w();
+        }
+
+        INLINE DEVICE Vec4f doubleDerivative(float u) const
+        {
+            return 2.0f * e[0];
+        }
+
+        INLINE DEVICE Vec3f ddPosition(float u) const
+        {
+            return Vec3f(doubleDerivative(u));
+        }
+
+        Vec4f e[3];
+    };
+
+    // CubicInterpolator
+    struct CubicInterpolator {
+        INLINE DEVICE CubicInterpolator() {}
         
-        Vec3f o1 = hit_point - p;
-        o1 -= (dot(o1, Vec3f(velocity)) / dd) * Vec3f(velocity);
-        o1 *= w / length(o1);
-        hit_point = p + o1;
+        INLINE DEVICE void initializeFromBSpline(const Vec4f* q)
+        {
+            e[0] = (-1.0f * q[0] + 3.0f * q[1] - 3.0f * q[2] + q[3]) / 6.0f;
+            e[1] = ( 3.0f * q[0] - 6.0f * q[1] + 3.0f * q[2]       ) / 6.0f;
+            e[2] = (-3.0f * q[0]               + 3.0f * q[2]       ) / 6.0f;
+            e[3] = (        q[0] + 4.0f * q[1] +        q[2]       ) / 6.0f;
+        }
 
-        Vec3f n = dd * o1 - (velocity.w() * w) * Vec3f(velocity);
+        INLINE DEVICE void exportToBSpline(Vec4f ret[4]) const
+        {
+            ret[0] = (        2.0f * e[1] -        e[2] + e[3]) / 3.0f;
+            ret[1] = (              -e[1]               + e[3]) / 3.0f;
+            ret[2] = (        2.0f * e[1] +        e[2] + e[3]) / 3.0f;
+            ret[3] = (e[0] + 11.0f * e[1] + 2.0f * e[2] + e[3]) / 3.0f;
+        }
 
+        INLINE DEVICE void initializeFromCatmullRom(const Vec4f* q)
+        {
+            e[0] = (      -q[0] + 3.0f * q[1] - 3.0f * q[2] + q[3]) / 2.0f;
+            e[1] = (2.0f * q[0] - 5.0f * q[1] + 4.0f * q[2] - q[3]) / 2.0f;
+            e[2] = (      -q[0]                      + q[2]       ) / 2.0f;
+            e[3] =                       q[1];
+        }
+
+        INLINE DEVICE void exportToCatmullRom(Vec4f ret[4]) const
+        {
+            ret[0] = (6.0f * e[0] - 5.0f * e[1] + 2.0f * e[2] + e[3]) / 6.0f;
+            ret[1] = e[0];
+            ret[2] = (6.0f * e[0] + e[1] + 2.0f * e[2] + e[3]) / 6.0f;
+            ret[3] = e[0];
+        }
+
+        INLINE DEVICE Vec4f evaluate(float u) const
+        {
+            return (((e[0] * u) + e[1]) * u + e[2]) * u + e[3];
+        }
+
+        INLINE DEVICE Vec3f position(float u) const
+        {
+            return Vec3f(evaluate(u));
+        }
+
+        INLINE DEVICE float radius(float u) const
+        {
+            return evaluate(u).w();
+        }
+
+        INLINE DEVICE Vec4f derivative(float u) const
+        {
+            if (u == 0.0f)
+                u = 0.000001f;
+            if (u == 1.0f)
+                u = 0.999999f;
+            return ((3.0f * e[0] * u) + 2.0f * e[1]) * u + e[2];
+        }
+
+        INLINE DEVICE Vec3f dPosition(float u) const
+        {
+            return Vec3f(derivative(u));
+        }
+
+        INLINE DEVICE float dRadius(float u) const
+        {
+            return derivative(u).w();
+        }
+
+        INLINE DEVICE Vec4f doubleDerivative(float u) const
+        {
+            return 6.0f * e[0] * u + 2.0f * e[1];
+        }
+
+        INLINE DEVICE Vec3f ddPosition(float u) const
+        {
+            return Vec3f(doubleDerivative(u));
+        }
+
+        Vec4f e[4];
+    };
+
+    template <typename Interpolator, Curves::Type CurveType>
+    INLINE DEVICE Shading getCurvesShading(Vec3f& hit_point, const float u, const Interpolator& interpolator)
+    {   
         Shading shading;
-        shading.uv = Vec2f(0.0f, u);
-        shading.n = n;
-        shading.dpdv = normalize(Vec3f(velocity));
-        shading.dpdu = cross(shading.n, shading.dpdv);
+        if (u == 0.0f)
+        {
+            if constexpr (CurveType == Curves::Type::Linear)
+                shading.n = hit_point - Vec3f(interpolator.e[0]);
+            else
+                shading.n = -interpolator.dPosition(0.0f);
+        }
+        else if (u >= 1.0f)
+        {
+            if constexpr (CurveType == Curves::Type::Linear)
+            {
+                Vec3f p = Vec3f(interpolator.e[1]) + Vec3f(interpolator.e[0]);
+                shading.n = hit_point - p;
+            }
+            else
+            {
+                shading.n = interpolator.dPosition(1.0f);
+            }
+        }
+        else
+        {
+            Vec4f p = interpolator.evaluate(u);
+            Vec3f position = Vec3f(p);
+            float radius = p.w();
+            Vec4f d = interpolator.derivative(u);
+            Vec3f d_position = Vec3f(d);
+            float d_radius = d.w();
+            float d_length2 = dot(d_position, d_position);
+
+            Vec3f o1 = hit_point - position;
+
+            o1 -= (dot(o1, d_position) / d_length2) * d_position;
+            o1 *= radius / length(o1);
+            //hit_point = position + o1;
+
+            if constexpr (CurveType != Curves::Type::Linear)
+                d_length2 -= dot(interpolator.ddPosition(u), o1);
+            shading.n = d_length2 * o1 - (d_radius * radius) * d_position;
+        }
+
+        shading.n = normalize(shading.n);
+        shading.dpdv = normalize(interpolator.derivative(u));
+        shading.dpdu = cross(shading.dpdv, shading.n);
 
         return shading;
     }
 
-    INLINE DEVICE Shading getShadingCurves(Vec3f& hit_point, const uint32_t primitive_idx, OptixPrimitiveType primitive_type)
+    INLINE DEVICE Shading getCurvesShading(Vec3f& hit_point, const uint32_t primitive_idx, OptixPrimitiveType primitive_type)
     {
+        const OptixTraversableHandle gas = optixGetGASTraversableHandle();
+        const uint32_t gas_sbt_idx = optixGetSbtGASIndex();
+        const float u = optixGetCurveParameter();
+
         switch (primitive_type)
         {
-        case OPTIX_PRIMITIVE_TYPE_ROUND_QUADRATIC_BSPLINE:
         case OPTIX_PRIMITIVE_TYPE_ROUND_LINEAR:
-            return getShadingCurvesLinear(hit_point, primitive_idx);
+        {
+            LinearInterpolator interpolator;
+            float4 p[2];
+            optixGetLinearCurveVertexData(gas, primitive_idx, gas_sbt_idx, 0.0f, p);
+            interpolator.initialize((Vec4f*)p);
+            return getCurvesShading<LinearInterpolator, Curves::Type::Linear>(hit_point, u, interpolator);
+        }
+        case OPTIX_PRIMITIVE_TYPE_ROUND_QUADRATIC_BSPLINE:
+        {
+            QuadraticInterpolator interpolator;
+            float4 p[3];
+            optixGetQuadraticBSplineVertexData(gas, primitive_idx, gas_sbt_idx, 0.0f, p);
+            interpolator.initializeFromBSpline((Vec4f*)p);
+            return getCurvesShading<QuadraticInterpolator, Curves::Type::QuadraticBSpline>(hit_point, u, interpolator);
+        }
         case OPTIX_PRIMITIVE_TYPE_ROUND_CUBIC_BSPLINE:
+        {
+            CubicInterpolator interpolator;
+            float4 p[4];
+            optixGetCubicBSplineVertexData(gas, primitive_idx, gas_sbt_idx, 0.0f, p);
+            interpolator.initializeFromBSpline((Vec4f*)p);
+            return getCurvesShading<CubicInterpolator, Curves::Type::CubicBSpline>(hit_point, u, interpolator);
+        }
         case OPTIX_PRIMITIVE_TYPE_ROUND_CATMULLROM:
+        {
+            CubicInterpolator interpolator;
+            float4 p[4];
+            optixGetCatmullRomVertexData(gas, primitive_idx, gas_sbt_idx, 0.0f, p);
+            interpolator.initializeFromCatmullRom((Vec4f*)p);
+            return getCurvesShading<CubicInterpolator, Curves::Type::CatmullRom>(hit_point, u, interpolator);
+        }
+        default:
+            return Shading{};
         }
     }
 

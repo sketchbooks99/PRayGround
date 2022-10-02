@@ -18,8 +18,8 @@ namespace prayground {
         };
 
         enum class Type : uint32_t {
-            QuadlicBspline = OPTIX_PRIMITIVE_TYPE_ROUND_QUADRATIC_BSPLINE,
-            CubicBspline = OPTIX_PRIMITIVE_TYPE_ROUND_CUBIC_BSPLINE,
+            QuadraticBSpline = OPTIX_PRIMITIVE_TYPE_ROUND_QUADRATIC_BSPLINE,
+            CubicBSpline = OPTIX_PRIMITIVE_TYPE_ROUND_CUBIC_BSPLINE,
             Linear = OPTIX_PRIMITIVE_TYPE_ROUND_LINEAR,
             CatmullRom = OPTIX_PRIMITIVE_TYPE_ROUND_CATMULLROM
         };

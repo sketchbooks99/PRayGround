@@ -58,6 +58,9 @@ void GeometryAccel::build(const Context& ctx, CUstream stream)
         m_build_inputs[i] = m_shapes[i]->createBuildInput();
     }
 
+    if (m_shapes[0]->type() == ShapeType::Curves)
+        m_options.buildFlags |= OPTIX_BUILD_FLAG_ALLOW_RANDOM_VERTEX_ACCESS;
+
     OptixAccelBufferSizes gas_buffer_sizes;
     OPTIX_CHECK(optixAccelComputeMemoryUsage(
         static_cast<OptixDeviceContext>(ctx), 

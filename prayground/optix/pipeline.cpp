@@ -38,24 +38,28 @@ namespace prayground {
         OptixBuiltinISOptions builtin_is_options;
         switch (primitive_type)
         {
-        case OPTIX_PRIMITIVE_TYPE_TRIANGLE:
-        case OPTIX_PRIMITIVE_TYPE_ROUND_LINEAR:
         case OPTIX_PRIMITIVE_TYPE_ROUND_QUADRATIC_BSPLINE:
         case OPTIX_PRIMITIVE_TYPE_ROUND_CUBIC_BSPLINE:
 #if OPTIX_VERSION >= 70400
         case OPTIX_PRIMITIVE_TYPE_ROUND_CATMULLROM:
+            builtin_is_options.curveEndcapFlags = OPTIX_CURVE_ENDCAP_ON;
+            break;
 #endif
+        case OPTIX_PRIMITIVE_TYPE_ROUND_LINEAR:
+            builtin_is_options.curveEndcapFlags = OPTIX_CURVE_ENDCAP_DEFAULT;
+            break;
+        case OPTIX_PRIMITIVE_TYPE_TRIANGLE:
 
 #if OPTIX_VERSION >= 70500:
         case OPTIX_PRIMITIVE_TYPE_SPHERE:
 #endif
-            builtin_is_options.builtinISModuleType = primitive_type;
             break;
         case OPTIX_PRIMITIVE_TYPE_CUSTOM:
         default:
             THROW("Invalid primitive type to get built-in intersection module.");
         }
 
+        builtin_is_options.builtinISModuleType = primitive_type;
         builtin_is_options.usesMotionBlur = m_compile_options.usesMotionBlur;
 
         // This must be enabled for using curve primitive, and also enabled in the buildFlags for GAS?

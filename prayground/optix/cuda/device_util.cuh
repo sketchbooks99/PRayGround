@@ -39,29 +39,6 @@ namespace prayground {
     }
 
     template <uint32_t i>
-    INLINE DEVICE void setAttribute(uint32_t value)
-    {
-        static_assert(i < PG_MAX_NUM_ATTRIBUTES, 
-            "Index to set attribute exceeds the maximum number of attributes (" PG_MAX_NUM_ATTRIBUTES_STR ")");
-        if constexpr (i == 0)
-            optixSetAttribute_0(value);
-        if constexpr (i == 1)
-            optixSetAttribute_1(value);
-        if constexpr (i == 2)
-            optixSetAttribute_2(value);
-        if constexpr (i == 3)
-            optixSetAttribute_3(value);
-        if constexpr (i == 4)
-            optixSetAttribute_4(value);
-        if constexpr (i == 5)
-            optixSetAttribute_5(value);
-        if constexpr (i == 6)
-            optixSetAttribute_6(value);
-        if constexpr (i == 7)
-            optixSetAttribute_7(value);
-    }
-
-    template <uint32_t i>
     INLINE DEVICE uint32_t getPayload()
     {
         static_assert(i < PG_MAX_NUM_PAYLOADS, 

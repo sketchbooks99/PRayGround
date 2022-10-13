@@ -5,10 +5,7 @@ void App::initResultBufferOnDevice()
     params.frame = 0;
 
     result_bmp.allocateDevicePtr();
-    accum_bmp.allocateDevicePtr();
-
     params.result_buffer = reinterpret_cast<Vec4u*>(result_bmp.devicePtr());
-    params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bmp.devicePtr());
 
     CUDA_SYNC_CHECK();
 }
@@ -50,19 +47,13 @@ void App::setup()
     const int32_t height = pgGetHeight();
     result_bmp.allocate(PixelFormat::RGBA, width, height);
     result_bmp.allocateDevicePtr();
-    accum_bmp.allocate(PixelFormat::RGBA, width, height);
-    accum_bmp.allocateDevicePtr();
 
     // Configuration of launch parameters
     params.width = result_bmp.width();
     params.height = result_bmp.height();
     params.samples_per_launch = 1;
-    params.max_depth = 10;
     params.frame = 0;
     params.result_buffer = reinterpret_cast<Vec4u*>(result_bmp.devicePtr());
-    params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bmp.devicePtr());
-
-    CUDA_SYNC_CHECK();
 
     // Camera settings
     std::shared_ptr<Camera> camera(new Camera);
@@ -115,7 +106,6 @@ void App::setup()
     miss_prgs[0] = pipeline.createMissProgram(context, module, "__miss__envmap");
     miss_prgs[1] = pipeline.createMissProgram(context, module, "__miss__shadow");
     scene.bindMissPrograms(miss_prgs);
-    //scene.setEnvmap(std::make_shared<FloatBitmapTexture>("resources/image/drackenstein_quarry_4k.exr", bitmap_prg.ID));
     scene.setEnvmap(make_shared<ConstantTexture>(Vec3f(0.0f), constant_prg.ID));
 
     // Hitgroup program
@@ -232,6 +222,8 @@ void App::update()
     params.frame++;
 
     result_bmp.copyFromDevice();
+
+    pgSetWindowName(toString(pgGetFrameRate()));
 }
 
 // ------------------------------------------------------------------

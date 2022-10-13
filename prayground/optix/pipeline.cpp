@@ -50,7 +50,7 @@ namespace prayground {
             break;
         case OPTIX_PRIMITIVE_TYPE_TRIANGLE:
 
-#if OPTIX_VERSION >= 70500:
+#if OPTIX_VERSION >= 70500
         case OPTIX_PRIMITIVE_TYPE_SPHERE:
 #endif
             break;

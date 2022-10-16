@@ -3,6 +3,7 @@
 #include <prayground/core/load3d.h>
 #include <prayground/core/file_util.h>
 #include <prayground/math/util.h>
+#include <algorithm>
 
 namespace prayground {
 

@@ -7,15 +7,16 @@
 
 namespace prayground {
 
-class ObjMesh final : public TriangleMesh {
-public:
-    using DataType = MeshData;
+    class ObjMesh final : public TriangleMesh {
+    public:
+        using Data = TriangleMesh::Data;
 
-    ObjMesh(const std::filesystem::path& filename);
+        ObjMesh(const std::filesystem::path& filename);
 
-    constexpr ShapeType type() override;
-private:
-    std::vector<int32_t> m_sbt_indices;
-};
+        const std::vector<std::shared_ptr<Material>>& materials() const;
+    private:
+        std::vector<int32_t> m_sbt_indices;
+        std::unordered_map<std::string, std::shared_ptr<>>
+    };
 
-} // ::prayground
+} // namespace prayground

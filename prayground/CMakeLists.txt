@@ -88,8 +88,12 @@ set(sources
   shape/curves.cpp
   shape/cylinder.h 
   shape/cylinder.cpp
+  shape/gltfmesh.h 
+  shape/gltfmesh.cpp
   shape/plane.h 
   shape/plane.cpp 
+  shape/primitivemesh.h 
+  shape/primitivemesh.cpp
   shape/shapegroup.h
   shape/sphere.h 
   shape/sphere.cpp
@@ -100,6 +104,7 @@ set(sources
   # Materials ==========
   material/conductor.h 
   material/conductor.cpp 
+  material/custom.h
   material/dielectric.h 
   material/dielectric.cpp 
   material/diffuse.h 
@@ -117,6 +122,7 @@ set(sources
   texture/bitmap.cpp
   texture/checker.h 
   texture/constant.h  
+  texture/cuda/textures.cuh
 
   # Medium ==========
   medium/gridmedium.h

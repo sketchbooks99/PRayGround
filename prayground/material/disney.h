@@ -5,6 +5,7 @@
 
 namespace prayground {
 
+    /// @todo : Change Disney to DisneyPBR
     class Disney final : public Material {
     public:
         struct Data

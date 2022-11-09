@@ -52,7 +52,9 @@ namespace prayground {
       m_data = data;
     }
 
-    DataT data() const { return m_data; }
+    DataT data() const { 
+      return m_data; 
+    }
 
   private:
     SurfaceType m_surface_type;

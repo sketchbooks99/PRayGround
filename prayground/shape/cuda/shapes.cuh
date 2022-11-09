@@ -1,13 +1,11 @@
 #pragma once 
 
-#define PG_INTERSECTION(name) __intersection__pg_##name
-#define PG_INTERSECTION_TEXT(name) "__intersection__pg_" name
-
 #include <prayground/optix/cuda/device_util.cuh>
 #include <prayground/shape/box.h>
 #include <prayground/shape/cylinder.h>
 #include <prayground/shape/plane.h>
 #include <prayground/shape/sphere.h>
+#include <prayground/shape/trianglemesh.h>
 #include <prayground/core/ray.h>
 #include <prayground/core/interaction.h>
 #include <prayground/optix/sbt.h>
@@ -115,7 +113,7 @@ namespace prayground {
         return true;
     }
 
-    extern "C" DEVICE void PG_INTERSECTION(cylinder)()
+    extern "C" DEVICE void IS_FUNC(pg_cylinder)()
     {
         const pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
         const Cylinder::Data* cylinder = reinterpret_cast<Cylinder::Data*>(data->shape_data);
@@ -135,7 +133,7 @@ namespace prayground {
         }
     }
 
-    extern "C" DEVICE void PG_INTERSECTION(cylinder_instanced)()
+    extern "C" DEVICE void IS_FUNC(pg_cylinder_instanced)()
     {
         const pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
         const int32_t idx = optixGetPrimitiveIndex();
@@ -263,7 +261,7 @@ namespace prayground {
         return true;
     }
 
-    extern "C" void DEVICE PG_INTERSECTION(box)()
+    extern "C" void DEVICE IS_FUNC(pg_box)()
     {
         const pgHitgroupData* hg_data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
         const Box::Data* box = reinterpret_cast<Box::Data*>(hg_data->shape_data);
@@ -283,7 +281,7 @@ namespace prayground {
         }
     }
 
-    extern "C" void DEVICE PG_INTERSECTION(box_instanced)()
+    extern "C" void DEVICE IS_FUNC(pg_box_instanced)()
     {
         const pgHitgroupData* hg_data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
         const int32_t idx = optixGetPrimitiveIndex();
@@ -334,7 +332,7 @@ namespace prayground {
         return false;
     }
 
-    extern "C" DEVICE void PG_INTERSECTION(plane)()
+    extern "C" DEVICE void IS_FUNC(pg_plane)()
     {
         const pgHitgroupData* hg_data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
         const Plane::Data* plane = reinterpret_cast<Plane::Data*>(hg_data->shape_data);
@@ -354,7 +352,7 @@ namespace prayground {
         }
     }
 
-    extern "C" DEVICE void PG_INTERSECTION(plane_instanced)()
+    extern "C" DEVICE void IS_FUNC(pg_plane_instanced)()
     {
         const pgHitgroupData* hg_data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
         const int32_t idx = optixGetPrimitiveIndex();
@@ -424,7 +422,7 @@ namespace prayground {
         return true;
     }
 
-    extern "C" DEVICE void PG_INTERSECTION(sphere)()
+    extern "C" DEVICE void IS_FUNC(pg_sphere)()
     {
         const pgHitgroupData* hg_data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
         const Sphere::Data* sphere = reinterpret_cast<Sphere::Data*>(hg_data->shape_data);
@@ -444,7 +442,7 @@ namespace prayground {
         }
     }
 
-    extern "C" DEVICE void PG_INTERSECTION(sphere_instanced)()
+    extern "C" DEVICE void IS_FUNC(pg_sphere_instanced)()
     {
         const pgHitgroupData* hg_data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
         const int32_t idx = optixGetPrimitiveIndex();
@@ -463,6 +461,58 @@ namespace prayground {
             packPointer(&shading, a0, a1);
             optixReportIntersection(time, 0, a0, a1);
         }
+    }
+
+    // ----------------------------------------------------------------------------------------
+    // Mesh
+    // ----------------------------------------------------------------------------------------
+
+    /**
+     * @brief Calculate shading frame on triangle 
+     * @param mesh : Triangle mesh data
+     * @param bc : Barycentric coordinate on triangle
+     * @param primitive_index : The primitive index of intersecting surface
+     * @return Shading frame on triangle
+    */
+    INLINE DEVICE Shading getMeshShading(const TriangleMesh::Data* mesh, const Vec2f& bc, const uint32_t primitive_index)
+    {
+        Shading shading = {};
+
+        const Face face = mesh->faces[primitive_index];
+
+        const Vec3f p0 = mesh->vertices[face.vertex_id.x()];
+        const Vec3f p1 = mesh->vertices[face.vertex_id.y()];
+        const Vec3f p2 = mesh->vertices[face.vertex_id.z()];
+
+        const Vec2f texcoord0 = mesh->texcoords[face.texcoord_id.x()];
+        const Vec2f texcoord1 = mesh->texcoords[face.texcoord_id.y()];
+        const Vec2f texcoord2 = mesh->texcoords[face.texcoord_id.z()];
+        shading.uv = (1 - bc.x() - bc.y()) * texcoord0 + bc.x() * texcoord1 + bc.x() * texcoord2;
+
+        const Vec3f n0 = mesh->normals[face.normal_id.x()];
+        const Vec3f n1 = mesh->normals[face.normal_id.y()];
+        const Vec3f n2 = mesh->normals[face.normal_id.z()];
+        shading.n = (1.0f - bc.x() - bc.y()) * n0 + bc.x() * n1 + bc.y() * n2;
+
+        const Vec2f duv02 = texcoord0 - texcoord2, duv12 = texcoord1 - texcoord2;
+        const Vec3f dp02 = p0 - p2, dp12 = p1 - p2;
+        const float D = duv02.x() * duv12.y() - duv02.y() * duv12.x();
+        bool degenerateUV = abs(D) < 1e-8f;
+        if (!degenerateUV)
+        {
+            const float invD = 1.0f / D;
+            shading.dpdu = (duv12.y() * dp02 - duv02.y() * dp12) * invD;
+            shading.dpdv = (-duv12.x() * dp02 + duv02.x() * dp12) * invD;
+        }
+        if (degenerateUV || length(cross(shading.dpdu, shading.dpdv)) == 0.0f)
+        {
+            const Vec3f n = normalize(cross(p2 - p0, p1 - p0));
+            Onb onb(n);
+            shading.dpdu = onb.tangent;
+            shading.dpdv = onb.bitangent;
+        }
+
+        return shading;
     }
 
     // ----------------------------------------------------------------------------------------

@@ -63,10 +63,10 @@
 #include "shape/curves.h"
 #include "shape/cylinder.h"
 #include "shape/plane.h"
+#include "shape/primitivemesh.h"
 #include "shape/sphere.h"
 #include "shape/trianglemesh.h"
 #include "shape/shapegroup.h"
-#include "shape/cuda/shapes.cuh" // Contains default intersection test program for custom primitives
 
 // material include 
 #include "material/conductor.h"
@@ -74,6 +74,7 @@
 #include "material/diffuse.h"
 #include "material/disney.h"
 #include "material/isotropic.h"
+#include "material/custom.h"
 
 // emitter include 
 #include "emitter/area.h"
@@ -93,6 +94,11 @@
 #include "optix/cuda/device_util.cuh"
 #include "math/vec_math.h"
 #include "core/ray.h"
+// Contains intersection test programs for custom primitives
+// and utility functions for triangle/curves primitives.
+#include "shape/cuda/shapes.cuh"
+
+#include "texture/cuda/textures.cuh"
 #endif // __CUDACC__
 
 using namespace prayground;

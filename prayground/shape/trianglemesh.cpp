@@ -185,6 +185,11 @@ namespace prayground {
         m_vertices.emplace_back(v);
     }
 
+    void TriangleMesh::addVertex(float x, float y, float z)
+    {
+        m_vertices.emplace_back(Vec3f(x, y, z));
+    }
+
     void TriangleMesh::addFace(const Face& face)
     {
         m_faces.emplace_back(face);
@@ -201,9 +206,39 @@ namespace prayground {
         m_normals.emplace_back(n);
     }
 
+    void TriangleMesh::addNormal(float x, float y, float z)
+    {
+        m_normals.emplace_back(Vec3f(x, y, z));
+    }
+
     void TriangleMesh::addTexcoord(const Vec2f& texcoord)
     {
         m_texcoords.emplace_back(texcoord);
+    }
+
+    void TriangleMesh::addTexcoord(float x, float y)
+    {
+        m_texcoords.emplace_back(Vec2f(x, y));
+    }
+
+    const Vec3f& TriangleMesh::vertexAt(const int32_t i) const
+    {
+        return m_vertices[i];
+    }
+
+    const Vec3f& TriangleMesh::normalAt(const int32_t i) const
+    {
+        return m_normals[i];
+    }
+
+    const Face& TriangleMesh::faceAt(const int32_t i) const
+    {
+        return m_faces[i];
+    }
+
+    const Vec2f& TriangleMesh::texcoordAt(const int32_t i) const
+    {
+        return m_texcoords[i];
     }
 
     // ------------------------------------------------------------------

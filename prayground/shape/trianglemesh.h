@@ -12,105 +12,113 @@
 
 namespace prayground {
 
-struct Face {
-    Vec3i vertex_id;
-    Vec3i normal_id;
-    Vec3i texcoord_id;
-};
-
-class TriangleMesh : public Shape {
-public:
-    struct Data {
-        Vec3f* vertices;
-        Face* faces;
-        Vec3f* normals;
-        Vec2f* texcoords;
+    struct Face {
+        Vec3i vertex_id;
+        Vec3i normal_id;
+        Vec3i texcoord_id;
     };
 
+    class TriangleMesh : public Shape {
+    public:
+        struct Data {
+            Vec3f* vertices;
+            Face* faces;
+            Vec3f* normals;
+            Vec2f* texcoords;
+        };
+
 #ifndef __CUDACC__
-    TriangleMesh();
-    TriangleMesh(const std::filesystem::path& filename);
-    TriangleMesh(
-        const std::vector<Vec3f>& vertices, 
-        const std::vector<Face>& faces, 
-        const std::vector<Vec3f>& normals, 
-        const std::vector<Vec2f>& texcoords, 
-        const std::vector<uint32_t>& sbt_indices = std::vector<uint32_t>() );
-    TriangleMesh(const TriangleMesh& mesh) = default;
-    TriangleMesh(TriangleMesh&& mesh) = default;
+        TriangleMesh();
+        TriangleMesh(const std::filesystem::path& filename);
+        TriangleMesh(
+            const std::vector<Vec3f>& vertices, 
+            const std::vector<Face>& faces, 
+            const std::vector<Vec3f>& normals, 
+            const std::vector<Vec2f>& texcoords, 
+            const std::vector<uint32_t>& sbt_indices = std::vector<uint32_t>() );
+        TriangleMesh(const TriangleMesh& mesh) = default;
+        TriangleMesh(TriangleMesh&& mesh) = default;
 
-    constexpr ShapeType type() override;
+        constexpr ShapeType type() override;
 
-    OptixBuildInput createBuildInput() override;
+        OptixBuildInput createBuildInput() override;
 
-    void copyToDevice() override;
-    void free() override;
+        void copyToDevice() override;
+        void free() override;
 
-    uint32_t numPrimitives() const override;
+        uint32_t numPrimitives() const override;
 
-    AABB bound() const override;
+        AABB bound() const override;
 
-    void setSbtIndex(const uint32_t sbt_idx) override;
-    uint32_t sbtIndex() const override;
+        void setSbtIndex(const uint32_t sbt_idx) override;
+        uint32_t sbtIndex() const override;
 
-    Data getData();
+        Data getData();
 
-    /**
-     * @note
-     * Be careful when updating GAS/IAS after modifying the number of vertices, indices
-     * because you must `rebuild` AS, not `update` 
-     */
-    void addVertices(const std::vector<Vec3f>& verts);
-    void addFaces(const std::vector<Face>& faces);
-    void addFaces(const std::vector<Face>& faces, const std::vector<uint32_t>& sbt_indices);
-    void addNormals(const std::vector<Vec3f>& normals);
-    void addTexcoords(const std::vector<Vec2f>& texcoords);
+        /**
+         * @note
+         * Be careful when updating GAS/IAS after modifying the number of vertices, indices
+         * because you must `rebuild` AS, not `update` 
+         */
+        void addVertices(const std::vector<Vec3f>& verts);
+        void addFaces(const std::vector<Face>& faces);
+        void addFaces(const std::vector<Face>& faces, const std::vector<uint32_t>& sbt_indices);
+        void addNormals(const std::vector<Vec3f>& normals);
+        void addTexcoords(const std::vector<Vec2f>& texcoords);
 
-    void addVertex(const Vec3f& v);
-    void addFace(const Face& face);
-    void addFace(const Face& face, uint32_t sbt_index); // For per face materials
-    void addNormal(const Vec3f& n);
-    void addTexcoord(const Vec2f& texcoord);
+        void addVertex(const Vec3f& v);
+        void addVertex(float x, float y, float z);
+        void addFace(const Face& face);
+        void addFace(const Face& face, uint32_t sbt_index); // For per face materials
+        void addNormal(const Vec3f& n);
+        void addNormal(float x, float y, float z);
+        void addTexcoord(const Vec2f& texcoord);
+        void addTexcoord(float x, float y);
 
-    void load(const std::filesystem::path& filename);
-    void loadWithMtl(
-        const std::filesystem::path& objpath, 
-        std::vector<Attributes>& material_attribs, 
-        const std::filesystem::path& mtlpath = "");
+        void load(const std::filesystem::path& filename);
+        void loadWithMtl(
+            const std::filesystem::path& objpath, 
+            std::vector<Attributes>& material_attribs, 
+            const std::filesystem::path& mtlpath = "");
 
-    virtual void smooth();
+        virtual void smooth();
 
-    // For binding multiple materials to single mesh object
-    void addSbtIndices(const std::vector<uint32_t>& sbt_indices);
-    void offsetSbtIndex(uint32_t sbt_base);
-    uint32_t numMaterials() const;
+        // For binding multiple materials to single mesh object
+        void addSbtIndices(const std::vector<uint32_t>& sbt_indices);
+        void offsetSbtIndex(uint32_t sbt_base);
+        uint32_t numMaterials() const;
 
-    const std::vector<Vec3f>& vertices() const { return m_vertices; }
-    const std::vector<Face>& faces() const { return m_faces; }
-    const std::vector<Vec3f>& normals() const { return m_normals; }
-    const std::vector<Vec2f>& texcoords() const { return m_texcoords; }
-    const std::vector<uint32_t>& sbtIndices() const { return m_sbt_indices; }
+        const Vec3f& vertexAt(const int32_t i) const;
+        const Vec3f& normalAt(const int32_t i) const;
+        const Face& faceAt(const int32_t i) const;
+        const Vec2f& texcoordAt(const int32_t i) const;
 
-    CUdeviceptr deviceVertices() const { return d_vertices; }
-    CUdeviceptr deviceFaces() const { return d_faces; }
-    CUdeviceptr deviceNormals() const { return d_normals; }
-    CUdeviceptr deivceTexcoords() const { return d_texcoords; }
-    CUdeviceptr deviceSbtIndices() const { return d_sbt_indices; }
+        const std::vector<Vec3f>& vertices() const { return m_vertices; }
+        const std::vector<Face>& faces() const { return m_faces; }
+        const std::vector<Vec3f>& normals() const { return m_normals; }
+        const std::vector<Vec2f>& texcoords() const { return m_texcoords; }
+        const std::vector<uint32_t>& sbtIndices() const { return m_sbt_indices; }
 
-protected:
-    std::vector<Vec3f> m_vertices;
-    std::vector<Face> m_faces;
-    std::vector<Vec3f> m_normals;
-    std::vector<Vec2f> m_texcoords;
-    std::vector<uint32_t> m_sbt_indices;
+        CUdeviceptr deviceVertices() const { return d_vertices; }
+        CUdeviceptr deviceFaces() const { return d_faces; }
+        CUdeviceptr deviceNormals() const { return d_normals; }
+        CUdeviceptr deivceTexcoords() const { return d_texcoords; }
+        CUdeviceptr deviceSbtIndices() const { return d_sbt_indices; }
 
-    CUdeviceptr d_vertices { 0 };
-    CUdeviceptr d_faces { 0 };
-    CUdeviceptr d_normals { 0 };
-    CUdeviceptr d_texcoords { 0 };
-    CUdeviceptr d_sbt_indices{ 0 };
+    protected:
+        std::vector<Vec3f> m_vertices;
+        std::vector<Face> m_faces;
+        std::vector<Vec3f> m_normals;
+        std::vector<Vec2f> m_texcoords;
+        std::vector<uint32_t> m_sbt_indices;
+
+        CUdeviceptr d_vertices { 0 };
+        CUdeviceptr d_faces { 0 };
+        CUdeviceptr d_normals { 0 };
+        CUdeviceptr d_texcoords { 0 };
+        CUdeviceptr d_sbt_indices{ 0 };
 
 #endif // __CUDACC__
-};
+    };
 
-}
+} // namespace prayground

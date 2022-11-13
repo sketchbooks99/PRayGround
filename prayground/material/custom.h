@@ -34,7 +34,7 @@ namespace prayground {
     void copyToDevice() override
     {
       if (!d_data)
-        CUDA_CHECK(cudaMalloc(&d_data), sizeof(DataT));
+        CUDA_CHECK(cudaMalloc(&d_data, sizeof(DataT)));
       CUDA_CHECK(cudaMemcpy(
         d_data, 
         &m_data, sizeof(DataT), 

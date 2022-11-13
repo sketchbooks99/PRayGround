@@ -74,15 +74,13 @@ namespace prayground {
                 float z = radius * cosf(v_ang) * sinf(h_ang);
                 m_vertices[v_idx] = Vec3f(x, y, z);
 
-                // 頂点を1つ追加するごとに面を2つ追加する
+                // Add two faces every 1 vertex added
                 // 例) v_idx = 1 (level=1)
                 //     0                      
                 //    / \   (1,2,0)
                 //   1 - 2
                 //    \ /   (1,6,2)
                 //     6
-                //
-                //
                 for (int k = 0; k < 2; k++)
                 {
 
@@ -159,28 +157,23 @@ namespace prayground {
     CylinderMesh::CylinderMesh(float radius, float height, const Vec2ui& resolution)
         : m_radius(radius), m_height(height), m_resolution(resolution)
     {
-        UNIMPLEMENTED();
-
         const Vec3f top_center_vertex(0.0f, height / 2.0f, 0.0f);
         const Vec3f bottom_center_vertex(0.0f, -height / 2.0f, 0.0f);
-        const int32_t total_num_vertices = resolution.x() * (resolution.y() + 2) + 2;
+        const int32_t total_num_vertices = resolution.x() * (resolution.y() + 3) + 2;
 
         addVertex(top_center_vertex);
         addTexcoord(Vec2f(0, 0));
         addNormal(Vec3f(0, 1, 0));
-        int32_t idx = 1;
 
-        int32_t side_base_index = resolution.x() + 1;
-
-        for (uint32_t h = 0; h <= resolution.y(); h++)
+        for (uint32_t h = 0; h <= (resolution.y() + 2); h++)
         {
             for (uint32_t r = 0; r < resolution.x(); r++)
             {
-                float x = sinf(((float)r / resolution.x()) * math::pi) * radius;
-                float z = cosf(((float)r / resolution.x()) * math::pi) * radius;
+                float x = sinf(((float)r / resolution.x()) * math::two_pi) * radius;
+                float z = cosf(((float)r / resolution.x()) * math::two_pi) * radius;
 
                 // Top/bottom faces 
-                if (h == 0 || h == resolution.y())
+                if (h == 0 || h == resolution.y() + 2)
                 {
                     Vec2f uv((float)r / resolution.x(), 1.0f);
                     addTexcoord(uv);
@@ -189,54 +182,69 @@ namespace prayground {
                     {
                         Vec3f n(0, 1, 0);
                         Vec3f v = top_center_vertex + Vec3f(x, 0, z);
-                        Face f{ {0, idx, idx + 1}, {0, idx, idx + 1}, {0, idx, idx + 1} };
                         addNormal(n);
                         addVertex(v);
-                        addFace(f);
                     }
-                    else if (h == resolution.y())
+                    else if (h == resolution.y() + 2)
                     {
                         Vec3f n(0, -1, 0);
                         Vec3f v = bottom_center_vertex + Vec3f(x, 0, z);
-                        Face f{ {total_num_vertices, idx, idx + 1}, {total_num_vertices, idx, idx + 1}, {total_num_vertices, idx, idx + 1} };
                         addNormal(n);
                         addVertex(v);
-                        addFace(f);
                     }
-                    idx++;
                 }
-
-                // Side faces 
-                Vec3f v(x, height/2.0f - (((float)h / resolution.y()) * height), z);
-                addVertex(v);
-                addTexcoord(Vec2f((float)r / resolution.x(), (float)h / resolution.y()));
-                idx++;
-                // Skip top vertices on side
-                if (h == 0)
-                    continue;
-                else 
+                else // 1 <= h <= resolution.y() + 1
                 {
-                    /* i0   i1
-                     *  .---.
-                     *  | \ |
-                     *  .---.
-                     * i2   i3 */
-                    int32_t i0 = (h-1) * resolution.x() + r;
-                    int32_t i1 = (h-1) * resolution.x() + (r + 1) % resolution.x();
-                    int32_t i2 = h * resolution.x() + r;
-                    int32_t i3 = h * resolution.x() + (r + 1) % resolution.x();
-
-                    Face f0 = {{i0, i2, i3},{i0, i2, i3}, {i0, i2, i3}};
-                    Face f1 = {{i0, i3, i1},{i0, i3, i1}, {i0, i3, i1}};
-
-                    addFace(f0); addFace(f1);
-                    auto v0 = vertexAt(i0);
-                    auto v2 = vertexAt(i2);
-                    auto v3 = vertexAt(i3);
-                    // Add normal for vertex at i0 and i2  
-                    Vec3f n = normalize(cross(v2 - v0, v3 - v0));
-                    addNormal(n); addNormal(n); 
+                    // Side faces 
+                    Vec3f v(x, height / 2.0f - (((float)(h-1) / resolution.y()) * height), z);
+                    addVertex(v);
+                    addTexcoord(Vec2f((float)r / resolution.x(), (float)h / resolution.y()));
                 }
+            }
+        }
+
+        int32_t side_base_idx = resolution.x() + 1;
+        for (uint32_t h = 0; h <= resolution.y(); h++)
+        {
+            for (uint32_t r = 0; r < resolution.x(); r++)
+            {
+                if (h == 0)
+                {
+                    int32_t i1 = r + 1; 
+                    int32_t i2 = (r + 1) % resolution.x() + 1;
+                    Face f{ {0, i1, i2}, {0, i1, i2}, {0, i1, i2} };
+                    addFace(f);
+                }
+                else if (h == resolution.y())
+                {
+                    int32_t base_idx = resolution.x() * (resolution.y() + 2) + 1;
+                    int32_t i0 = total_num_vertices - 1;
+                    int32_t i1 = base_idx + r;
+                    int32_t i2 = base_idx + (r + 1) % resolution.x();
+                    Face f{ {i0, i1, i2}, {i0, i1, i2}, {i0, i1, i2} };
+                    addFace(f);
+                }
+
+                /* i0   i1
+                 *  .---.
+                 *  | \ |
+                 *  .---.
+                 * i2   i3 */
+                int32_t i0 = h * resolution.x() + r + side_base_idx;
+                int32_t i1 = h * resolution.x() + (r + 1) % resolution.x() + side_base_idx;
+                int32_t i2 = (h + 1) * resolution.x() + r + side_base_idx;
+                int32_t i3 = (h + 1) * resolution.x() + (r + 1) % resolution.x() + side_base_idx;
+
+                Face f0 = { {i0, i2, i3},{i0, i2, i3}, {i0, i2, i3} };
+                Face f1 = { {i0, i3, i1},{i0, i3, i1}, {i0, i3, i1} };
+
+                addFace(f0); addFace(f1);
+                auto v0 = vertexAt(i0);
+                auto v2 = vertexAt(i2);
+                auto v3 = vertexAt(i3);
+                // Add normal for vertex at i0 and i2  
+                Vec3f n = normalize(cross(v2 - v0, v3 - v0));
+                addNormal(n); addNormal(n); addNormal(n);
             }
         }
 

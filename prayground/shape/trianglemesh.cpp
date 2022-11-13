@@ -119,8 +119,10 @@ namespace prayground {
 
     uint32_t TriangleMesh::sbtIndex() const
     {
-        ASSERT(m_sbt_indices.size() != 1, "Detected invalid number of SBT indices. TriangleMesh::sbtIndex() can be called when the only ONE SBT index is set.");
-
+        if (m_sbt_indices.size() > 1)
+            PG_LOG_WARN("You should use TriangleMesh::sbtIndices() if the number of SBT indices is mush more 2");
+        if (m_sbt_indices.empty())
+            return 0;
         return m_sbt_indices.back();
     }
 
@@ -373,9 +375,11 @@ namespace prayground {
 
     uint32_t TriangleMesh::numMaterials() const
     {
-        ASSERT(m_sbt_indices.size() != 0, "Any SBT indices aren't set");
+        if (m_sbt_indices.empty())
+            return 1u;
 
         std::vector<uint32_t> sbt_counter;
+        // Count the number of sbt indices that doesn't duplicate
         for (auto& sbt_idx : m_sbt_indices)
         {
             auto itr = std::find(sbt_counter.begin(), sbt_counter.end(), sbt_idx);
@@ -385,8 +389,9 @@ namespace prayground {
         return static_cast<uint32_t>(sbt_counter.size());
     }
 
-    void TriangleMesh::addSbtIndices(const std::vector<uint32_t>& sbt_indices)
+    void TriangleMesh::setSbtIndices(const std::vector<uint32_t>& sbt_indices)
     {
+        m_sbt_indices.clear();
         std::copy(sbt_indices.begin(), sbt_indices.end(), std::back_inserter(m_sbt_indices));
     }
 

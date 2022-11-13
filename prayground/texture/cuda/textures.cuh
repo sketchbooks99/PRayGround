@@ -62,22 +62,22 @@ namespace prayground {
     
     // Bitmap ------------------------------------------------------
     extern "C" __device__ Vec4f __direct_callable__pg_bitmap_texture_Vec4f(const Vec2f& uv, void* tex_data) {
-        const BitmapTexture::Data* bitmap = reinterpret_cast<BitmapTextureData*>(tex_data);
+        const BitmapTexture::Data* bitmap = reinterpret_cast<BitmapTexture::Data*>(tex_data);
         float4 c = tex2D<float4>(bitmap->texture, uv.x(), uv.y());
         return Vec4f(c);
     }
 
-    extern "C" __device__ Vec3f __direct_callable__pg_bitmap_texture_Vec3f(const Vec2f & uv, void* tex_data) {
-        const BitmapTexture::Data* bitmap = reinterpret_cast<BitmapTextureData*>(tex_data);
+    extern "C" __device__ Vec3f __direct_callable__pg_bitmap_texture_Vec3f(const Vec2f& uv, void* tex_data) {
+        const BitmapTexture::Data* bitmap = reinterpret_cast<BitmapTexture::Data*>(tex_data);
         float4 c = tex2D<float4>(bitmap->texture, uv.x(), uv.y());
         return Vec3f(c);
     }
 
-    extern "C" __device__ Spectrum __direct_callable__pg_bitmap_texture_Spectrum(const Vec2f & uv, void* tex_data) {
+    extern "C" __device__ SampledSpectrum __direct_callable__pg_bitmap_texture_Spectrum(const Vec2f& uv, void* tex_data) {
         //const BitmapTexture::Data* bitmap = reinterpret_cast<BitmapTexture::Data*>(tex_data);
         //float4 c = tex2D<float4>(bitmap->texture, uv.x(), uv.y());
         //return Vec4f(c);
-        return Spectrum{};
+        return SampledSpectrum{};
     }
 
     // Constant ------------------------------------------------------
@@ -86,13 +86,13 @@ namespace prayground {
         return constant->color;
     }
 
-    extern "C" __device__ Vec3f __direct_callable__pg_constant_texture_Vec3f(const Vec2f & uv, void* tex_data) {
-        const ConstantTexture_<Vec3f>::Data* constant = reinterpret_cast<ConstantTexture_<Vec4f>::Data*>(tex_data);
+    extern "C" __device__ Vec3f __direct_callable__pg_constant_texture_Vec3f(const Vec2f& uv, void* tex_data) {
+        const ConstantTexture_<Vec3f>::Data* constant = reinterpret_cast<ConstantTexture_<Vec3f>::Data*>(tex_data);
         return constant->color;
     }
 
-    extern "C" __device__ Spectrum __direct_callable__pg_constant_texture_Spectrum(const Vec2f & uv, void* tex_data) {
-        const ConstantTexture_<Spectrum>::Data* constant = reinterpret_cast<ConstantTexture_<Vec4f>::Data*>(tex_data);
+    extern "C" __device__ SampledSpectrum __direct_callable__pg_constant_texture_Spectrum(const Vec2f& uv, void* tex_data) {
+        const ConstantTexture_<SampledSpectrum>::Data* constant = reinterpret_cast<ConstantTexture_<SampledSpectrum>::Data*>(tex_data);
         return constant->color;
     }
 
@@ -103,14 +103,14 @@ namespace prayground {
         return is_odd ? checker->color1 : checker->color2;
     }
 
-    extern "C" __device__ Vec4f __direct_callable__pg_checker_texture_Vec3f(const Vec2f & uv, void* tex_data) {
-        const CheckerTexture_<Vec3f>::Data* checker = reinterpret_cast<CheckerTexture_<Vec4f>::Data*>(tex_data);
+    extern "C" __device__ Vec4f __direct_callable__pg_checker_texture_Vec3f(const Vec2f& uv, void* tex_data) {
+        const CheckerTexture_<Vec3f>::Data* checker = reinterpret_cast<CheckerTexture_<Vec3f>::Data*>(tex_data);
         const bool is_odd = sinf(uv.x() * math::pi * checker->scale) * sinf(uv.y() * math::pi * checker->scale) < 0;
         return is_odd ? checker->color1 : checker->color2;
     }
 
-    extern "C" __device__ Vec4f __direct_callable__pg_checker_texture_Spectrum(const Vec2f & uv, void* tex_data) {
-        const CheckerTexture_<Spectrum>::Data* checker = reinterpret_cast<CheckerTexture_<Spectrum>::Data*>(tex_data);
+    extern "C" __device__ SampledSpectrum __direct_callable__pg_checker_texture_Spectrum(const Vec2f& uv, void* tex_data) {
+        const CheckerTexture_<SampledSpectrum>::Data* checker = reinterpret_cast<CheckerTexture_<SampledSpectrum>::Data*>(tex_data);
         const bool is_odd = sinf(uv.x() * math::pi * checker->scale) * sinf(uv.y() * math::pi * checker->scale) < 0;
         return is_odd ? checker->color1 : checker->color2;
     }

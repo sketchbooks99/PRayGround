@@ -48,6 +48,7 @@ void App::setup()
     const uint32_t width = pgGetWidth();
     const uint32_t height = pgGetHeight();
     result_bitmap.allocate(PixelFormat::RGBA, width, height);
+    result_bitmap.allocateDevicePtr();
 
     // Configuration of launch parameters
     params.width = result_bitmap.width();
@@ -65,7 +66,7 @@ void App::setup()
     camera->enableTracking(pgGetCurrentWindow());
 
     // Raygen program
-    ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, module, "__raygen__pinhole");
+    ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, module, "__raygen__shade");
     scene.bindRaygenProgram(raygen_prg);
     scene.setCamera(camera);
 
@@ -77,9 +78,9 @@ void App::setup()
         ProgramGroup program;
         uint32_t ID;
     };
-    Callable bitmap_prg = pipeline.createCallablesProgram(context, module, "__direct_callable__bitmap", "");
-    Callable constant_prg = pipeline.createCallablesProgram(context, module, "__direct_callable__constant", "");
-    Callable checker_prg = pipeline.createCallablesProgram(context, module, "__direct_callable__checker", "");
+    Callable bitmap_prg = pipeline.createCallablesProgram(context, module, "__direct_callable__pg_bitmap_texture_Vec3f", "");
+    Callable constant_prg = pipeline.createCallablesProgram(context, module, "__direct_callable__pg_constant_texture_Vec3f", "");
+    Callable checker_prg = pipeline.createCallablesProgram(context, module, "__direct_callable__pg_checker_texture_Vec3f", "");
     scene.bindCallablesProgram(bitmap_prg.program);
     scene.bindCallablesProgram(constant_prg.program);
     scene.bindCallablesProgram(checker_prg.program);
@@ -92,23 +93,23 @@ void App::setup()
     std::array<ProgramGroup, NRay> miss_prgs;
     miss_prgs[0] = pipeline.createMissProgram(context, module, "__miss__envmap");
     scene.bindMissPrograms(miss_prgs);
-    scene.setEnvmap(make_shared<ConstantTexture>(Vec3f(0.0f), constant_prg.ID));
+    scene.setEnvmap(make_shared<ConstantTexture>(Vec3f(0.5f), constant_prg.ID));
 
     // Hitgroup program
     std::array<ProgramGroup, NRay> mesh_prgs;
-    mesh_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closest_hit__mesh");
+    mesh_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__mesh");
 
     std::array<ProgramGroup, NRay> sphere_prgs;
-    sphere_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closest_hit__custom", IS_FUNC_TEXT("pg_sphere"));
+    sphere_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", IS_FUNC_TEXT("pg_sphere"));
 
     std::array<ProgramGroup, NRay> box_prgs;
-    box_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closest_hit__custom", IS_FUNC_TEXT("pg_box"));
+    box_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", IS_FUNC_TEXT("pg_box"));
 
     std::array<ProgramGroup, NRay> plane_prgs;
-    plane_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closest_hit__custom", IS_FUNC_TEXT("pg_plane"));
+    plane_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", IS_FUNC_TEXT("pg_plane"));
 
     std::array<ProgramGroup, NRay> cylinder_prgs;
-    cylinder_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closest_hit__custom", IS_FUNC_TEXT("pg_cylinder"));
+    cylinder_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", IS_FUNC_TEXT("pg_cylinder"));
 
     using PhongMaterial = CustomMaterial<PhongData>;
     SurfaceType phong_type = SurfaceType::RoughReflection;
@@ -161,7 +162,7 @@ void App::setup()
     auto white_phong = make_shared<PhongMaterial>(phong_id, phong_type, white);
     auto yellow_phong = make_shared<PhongMaterial>(phong_id, phong_type, yellow);
 
-    scene.addObject("mesh_cylinder", make_shared<CylinderMesh>(), green_phong, mesh_prgs, Matrix4f::identity());
+    scene.addObject("mesh_cylinder", make_shared<CylinderMesh>(), green_phong, mesh_prgs, Matrix4f::scale(50.0f));
 
     CUDA_CHECK(cudaStreamCreate(&stream));
     scene.copyDataToDevice();

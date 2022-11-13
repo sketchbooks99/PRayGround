@@ -48,6 +48,7 @@
 #include "core/bsdf.h"
 #include "core/interaction.h"
 #include "core/onb.h"
+#include "core/ray.h"
 
 #include "optix/sbt.h"
 
@@ -93,7 +94,6 @@
 #ifdef __CUDACC__ // GPU only
 #include "optix/cuda/device_util.cuh"
 #include "math/vec_math.h"
-#include "core/ray.h"
 // Contains intersection test programs for custom primitives
 // and utility functions for triangle/curves primitives.
 #include "shape/cuda/shapes.cuh"

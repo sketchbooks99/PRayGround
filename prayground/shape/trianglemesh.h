@@ -84,7 +84,7 @@ namespace prayground {
         virtual void smooth();
 
         // For binding multiple materials to single mesh object
-        void addSbtIndices(const std::vector<uint32_t>& sbt_indices);
+        void setSbtIndices(const std::vector<uint32_t>& sbt_indices);
         void offsetSbtIndex(uint32_t sbt_base);
         uint32_t numMaterials() const;
 
@@ -120,5 +120,17 @@ namespace prayground {
 
 #endif // __CUDACC__
     };
+
+#ifndef __CUDACC__
+    inline std::ostream& operator<<(std::ostream& out, const Face& face)
+    {
+        out << "Face: {" << std::endl;
+        out << "\tvertex_id: " << face.vertex_id << "," << std::endl;
+        out << "\tnormal_id: " << face.normal_id << "," << std::endl;
+        out << "\ttexcoord_id: " << face.texcoord_id << "," << std::endl;
+        out << "}";
+        return out;
+    }
+#endif
 
 } // namespace prayground

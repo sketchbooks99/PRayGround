@@ -29,6 +29,15 @@ namespace prayground {
     class CylinderMesh final : public TriangleMesh {
     public:
         CylinderMesh(float radius = 1, float height = 2, const Vec2ui& resolution = {10, 5});
+
+        float radius() const;
+        void setRadius(const float radius);
+
+        float height() const;
+        void setHeight(const float height);
+
+        const Vec2ui& resolution() const;
+        void setResolution(const Vec2ui& resolution);
     private:
         float m_radius;
         float m_height;

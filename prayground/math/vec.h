@@ -80,6 +80,10 @@ namespace prayground {
         Vec2(T t) { e[0] = t; e[1] = t; }
         Vec2(const CUVec& v) { e[0] = v.x; e[1] = v.y; }
 
+        // Cast from other type vector
+        template <typename U>
+        operator Vec2<U>() { return Vec2<U>(e[0], e[1]); }
+
         // Implicit cast operator to CUDA vector i.e. float2
         operator CUVec() const { return CUVec{ e[0], e[1] }; }
 
@@ -169,6 +173,10 @@ namespace prayground {
         Vec3(const typename CUVec2<T>::Type& v, const T& z) { e[0] = v.x; e[1] = v.y; e[2] = z; }
         Vec3(const CUVec& v) { e[0] = v.x; e[1] = v.y; e[2] = v.z; }
         Vec3(const typename CUVec4<T>::Type& v) { e[0] = v.x; e[1] = v.y; e[2] = v.z; }
+
+        // Cast from other type vector
+        template <typename U>
+        operator Vec3<U>() { return Vec3<U>(e[0], e[1], e[2]); }
 
         // Implicit cast operator to CUDA vector i.e. float3
         operator CUVec() const { return CUVec{ e[0], e[1], e[2] }; }
@@ -267,6 +275,10 @@ namespace prayground {
         Vec4(const typename CUVec3<T>::Type& v) { e[0] = v.x; e[1] = v.y; e[2] = v.z; e[3] = T(1); }
         Vec4(const typename CUVec3<T>::Type& v, const T& w) { e[0] = v.x; e[1] = v.y; e[2] = v.z; e[3] = w; }
         Vec4(const CUVec& v) { e[0] = v.x; e[1] = v.y; e[2] = v.z; e[3] = v.w; }
+
+        // Cast from other type vector
+        template <typename U>
+        operator Vec4<U>() { return Vec4<U>(e[0], e[1], e[2], e[3]); }
 
         // Implicit cast operator to CUDA vector i.e. float4
         operator CUVec() const { return CUVec{ e[0], e[1], e[2], e[3] }; }

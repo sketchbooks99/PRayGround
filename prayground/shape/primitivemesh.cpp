@@ -159,98 +159,120 @@ namespace prayground {
     {
         const Vec3f top_center_vertex(0.0f, height / 2.0f, 0.0f);
         const Vec3f bottom_center_vertex(0.0f, -height / 2.0f, 0.0f);
-        const int32_t total_num_vertices = resolution.x() * (resolution.y() + 3) + 2;
+        const int32_t total_num_vertices = resolution.x() * (resolution.y() + 1) + 2;
 
         addVertex(top_center_vertex);
         addTexcoord(Vec2f(0, 0));
         addNormal(Vec3f(0, 1, 0));
 
-        for (uint32_t h = 0; h <= (resolution.y() + 2); h++)
+        int32_t num_top_vertices = resolution.x() + 1;
+
+        // Add faces for top surface
+        for (uint32_t r = 0; r < resolution.x(); r++)
+        {
+            int32_t i1 = r + 1;
+            int32_t i2 = (r + 1) % resolution.x() + 1;
+            Face f{{0, i1, i2}, {0, i1, i2}, {0, i1, i2}};
+            addFace(f);
+            addNormal(Vec3f(0, 1, 0));
+        }
+
+        // Add vertices/texcoords on the side
+        for (uint32_t h = 0; h <= resolution.y(); h++)
         {
             for (uint32_t r = 0; r < resolution.x(); r++)
             {
                 float x = sinf(((float)r / resolution.x()) * math::two_pi) * radius;
                 float z = cosf(((float)r / resolution.x()) * math::two_pi) * radius;
-
-                // Top/bottom faces 
-                if (h == 0 || h == resolution.y() + 2)
-                {
-                    Vec2f uv((float)r / resolution.x(), 1.0f);
-                    addTexcoord(uv);
-
-                    if (h == 0)
-                    {
-                        Vec3f n(0, 1, 0);
-                        Vec3f v = top_center_vertex + Vec3f(x, 0, z);
-                        addNormal(n);
-                        addVertex(v);
-                    }
-                    else if (h == resolution.y() + 2)
-                    {
-                        Vec3f n(0, -1, 0);
-                        Vec3f v = bottom_center_vertex + Vec3f(x, 0, z);
-                        addNormal(n);
-                        addVertex(v);
-                    }
-                }
-                else // 1 <= h <= resolution.y() + 1
-                {
-                    // Side faces 
-                    Vec3f v(x, height / 2.0f - (((float)(h-1) / resolution.y()) * height), z);
-                    addVertex(v);
-                    addTexcoord(Vec2f((float)r / resolution.x(), (float)h / resolution.y()));
-                }
+                float y = height / 2.0f - ((float)h / resolution.y()) * height;
+                // Side faces 
+                Vec3f v(x, y, z);
+                addVertex(v);
+                addTexcoord(Vec2f((float)r / resolution.x(), (float)h / resolution.y()));
             }
         }
 
-        int32_t side_base_idx = resolution.x() + 1;
-        for (uint32_t h = 0; h <= resolution.y(); h++)
+        for (uint32_t h = 0; h < resolution.y(); h++)
         {
             for (uint32_t r = 0; r < resolution.x(); r++)
             {
-                if (h == 0)
-                {
-                    int32_t i1 = r + 1; 
-                    int32_t i2 = (r + 1) % resolution.x() + 1;
-                    Face f{ {0, i1, i2}, {0, i1, i2}, {0, i1, i2} };
-                    addFace(f);
-                }
-                else if (h == resolution.y())
-                {
-                    int32_t base_idx = resolution.x() * (resolution.y() + 2) + 1;
-                    int32_t i0 = total_num_vertices - 1;
-                    int32_t i1 = base_idx + r;
-                    int32_t i2 = base_idx + (r + 1) % resolution.x();
-                    Face f{ {i0, i1, i2}, {i0, i1, i2}, {i0, i1, i2} };
-                    addFace(f);
-                }
-
                 /* i0   i1
                  *  .---.
                  *  | \ |
                  *  .---.
                  * i2   i3 */
-                int32_t i0 = h * resolution.x() + r + side_base_idx;
-                int32_t i1 = h * resolution.x() + (r + 1) % resolution.x() + side_base_idx;
-                int32_t i2 = (h + 1) * resolution.x() + r + side_base_idx;
-                int32_t i3 = (h + 1) * resolution.x() + (r + 1) % resolution.x() + side_base_idx;
+                int32_t i0 = h * resolution.x() + r + 1;
+                int32_t i1 = h * resolution.x() + (r + 1) % resolution.x() + 1;
+                int32_t i2 = (h + 1) * resolution.x() + r + 1;
+                int32_t i3 = (h + 1) * resolution.x() + (r + 1) % resolution.x() + 1;
 
-                Face f0 = { {i0, i2, i3},{i0, i2, i3}, {i0, i2, i3} };
-                Face f1 = { {i0, i3, i1},{i0, i3, i1}, {i0, i3, i1} };
-
-                addFace(f0); addFace(f1);
                 auto v0 = vertexAt(i0);
+                auto v1 = vertexAt(i1);
                 auto v2 = vertexAt(i2);
                 auto v3 = vertexAt(i3);
-                // Add normal for vertex at i0 and i2  
-                Vec3f n = normalize(cross(v2 - v0, v3 - v0));
-                addNormal(n); addNormal(n); addNormal(n);
+                // Add normal for vertex at i0 and i2 
+                Vec3f n0 = normalize(cross(v2 - v0, v3 - v0));
+                addNormal(n0); addNormal(n0); addNormal(n0);
+
+                Vec3f n1 = normalize(cross(v3 - v0, v1 - v0));
+                addNormal(n1); addNormal(n1); addNormal(n1);
+
+                int32_t in0 = numNormals();
+                int32_t in1 = numNormals() + 3;
+
+                Face f0 = { {i0, i2, i3},{in0, in0 + 1, in0 + 2}, {i0, i2, i3} };
+                Face f1 = { {i0, i3, i1},{in1, in1 + 1, in1 + 2}, {i0, i3, i1} };
+
+                addFace(f0); addFace(f1);
             }
+        }
+
+        // Add faces for bottom surface
+        for (uint32_t r = 0; r < resolution.x(); r++)
+        {
+            int32_t base_idx = resolution.x() * resolution.y() + 1;
+            int32_t num_total_normals = numNormals() + num_top_vertices;
+            int32_t i0 = total_num_vertices - 1;
+            int32_t i1 = base_idx + r;
+            int32_t i2 = base_idx + (r + 1) % resolution.x();
+            Face f{ Vec3i{i0, i1, i2}, Vec3i{num_total_normals - 1, (int32_t)(numNormals() + r), (int32_t)(numNormals() + (r + 1) % resolution.x())}, Vec3i{i0, i1, i2}};
+            addFace(f);
+            addNormal(Vec3f(0, -1, 0));
         }
 
         addVertex(bottom_center_vertex);
         addTexcoord(Vec2f(0.0f));
         addNormal(Vec3f(0.0f, -1.0f, 0.0f));
+    }
+
+    float CylinderMesh::radius() const
+    {
+        return m_radius;
+    }
+
+    void CylinderMesh::setRadius(const float radius)
+    {
+        m_radius = radius;
+    }
+
+    float CylinderMesh::height() const
+    {
+        return m_height;
+    }
+
+    void CylinderMesh::setHeight(const float height)
+    {
+        m_height = height;
+    }
+
+    const Vec2ui& CylinderMesh::resolution() const
+    {
+        return m_resolution;
+    }
+
+    void CylinderMesh::setResolution(const Vec2ui& resolution)
+    {
+        m_resolution = resolution;
     }
 
     // ---------------------------------------------------------

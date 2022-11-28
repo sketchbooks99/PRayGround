@@ -162,7 +162,7 @@ void App::setup()
     auto white_phong = make_shared<PhongMaterial>(phong_id, phong_type, white);
     auto yellow_phong = make_shared<PhongMaterial>(phong_id, phong_type, yellow);
 
-    scene.addObject("mesh_cylinder", make_shared<CylinderMesh>(), green_phong, mesh_prgs, Matrix4f::scale(50.0f));
+    scene.addObject("mesh_cylinder", make_shared<CylinderMesh>(1, 2, Vec2ui(30, 30)), green_phong, mesh_prgs, Matrix4f::scale(50.0f));
 
     CUDA_CHECK(cudaStreamCreate(&stream));
     scene.copyDataToDevice();

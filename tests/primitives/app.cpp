@@ -93,7 +93,7 @@ void App::setup()
     std::array<ProgramGroup, NRay> miss_prgs;
     miss_prgs[0] = pipeline.createMissProgram(context, module, "__miss__envmap");
     scene.bindMissPrograms(miss_prgs);
-    scene.setEnvmap(make_shared<ConstantTexture>(Vec3f(0.5f), constant_prg.ID));
+    scene.setEnvmap(make_shared<ConstantTexture>(Vec3f(0.0f), constant_prg.ID));
 
     // Hitgroup program
     std::array<ProgramGroup, NRay> mesh_prgs;
@@ -163,6 +163,7 @@ void App::setup()
     auto yellow_phong = make_shared<PhongMaterial>(phong_id, phong_type, yellow);
 
     scene.addObject("mesh_cylinder", make_shared<CylinderMesh>(1, 2, Vec2ui(30, 30)), green_phong, mesh_prgs, Matrix4f::scale(50.0f));
+    scene.addObject("mesh_icosphere", make_shared<IcoSphereMesh>(1, 1), red_phong, mesh_prgs, Matrix4f::translate(-100, 0, 0) * Matrix4f::scale(50.0f));
 
     CUDA_CHECK(cudaStreamCreate(&stream));
     scene.copyDataToDevice();

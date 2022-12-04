@@ -78,6 +78,10 @@ namespace prayground {
         Vec2() = default;
         Vec2(T x, T y) { e[0] = x; e[1] = y; }
         Vec2(T t) { e[0] = t; e[1] = t; }
+
+        // Copy constructor
+        Vec2(const Vec2& v) = default;
+
         Vec2(const CUVec& v) { e[0] = v.x; e[1] = v.y; }
 
         // Cast from other type vector
@@ -95,6 +99,8 @@ namespace prayground {
         
               T& y()       { return e[1]; }
         const T& y() const { return e[1]; }
+
+        bool operator==(const Vec2& v) const { return (e[0] == v[0] && e[1] == v[1]); }
 
         const Vec2& operator-() const { return Vec2{ -e[0], -e[1] }; }
 
@@ -164,6 +170,9 @@ namespace prayground {
         Vec3() = default;
         Vec3(T x, T y, T z) { e[0] = x; e[1] = y; e[2] = z;}
         Vec3(T t) { e[0] = t; e[1] = t; e[2] = t; }
+        
+        // Copy constructor
+        Vec3(const Vec3& v) = default;
 
         // From other dimension vector
         Vec3(const Vec2<T>& v, const T& z) { e[0] = v[0]; e[1] = v[1]; e[2] = z; }
@@ -192,6 +201,8 @@ namespace prayground {
 
         T& z() { return e[2]; }
         const T& z() const { return e[2]; }
+
+        bool operator==(const Vec3& v) const { return (e[0] == v[0] && e[1] == v[1] && e[2] == v[2]); }
 
         Vec3 operator-() const { return Vec3{ -e[0], -e[1], -e[2] }; }
 
@@ -263,6 +274,9 @@ namespace prayground {
         Vec4(T x, T y, T z, T w) { e[0] = x; e[1] = y; e[2] = z; e[3] = w; }
         Vec4(T t) { e[0] = t; e[1] = t; e[2] = t; e[3] = t; }
 
+        // Copy constructor
+        Vec4(const Vec4& v) = default;
+
         // From other dimension vector
         Vec4(const Vec2<T>& v, const T& z, const T& w) { e[0] = v[0]; e[1] = v[1]; e[2] = z; e[3] = w; }
         Vec4(const Vec2<T>& xy, const Vec2<T>& zw) { e[0] = xy[0]; e[1] = xy[1]; e[2] = zw[0]; e[3] = zw[1]; }
@@ -297,6 +311,8 @@ namespace prayground {
 
         T& w() { return e[3]; }
         const T& w() const { return e[3]; }
+
+        bool operator==(const Vec4& v) const { return (e[0] == v[0] && e[1] == v[1] && e[2] == v[2] && e[3] == v[3]); }
 
         const Vec4& operator-() const { return Vec4{ -e[0], -e[1], -e[2], -e[3]}; }
 

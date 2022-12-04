@@ -20,7 +20,7 @@ namespace prayground {
     IcoSphereMesh::IcoSphereMesh(float radius, int level)
     : m_radius(radius), m_level(level)
     {
-        ASSERT(level >= 1 && level < 20, "The level of subdivision must be 1 to 19.");
+        ASSERT(level >= 0 && level < 20, "The level of subdivision must be 0 to 19.");
 
         const float H_ANGLE = math::pi / 180.0f * 72.0f;
         const float V_ANGLE = atanf(1.0f / 2.0f);
@@ -34,6 +34,8 @@ namespace prayground {
 
         // Top vertex
         m_vertices[0] = Vec3f(0, radius, 0);
+        m_texcoords[0] = Vec2f(0, 0);
+        m_indices.emplace(std::make_pair<float, float>(0, 0), 0);
 
         // 10 vertices at 2nd and 3rd rows
         for (int32_t i = 1; i <= 5; i++)
@@ -45,11 +47,15 @@ namespace prayground {
             const float xz = m_radius * cosf(V_ANGLE);
 
             const Vec3f v0(xz * cosf(h_angle1), y, xz * sinf(h_angle1));
-            const Vec3f v1(xz * cosf(h_angle2), y, xz * sinf(h_angle2));
+            const Vec3f v1(xz * cosf(h_angle2), -y, xz * sinf(h_angle2));
             m_vertices[i0] = v0;
             m_vertices[i1] = v1;
             const Vec2f uv0 = getSphereUV(normalize(v0));
             const Vec2f uv1 = getSphereUV(normalize(v1));
+            std::pair<float, float> key0(uv0.x(), uv0.y());
+            std::pair<float, float> key1(uv1.x(), uv1.y());
+            m_indices.emplace(key0, i0);
+            m_indices.emplace(key1, i1);
             m_texcoords[i0] = uv0;
             m_texcoords[i1] = uv1;
 
@@ -59,7 +65,7 @@ namespace prayground {
             Face f1{ {i0, i1, i0 % 5 + 1}, {0, 0, 0}, {i0, i1, i1 % 5 + 1} };
             Face f2{ {i1, i1 % 5 + 6, i0 % 5 + 1}, {0, 0, 0}, {i1, i1 % 5 + 6, i0 % 5 + 1} };
             // Bottom face
-            Face f3{ {i1, i1 % 5 + 6, 11}, {0, 0, 0}, {i1, i1 % 5 + 6, 11} };
+            Face f3{ {i1, 11, i1 % 5 + 6}, {0, 0, 0}, {i1, 11, i1 % 5 + 6} };
 
             m_faces[i - 1] = f0;
             m_faces[5 + (i - 1) * 2 + 0] = f1;
@@ -73,6 +79,8 @@ namespace prayground {
 
         // Bottom vertex
         m_vertices[11] = Vec3f(0, -radius, 0);
+        m_texcoords[11] = Vec2f(0, 1);
+        m_indices.emplace(std::make_pair<float, float>(0, 1), 11);
 
         int32_t n_id = 0;
         for (auto& f : m_faces)
@@ -90,54 +98,118 @@ namespace prayground {
             f.normal_id = Vec3i(n_id, n_id + 1, n_id + 2);
             n_id += 3;
         }
+
+        subdivide(m_level);
     }
 
     // Subdivide each faces to 4 faces
     // Prohibit m_level(current level) + level exceeds 20 due to decline of performance
     void IcoSphereMesh::subdivide(const float level)
     {
-        ASSERT(level >= 1 && level < 20, "The level of subdivision must be 1 to 19.");
+        PG_LOG("Processing subdivision of Icosphere (subdivision level =", level, ") ...");
 
-        std::vector<Vec3f> temp_vertices;
+        const int32_t total_level = m_level + level;
+        ASSERT(total_level >= 0 && total_level < 20, "The level of subdivision must be 0 to 19.");
+
         std::vector<Face> temp_faces;
         int32_t index = 0;
 
-        for (int32_t i = 1; i <= level; i++)
+        for (int32_t i = 1; i <= total_level; i++)
         {
             // Copy previous vertices/faces and clear it
-            temp_vertices = m_vertices;
             temp_faces = m_faces;
-            m_vertices.clear();
             m_faces.clear();
             index = 0;
 
             // Perform subdivision for each triangle
             for (int32_t j = 0; j < temp_faces.size(); j++)
             {
+                const int32_t i0 = temp_faces[j].vertex_id.x();
+                const int32_t i1 = temp_faces[j].vertex_id.y();
+                const int32_t i2 = temp_faces[j].vertex_id.z();
+                const Vec3f v0 = m_vertices[i0];
+                const Vec3f v1 = m_vertices[i1];
+                const Vec3f v2 = m_vertices[i2];
 
+                /**
+                 * Add 3 vertices between each edges, 4 triangle faces 
+                 * 
+                 *              v0 *
+                 *                / \
+                 *        new_v0 * - * new_v2
+                 *              / \ / \
+                 *          v1 * - * - * v2
+                 *                 new_v1
+                 */
+
+                Vec3f new_v0 = lerp(v0, v1, 0.5f);
+                Vec3f new_v1 = lerp(v1, v2, 0.5f);
+                Vec3f new_v2 = lerp(v2, v0, 0.5f);
+                new_v0 = normalize(new_v0) * m_radius;
+                new_v1 = normalize(new_v1) * m_radius;
+                new_v2 = normalize(new_v2) * m_radius;
+                Vec2f new_uv0 = getSphereUV(new_v0 * (1.0f / m_radius));
+                Vec2f new_uv1 = getSphereUV(new_v1 * (1.0f / m_radius));
+                Vec2f new_uv2 = getSphereUV(new_v2 * (1.0f / m_radius));
+
+                int32_t new_i0 = findOrAddVertex(new_v0, new_uv0);
+                int32_t new_i1 = findOrAddVertex(new_v1, new_uv1);
+                int32_t new_i2 = findOrAddVertex(new_v2, new_uv2);
+
+                Face f0{ {i0, new_i0, new_i2}, {0, 0, 0}, {i0, new_i0, new_i2} };
+                Face f1{ {new_i0, i1, new_i1}, {0, 0, 0}, {new_i0, i1, new_i1} };
+                Face f2{ {new_i0, new_i1, new_i2}, {0, 0, 0}, {new_i0, new_i1, new_i2} };
+                Face f3{ {new_i2, new_i1, i2}, {0, 0, 0}, {new_i2, new_i1, i2} };
+
+                addFace(f0); addFace(f1); addFace(f2); addFace(f3);
             }
+        }
+
+        m_normals.clear();
+        int32_t n_id = 0;
+        for (auto& f : m_faces)
+        {
+            const Vec3f& v0 = m_vertices[f.vertex_id.x()];
+            const Vec3f& v1 = m_vertices[f.vertex_id.y()];
+            const Vec3f& v2 = m_vertices[f.vertex_id.z()];
+
+            const Vec3f n = normalize(cross(v2 - v0, v1 - v0));
+
+            addNormal(n);
+            addNormal(n);
+            addNormal(n);
+
+            f.normal_id = Vec3i(n_id, n_id + 1, n_id + 2);
+            n_id += 3;
         }
     }
 
     // ---------------------------------------------------------
     /**
-     * @note
-     * Smooth each normal
-     */
-    void IcoSphereMesh::smooth()
-    {
-
-    }
-
-    // ---------------------------------------------------------
-    /**
      * @note 
-     * Split each vertices which is shared by two or more faces 
-     * This may induce more memory usage
+     * Split shared vertices to independent vertices
      */
     void IcoSphereMesh::splitVertices()
     {
+        UNIMPLEMENTED();
+    }
 
+    int32_t IcoSphereMesh::findOrAddVertex(const Vec3f& v, const Vec2f& texcoord)
+    {
+        std::pair<float, float> key(texcoord.x(), texcoord.y());
+        auto itr = m_indices.find(key);
+        // Found the same vertex and return it's index
+        if (itr != m_indices.end())
+            return itr->second;
+        // There has been no same vertex yet, and add vertex/texcoord
+        else
+        {
+            int32_t index = static_cast<int32_t>(m_indices.size());
+            addVertex(v);
+            addTexcoord(texcoord);
+            m_indices.emplace(key, index);
+            return index;
+        }
     }
 
     // ---------------------------------------------------------
@@ -224,6 +296,10 @@ namespace prayground {
                 auto v1 = vertexAt(i1);
                 auto v2 = vertexAt(i2);
                 auto v3 = vertexAt(i3);
+
+                int32_t in0 = numNormals();
+                int32_t in1 = numNormals() + 3;
+
                 // Add normal for vertex at i0 and i2 
                 Vec3f n0 = normalize(cross(v2 - v0, v3 - v0));
                 addNormal(n0); addNormal(n0); addNormal(n0);
@@ -231,16 +307,14 @@ namespace prayground {
                 Vec3f n1 = normalize(cross(v3 - v0, v1 - v0));
                 addNormal(n1); addNormal(n1); addNormal(n1);
 
-                int32_t in0 = numNormals();
-                int32_t in1 = numNormals() + 3;
-
-                Face f0 = { {i0, i2, i3},{in0, in0 + 1, in0 + 2}, {i0, i2, i3} };
-                Face f1 = { {i0, i3, i1},{in1, in1 + 1, in1 + 2}, {i0, i3, i1} };
+                Face f0 = { {i0, i2, i3}, {in0, in0 + 1, in0 + 2}, {i0, i2, i3} };
+                Face f1 = { {i0, i3, i1}, {in1, in1 + 1, in1 + 2}, {i0, i3, i1} };
 
                 addFace(f0); addFace(f1);
             }
         }
-
+        
+        int32_t n_base_idx = numNormals();
         // Add faces for bottom surface
         for (uint32_t r = 0; r < m_resolution.x(); r++)
         {
@@ -249,7 +323,9 @@ namespace prayground {
             int32_t i0 = total_num_vertices - 1;
             int32_t i1 = base_idx + r;
             int32_t i2 = base_idx + (r + 1) % m_resolution.x();
-            Face f{ Vec3i{i0, i1, i2}, Vec3i{num_total_normals - 1, (int32_t)(numNormals() + r), (int32_t)(numNormals() + (r + 1) % m_resolution.x())}, Vec3i{i0, i1, i2}};
+            Face f{ Vec3i{i0, i1, i2}, 
+                Vec3i{num_total_normals - 1, static_cast<int32_t>(n_base_idx + r), static_cast<int32_t>(n_base_idx + (r + 1) % resolution.x())},
+                Vec3i{i0, i1, i2}};
             addFace(f);
             addNormal(Vec3f(0, -1, 0));
         }

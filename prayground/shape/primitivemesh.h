@@ -1,6 +1,9 @@
 #pragma once 
 
 #include <prayground/shape/trianglemesh.h>
+#ifndef __CUDACC__
+#include <map>
+#endif
 
 namespace prayground {
 
@@ -11,12 +14,16 @@ namespace prayground {
         IcoSphereMesh(float radius = 1, int level = 2);
 
         void subdivide(const float level);
-        void smooth() override;
         void splitVertices();
     private:
+        /* Return index if the same vertex position has already existed.
+        *  If there is no same vertex, it will return -1. */
+        int32_t findOrAddVertex(const Vec3f& v, const Vec2f& texcoord);
+
         float m_radius;
         int m_level;
-        std::vector<int> share_count; // Count the number of sharing faces
+        /* Map to search an index correnponds to a texcoord */
+        std::map<std::pair<float, float>, int32_t> m_indices;
     };
 
     class UVSphereMesh final : public TriangleMesh {

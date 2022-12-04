@@ -59,8 +59,8 @@ extern "C" __device__ void __raygen__shade()
         si.wi = normalize(Vec3f(-1, -1, 2));
         //Vec3f shade = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
         //    si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
-        Vec3f shade = fabsf(dot(si.wi, si.shading.n)) * Vec3f(0.3f, 0.7f, 0.3f);
-        result = shade;
+        Vec3f shade = dot(si.wi, si.shading.n) * Vec3f(0.3f, 0.7f, 0.3f);
+        result = si.shading.n;
     }
 
     if (!result.isValid())
@@ -117,7 +117,10 @@ extern "C" __device__ void __closesthit__mesh()
     const Vec3f p0 = mesh->vertices[f.vertex_id.x()];
     const Vec3f p1 = mesh->vertices[f.vertex_id.y()];
     const Vec3f p2 = mesh->vertices[f.vertex_id.z()];
-    shading.n = normalize(cross(p2 - p0, p1 - p0));
+    const Vec3f n0 = mesh->normals[f.normal_id.x()];
+    const Vec3f n1 = mesh->normals[f.normal_id.y()];
+    const Vec3f n2 = mesh->normals[f.normal_id.z()];
+    shading.n = (1.0f - bc.x() - bc.y()) * n0 + bc.x() * n1 + bc.y() * n2;
     shading.n = normalize(optixTransformNormalFromObjectToWorldSpace(shading.n));
 
     SurfaceInteraction* si = getSurfaceInteraction();

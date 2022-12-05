@@ -57,10 +57,10 @@ extern "C" __device__ void __raygen__shade()
     else
     {
         si.wi = normalize(Vec3f(-1, -1, 2));
-        //Vec3f shade = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
-        //    si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
-        Vec3f shade = dot(si.wi, si.shading.n) * Vec3f(0.3f, 0.7f, 0.3f);
-        result = si.shading.n;
+        Vec3f shade = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
+            si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
+        //Vec3f shade = dot(si.wi, si.shading.n) * Vec3f(0.3f, 0.7f, 0.3f);
+        result = shade;
     }
 
     if (!result.isValid())

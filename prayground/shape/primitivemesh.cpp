@@ -216,7 +216,127 @@ namespace prayground {
     UVSphereMesh::UVSphereMesh(float radius, const Vec2ui& resolution)
         : m_radius(radius), m_resolution(resolution)
     {
-        UNIMPLEMENTED();
+        const int32_t total_num_vertices = resolution.x() * (resolution.y() - 1) + 2;
+
+        // Add top vertex
+        addVertex(0, radius, 0);
+        addTexcoord(0, 0);
+
+        // Add vertices on side
+        for (uint32_t v = 1; v < resolution.y(); v++)
+        {
+            for (uint32_t u = 0; u < resolution.x(); u++)
+            {
+                const float phi = (math::pi / 2.0f) - ((float)v / resolution.y()) * math::pi;
+                const float theta = math::two_pi * ((float)u / resolution.x());
+                const float x = cosf(phi) * cosf(theta);
+                const float y = sinf(phi);
+                const float z = cosf(phi) * sinf(theta);
+                Vec3f vertex = Vec3f(x, y, z) * radius;
+                addVertex(vertex);
+                addTexcoord(getSphereUV(normalize(vertex)));
+            }
+        }
+
+        // Add bottom vertex
+        addVertex(0, -radius, 0);
+        addTexcoord(0, 1);
+
+        for (uint32_t v = 0; v < resolution.y(); v++)
+        {
+            for (uint32_t u = 0; u < resolution.x(); u++)
+            {
+                if (v == 0)
+                {
+                    //       i0
+                    //       * <- top vertex
+                    //      / \
+                    // ... * - * ...
+                    //    i1   i2
+
+                    const int32_t i0 = 0;
+                    const int32_t i1 = u + 1;
+                    const int32_t i2 = (u + 1) % resolution.x() + 1;
+
+                    const Vec3f v0 = vertexAt(i0);
+                    const Vec3f v1 = vertexAt(i1);
+                    const Vec3f v2 = vertexAt(i2);
+
+                    const Vec3f n = normalize(cross(v2 - v0, v1 - v0));
+
+                    // Get base index of normal
+                    const int32_t n_base_idx = numNormals();
+                    // Add three normals for vertices that constructs triangle face
+                    for (int i = 0; i < 3; i++)
+                        addNormal(n);
+
+                    const Face f{ {i0, i1, i2}, {n_base_idx, n_base_idx + 1, n_base_idx + 2}, {i0, i1, i2} };
+                    addFace(f);
+                }
+                else if (v == resolution.y() - 1)
+                {
+                    //      i0   i2
+                    // ... - * - * - ...
+                    //        \ /
+                    //         * <- bottom vertex
+                    //         i1
+
+                    const int32_t i0 = (v - 1) * resolution.x() + u + 1;
+                    const int32_t i1 = total_num_vertices - 1;
+                    const int32_t i2 = (v - 1) * resolution.x() + (u + 1) % resolution.x() + 1;
+
+                    const Vec3f v0 = vertexAt(i0);
+                    const Vec3f v1 = vertexAt(i1);
+                    const Vec3f v2 = vertexAt(i2);
+
+                    const Vec3f n = normalize(cross(v2 - v0, v1 - v0));
+
+                    // Get base index of normal
+                    const int32_t n_base_idx = numNormals();
+                    // Add three normals for vertices that construct triangle face
+                    for (int i = 0; i < 3; i++)
+                        addNormal(n);
+
+                    const Face f{ {i0, i1, i2}, {n_base_idx, n_base_idx + 1, n_base_idx + 2}, {i0, i1, i2} };
+                    addFace(f);
+                }
+                else
+                {
+                    //      i0   i1
+                    // ... - * - * - ...
+                    //       | \ | 
+                    // ... - * - * - ... 
+                    //      i2   i3
+
+                    const int32_t i0 = (v - 1) * resolution.x() + u + 1;
+                    const int32_t i1 = (v - 1) * resolution.x() + (u + 1) % resolution.x() + 1;
+                    const int32_t i2 = v * resolution.x() + u + 1;
+                    const int32_t i3 = v * resolution.x() + (u + 1) % resolution.x() + 1;
+
+                    const Vec3f v0 = vertexAt(i0);
+                    const Vec3f v1 = vertexAt(i1);
+                    const Vec3f v2 = vertexAt(i2);
+                    const Vec3f v3 = vertexAt(i3);
+
+                    const Vec3f n0 = normalize(cross(v3 - v0, v2 - v0));
+                    const Vec3f n1 = normalize(cross(v1 - v0, v3 - v0));
+
+                    const int32_t n_base_idx = numNormals();
+                    // Add three normals for vertices that construct triangle face
+                    for (int i = 0; i < 3; i++)
+                        addNormal(n0);
+                    for (int i = 0; i < 3; i++)
+                        addNormal(n1);
+
+                    Face f0{ {i0, i2, i3}, {n_base_idx, n_base_idx + 1, n_base_idx + 2}, {i0, i2, i3} };
+                    Face f1{ {i0, i3, i1}, {n_base_idx + 3, n_base_idx + 4, n_base_idx + 5}, {i0, i3, i1} };
+
+                    addFace(f0); addFace(f1);
+                }
+            }
+        }
+
+        PG_LOG("Dummy");
     }
 
     float UVSphereMesh::radius() const
@@ -369,13 +489,6 @@ namespace prayground {
     PlaneMesh::PlaneMesh(const Vec2f& size, const Vec2ui& resolution, Axis axis)
         : m_size(size), m_resolution(resolution), m_axis(axis)
     {
-        
-    }
-
-    void PlaneMesh::init()
-    {
-        std::vector<std::array<float, 3>> temp_vertices;
-
         const float u_min = -m_size.x() / 2.0f;
         const float v_min = -m_size.y() / 2.0f;
         const float u_step = m_size.x() / (float)m_resolution.x();
@@ -390,39 +503,36 @@ namespace prayground {
 
             for (int u = 0; u <= m_resolution.x(); u++)
             {
-                std::array<float, 3> vertex{ 0.0f, 0.0f, 0.0f };
+                Vec3f vertex(0.0f);
                 vertex[u_axis] = u_min + (float)u * u_step;
                 vertex[v_axis] = v_min + (float)v * v_step;
                 vertex[(int)m_axis] = 0.0f;
-                m_texcoords.push_back(make_float2((float)u / m_resolution.x(), (float)v / m_resolution.y()));
-                temp_vertices.push_back(vertex);
+                addTexcoord(Vec2f((float)u / m_resolution.x(), (float)v / m_resolution.y()));
+                addVertex(vertex);
 
-                if (u < m_resolution.x() && v < m_resolution.y())
-                {
-                    // i00 - i01 ...
-                    //  |  \  |  
-                    // i10 - i11 ...
-                    //  |  \  |
+                if (u == m_resolution.x() || v == m_resolution.y())
+                    continue;
 
-                    int i00 = m_resolution.x() * v + u;
-                    int i01 = i00 + 1;
-                    int i10 = m_resolution.x() * (v + 1) + u;
-                    int i11 = i10 + 1;
-                    Face f1{ Vec3i(i00, i10, i11), Vec3i(i00, i10, i11), Vec3i(i00, i10, i11) };
-                    Face f2{ Vec3i(i00, i11, i01), Vec3i(i00, i11, i01), Vec3i(i00, i11, i01) };
-                    m_faces.push_back(f1);
-                    m_faces.push_back(f2);
-                }
+                // i00 - i01 ...
+                //  |  \  |  
+                // i10 - i11 ...
+                //  |  \  |
+
+                int i00 = (m_resolution.x() + 1) * v + u;
+                int i01 = i00 + 1;
+                int i10 = (m_resolution.x() + 1) * (v + 1) + u;
+                int i11 = i10 + 1;
+                Face f1{ Vec3i(i00, i10, i11), Vec3i(i00, i10, i11), Vec3i(i00, i10, i11) };
+                Face f2{ Vec3i(i00, i11, i01), Vec3i(i00, i11, i01), Vec3i(i00, i11, i01) };
+                m_faces.push_back(f1);
+                m_faces.push_back(f2);
             }
         }
 
-        std::transform(temp_vertices.begin(), temp_vertices.end(), std::back_insert_iterator(m_vertices),
-            [](const std::array<float, 3>& v) { return Vec3f(v[0], v[1], v[2]); });
-
-        float n[3] = { 0.0f, 0.0f, 0.0f };
+        Vec3f n{ 0.0f, 0.0f, 0.0f };
         n[(int)m_axis] = 1.0f;
         m_normals.resize(m_vertices.size());
-        std::fill(m_normals.begin(), m_normals.end(), Vec3f(n[0], n[1], n[2]));
+        std::fill(m_normals.begin(), m_normals.end(), n);
     }
 
     const Vec2f& PlaneMesh::size() const

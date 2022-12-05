@@ -62,8 +62,6 @@ namespace prayground {
     public: 
         PlaneMesh(const Vec2f& size = {10,10}, const Vec2ui& resolution = {2,2}, Axis axis=Axis::Y);
 
-        void init();
-
         const Vec2f& size() const;
         void setSize(const Vec2f& size);
 

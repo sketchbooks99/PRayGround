@@ -118,7 +118,7 @@ void App::setup()
     // Create phong materials
     PhongData green = {
         .emission = Vec3f(0.0f),
-        .ambient = Vec3f(0.3f, 0.7f, 0.3f),
+        .ambient = Vec3f(0.1f, 0.2f, 0.1f),
         .diffuse = Vec3f(0.05f, 0.8f, 0.05f),
         .specular = Vec3f(0.9f), 
         .shininess = 0.5f
@@ -126,7 +126,7 @@ void App::setup()
 
     PhongData red = {
         .emission = Vec3f(0.0f),
-        .ambient = Vec3f(0.7f, 0.3f, 0.3f),
+        .ambient = Vec3f(0.2f, 0.1f, 0.1f),
         .diffuse = Vec3f(0.8f, 0.05f, 0.05f),
         .specular = Vec3f(0.9f),
         .shininess = 0.5f
@@ -134,7 +134,7 @@ void App::setup()
 
     PhongData blue = {
         .emission = Vec3f(0.0f),
-        .ambient = Vec3f(0.3f, 0.3f, 0.7f),
+        .ambient = Vec3f(0.1f, 0.1f, 0.2f),
         .diffuse = Vec3f(0.05f, 0.05f, 0.8f),
         .specular = Vec3f(0.9f),
         .shininess = 0.5f
@@ -164,6 +164,8 @@ void App::setup()
 
     scene.addObject("mesh_cylinder", make_shared<CylinderMesh>(1, 2, Vec2ui(30, 30)), green_phong, mesh_prgs, Matrix4f::scale(50.0f));
     scene.addObject("mesh_icosphere", make_shared<IcoSphereMesh>(1, 1), red_phong, mesh_prgs, Matrix4f::translate(-100, 0, 0) * Matrix4f::scale(50.0f));
+    scene.addObject("mesh_uvsphere", make_shared<UVSphereMesh>(1, Vec2ui(20, 20)), blue_phong, mesh_prgs, Matrix4f::translate(100, 0, 0)* Matrix4f::scale(50.0f));
+    scene.addObject("mesh_plane", make_shared<PlaneMesh>(), white_phong, mesh_prgs, Matrix4f::translate(0, -100, 0)* Matrix4f::scale(100.0f));
 
     CUDA_CHECK(cudaStreamCreate(&stream));
     scene.copyDataToDevice();

@@ -341,7 +341,7 @@ void App::setup()
     // Bunny
     {
         auto mesh = make_shared<TriangleMesh>("resources/model/bunny.obj");
-        mesh->smooth();
+        mesh->calculateNormalSmooth();
         auto diffuse = make_shared<Diffuse>(diffuse_id, tex_red);
         auto transform = Matrix4f::translate(-0.5, -0.07f, 0.0f) * Matrix4f::scale(2.0f);
         Primitive p{ mesh, diffuse, diffuse_prg_id };
@@ -351,7 +351,7 @@ void App::setup()
     // Armadillo
     {
         auto mesh = make_shared<TriangleMesh>("resources/model/Armadillo.ply");
-        mesh->smooth();
+        mesh->calculateNormalSmooth();
         auto diffuse = make_shared<Diffuse>(diffuse_id, tex_green);
         auto transform = Matrix4f::translate(-0.2f, 0.15f, -0.5f) * Matrix4f::rotate(math::pi * 7/6, {0,1,0}) * Matrix4f::scale(0.003f);
         Primitive p{ mesh, diffuse, diffuse_prg_id };
@@ -361,7 +361,7 @@ void App::setup()
     // Dragon
     {
         auto mesh = make_shared<TriangleMesh>("resources/model/dragon.obj");
-        mesh->smooth();
+        mesh->calculateNormalSmooth();
         auto diffuse = make_shared<Diffuse>(diffuse_id, tex_yellow);
         auto transform = Matrix4f::translate(0.5f, 0.13f, 0.7f) * Matrix4f::rotate(math::pi/3, {0,1,0}) * Matrix4f::scale(0.4f);
         Primitive p{ mesh, diffuse, diffuse_prg_id };

@@ -326,12 +326,36 @@ namespace prayground {
         }
     }
 
+    void TriangleMesh::calculateNormalFlat()
+    {
+        // Check if faces/vertices are empty.
+        ASSERT(m_faces.empty(), "Face array to construct triangle mesh is empty.");
+        ASSERT(m_vertices.empty(), "Vertex array to construct triangle mesh is empty.");
 
-    void TriangleMesh::smooth()
+        m_normals.clear();
+        for (auto& face : m_faces)
+        {
+            const Vec3f& v0 = vertexAt(face.vertex_id.x());
+            const Vec3f& v1 = vertexAt(face.vertex_id.y());
+            const Vec3f& v2 = vertexAt(face.vertex_id.z());
+
+            const Vec3f n = normalize(cross(v2 - v0, v1 - v0));
+            const int32_t n_id = static_cast<int32_t>(numNormals());
+
+            // Add three normals for each vertex
+            for (int32_t i = 0; i < 3; i++)
+                addNormal(n);
+
+            face.normal_id = Vec3i(n_id, n_id + 1, n_id + 2);
+        }
+    }
+
+    void TriangleMesh::calculateNormalSmooth()
     {
         m_normals.clear();
         m_normals.resize(m_vertices.size());
         auto counts = std::vector<int>(m_vertices.size(), 0);
+        // Accumerate normals on each vertices for the number of faces.
         for (size_t i = 0; i < m_faces.size(); i++)
         {
             m_faces[i].normal_id = m_faces[i].vertex_id;
@@ -354,6 +378,7 @@ namespace prayground {
             m_normals[idx] += N;
             counts[idx]++;
         }
+        // Averate normals with shared number of vertices.
         for (size_t i = 0; i < m_vertices.size(); i++)
         {
             m_normals[i] /= counts[i];

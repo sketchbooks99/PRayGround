@@ -75,86 +75,112 @@ namespace prayground {
         using Type = T;
         static constexpr uint32_t Dim = 2;
 
-        Vec2() = default;
-        Vec2(T x, T y) { e[0] = x; e[1] = y; }
-        Vec2(T t) { e[0] = t; e[1] = t; }
+        HOSTDEVICE Vec2() = default;
+        HOSTDEVICE Vec2(T x, T y) { e[0] = x; e[1] = y; }
+        HOSTDEVICE Vec2(T t) { e[0] = t; e[1] = t; }
 
         // Copy constructor
-        Vec2(const Vec2& v) = default;
+        HOSTDEVICE Vec2(const Vec2& v) = default;
 
-        Vec2(const CUVec& v) { e[0] = v.x; e[1] = v.y; }
+        HOSTDEVICE Vec2(const CUVec& v) { e[0] = v.x; e[1] = v.y; }
 
         // Cast from other type vector
         template <typename U>
-        operator Vec2<U>() { return Vec2<U>(e[0], e[1]); }
+        HOSTDEVICE operator Vec2<U>() { return Vec2<U>(e[0], e[1]); }
 
         // Implicit cast operator to CUDA vector i.e. float2
-        operator CUVec() const { return CUVec{ e[0], e[1] }; }
+        HOSTDEVICE operator CUVec() const { return CUVec{ e[0], e[1] }; }
 
-              T& operator[](int32_t i)       { return e[i]; }
-        const T& operator[](int32_t i) const { return e[i]; }
+        HOSTDEVICE       T& operator[](int32_t i)       { return e[i]; }
+        HOSTDEVICE const T& operator[](int32_t i) const { return e[i]; }
 
-              T& x()       { return e[0]; }
-        const T& x() const { return e[0]; }
+        HOSTDEVICE       T& x()       { return e[0]; }
+        HOSTDEVICE const T& x() const { return e[0]; }
         
-              T& y()       { return e[1]; }
-        const T& y() const { return e[1]; }
+        HOSTDEVICE       T& y()       { return e[1]; }
+        HOSTDEVICE const T& y() const { return e[1]; }
 
-        bool operator==(const Vec2& v) const { return (e[0] == v[0] && e[1] == v[1]); }
+        HOSTDEVICE bool operator==(const Vec2& v) const { return (e[0] == v[0] && e[1] == v[1]); }
 
-        const Vec2& operator-() const { return Vec2{ -e[0], -e[1] }; }
+        HOSTDEVICE const Vec2& operator-() const { return Vec2{ -e[0], -e[1] }; }
 
-        Vec2& operator+=(const Vec2& v)
+        HOSTDEVICE Vec2& operator+=(const Vec2& v)
         {
             for (uint32_t i = 0; i < Dim; i++)
                 e[i] += v[i];
             return *this;
         }
-        Vec2& operator-=(const Vec2& v)
+        HOSTDEVICE Vec2& operator-=(const Vec2& v)
         {
             for (uint32_t i = 0; i < Dim; i++)
                 e[i] -= v[i];
             return *this;
         }
-        Vec2& operator*=(const Vec2& v)
+        HOSTDEVICE Vec2& operator*=(const Vec2& v)
         {
             for (uint32_t i = 0; i < Dim; i++) 
                 e[i] *= v[i];
             return *this;
         }
-        Vec2& operator*=(const T& t)
+        HOSTDEVICE Vec2& operator*=(const T& t)
         {
             for (uint32_t i = 0; i < Dim; i++) 
                 e[i] *= t;
             return *this;
         }
-        Vec2& operator/=(const T& t)
+        HOSTDEVICE Vec2& operator/=(const T& t)
         {
             return *this *= 1 / t;
         }
 
-        CUVec toCUVec() const { return CUVec{ e[0], e[1] }; }
+        HOSTDEVICE CUVec toCUVec() const { return CUVec{ e[0], e[1] }; }
 
-        void toArray(T out_data[2]) const
+        HOSTDEVICE void toArray(T out_data[2]) const
         {
             out_data[0] = e[0];
             out_data[1] = e[1];
         }
 
-        bool containsNan() const 
+        HOSTDEVICE bool containsNan() const 
         {
             return isnan(e[0]) || isnan(e[1]);
         }
 
-        bool containsInf() const 
+        HOSTDEVICE bool containsInf() const 
         {
             return isinf(e[0]) || isinf(e[1]);
         }
 
-        bool isValid() const
+        HOSTDEVICE bool isValid() const
         {
             return !(containsNan() || containsInf());
         }
+
+        // Return random vector with input seed value. 
+        // Can be used on both of CPU and GPU.
+        static HOSTDEVICE Vec2<float> randGPU(uint32_t& seed)
+        {
+
+        }
+
+        static HOSTDEVICE Vec2<double> randGPU(uint32_t& seed)
+        {
+            
+        }
+
+#ifndef __CUDACC__
+        // Return random vector without input seed value.
+        // This can be only used on CPU.
+        static HOST Vec2<float> randCPU()
+        {
+
+        }
+
+        static HOST Vec2<double> randCPU()
+        {
+
+        }
+#endif
         
     private:
         T e[2];
@@ -167,97 +193,123 @@ namespace prayground {
         using Type = T;
         static constexpr uint32_t Dim = 3;
 
-        Vec3() = default;
-        Vec3(T x, T y, T z) { e[0] = x; e[1] = y; e[2] = z;}
-        Vec3(T t) { e[0] = t; e[1] = t; e[2] = t; }
+        HOSTDEVICE Vec3() = default;
+        HOSTDEVICE Vec3(T x, T y, T z) { e[0] = x; e[1] = y; e[2] = z;}
+        HOSTDEVICE Vec3(T t) { e[0] = t; e[1] = t; e[2] = t; }
         
         // Copy constructor
-        Vec3(const Vec3& v) = default;
+        HOSTDEVICE Vec3(const Vec3& v) = default;
 
         // From other dimension vector
-        Vec3(const Vec2<T>& v, const T& z) { e[0] = v[0]; e[1] = v[1]; e[2] = z; }
-        Vec3(const Vec4<T>& v) { e[0] = v[0]; e[1] = v[1]; e[2] = v[2]; }
+        HOSTDEVICE Vec3(const Vec2<T>& v, const T& z) { e[0] = v[0]; e[1] = v[1]; e[2] = z; }
+        HOSTDEVICE Vec3(const Vec4<T>& v) { e[0] = v[0]; e[1] = v[1]; e[2] = v[2]; }
 
         // From CUDA vector i.e. float3
-        Vec3(const typename CUVec2<T>::Type& v, const T& z) { e[0] = v.x; e[1] = v.y; e[2] = z; }
-        Vec3(const CUVec& v) { e[0] = v.x; e[1] = v.y; e[2] = v.z; }
-        Vec3(const typename CUVec4<T>::Type& v) { e[0] = v.x; e[1] = v.y; e[2] = v.z; }
+        HOSTDEVICE Vec3(const typename CUVec2<T>::Type& v, const T& z) { e[0] = v.x; e[1] = v.y; e[2] = z; }
+        HOSTDEVICE Vec3(const CUVec& v) { e[0] = v.x; e[1] = v.y; e[2] = v.z; }
+        HOSTDEVICE Vec3(const typename CUVec4<T>::Type& v) { e[0] = v.x; e[1] = v.y; e[2] = v.z; }
 
         // Cast from other type vector
         template <typename U>
-        operator Vec3<U>() { return Vec3<U>(e[0], e[1], e[2]); }
+        HOSTDEVICE operator Vec3<U>() { return Vec3<U>(e[0], e[1], e[2]); }
 
         // Implicit cast operator to CUDA vector i.e. float3
-        operator CUVec() const { return CUVec{ e[0], e[1], e[2] }; }
+        HOSTDEVICE operator CUVec() const { return CUVec{ e[0], e[1], e[2] }; }
 
-        T& operator[](int i) { return e[i]; }
-        const T& operator[](int i) const { return e[i]; }
+        HOSTDEVICE       T& operator[](int i) { return e[i]; }
+        HOSTDEVICE const T& operator[](int i) const { return e[i]; }
 
-        T& x() { return e[0]; }
-        const T& x() const { return e[0]; }
+        HOSTDEVICE       T& x() { return e[0]; }
+        HOSTDEVICE const T& x() const { return e[0]; }
 
-        T& y() { return e[1]; }
-        const T& y() const { return e[1]; }
+        HOSTDEVICE       T& y() { return e[1]; }
+        HOSTDEVICE const T& y() const { return e[1]; }
 
-        T& z() { return e[2]; }
-        const T& z() const { return e[2]; }
+        HOSTDEVICE       T& z() { return e[2]; }
+        HOSTDEVICE const T& z() const { return e[2]; }
 
-        bool operator==(const Vec3& v) const { return (e[0] == v[0] && e[1] == v[1] && e[2] == v[2]); }
+        HOSTDEVICE bool operator==(const Vec3& v) const { return (e[0] == v[0] && e[1] == v[1] && e[2] == v[2]); }
 
-        Vec3 operator-() const { return Vec3{ -e[0], -e[1], -e[2] }; }
+        HOSTDEVICE Vec3 operator-() const { return Vec3{ -e[0], -e[1], -e[2] }; }
 
-        Vec3& operator+=(const Vec3& v)
+        HOSTDEVICE Vec3& operator+=(const Vec3& v)
         {
             for (uint32_t i = 0; i < Dim; i++)
                 e[i] += v[i];
             return *this;
         }
-        Vec3& operator-=(const Vec3& v)
+        HOSTDEVICE Vec3& operator-=(const Vec3& v)
         {
             for (uint32_t i = 0; i < Dim; i++)
                 e[i] -= v[i];
             return *this;
         }
-        Vec3& operator*=(const Vec3& v)
+        HOSTDEVICE Vec3& operator*=(const Vec3& v)
         {
             for (uint32_t i = 0; i < Dim; i++)
                 e[i] *= v[i];
             return *this;
         }
-        Vec3& operator*=(const float t)
+        HOSTDEVICE Vec3& operator*=(const float t)
         {
             for (uint32_t i = 0; i < Dim; i++)
                 e[i] *= t;
             return *this;
         }
-        Vec3& operator/=(const float t)
+        HOSTDEVICE Vec3& operator/=(const float t)
         {
             return *this *= 1 / t;
         }
 
-        CUVec toCUVec() const { return CUVec{e[0], e[1], e[2]}; }
+        HOSTDEVICE CUVec toCUVec() const { return CUVec{e[0], e[1], e[2]}; }
 
-        void toArray(T out_data[3]) const
+        HOSTDEVICE void toArray(T out_data[3]) const
         {
             out_data[0] = e[0];
             out_data[1] = e[1];
             out_data[2] = e[2];
         }
 
-        bool containsNan() const 
+        HOSTDEVICE bool containsNan() const 
         {
             return isnan(e[0]) || isnan(e[1]) || isnan(e[2]);
         }
 
-        bool containsInf() const 
+        HOSTDEVICE bool containsInf() const 
         {
             return isinf(e[0]) || isinf(e[1]) || isnan(e[2]);
         }
 
-        bool isValid() const
+        HOSTDEVICE bool isValid() const
         {
             return !(containsNan() || containsInf());
         }
+
+        // Return random vector with input seed value. 
+        // Can be used on both of CPU and GPU.
+        static HOSTDEVICE Vec3<float> randGPU(uint32_t& seed)
+        {
+
+        }
+
+        static HOSTDEVICE Vec3<double> randGPU(uint32_t& seed)
+        {
+            
+        }
+
+#ifndef __CUDACC__
+        // Return random vector without input seed value.
+        // This can be only used on CPU.
+        static HOST Vec3<float> randCPU()
+        {
+
+        }
+
+        static HOST Vec3<double> randCPU()
+        {
+
+        }
+#endif
 
     private:
         T e[3];
@@ -270,84 +322,84 @@ namespace prayground {
         using Type = T;
         static constexpr uint32_t Dim = 4;
 
-        Vec4() = default;
-        Vec4(T x, T y, T z, T w) { e[0] = x; e[1] = y; e[2] = z; e[3] = w; }
-        Vec4(T t) { e[0] = t; e[1] = t; e[2] = t; e[3] = t; }
+        HOSTDEVICE Vec4() = default;
+        HOSTDEVICE Vec4(T x, T y, T z, T w) { e[0] = x; e[1] = y; e[2] = z; e[3] = w; }
+        HOSTDEVICE Vec4(T t) { e[0] = t; e[1] = t; e[2] = t; e[3] = t; }
 
         // Copy constructor
-        Vec4(const Vec4& v) = default;
+        HOSTDEVICE Vec4(const Vec4& v) = default;
 
         // From other dimension vector
-        Vec4(const Vec2<T>& v, const T& z, const T& w) { e[0] = v[0]; e[1] = v[1]; e[2] = z; e[3] = w; }
-        Vec4(const Vec2<T>& xy, const Vec2<T>& zw) { e[0] = xy[0]; e[1] = xy[1]; e[2] = zw[0]; e[3] = zw[1]; }
-        Vec4(const Vec3<T>& v) { e[0] = v[0]; e[1] = v[1]; e[2] = v[2]; e[3] = T(1); }
-        Vec4(const Vec3<T>& v, const T& w) { e[0] = v[0]; e[1] = v[1]; e[2] = v[2]; e[3] = w; }
+        HOSTDEVICE Vec4(const Vec2<T>& v, const T& z, const T& w) { e[0] = v[0]; e[1] = v[1]; e[2] = z; e[3] = w; }
+        HOSTDEVICE Vec4(const Vec2<T>& xy, const Vec2<T>& zw) { e[0] = xy[0]; e[1] = xy[1]; e[2] = zw[0]; e[3] = zw[1]; }
+        HOSTDEVICE Vec4(const Vec3<T>& v) { e[0] = v[0]; e[1] = v[1]; e[2] = v[2]; e[3] = T(1); }
+        HOSTDEVICE Vec4(const Vec3<T>& v, const T& w) { e[0] = v[0]; e[1] = v[1]; e[2] = v[2]; e[3] = w; }
 
         // From CUDA vector i.e. float3
-        Vec4(const typename CUVec2<T>::Type& v, const T& z, const T& w) { e[0] = v.x; e[1] = v.y; e[2] = z; e[3] = w; }
-        Vec4(const typename CUVec2<T>::Type& xy, const typename CUVec2<T>::Type& zw) { e[0] = xy.x; e[1] = xy.y; e[2] = zw.x; e[3] = zw.y; }
-        Vec4(const typename CUVec3<T>::Type& v) { e[0] = v.x; e[1] = v.y; e[2] = v.z; e[3] = T(1); }
-        Vec4(const typename CUVec3<T>::Type& v, const T& w) { e[0] = v.x; e[1] = v.y; e[2] = v.z; e[3] = w; }
-        Vec4(const CUVec& v) { e[0] = v.x; e[1] = v.y; e[2] = v.z; e[3] = v.w; }
+        HOSTDEVICE Vec4(const typename CUVec2<T>::Type& v, const T& z, const T& w) { e[0] = v.x; e[1] = v.y; e[2] = z; e[3] = w; }
+        HOSTDEVICE Vec4(const typename CUVec2<T>::Type& xy, const typename CUVec2<T>::Type& zw) { e[0] = xy.x; e[1] = xy.y; e[2] = zw.x; e[3] = zw.y; }
+        HOSTDEVICE Vec4(const typename CUVec3<T>::Type& v) { e[0] = v.x; e[1] = v.y; e[2] = v.z; e[3] = T(1); }
+        HOSTDEVICE Vec4(const typename CUVec3<T>::Type& v, const T& w) { e[0] = v.x; e[1] = v.y; e[2] = v.z; e[3] = w; }
+        HOSTDEVICE Vec4(const CUVec& v) { e[0] = v.x; e[1] = v.y; e[2] = v.z; e[3] = v.w; }
 
         // Cast from other type vector
         template <typename U>
-        operator Vec4<U>() { return Vec4<U>(e[0], e[1], e[2], e[3]); }
+        HOSTDEVICE operator Vec4<U>() { return Vec4<U>(e[0], e[1], e[2], e[3]); }
 
         // Implicit cast operator to CUDA vector i.e. float4
-        operator CUVec() const { return CUVec{ e[0], e[1], e[2], e[3] }; }
+        HOSTDEVICE operator CUVec() const { return CUVec{ e[0], e[1], e[2], e[3] }; }
 
-        T& operator[](int i) { return e[i]; }
-        const T& operator[](int i) const { return e[i]; }
+        HOSTDEVICE       T& operator[](int i) { return e[i]; }
+        HOSTDEVICE const T& operator[](int i) const { return e[i]; }
 
-        T& x() { return e[0]; }
-        const T& x() const { return e[0]; }
+        HOSTDEVICE       T& x() { return e[0]; }
+        HOSTDEVICE const T& x() const { return e[0]; }
 
-        T& y() { return e[1]; }
-        const T& y() const { return e[1]; }
+        HOSTDEVICE       T& y() { return e[1]; }
+        HOSTDEVICE const T& y() const { return e[1]; }
 
-        T& z() { return e[2]; }
-        const T& z() const { return e[2]; }
+        HOSTDEVICE       T& z() { return e[2]; }
+        HOSTDEVICE const T& z() const { return e[2]; }
 
-        T& w() { return e[3]; }
-        const T& w() const { return e[3]; }
+        HOSTDEVICE       T& w() { return e[3]; }
+        HOSTDEVICE const T& w() const { return e[3]; }
 
-        bool operator==(const Vec4& v) const { return (e[0] == v[0] && e[1] == v[1] && e[2] == v[2] && e[3] == v[3]); }
+        HOSTDEVICE bool operator==(const Vec4& v) const { return (e[0] == v[0] && e[1] == v[1] && e[2] == v[2] && e[3] == v[3]); }
 
-        const Vec4& operator-() const { return Vec4{ -e[0], -e[1], -e[2], -e[3]}; }
+        HOSTDEVICE const Vec4& operator-() const { return Vec4{ -e[0], -e[1], -e[2], -e[3]}; }
 
-        Vec4& operator+=(const Vec4& v)
+        HOSTDEVICE Vec4& operator+=(const Vec4& v)
         {
             for (uint32_t i = 0; i < Dim; i++)
                 e[i] += v[i];
             return *this;
         }
-        Vec4& operator-=(const Vec4& v)
+        HOSTDEVICE Vec4& operator-=(const Vec4& v)
         {
             for (uint32_t i = 0; i < Dim; i++)
                 e[i] -= v[i];
             return *this;
         }
-        Vec4& operator*=(const Vec4& v)
+        HOSTDEVICE Vec4& operator*=(const Vec4& v)
         {
             for (uint32_t i = 0; i < Dim; i++)
                 e[i] *= v[i];
             return *this;
         }
-        Vec4& operator*=(const float t)
+        HOSTDEVICE Vec4& operator*=(const float t)
         {
             for (uint32_t i = 0; i < Dim; i++)
                 e[i] *= t;
             return *this;
         }
-        Vec4& operator/=(const float t)
+        HOSTDEVICE Vec4& operator/=(const float t)
         {
             return *this *= 1 / t;
         }
 
-        CUVec toCUVec() const { return CUVec{e[0], e[1], e[2], e[3]}; }
+        HOSTDEVICE CUVec toCUVec() const { return CUVec{e[0], e[1], e[2], e[3]}; }
 
-        void toArray(T out_data[4]) const
+        HOSTDEVICE void toArray(T out_data[4]) const
         {
             out_data[0] = e[0];
             out_data[1] = e[1];
@@ -355,20 +407,46 @@ namespace prayground {
             out_data[3] = e[3];
         }
 
-        bool containsNan() const 
+        HOSTDEVICE bool containsNan() const 
         {
             return isnan(e[0]) || isnan(e[1]) || isnan(e[2]) || isnan(e[3]);
         }
 
-        bool containsInf() const 
+        HOSTDEVICE bool containsInf() const 
         {
             return isinf(e[0]) || isinf(e[1]) || isnan(e[2]) || isnan(e[3]);
         }
 
-        bool isValid() const
+        HOSTDEVICE bool isValid() const
         {
             return !(containsNan() || containsInf());
         }
+
+        // Return random vector with input seed value. 
+        // Can be used on both of CPU and GPU.
+        static HOSTDEVICE Vec4<float> randGPU(uint32_t& seed)
+        {
+
+        }
+
+        static HOSTDEVICE Vec4<double> randGPU(uint32_t& seed)
+        {
+            
+        }
+
+#ifndef __CUDACC__
+        // Return random vector without input seed value.
+        // This can be only used on CPU.
+        static HOST Vec4<float> randCPU()
+        {
+
+        }
+
+        static HOST Vec4<double> randCPU()
+        {
+
+        }
+#endif
     private:
         T e[4];
     };

@@ -255,7 +255,7 @@ void App::setup()
     // Scene ----------------------------------------------------------
     // Shapes
     auto bunny = new TriangleMesh("resources/model/bunny.obj");
-    bunny->smooth();
+    bunny->calculateNormalSmooth();
     shapes.emplace("bunny", bunny);
     shapes.emplace("wall", new Plane(Vec2f(-275, -275), Vec2f(275, 275)));
     shapes.emplace("ceiling_light", new Plane(Vec2f(-60, -60), Vec2f(60, 60)));

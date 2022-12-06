@@ -81,9 +81,13 @@ namespace prayground {
             std::vector<Attributes>& material_attribs, 
             const std::filesystem::path& mtlpath = "");
 
-        virtual void smooth();
+        /* Calculate normals based on triangle faces. The normals are stored for each faces, 
+         * so more memory size will be required than smoothed normals. */
+        void calculateNormalFlat();
+        /* Calculate smooth normals for all vertices. The number of vertices and normals is same. */
+        void calculateNormalSmooth();
 
-        // For binding multiple materials to single mesh object
+        /* For binding multiple materials to single mesh object */
         void setSbtIndices(const std::vector<uint32_t>& sbt_indices);
         void offsetSbtIndex(uint32_t sbt_base);
         uint32_t numMaterials() const;

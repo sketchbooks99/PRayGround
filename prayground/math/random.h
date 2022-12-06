@@ -80,3 +80,20 @@ HOSTDEVICE INLINE int rndInt(unsigned int& prev, int min, int max)
 {
     return static_cast<int>(rnd(prev, min, max + 1));
 }
+
+#ifndef __CUDACC__
+HOST INLINE float rndCPU()
+{
+
+}
+
+HOST INLINE float rndCPU(const float min, const float max)
+{
+
+}
+
+HOST int rndIntCPU(int min, int max)
+{
+
+}
+#endif

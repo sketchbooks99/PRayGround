@@ -323,12 +323,12 @@ void App::setup()
     vector<Attributes> mitsuba_mat_attribs;
     mitsuba->loadWithMtl("resources/model/mitsuba-sphere.obj", mitsuba_mat_attribs);
     
-    dragon->smooth();
-    bunny->smooth();
-    buddha->smooth();
-    teapot->smooth();
-    armadillo->smooth();
-    mitsuba->smooth();
+    dragon->calculateNormalSmooth();
+    bunny->calculateNormalSmooth();
+    buddha->calculateNormalSmooth();
+    teapot->calculateNormalSmooth();
+    armadillo->calculateNormalSmooth();
+    mitsuba->calculateNormalSmooth();
     shapes.emplace("dragon", dragon);
     shapes.emplace("bunny", bunny);
     shapes.emplace("buddha", buddha);

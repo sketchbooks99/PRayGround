@@ -319,7 +319,7 @@ void App::setup()
     {
         // Shape
         auto armadillo = make_shared<TriangleMesh>("resources/model/Armadillo.ply");
-        armadillo->smooth();
+        armadillo->calculateNormalSmooth();
         // Texture
         auto armadillo_constant = make_shared<ConstantTexture>(Vec3f(1.0f), constant_prg_id);
         armadillo_constant->copyToDevice();

@@ -75,12 +75,12 @@ namespace prayground {
         using Type = T;
         static constexpr uint32_t Dim = 2;
 
-        HOSTDEVICE Vec2() = default;
+        Vec2() = default;
         HOSTDEVICE Vec2(T x, T y) { e[0] = x; e[1] = y; }
         HOSTDEVICE Vec2(T t) { e[0] = t; e[1] = t; }
 
         // Copy constructor
-        HOSTDEVICE Vec2(const Vec2& v) = default;
+        Vec2(const Vec2& v) = default;
 
         HOSTDEVICE Vec2(const CUVec& v) { e[0] = v.x; e[1] = v.y; }
 
@@ -155,32 +155,6 @@ namespace prayground {
         {
             return !(containsNan() || containsInf());
         }
-
-        // Return random vector with input seed value. 
-        // Can be used on both of CPU and GPU.
-        static HOSTDEVICE Vec2<float> randGPU(uint32_t& seed)
-        {
-
-        }
-
-        static HOSTDEVICE Vec2<double> randGPU(uint32_t& seed)
-        {
-            
-        }
-
-#ifndef __CUDACC__
-        // Return random vector without input seed value.
-        // This can be only used on CPU.
-        static HOST Vec2<float> randCPU()
-        {
-
-        }
-
-        static HOST Vec2<double> randCPU()
-        {
-
-        }
-#endif
         
     private:
         T e[2];
@@ -193,12 +167,12 @@ namespace prayground {
         using Type = T;
         static constexpr uint32_t Dim = 3;
 
-        HOSTDEVICE Vec3() = default;
+        Vec3() = default;
         HOSTDEVICE Vec3(T x, T y, T z) { e[0] = x; e[1] = y; e[2] = z;}
         HOSTDEVICE Vec3(T t) { e[0] = t; e[1] = t; e[2] = t; }
         
         // Copy constructor
-        HOSTDEVICE Vec3(const Vec3& v) = default;
+        Vec3(const Vec3& v) = default;
 
         // From other dimension vector
         HOSTDEVICE Vec3(const Vec2<T>& v, const T& z) { e[0] = v[0]; e[1] = v[1]; e[2] = z; }
@@ -285,32 +259,6 @@ namespace prayground {
             return !(containsNan() || containsInf());
         }
 
-        // Return random vector with input seed value. 
-        // Can be used on both of CPU and GPU.
-        static HOSTDEVICE Vec3<float> randGPU(uint32_t& seed)
-        {
-
-        }
-
-        static HOSTDEVICE Vec3<double> randGPU(uint32_t& seed)
-        {
-            
-        }
-
-#ifndef __CUDACC__
-        // Return random vector without input seed value.
-        // This can be only used on CPU.
-        static HOST Vec3<float> randCPU()
-        {
-
-        }
-
-        static HOST Vec3<double> randCPU()
-        {
-
-        }
-#endif
-
     private:
         T e[3];
     };
@@ -322,12 +270,12 @@ namespace prayground {
         using Type = T;
         static constexpr uint32_t Dim = 4;
 
-        HOSTDEVICE Vec4() = default;
+        Vec4() = default;
         HOSTDEVICE Vec4(T x, T y, T z, T w) { e[0] = x; e[1] = y; e[2] = z; e[3] = w; }
         HOSTDEVICE Vec4(T t) { e[0] = t; e[1] = t; e[2] = t; e[3] = t; }
 
         // Copy constructor
-        HOSTDEVICE Vec4(const Vec4& v) = default;
+        Vec4(const Vec4& v) = default;
 
         // From other dimension vector
         HOSTDEVICE Vec4(const Vec2<T>& v, const T& z, const T& w) { e[0] = v[0]; e[1] = v[1]; e[2] = z; e[3] = w; }
@@ -366,7 +314,7 @@ namespace prayground {
 
         HOSTDEVICE bool operator==(const Vec4& v) const { return (e[0] == v[0] && e[1] == v[1] && e[2] == v[2] && e[3] == v[3]); }
 
-        HOSTDEVICE const Vec4& operator-() const { return Vec4{ -e[0], -e[1], -e[2], -e[3]}; }
+        HOSTDEVICE Vec4 operator-() const { return Vec4{ -e[0], -e[1], -e[2], -e[3]}; }
 
         HOSTDEVICE Vec4& operator+=(const Vec4& v)
         {
@@ -422,31 +370,6 @@ namespace prayground {
             return !(containsNan() || containsInf());
         }
 
-        // Return random vector with input seed value. 
-        // Can be used on both of CPU and GPU.
-        static HOSTDEVICE Vec4<float> randGPU(uint32_t& seed)
-        {
-
-        }
-
-        static HOSTDEVICE Vec4<double> randGPU(uint32_t& seed)
-        {
-            
-        }
-
-#ifndef __CUDACC__
-        // Return random vector without input seed value.
-        // This can be only used on CPU.
-        static HOST Vec4<float> randCPU()
-        {
-
-        }
-
-        static HOST Vec4<double> randCPU()
-        {
-
-        }
-#endif
     private:
         T e[4];
     };

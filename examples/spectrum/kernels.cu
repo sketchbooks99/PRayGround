@@ -85,7 +85,6 @@ extern "C" __global__ void __raygen__spectrum()
         si.emission = Spectrum{};
         si.albedo = Spectrum{};
         si.trace_terminate = false;
-        si.radiance_evaled = false;
 
         int depth = 0;
         for (;;)
@@ -241,7 +240,6 @@ extern "C" __device__ float __direct_callable__sample_dielectric(const float& la
         si->wi = reflect(si->wo, outward_normal);
     else
         si->wi = refract(si->wo, outward_normal, cosine, ni, nt);
-    si->radiance_evaled = false;
     si->trace_terminate = false;
     si->seed = seed;
 
@@ -383,7 +381,6 @@ extern "C" __device__ float __direct_callable__sample_disney(const float& lambda
         onb.inverseTransform(h);
         si->wi = normalize(reflect(si->wo, h));
     }
-    si->radiance_evaled = false;
     si->trace_terminate = false;
     si->seed = seed;
 
@@ -437,14 +434,15 @@ extern "C" __device__ Spectrum __direct_callable__checker(SurfaceInteraction* si
     return is_odd ? checker->color1 : checker->color2;
 }
 
-extern "C" __device__ Spectrum __direct_callable__bitmap(SurfaceInteraction* si, void* tex_data)
+extern "C" __device__ Spectrum __direct_callable__bitmap(SurfaceInteraction * si, void* tex_data)
 {
     const BitmapTexture::Data* image = reinterpret_cast<BitmapTexture::Data*>(tex_data);
     Vec4f c = tex2D<float4>(image->texture, si->shading.uv.x(), si->shading.uv.y());
     return reconstructSpectrumFromRGB(Vec3f(c),
-        *params.white_spd, *params.cyan_spd, *params.magenta_spd, *params.yellow_spd, 
-        *params.red_spd, *params.green_spd, *params.blue_spd
-    );
+        *rgb2spectrum_white, *rgb2spectrum_cyan, *rgb2spectrum_magenta, *rgb2spectrum_yellow,
+        *rgb2spectrum_red, *rgb2spectrum_green, *rgb2spectrum_blue);
+        //*params.white_spd, *params.cyan_spd, *params.magenta_spd, *params.yellow_spd,
+        //*params.red_spd, *params.green_spd, *params.blue_spd);
 }
 
 // Hitgroup functions ---------------------------------------------------------------
@@ -506,14 +504,6 @@ extern "C" __device__ void __closesthit__mesh()
     }
     si->shading.dpdu = normalize(optixTransformVectorFromObjectToWorldSpace(dpdu.toCUVec()));
     si->shading.dpdv = normalize(optixTransformVectorFromObjectToWorldSpace(dpdv.toCUVec()));
-}
-
-static __forceinline__ __device__ Vec2f getSphereUV(const Vec3f& p) {
-    float phi = atan2(p.z(), p.x());
-    float theta = asin(p.y());
-    float u = 1.0f - (phi + math::pi) / (2.0f * math::pi);
-    float v = 1.0f - (theta + math::pi / 2.0f) * math::inv_pi;
-    return Vec2f(u, v);
 }
 
 extern "C" __device__ void __intersection__sphere()

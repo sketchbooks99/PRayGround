@@ -97,7 +97,7 @@
 // Contains intersection test programs for custom primitives
 // and utility functions for triangle/curves primitives.
 #include "shape/cuda/shapes.cuh"
-
+#include "material/cuda/materials.cuh"
 #include "texture/cuda/textures.cuh"
 #endif // __CUDACC__
 

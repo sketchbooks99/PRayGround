@@ -167,6 +167,8 @@ void App::setup()
     scene.addObject("mesh_uvsphere", make_shared<UVSphereMesh>(1, Vec2ui(20, 20)), blue_phong, mesh_prgs, Matrix4f::translate(100, 0, 0)* Matrix4f::scale(50.0f));
     scene.addObject("mesh_plane", make_shared<PlaneMesh>(), white_phong, mesh_prgs, Matrix4f::translate(0, -100, 0)* Matrix4f::scale(100.0f));
 
+
+
     CUDA_CHECK(cudaStreamCreate(&stream));
     scene.copyDataToDevice();
     scene.buildAccel(context, stream);

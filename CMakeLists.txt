@@ -312,24 +312,51 @@ function(PRAYGROUND_add_executalbe target_name_base target_name_var)
   # code here, so that we can use our own name for the target.  target_name is used in the
   # creation of the output file names, and we want this to be unique for each target in
   # the SDK.
+  # CUDA_GET_SOURCES_AND_OPTIONS(source_files cmake_options options ${ARGN})
+  # if (CUDA_NVRTC_ENABLED)
+
+  #   # Isolate OBJ target files. NVCC should only process these files and leave PTX targets for NVRTC
+  #   set(cu_obj_source_files)
+  #   foreach(file ${source_files})
+  #     get_source_file_property(_cuda_source_format ${file} CUDA_SOURCE_PROPERTY_FORMAT)
+  #     if(${_cuda_source_format} MATCHES "OBJ")
+  #       list(APPEND cu_obj_source_files ${file})
+  #     endif()
+  #   endforeach()
+
+  #   # Create the rules to build the OBJ from the CUDA files.
+  #   CUDA_WRAP_SRCS( ${target_name} OBJ generated_files ${cu_obj_source_files} ${cmake_options} OPTIONS ${options} )
+  # else()
+
+  #   # Create the rules to build the PTX and OBJ from the CUDA files.
+  #   CUDA_WRAP_SRCS( ${target_name} PTX generated_files ${source_files} ${cmake_options} OPTIONS ${options} )
+  # endif()
+
   CUDA_GET_SOURCES_AND_OPTIONS(source_files cmake_options options ${ARGN})
-  if (CUDA_NVRTC_ENABLED)
 
-    # Isolate OBJ target files. NVCC should only process these files and leave PTX targets for NVRTC
-    set(cu_obj_source_files)
-    foreach(file ${source_files})
-      get_source_file_property(_cuda_source_format ${file} CUDA_SOURCE_PROPERTY_FORMAT)
-      if(${_cuda_source_format} MATCHES "OBJ")
-        list(APPEND cu_obj_source_files ${file})
-      endif()
-    endforeach()
+  # Isolate OBJ target files. NVCC should only process these files and leave PTX targets for NVRTC
+  set(cu_obj_source_files)
+  set(cu_optix_source_files)
+  foreach(file ${source_files})
+    get_source_file_property(_cuda_source_format ${file} CUDA_SOURCE_PROPERTY_FORMAT)
+    if(${_cuda_source_format} MATCHES "OBJ")
+      list(APPEND cu_obj_source_files ${file})
+    else()
+      list(APPEND cu_optix_source_files ${file})
+    endif()
+  endforeach()
 
-    # Create the rules to build the OBJ from the CUDA files.
-    CUDA_WRAP_SRCS( ${target_name} OBJ generated_files ${cu_obj_source_files} ${cmake_options} OPTIONS ${options} )
-  else()
+  # Create the rules to build the OBJ from the CUDA files.
+  CUDA_WRAP_SRCS( ${target_name} OBJ generated_files ${cu_obj_source_files} ${cmake_options} OPTIONS ${options} )
 
-    # Create the rules to build the PTX and OBJ from the CUDA files.
-    CUDA_WRAP_SRCS( ${target_name} PTX generated_files ${source_files} ${cmake_options} OPTIONS ${options} )
+  # Create the rules to build the PTX and/or OPTIX files.
+  if( SAMPLES_INPUT_GENERATE_OPTIXIR )
+    CUDA_WRAP_SRCS( ${target_name} OPTIXIR generated_files2 ${cu_optix_source_files} ${cmake_options} OPTIONS ${options} )
+    list(APPEND generated_files ${generated_files2})
+  endif()
+  if( SAMPLES_INPUT_GENERATE_PTX AND NOT CUDA_NVRTC_ENABLED)
+    CUDA_WRAP_SRCS( ${target_name} PTX generated_files3 ${cu_optix_source_files} ${cmake_options} OPTIONS ${options} )
+    list(APPEND generated_files ${generated_files3})
   endif()
 
 
@@ -385,19 +412,19 @@ add_subdirectory(prayground)
 # 
 # Please uncomment the target you'd like to build
 ################################################################
-# add_subdirectory(examples/single_gas)
-# add_subdirectory(examples/dynamic_update)
-# add_subdirectory(examples/motion_blur)
-# add_subdirectory(examples/pathtracing)
-# add_subdirectory(examples/objscene)
-# add_subdirectory(examples/rayTracingNextWeek)
-# add_subdirectory(examples/rayTracingRestOfYourLife)
-# add_subdirectory(examples/denoiser)
-# add_subdirectory(examples/thumbnail)
-# add_subdirectory(examples/spectrum)
-# add_subdirectory(examples/pgVolume)
-# add_subdirectory(examples/scene)
-# add_subdirectory(examples/curves)
+add_subdirectory(examples/single_gas)
+add_subdirectory(examples/dynamic_update)
+add_subdirectory(examples/motion_blur)
+add_subdirectory(examples/pathtracing)
+add_subdirectory(examples/objscene)
+add_subdirectory(examples/rayTracingNextWeek)
+add_subdirectory(examples/rayTracingRestOfYourLife)
+add_subdirectory(examples/denoiser)
+add_subdirectory(examples/thumbnail)
+add_subdirectory(examples/spectrum)
+add_subdirectory(examples/pgVolume)
+add_subdirectory(examples/scene)
+add_subdirectory(examples/curves)
 
 ################################################################
 # Applications

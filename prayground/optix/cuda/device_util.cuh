@@ -15,6 +15,8 @@
 
 #ifdef __CUDACC__
 
+#include <cuda/std/type_traits>
+
 namespace prayground {
 
     INLINE DEVICE void* unpackPointer( uint32_t i0, uint32_t i1 )

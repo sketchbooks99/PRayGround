@@ -28,6 +28,7 @@ set(sources
   core/util.h
   core/shaders/bitmap.vert
   core/shaders/bitmap.frag
+  core/cuda/spectrum.cu
 
   # Math libraries ==========
   math/matrix.h
@@ -111,10 +112,7 @@ set(sources
   material/disney.h
   material/disney.cpp
   material/isotropic.h 
-  material/cuda/conductor.cuh
-  material/cuda/dielectric.cuh
-  material/cuda/diffuse.cuh
-  material/cuda/disney.cuh
+  material/cuda/materials.cuh
 
   # Textures ==========
   texture/bitmap.h
@@ -143,10 +141,45 @@ set(sources
   # OPTIONS -rdc true
 )
 
+set_source_files_properties(
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/cuda/spectrum.cu
+    PROPERTIES CUDA_SOURCE_PROPERTY_FORMAT OBJ
+)
+
 set(pg_target "prayground")
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${sources})
 
-add_library(${pg_target} STATIC ${sources})
+CUDA_GET_SOURCES_AND_OPTIONS(source_files cmake_options options ${ARGN})
+
+# Isolate OBJ target files. NVCC should only process these files and leave PTX targets for NVRTC
+set(cu_obj_source_files)
+set(cu_optix_source_files)
+foreach(file ${sources})
+  get_source_file_property(_cuda_source_format ${file} CUDA_SOURCE_PROPERTY_FORMAT)
+  if(${_cuda_source_format} MATCHES "OBJ")
+    list(APPEND cu_obj_source_files ${file})
+  else()
+    list(APPEND cu_optix_source_files ${file})
+  endif()
+endforeach()
+
+# Create the rules to build the OBJ from the CUDA files.
+CUDA_WRAP_SRCS( ${pg_target} OBJ generated_files ${cu_obj_source_files} ${cmake_options} OPTIONS ${options} )
+
+# Create the rules to build the PTX and/or OPTIX files.
+if( SAMPLES_INPUT_GENERATE_OPTIXIR )
+  CUDA_WRAP_SRCS( ${pg_target} OPTIXIR generated_files2 ${cu_optix_source_files} ${cmake_options} OPTIONS ${options} )
+  list(APPEND generated_files ${generated_files2})
+endif()
+if( SAMPLES_INPUT_GENERATE_PTX AND NOT CUDA_NVRTC_ENABLED)
+  CUDA_WRAP_SRCS( ${pg_target} PTX generated_files3 ${cu_optix_source_files} ${cmake_options} OPTIONS ${options} )
+  list(APPEND generated_files ${generated_files3})
+endif()
+
+add_library(${pg_target} STATIC 
+    ${sources}
+    ${generated_files}
+)
 if (WIN32)
   target_compile_definitions(${pg_target} PUBLIC GLAD_GLAPI_EXPORT)
 endif()

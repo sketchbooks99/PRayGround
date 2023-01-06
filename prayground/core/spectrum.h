@@ -7,6 +7,10 @@
 #include <prayground/optix/util.h>
 #include <prayground/core/util.h>
 
+#if defined(__CUDACC__) && !defined(__CUDACC_RTC__)
+#include <math.h>
+#endif
+
 #ifndef __CUDACC__
 #include <filesystem>
 #include <fstream>
@@ -28,7 +32,6 @@ namespace prayground {
         677.50f, 681.75f, 686.00f, 690.25f, 694.50f, 698.75f, 703.00f, 707.25f, 711.50f, 715.75f,
         720.00f
     };
-
 
     constexpr float CIE_Y_integral = 106.911594f;
 
@@ -61,16 +64,13 @@ namespace prayground {
     };
 
     // Forward declaration
-    class RGBSpectrum;
     class SampledSpectrum;
     HOSTDEVICE Vec3f XYZToSRGB(const Vec3f& xyz);
     HOSTDEVICE void XYZToSRGB(float xyz2rgb[3]);
     HOSTDEVICE Vec3f sRGBToXYZ(const Vec3f& rgb);
     HOSTDEVICE void sRGBToXYZ(float rgb2xyz[3]);
     HOSTDEVICE Vec3f linearToSRGB(const Vec3f& c);
-    HOSTDEVICE RGBSpectrum linearToSRGB(const RGBSpectrum& c);
     HOSTDEVICE Vec3f sRGBToLinear(const Vec3f& c);
-    HOSTDEVICE RGBSpectrum sRGBToLinear(const RGBSpectrum& c);
     HOSTDEVICE Vec4f color2float(const Vec4u& c);
     HOSTDEVICE Vec3f color2float(const Vec3u& c);
     HOSTDEVICE Vec3u make_color(const Vec3f& c, bool gamma_enabled=true);
@@ -85,152 +85,44 @@ namespace prayground {
     HOSTDEVICE SampledSpectrum reconstructSpectrumFromRGB(const Vec3f& rgb,
         const SampledSpectrum& white, const SampledSpectrum& cyan, const SampledSpectrum& magenta, const SampledSpectrum& yellow,
         const SampledSpectrum& red, const SampledSpectrum& green, const SampledSpectrum& blue);
-    HOSTDEVICE SampledSpectrum reconstructSpectrumFromRGB(const RGBSpectrum& rgb,
-        const SampledSpectrum& white, const SampledSpectrum& cyan, const SampledSpectrum& magenta, const SampledSpectrum& yellow,
-        const SampledSpectrum& red, const SampledSpectrum& green, const SampledSpectrum& blue);
     HOSTDEVICE float Lerp(const float a, const float b, const float t);
 
+#ifdef __CUDACC__
+    extern "C" {
+        __constant__ SampledSpectrum* rgb2spectrum_white;
+        __constant__ SampledSpectrum* rgb2spectrum_cyan;
+        __constant__ SampledSpectrum* rgb2spectrum_magenta;
+        __constant__ SampledSpectrum* rgb2spectrum_yellow;
+        __constant__ SampledSpectrum* rgb2spectrum_red;
+        __constant__ SampledSpectrum* rgb2spectrum_green;
+        __constant__ SampledSpectrum* rgb2spectrum_blue;
+    }
+#endif
 
-    // RGBSpectrum ---------------------------------------------------------------
-    class RGBSpectrum {
-    public:
-        static constexpr int nSamples = 3;
-
-        RGBSpectrum(float t = 0.0f)
-        {
-            c[0] = t; c[1] = t; c[2] = t;
-        }
-
-        RGBSpectrum(const Vec3f& rgb)
-        {
-            c[0] = rgb[0]; c[1] = rgb[1]; c[2] = rgb[2];
-        }
-
-        float& operator[](int i)
-        {
-            return c[i];
-        }
-
-        const float& operator[](int i) const
-        {
-            return c[i];
-        }
-
-        /* Addition */
-        RGBSpectrum& operator+=(const RGBSpectrum& s2)
-        {
-            for (int i = 0; i < 3; i++)
-                c[i] += s2.c[i];
-            return *this;
-        }
-        RGBSpectrum operator+(const RGBSpectrum& s2)
-        {
-            RGBSpectrum ret;
-            for (int i = 0; i < 3; i++)
-                ret.c[i] += s2.c[i];
-            return ret;
-        }
-
-        /* Subtraction */
-        RGBSpectrum& operator-=(const RGBSpectrum& s2)
-        {
-            for (int i = 0; i < 3; i++)
-                c[i] -= s2.c[i];
-            return *this;
-        }
-        RGBSpectrum operator-(const RGBSpectrum& s2)
-        {
-            RGBSpectrum ret;
-            for (int i = 0; i < 3; i++)
-                ret.c[i] -= s2.c[i];
-            return ret;
-        }
-
-        /* Multiplication */
-        RGBSpectrum& operator*=(const RGBSpectrum& s2)
-        {
-            for (int i = 0; i < 3; i++)
-                c[i] *= s2.c[i];
-            return *this;
-        }
-        RGBSpectrum operator*(const RGBSpectrum& s2)
-        {
-            RGBSpectrum ret;
-            for (int i = 0; i < 3; i++)
-                ret.c[i] *= s2.c[i];
-            return ret;
-        }
-
-        /* Division */
-        RGBSpectrum& operator/=(const RGBSpectrum& s2)
-        {
-            for (int i = 0; i < 3; i++)
-                c[i] /= s2.c[i] != 0.0f ? s2.c[i] : 1.0f;
-            return *this;
-        }
-        RGBSpectrum operator/(const RGBSpectrum& s2)
-        {
-            RGBSpectrum ret;
-            for (int i = 0; i < 3; i++)
-                c[i] /= s2.c[i] != 0.0f ? s2.c[i] : 1.0f;
-            return ret;
-        }
-
-        bool isBlack() const
-        {
-            for (int i = 0; i < 3; i++)
-                if (c[i] != 0.0f) return false;
-            return true;
-        }
-
-        Vec3f toXYZ() const 
-        {
-            return sRGBToXYZ(Vec3f(c[0], c[1], c[2]));
-        }
-
-        Vec3f toRGB() const 
-        {
-            return Vec3f(c[0], c[1], c[2]);
-        }
-
-        friend RGBSpectrum sqrtf(const RGBSpectrum& s)
-        {
-            RGBSpectrum ret;
-            for (int i = 0; i < 3; i++)
-                ret.c[i] = sqrtf(s.c[i]);
-            return ret;
-        }
-
-        friend RGBSpectrum expf(const RGBSpectrum& s)
-        {
-            RGBSpectrum ret;
-            for (int i = 0; i < 3; i++)
-                ret.c[i] = expf(s.c[i]);
-            return ret;
-        }
-
-        friend RGBSpectrum powf(const RGBSpectrum& s, float t)
-        {
-            RGBSpectrum ret;
-            for (int i = 0; i < 3; i++)
-                ret.c[i] = powf(s.c[i], t);
-            return ret;
-        }
-    private:
-        float c[3];
-    };
+#ifndef __CUDACC__
+    // Make sure it to be compiled by compiler of nvcc, not standard compiler of c++.
+    extern "C" HOST void initRGB2SpectrumTableOnGPU(
+        SampledSpectrum & white,
+        SampledSpectrum & cyan,
+        SampledSpectrum & magenta,
+        SampledSpectrum & yellow,
+        SampledSpectrum & red,
+        SampledSpectrum & green,
+        SampledSpectrum & blue);
+#endif
 
      // SampledSpectrum ---------------------------------------------------------------
     class SampledSpectrum {
     public:
         static constexpr int nSamples = nSpectrumSamples;
 
-        SampledSpectrum(float t = 0.0f)
+        explicit SampledSpectrum(float t = 0.0f)
         {
             for (int i = 0; i < nSpectrumSamples; i++)
                 c[i] = t;
         }
-
+        
+        // Copy constructor
         SampledSpectrum(const SampledSpectrum& spd)
         {
             for (int i = 0; i < nSpectrumSamples; i++)
@@ -296,8 +188,19 @@ namespace prayground {
                 rgb2spectrum_spd_green.c[i] = averageSpectrumSamples(rgb2spectrum_lambda, rgb2spectrum_green_table, nRGB2SpectrumSamples, lambda0, lambda1);
                 rgb2spectrum_spd_blue.c[i] = averageSpectrumSamples(rgb2spectrum_lambda, rgb2spectrum_blue_table, nRGB2SpectrumSamples, lambda0, lambda1);
             }
+
+            /// @todo: Consider about device-side allocation of spectrum tables.
+             initRGB2SpectrumTableOnGPU(
+                 rgb2spectrum_spd_white,
+                 rgb2spectrum_spd_cyan,
+                 rgb2spectrum_spd_magenta,
+                 rgb2spectrum_spd_yellow,
+                 rgb2spectrum_spd_red,
+                 rgb2spectrum_spd_green,
+                 rgb2spectrum_spd_blue);
         }
 #endif
+
         float& operator[](int i) {
             return c[i];
         }
@@ -494,11 +397,6 @@ namespace prayground {
     INLINE SampledSpectrum SampledSpectrum::rgb2spectrum_spd_blue;
 
     /* Stream function of spectrum classes */
-    HOST inline std::ostream& operator<<(std::ostream& out, const RGBSpectrum& rgb)
-    {
-        return out << rgb[0] << ' ' << rgb[1] << ' ' << rgb[2];
-    }
-
     HOST inline std::ostream& operator<<(std::ostream& out, const SampledSpectrum& spd)
     {
         for (int i = 0; i < SampledSpectrum::nSamples; i++)
@@ -558,17 +456,6 @@ namespace prayground {
         );
     }
 
-    HOSTDEVICE INLINE RGBSpectrum linearToSRGB(const RGBSpectrum& c)
-    {
-        float  invGamma = 1.0f / 2.4f;
-        RGBSpectrum ret;
-        RGBSpectrum powed = powf(c, invGamma);
-        ret[0] = c[0] < 0.0031308f ? 12.92f * c[0] : 1.055f * powed[0] - 0.055f;
-        ret[1] = c[1] < 0.0031308f ? 12.92f * c[1] : 1.055f * powed[1] - 0.055f;
-        ret[2] = c[2] < 0.0031308f ? 12.92f * c[2] : 1.055f * powed[2] - 0.055f;
-        return ret;
-    }
-
     HOSTDEVICE INLINE Vec3f sRGBToLinear(const Vec3f& c)
     {
         const float gamma = 2.4f;
@@ -577,16 +464,6 @@ namespace prayground {
             c[1] < 0.0404482f ? c[1] / 12.92 : powf((c[1] + 0.055f) / 1.055f, gamma),
             c[2] < 0.0404482f ? c[2] / 12.92 : powf((c[2] + 0.055f) / 1.055f, gamma)
         );
-    }
-
-    HOSTDEVICE INLINE RGBSpectrum sRGBToLinear(const RGBSpectrum& c)
-    {
-        const float gamma = 2.4f;
-        RGBSpectrum ret;
-        ret[0] = c[0] < 0.0404482f ? c[0] / 12.92 : powf((c[0] + 0.055f) / 1.055f, gamma);
-        ret[1] = c[1] < 0.0404482f ? c[1] / 12.92 : powf((c[1] + 0.055f) / 1.055f, gamma);
-        ret[2] = c[2] < 0.0404482f ? c[2] / 12.92 : powf((c[2] + 0.055f) / 1.055f, gamma);
-        return ret;
     }
 
     /* 1 bit color to 4 bit float color */
@@ -687,7 +564,7 @@ namespace prayground {
         return sum / (lambda_end - lambda_start);
     }
 
-    /* Linearly interpolate spectrum value with lambda sample 'l' */
+    /* Linear interpolation of spectrum value by lambda sample 'l' */
     HOSTDEVICE INLINE float linearInterpSpectrumSamples(
         const float* lambda, const float* v, int n, const float& l
     )
@@ -711,13 +588,6 @@ namespace prayground {
     }
 
     HOSTDEVICE INLINE SampledSpectrum reconstructSpectrumFromRGB(const Vec3f& rgb,
-        const SampledSpectrum& white, const SampledSpectrum& cyan, const SampledSpectrum& magenta, const SampledSpectrum& yellow,
-        const SampledSpectrum& red, const SampledSpectrum& green, const SampledSpectrum& blue)
-    {
-        return reconstructSpectrumFromRGB(RGBSpectrum{ rgb }, white, cyan, magenta, yellow, red, green, blue);
-    }
-
-    HOSTDEVICE INLINE SampledSpectrum reconstructSpectrumFromRGB(const RGBSpectrum& rgb,
         const SampledSpectrum& white, const SampledSpectrum& cyan, const SampledSpectrum& magenta, const SampledSpectrum& yellow,
         const SampledSpectrum& red, const SampledSpectrum& green, const SampledSpectrum& blue)
     {

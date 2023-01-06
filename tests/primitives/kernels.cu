@@ -159,3 +159,17 @@ extern "C" __device__ Vec3f __direct_callable__phong(SurfaceInteraction* si, voi
     const float cosine = fmaxf(0.0f, dot(si->shading.n, si->wi));
     return phong->diffuse * cosine + phong->ambient;
 }
+
+extern "C" __device__ Vec3f __direct_callable__brdf_diffuse(SurfaceInteraction* si, void* mat_data)
+{
+}
+
+extern "C" __device__ Vec3f __direct_callable__sampling_diffuse(SurfaceInteraction* si, void* mat_data)
+{
+
+}
+
+extern "C" __device__ float __direct_callable__pdf_diffuse(SurfaceInteraction* si, void* mat_data)
+{
+
+}

@@ -7,10 +7,6 @@
 #include <prayground/optix/util.h>
 #include <prayground/core/util.h>
 
-#if defined(__CUDACC__) && !defined(__CUDACC_RTC__)
-#include <math.h>
-#endif
-
 #ifndef __CUDACC__
 #include <filesystem>
 #include <fstream>
@@ -22,8 +18,8 @@ namespace prayground {
     constexpr int max_lambda = 720;
     constexpr int nSpectrumSamples = 81;
     constexpr float spectrum_lambda[nSpectrumSamples] = {
-        380.00f, 384.25f, 388.50f, 392.75f, 397.00f, 401.25f, 405.50f, 409.75f, 414.00f, 418.25f, 
-        422.50f, 426.75f, 431.00f, 435.25f, 439.50f, 443.75f, 448.00f, 452.25f, 456.50f, 460.75f, 
+        380.00f, 384.25f, 388.50f, 392.75f, 397.00f, 401.25f, 405.50f, 409.75f, 414.00f, 418.25f,
+        422.50f, 426.75f, 431.00f, 435.25f, 439.50f, 443.75f, 448.00f, 452.25f, 456.50f, 460.75f,
         465.00f, 469.25f, 473.50f, 477.75f, 482.00f, 486.25f, 490.50f, 494.75f, 499.00f, 503.25f,
         507.50f, 511.75f, 516.00f, 520.25f, 524.50f, 528.75f, 533.00f, 537.25f, 541.50f, 545.75f,
         550.00f, 554.25f, 558.50f, 562.75f, 567.00f, 571.25f, 575.50f, 579.75f, 584.00f, 588.25f,
@@ -38,7 +34,7 @@ namespace prayground {
     /** @ref An RGB to Spectrum Conversion for Reflectances, Smits 2000 */
     static constexpr int nRGB2SpectrumSamples = 10;
     static constexpr float rgb2spectrum_lambda[nRGB2SpectrumSamples] = {
-        380.00f, 417.78f, 455.55f, 493.33f, 531.11f, 
+        380.00f, 417.78f, 455.55f, 493.33f, 531.11f,
         568.89f, 606.67f, 644.44f, 682.22f, 720.00f
     };
     static constexpr float rgb2spectrum_white_table[nRGB2SpectrumSamples] = {
@@ -73,8 +69,8 @@ namespace prayground {
     HOSTDEVICE Vec3f sRGBToLinear(const Vec3f& c);
     HOSTDEVICE Vec4f color2float(const Vec4u& c);
     HOSTDEVICE Vec3f color2float(const Vec3u& c);
-    HOSTDEVICE Vec3u make_color(const Vec3f& c, bool gamma_enabled=true);
-    HOSTDEVICE Vec4u make_color(const Vec4f& c, bool gamma_enabled=true);
+    HOSTDEVICE Vec3u make_color(const Vec3f& c, bool gamma_enabled = true);
+    HOSTDEVICE Vec4u make_color(const Vec4f& c, bool gamma_enabled = true);
     HOSTDEVICE float luminance(const Vec3f& c);
     static HOSTDEVICE float gauss(const float& x, const float& mu, const float& sigma1, const float& sigma2);
     HOSTDEVICE float CIE_X(const float& lambda);
@@ -82,48 +78,23 @@ namespace prayground {
     HOSTDEVICE float CIE_Z(const float& lambda);
     static HOSTDEVICE float averageSpectrumSamples(const float* lambda, const float* v, int n, const float& lambda_start, const float& lambda_end);
     HOSTDEVICE float linearInterpSpectrumSamples(const float* lambda, const float* v, int n, const float& l);
-    HOSTDEVICE SampledSpectrum reconstructSpectrumFromRGB(const Vec3f& rgb,
-        const SampledSpectrum& white, const SampledSpectrum& cyan, const SampledSpectrum& magenta, const SampledSpectrum& yellow,
-        const SampledSpectrum& red, const SampledSpectrum& green, const SampledSpectrum& blue);
     HOSTDEVICE float Lerp(const float a, const float b, const float t);
-
-#ifdef __CUDACC__
-    extern "C" {
-        __constant__ SampledSpectrum* rgb2spectrum_white;
-        __constant__ SampledSpectrum* rgb2spectrum_cyan;
-        __constant__ SampledSpectrum* rgb2spectrum_magenta;
-        __constant__ SampledSpectrum* rgb2spectrum_yellow;
-        __constant__ SampledSpectrum* rgb2spectrum_red;
-        __constant__ SampledSpectrum* rgb2spectrum_green;
-        __constant__ SampledSpectrum* rgb2spectrum_blue;
-    }
-#endif
-
-#ifndef __CUDACC__
-    // Make sure it to be compiled by compiler of nvcc, not standard compiler of c++.
-    extern "C" HOST void initRGB2SpectrumTableOnGPU(
-        SampledSpectrum & white,
-        SampledSpectrum & cyan,
-        SampledSpectrum & magenta,
-        SampledSpectrum & yellow,
-        SampledSpectrum & red,
-        SampledSpectrum & green,
-        SampledSpectrum & blue);
-#endif
 
      // SampledSpectrum ---------------------------------------------------------------
     class SampledSpectrum {
     public:
         static constexpr int nSamples = nSpectrumSamples;
 
-        explicit SampledSpectrum(float t = 0.0f)
+        SampledSpectrum() = default;
+
+        explicit HOSTDEVICE SampledSpectrum(float t)
         {
             for (int i = 0; i < nSpectrumSamples; i++)
                 c[i] = t;
         }
         
         // Copy constructor
-        SampledSpectrum(const SampledSpectrum& spd)
+        HOSTDEVICE SampledSpectrum(const SampledSpectrum& spd)
         {
             for (int i = 0; i < nSpectrumSamples; i++)
                 c[i] = spd.c[i];
@@ -171,53 +142,25 @@ namespace prayground {
 
             return fromSample(lambda.data(), value.data(), static_cast<int>(lambda.size()));
         }
-
-        static HOST void init()
-        {
-            for (int i = 0; i < nSpectrumSamples; i++)
-            {
-                const float lambda0 = lerp(min_lambda, max_lambda, float(i) / nSpectrumSamples);
-                const float lambda1 = lerp(min_lambda, max_lambda, float(i + 1) / nSpectrumSamples);
-
-                // Host side
-                rgb2spectrum_spd_white.c[i] = averageSpectrumSamples(rgb2spectrum_lambda, rgb2spectrum_white_table, nRGB2SpectrumSamples, lambda0, lambda1);
-                rgb2spectrum_spd_cyan.c[i] = averageSpectrumSamples(rgb2spectrum_lambda, rgb2spectrum_cyan_table, nRGB2SpectrumSamples, lambda0, lambda1);
-                rgb2spectrum_spd_magenta.c[i] = averageSpectrumSamples(rgb2spectrum_lambda, rgb2spectrum_magenta_table, nRGB2SpectrumSamples, lambda0, lambda1);
-                rgb2spectrum_spd_yellow.c[i] = averageSpectrumSamples(rgb2spectrum_lambda, rgb2spectrum_yellow_table, nRGB2SpectrumSamples, lambda0, lambda1);
-                rgb2spectrum_spd_red.c[i] = averageSpectrumSamples(rgb2spectrum_lambda, rgb2spectrum_red_table, nRGB2SpectrumSamples, lambda0, lambda1);
-                rgb2spectrum_spd_green.c[i] = averageSpectrumSamples(rgb2spectrum_lambda, rgb2spectrum_green_table, nRGB2SpectrumSamples, lambda0, lambda1);
-                rgb2spectrum_spd_blue.c[i] = averageSpectrumSamples(rgb2spectrum_lambda, rgb2spectrum_blue_table, nRGB2SpectrumSamples, lambda0, lambda1);
-            }
-
-            /// @todo: Consider about device-side allocation of spectrum tables.
-             initRGB2SpectrumTableOnGPU(
-                 rgb2spectrum_spd_white,
-                 rgb2spectrum_spd_cyan,
-                 rgb2spectrum_spd_magenta,
-                 rgb2spectrum_spd_yellow,
-                 rgb2spectrum_spd_red,
-                 rgb2spectrum_spd_green,
-                 rgb2spectrum_spd_blue);
-        }
 #endif
 
-        float& operator[](int i) {
+        HOSTDEVICE float& operator[](int i) {
             return c[i];
         }
 
-        const float& operator[](int i) const
+        HOSTDEVICE const float& operator[](int i) const
         {
             return c[i];
         }
 
         /* Addition */
-        SampledSpectrum& operator+=(const SampledSpectrum& s2)
+        HOSTDEVICE SampledSpectrum& operator+=(const SampledSpectrum& s2)
         {
             for (int i = 0; i < nSpectrumSamples; i++)
                 c[i] += s2.c[i];
             return *this;
         }
-        SampledSpectrum operator+(const SampledSpectrum& s2) const
+        HOSTDEVICE SampledSpectrum operator+(const SampledSpectrum& s2) const
         {
             SampledSpectrum ret = *this;
             for (int i = 0; i < nSpectrumSamples; i++)
@@ -226,13 +169,13 @@ namespace prayground {
         }
 
         /* Subtraction */
-        SampledSpectrum& operator-=(const SampledSpectrum& s2)
+        HOSTDEVICE SampledSpectrum& operator-=(const SampledSpectrum& s2)
         {
             for (int i = 0; i < nSpectrumSamples; i++)
                 c[i] -= s2.c[i];
             return *this;
         }
-        SampledSpectrum operator-(const SampledSpectrum& s2) const
+        HOSTDEVICE SampledSpectrum operator-(const SampledSpectrum& s2) const
         {
             SampledSpectrum ret = *this;
             for (int i = 0; i < nSpectrumSamples; i++)
@@ -241,79 +184,79 @@ namespace prayground {
         }
 
         /* Multiplication */
-        SampledSpectrum& operator*=(const SampledSpectrum& s2)
+        HOSTDEVICE SampledSpectrum& operator*=(const SampledSpectrum& s2)
         {
             for (int i = 0; i < nSpectrumSamples; i++)
                 c[i] *= s2.c[i];
             return *this;
         }
-        SampledSpectrum operator*(const SampledSpectrum& s2) const
+        HOSTDEVICE SampledSpectrum operator*(const SampledSpectrum& s2) const
         {
             SampledSpectrum ret = *this;
             for (int i = 0; i < nSpectrumSamples; i++)
                 ret.c[i] *= s2.c[i];
             return ret;
         }
-        SampledSpectrum& operator*=(const float& t)
+        HOSTDEVICE SampledSpectrum& operator*=(const float& t)
         {
             for (int i = 0; i < nSpectrumSamples; i++)
                 c[i] *= t;
             return *this;
         }
-        SampledSpectrum operator*(const float& t) const
+        HOSTDEVICE SampledSpectrum operator*(const float& t) const
         {
             SampledSpectrum ret = *this;
             for (int i = 0; i < nSpectrumSamples; i++)
                 ret.c[i] *= t;
             return ret;
         }
-        friend inline SampledSpectrum operator*(const float& t, const SampledSpectrum& s)
+        HOSTDEVICE friend inline SampledSpectrum operator*(const float& t, const SampledSpectrum& s)
         {
             assert(!isnan(t));
             return s * t;
         }
 
         /* Division */
-        SampledSpectrum& operator/=(const SampledSpectrum& s2)
+        HOSTDEVICE SampledSpectrum& operator/=(const SampledSpectrum& s2)
         {
             for (int i = 0; i < nSpectrumSamples; i++)
                 c[i] /= s2.c[i] != 0.0f ? s2.c[i] : 1.0f;
             return *this;
         }
-        SampledSpectrum operator/(const SampledSpectrum& s2) const
+        HOSTDEVICE SampledSpectrum operator/(const SampledSpectrum& s2) const
         {
             SampledSpectrum ret = *this;
             for (int i = 0; i < nSpectrumSamples; i++)
                 ret.c[i] /= s2.c[i] != 0.0f ? s2.c[i] : 1.0f;
             return ret;
         }
-        SampledSpectrum& operator/=(const float& t)
+        HOSTDEVICE SampledSpectrum& operator/=(const float& t)
         {
             for (int i = 0; i < nSpectrumSamples; i++)
                 c[i] /= t;
             return *this;
         }
-        SampledSpectrum operator/(const float& t) const
+        HOSTDEVICE SampledSpectrum operator/(const float& t) const
         {
             SampledSpectrum ret = *this;
             for (int i = 0; i < nSpectrumSamples; i++)
                 ret.c[i] /= t;
             return ret;
         }
-        friend inline SampledSpectrum operator/(const float& t, const SampledSpectrum& s)
+        HOSTDEVICE friend inline SampledSpectrum operator/(const float& t, const SampledSpectrum& s)
         {
             assert(!isnan(t) && t != 0.0f);
             return s * t;
         }
 
-        bool isBlack() const
+        HOSTDEVICE bool isBlack() const
         {
             for (int i = 0; i < nSpectrumSamples; i++)
                 if (c[i] != 0.0f) return false;
             return true;
         }
 
-        Vec3f toXYZ() const 
+        HOSTDEVICE Vec3f toXYZ() const
         {
             Vec3f ret{0.0f, 0.0f, 0.0f};
             for (int i = 0; i < nSpectrumSamples; i++)
@@ -328,18 +271,18 @@ namespace prayground {
             return ret * scale;
         }
 
-        Vec3f toRGB() const 
+        HOSTDEVICE Vec3f toRGB() const
         {
             Vec3f xyz = toXYZ();
             return XYZToSRGB(xyz);
         }
 
-        float getSpectrumFromWavelength(const float& lambda) const
+        HOSTDEVICE float getSpectrumFromWavelength(const float& lambda) const
         {
             return linearInterpSpectrumSamples(spectrum_lambda, c, nSpectrumSamples, lambda);
         }
 
-        float y() const
+        HOSTDEVICE float y() const
         {
             float sum = 0.0f;
             for (int i = 0; i < nSpectrumSamples; i++)
@@ -374,28 +317,95 @@ namespace prayground {
         }
     private:
         float c[nSamples];
+    };
+
+    // Conversion from RGB to SampledSpectrum
+    class RGB2Spectrum {
+    public:
+        RGB2Spectrum() = default;
 
 #ifndef __CUDACC__
-    public:
-        static SampledSpectrum rgb2spectrum_spd_white;
-        static SampledSpectrum rgb2spectrum_spd_cyan;
-        static SampledSpectrum rgb2spectrum_spd_magenta;
-        static SampledSpectrum rgb2spectrum_spd_yellow;
-        static SampledSpectrum rgb2spectrum_spd_red;
-        static SampledSpectrum rgb2spectrum_spd_green;
-        static SampledSpectrum rgb2spectrum_spd_blue;
-#endif
+        void HOST init()
+        {
+            for (int i = 0; i < nSpectrumSamples; i++)
+            {
+                const float lambda0 = lerp(min_lambda, max_lambda, float(i) / nSpectrumSamples);
+                const float lambda1 = lerp(min_lambda, max_lambda, float(i + 1) / nSpectrumSamples);
+
+                m_white[i] = averageSpectrumSamples(rgb2spectrum_lambda, rgb2spectrum_white_table, nRGB2SpectrumSamples, lambda0, lambda1);
+                m_cyan[i] = averageSpectrumSamples(rgb2spectrum_lambda, rgb2spectrum_cyan_table, nRGB2SpectrumSamples, lambda0, lambda1);
+                m_magenta[i] = averageSpectrumSamples(rgb2spectrum_lambda, rgb2spectrum_magenta_table, nRGB2SpectrumSamples, lambda0, lambda1);
+                m_yellow[i] = averageSpectrumSamples(rgb2spectrum_lambda, rgb2spectrum_yellow_table, nRGB2SpectrumSamples, lambda0, lambda1);
+                m_red[i] = averageSpectrumSamples(rgb2spectrum_lambda, rgb2spectrum_red_table, nRGB2SpectrumSamples, lambda0, lambda1);
+                m_green[i] = averageSpectrumSamples(rgb2spectrum_lambda, rgb2spectrum_green_table, nRGB2SpectrumSamples, lambda0, lambda1);
+                m_blue[i] = averageSpectrumSamples(rgb2spectrum_lambda, rgb2spectrum_blue_table, nRGB2SpectrumSamples, lambda0, lambda1);
+            }
+        }
+#endif // #ifndef __CUDACC__
+
+        HOSTDEVICE INLINE SampledSpectrum getSpectrum(const Vec3f& rgb) const
+        {
+            SampledSpectrum ret;
+            const float r = rgb[0];
+            const float g = rgb[1];
+            const float b = rgb[2];
+
+            if (r <= g && r <= b)
+            {
+                ret += m_white * r;
+                if (g <= b)
+                {
+                    ret += m_cyan * (g - r);
+                    ret += m_blue * (b - g);
+                }
+                else
+                {
+                    ret += m_cyan * (b - r);
+                    ret += m_green * (g - b);
+                }
+            }
+            else if (g <= r && g <= b)
+            {
+                ret += m_white * g;
+                if (r <= g)
+                {
+                    ret += m_magenta * (r - g);
+                    ret += m_blue * (b - r);
+                }
+                else
+                {
+                    ret += m_magenta * (b - g);
+                    ret += m_red * (r - b);
+                }
+            }
+            else // blue <= red && blue <= green
+            {
+                ret += m_white * b;
+                if (r <= g)
+                {
+                    ret += m_yellow * (r - b);
+                    ret += m_green * (g - r);
+                }
+                else
+                {
+                    ret += m_yellow * (g - b);
+                    ret += m_red * (r - g);
+                }
+            }
+            return ret;
+        }
+
+    private:
+        SampledSpectrum m_white;
+        SampledSpectrum m_cyan;
+        SampledSpectrum m_magenta;
+        SampledSpectrum m_yellow;
+        SampledSpectrum m_red;
+        SampledSpectrum m_green;
+        SampledSpectrum m_blue;
     };
 
 #ifndef __CUDACC__
-    INLINE SampledSpectrum SampledSpectrum::rgb2spectrum_spd_white;
-    INLINE SampledSpectrum SampledSpectrum::rgb2spectrum_spd_cyan;
-    INLINE SampledSpectrum SampledSpectrum::rgb2spectrum_spd_magenta;
-    INLINE SampledSpectrum SampledSpectrum::rgb2spectrum_spd_yellow;
-    INLINE SampledSpectrum SampledSpectrum::rgb2spectrum_spd_red;
-    INLINE SampledSpectrum SampledSpectrum::rgb2spectrum_spd_green;
-    INLINE SampledSpectrum SampledSpectrum::rgb2spectrum_spd_blue;
-
     /* Stream function of spectrum classes */
     HOST inline std::ostream& operator<<(std::ostream& out, const SampledSpectrum& spd)
     {
@@ -585,60 +595,6 @@ namespace prayground {
         }
         const float t = (l - lambda[offset]) / (lambda[offset + 1] - lambda[offset]);
         return lerp(v[offset], v[offset + 1], t);
-    }
-
-    HOSTDEVICE INLINE SampledSpectrum reconstructSpectrumFromRGB(const Vec3f& rgb,
-        const SampledSpectrum& white, const SampledSpectrum& cyan, const SampledSpectrum& magenta, const SampledSpectrum& yellow,
-        const SampledSpectrum& red, const SampledSpectrum& green, const SampledSpectrum& blue)
-    {
-        SampledSpectrum ret;
-        const float r = rgb[0];
-        const float g = rgb[1];
-        const float b = rgb[2];
-
-        if (r <= g && r <= b)
-        {
-            ret += white * r;
-            if (g <= b)
-            {
-                ret += cyan * (g - r);
-                ret += blue * (b - g);
-            }
-            else
-            {
-                ret += cyan * (b - r);
-                ret += green * (g - b);
-            }
-        }
-        else if (g <= r && g <= b)
-        {
-            ret += white * g;
-            if (r <= g)
-            {
-                ret += magenta * (r - g);
-                ret += blue * (b - r);
-            }
-            else
-            {
-                ret += magenta * (b - g);
-                ret += red * (r - b);
-            }
-        }
-        else // blue <= red && blue <= green
-        {
-            ret += white * b;
-            if (r <= g)
-            {
-                ret += yellow * (r - b);
-                ret += green * (g - r);
-            }
-            else
-            {
-                ret += yellow * (g - b);
-                ret += red * (r - g);
-            }
-        }
-        return ret;
     }
 
     HOSTDEVICE INLINE float Lerp(const float a, const float b, const float t)

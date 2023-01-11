@@ -16,7 +16,7 @@ static INLINE DEVICE SurfaceInteraction* getSurfaceInteraction()
     return reinterpret_cast<SurfaceInteraction*>(unpackPointer(u0, u1));
 }
 
-static __forceinline__ __device__ void traceSpectrum(
+static INLINE DEVICE void traceSpectrum(
     OptixTraversableHandle handle, 
     const Vec3f& ro, const Vec3f& rd, 
     float tmin, float tmax, 
@@ -438,11 +438,7 @@ extern "C" __device__ Spectrum __direct_callable__bitmap(SurfaceInteraction * si
 {
     const BitmapTexture::Data* image = reinterpret_cast<BitmapTexture::Data*>(tex_data);
     Vec4f c = tex2D<float4>(image->texture, si->shading.uv.x(), si->shading.uv.y());
-    return reconstructSpectrumFromRGB(Vec3f(c),
-        *rgb2spectrum_white, *rgb2spectrum_cyan, *rgb2spectrum_magenta, *rgb2spectrum_yellow,
-        *rgb2spectrum_red, *rgb2spectrum_green, *rgb2spectrum_blue);
-        //*params.white_spd, *params.cyan_spd, *params.magenta_spd, *params.yellow_spd,
-        //*params.red_spd, *params.green_spd, *params.blue_spd);
+    return params.rgb2spectrum.getSpectrum(Vec3f(c));
 }
 
 // Hitgroup functions ---------------------------------------------------------------

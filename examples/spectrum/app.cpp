@@ -41,9 +41,6 @@ void App::setup()
     OPTIX_CHECK(optixInit());
     context.create();
 
-    // Initialize SampledSpectrum class
-    SampledSpectrum::init();
-
     // Instance acceleration structureの初期化
     scene_ias = InstanceAccel{InstanceAccel::Type::Instances};
 
@@ -68,21 +65,9 @@ void App::setup()
     params.max_depth = 8;
 
     // Copy SPD data to convert RGB to spectrum by Smits's method (1999)
-    constexpr size_t spd_size = sizeof(SampledSpectrum);
-    CUDA_CHECK(cudaMalloc(&params.white_spd, spd_size));
-    CUDA_CHECK(cudaMemcpy(params.white_spd, &SampledSpectrum::rgb2spectrum_spd_white, spd_size, cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMalloc(&params.cyan_spd, spd_size));
-    CUDA_CHECK(cudaMemcpy(params.cyan_spd, &SampledSpectrum::rgb2spectrum_spd_cyan, spd_size, cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMalloc(&params.magenta_spd, spd_size));
-    CUDA_CHECK(cudaMemcpy(params.magenta_spd, &SampledSpectrum::rgb2spectrum_spd_magenta, spd_size, cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMalloc(&params.yellow_spd, spd_size));
-    CUDA_CHECK(cudaMemcpy(params.yellow_spd, &SampledSpectrum::rgb2spectrum_spd_yellow, spd_size, cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMalloc(&params.red_spd, spd_size));
-    CUDA_CHECK(cudaMemcpy(params.red_spd, &SampledSpectrum::rgb2spectrum_spd_red, spd_size, cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMalloc(&params.green_spd, spd_size));
-    CUDA_CHECK(cudaMemcpy(params.green_spd, &SampledSpectrum::rgb2spectrum_spd_green, spd_size, cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMalloc(&params.blue_spd, spd_size));
-    CUDA_CHECK(cudaMemcpy(params.blue_spd, &SampledSpectrum::rgb2spectrum_spd_blue, spd_size, cudaMemcpyHostToDevice));
+    RGB2Spectrum rgb2spectrum;
+    rgb2spectrum.init();
+    params.rgb2spectrum = rgb2spectrum;
 
     initResultBufferOnDevice();
 
@@ -306,11 +291,7 @@ void App::setup()
     auto tex_white = make_shared<ConstantTexture>(SampledSpectrum(0.95f), constant_prg_id);
     auto tex_red = createConstantTextureFromSPD(red);
     auto tex_green = createConstantTextureFromSPD(green);
-    auto yellow = reconstructSpectrumFromRGB(
-        Vec3f(0.7f, 0.7f, 0.3f), SampledSpectrum::rgb2spectrum_spd_white,
-        SampledSpectrum::rgb2spectrum_spd_cyan, SampledSpectrum::rgb2spectrum_spd_magenta, SampledSpectrum::rgb2spectrum_spd_yellow,
-        SampledSpectrum::rgb2spectrum_spd_red, SampledSpectrum::rgb2spectrum_spd_green, SampledSpectrum::rgb2spectrum_spd_blue
-    );
+    auto yellow = rgb2spectrum.getSpectrum(Vec3f(0.7f, 0.7f, 0.3f));
     auto tex_yellow = make_shared<ConstantTexture>(yellow, constant_prg_id);
     auto tex_grid = make_shared<BitmapTexture>("resources/image/grid.png", bitmap_prg_id);
 

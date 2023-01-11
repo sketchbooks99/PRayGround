@@ -343,9 +343,17 @@ namespace prayground {
         }
 #endif // #ifndef __CUDACC__
 
+        HOSTDEVICE INLINE const SampledSpectrum& whiteTable() const { return m_white; }
+        HOSTDEVICE INLINE const SampledSpectrum& cyanTable() const { return m_cyan; }
+        HOSTDEVICE INLINE const SampledSpectrum& magentaTable() const { return m_magenta; }
+        HOSTDEVICE INLINE const SampledSpectrum& yellowTable() const { return m_yellow; }
+        HOSTDEVICE INLINE const SampledSpectrum& redTable() const { return m_red; }
+        HOSTDEVICE INLINE const SampledSpectrum& greenTable() const { return m_green; }
+        HOSTDEVICE INLINE const SampledSpectrum& blueTable() const { return m_blue; }
+
         HOSTDEVICE INLINE SampledSpectrum getSpectrum(const Vec3f& rgb) const
         {
-            SampledSpectrum ret;
+            SampledSpectrum ret(0);
             const float r = rgb[0];
             const float g = rgb[1];
             const float b = rgb[2];
@@ -411,6 +419,19 @@ namespace prayground {
     {
         for (int i = 0; i < SampledSpectrum::nSamples; i++)
             out << spd[i] << ' ';
+        return out;
+    }
+
+    HOST inline std::ostream& operator<<(std::ostream& out, const RGB2Spectrum& r2s)
+    {
+        out << "RGB2Spectrum::white_table: " << r2s.whiteTable() << std::endl;
+        out << "RGB2Spectrum::cyan_table: " << r2s.cyanTable() << std::endl;
+        out << "RGB2Spectrum::magenta_table: " << r2s.magentaTable() << std::endl;
+        out << "RGB2Spectrum::yellow_table: " << r2s.yellowTable() << std::endl;
+        out << "RGB2Spectrum::red_table: " << r2s.redTable() << std::endl;
+        out << "RGB2Spectrum::green_table: " << r2s.greenTable() << std::endl;
+        out << "RGB2Spectrum::blue_table: " << r2s.blueTable();
+
         return out;
     }
 #endif

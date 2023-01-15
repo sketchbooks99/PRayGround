@@ -48,7 +48,7 @@ static INLINE DEVICE void traceSpectrum(
 // Raygen ------------------------------------------------------------------------------
 static __forceinline__ __device__ float uniformSpectrumPDF()
 {
-    return 1.0f / (max_lambda - min_lambda);
+    return 1.0f / (constants::max_lambda - constants::min_lambda);
 }
 
 // Raygen function
@@ -65,7 +65,7 @@ extern "C" __global__ void __raygen__spectrum()
     int i = params.samples_per_launch;
 
     // Uniform sampling of lambda
-    float lambda = lerp(float(min_lambda), float(max_lambda), rnd(seed));
+    float lambda = lerp(float(constants::min_lambda), float(constants::max_lambda), rnd(seed));
 
     do 
     {
@@ -132,9 +132,9 @@ extern "C" __global__ void __raygen__spectrum()
     const uint32_t image_idx = idx.y() * params.width + idx.x();
 
     Vec3f xyz_result = Vec3f(
-        radiance * CIE_X(lambda) / CIE_Y_integral / uniformSpectrumPDF(),
-        radiance * CIE_Y(lambda) / CIE_Y_integral / uniformSpectrumPDF(),
-        radiance * CIE_Z(lambda) / CIE_Y_integral / uniformSpectrumPDF());
+        radiance * CIE_X(lambda) / constants::CIE_Y_integral / uniformSpectrumPDF(),
+        radiance * CIE_Y(lambda) / constants::CIE_Y_integral / uniformSpectrumPDF(),
+        radiance * CIE_Z(lambda) / constants::CIE_Y_integral / uniformSpectrumPDF());
 
     Vec3f color = XYZToSRGB(xyz_result);
 
@@ -304,7 +304,7 @@ static __forceinline__ __device__ float disneyBRDF(
     const float f_subsurface = base * math::inv_pi * 1.25f * (FVss90 * FLss90 * ((1.0f / (NdotV * NdotL)) - 0.5f) + 0.5f);
 
     // Sheen
-    const float lumi = base_spectrum.y() / CIE_Y_integral;
+    const float lumi = base_spectrum.y() / constants::CIE_Y_integral;
     const float rho_tint = base / lumi;
     const float rho_sheen = lerp(1.0f, rho_tint, disney->sheen_tint);
     const float f_sheen = disney->sheen * rho_sheen * pow5(1.0f - LdotH);

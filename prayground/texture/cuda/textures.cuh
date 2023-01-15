@@ -6,10 +6,11 @@
 #include <prayground/texture/constant.h>
 #include <prayground/texture/checker.h>
 #include <prayground/texture/bitmap.h>
+#include <prayground/optix/cuda/device_util.cuh>
 
 namespace prayground {
 
-#ifdef __CUDACC__
+//#ifdef __CUDACC__
 
     /**!
      Texture should be return evaluated color
@@ -58,6 +59,34 @@ namespace prayground {
         // dot products of the projected ray differentials with the texture derivatives. 
         dpdx = Vec2f(dot(dPds, rdx), dot(dPdt, rdx));
         dpdy = Vec2f(dot(dPds, rdy), dot(dPdt, rdy));
+    }
+
+    template <typename ReturnSpectrumT>
+    DEVICE INLINE ReturnSpectrumT getConstantTextureValue(const Vec2f& uv, void* tex_data)
+    {
+        using Texture_ = ConstantTexture_<ReturnSpectrumT>;
+        const Texture_::Data* constant = reinterpret_cast<Texture_::Data*>(tex_data);
+        return constant->color;
+    }
+
+    template <typename ReturnSpectrumT>
+    DEVICE INLINE ReturnSpectrumT getCheckerTextureValue(const Vec2f& uv, void* tex_data)
+    {
+        using Texture_ = CheckerTexture_<ReturnSpectrumT>;
+        const Texture_::Data* checker = reinterpret_cast<Texture_::Data*>(tex_data);
+        const bool is_odd = sinf(uv.x() * math::pi * checker->scale) * sinf(uv.y() * math::pi * checker->scale) < 0;
+        return is_odd ? checker->color1 : checker->color2;
+    }
+    
+    template <typename ReturnSpectrumT>
+    DEVICE INLINE ReturnSpectrumT getBitmapTextureValue(const Vec2f& uv, void* tex_data, const RGB2Spectrum& rgb2spectrum = RGB2Spectrum())
+    {
+        const BitmapTexture::Data* bitmap = reinterpret_cast<BitmapTexture::Data*>(tex_data);
+        const float4 c = tex2D<float4>(bitmap->texture, uv.x(), uv.y());
+        if constexpr (::cuda::std::is_same_v<ReturnSpectrumT, SampledSpectrum>)
+        {
+            assert()
+        }
     }
     
     // Bitmap ------------------------------------------------------
@@ -115,6 +144,6 @@ namespace prayground {
         return is_odd ? checker->color1 : checker->color2;
     }
 
-#endif
+//#endif
 
 } // namespace prayground

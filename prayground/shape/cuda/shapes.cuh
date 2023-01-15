@@ -746,7 +746,7 @@ namespace prayground {
 
             o1 -= (dot(o1, d_position) / d_length2) * d_position;
             o1 *= radius / length(o1);
-            //hit_point = position + o1;
+            hit_point = position + o1;
 
             if constexpr (CurveType != Curves::Type::Linear)
                 d_length2 -= dot(interpolator.ddPosition(u), o1);

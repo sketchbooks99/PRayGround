@@ -232,7 +232,7 @@ namespace prayground {
         const float f_subsurface = value * math::inv_pi * 1.25f * (FVss90 * FLss90 * ((1.0f / (NdotV * NdotL)) - 0.5f) + 0.5f);
 
         // Sheen
-        const float lumi = base.y() / CIE_Y_integral;
+        const float lumi = base.y() / constants::CIE_Y_integral;
         const float rho_tint = value / lumi;
         const float rho_sheen = lerp(1.0f, rho_tint, disney->sheen_tint);
         const float f_sheen = disney->sheen * rho_sheen * pow5(1.0f - LdotH);

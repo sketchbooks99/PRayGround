@@ -36,8 +36,6 @@ struct LaunchParams
 
     AreaEmitterInfo* lights;
     int num_lights;
-
-    RGB2Spectrum rgb2spectrum;
 };
 
 struct RaygenData

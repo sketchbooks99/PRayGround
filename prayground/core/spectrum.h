@@ -16,24 +16,24 @@ namespace prayground {
 
     // Forward declaration
     class SampledSpectrum;
-    HOSTDEVICE Vec3f XYZToSRGB(const Vec3f& xyz);
-    HOSTDEVICE void XYZToSRGB(float xyz2rgb[3]);
-    HOSTDEVICE Vec3f sRGBToXYZ(const Vec3f& rgb);
-    HOSTDEVICE void sRGBToXYZ(float rgb2xyz[3]);
-    HOSTDEVICE Vec3f linearToSRGB(const Vec3f& c);
-    HOSTDEVICE Vec3f sRGBToLinear(const Vec3f& c);
-    HOSTDEVICE Vec4f color2float(const Vec4u& c);
-    HOSTDEVICE Vec3f color2float(const Vec3u& c);
-    HOSTDEVICE Vec3u make_color(const Vec3f& c, bool gamma_enabled = true);
-    HOSTDEVICE Vec4u make_color(const Vec4f& c, bool gamma_enabled = true);
-    HOSTDEVICE float luminance(const Vec3f& c);
-    static HOSTDEVICE float gauss(const float& x, const float& mu, const float& sigma1, const float& sigma2);
-    HOSTDEVICE float CIE_X(const float& lambda);
-    HOSTDEVICE float CIE_Y(const float& lambda);
-    HOSTDEVICE float CIE_Z(const float& lambda);
-    static HOSTDEVICE float averageSpectrumSamples(const float* lambda, const float* v, int n, const float& lambda_start, const float& lambda_end);
-    HOSTDEVICE float linearInterpSpectrumSamples(const float* lambda, const float* v, int n, const float& l);
-    HOSTDEVICE float Lerp(const float a, const float b, const float t);
+    HOSTDEVICE INLINE Vec3f XYZToSRGB(const Vec3f& xyz);
+    HOSTDEVICE INLINE void XYZToSRGB(float xyz2rgb[3]);
+    HOSTDEVICE INLINE Vec3f sRGBToXYZ(const Vec3f& rgb);
+    HOSTDEVICE INLINE void sRGBToXYZ(float rgb2xyz[3]);
+    HOSTDEVICE INLINE Vec3f linearToSRGB(const Vec3f& c);
+    HOSTDEVICE INLINE Vec3f sRGBToLinear(const Vec3f& c);
+    HOSTDEVICE INLINE Vec4f color2float(const Vec4u& c);
+    HOSTDEVICE INLINE Vec3f color2float(const Vec3u& c);
+    HOSTDEVICE INLINE Vec3u make_color(const Vec3f& c, bool gamma_enabled = true);
+    HOSTDEVICE INLINE Vec4u make_color(const Vec4f& c, bool gamma_enabled = true);
+    HOSTDEVICE INLINE float luminance(const Vec3f& c);
+    HOSTDEVICE INLINE float gauss(const float& x, const float& mu, const float& sigma1, const float& sigma2);
+    HOSTDEVICE INLINE float CIE_X(const float& lambda);
+    HOSTDEVICE INLINE float CIE_Y(const float& lambda);
+    HOSTDEVICE INLINE float CIE_Z(const float& lambda);
+    HOSTDEVICE INLINE float averageSpectrumSamples(const float* lambda, const float* v, int n, const float& lambda_start, const float& lambda_end);
+    HOSTDEVICE INLINE float linearInterpSpectrumSamples(const float* lambda, const float* v, int n, const float& l);
+    HOSTDEVICE INLINE float Lerp(const float a, const float b, const float t);
 
     /** 
     * @note
@@ -87,31 +87,11 @@ namespace prayground {
         };
     }
 
-     // SampledSpectrum ---------------------------------------------------------------
-    class SampledSpectrum {
-    public:
+    // SampledSpectrum ---------------------------------------------------------------
+    struct SampledSpectrum {
         static constexpr int nSamples = constants::num_spectrum_samples;
 
-        SampledSpectrum() = default;
-
-        explicit HOSTDEVICE SampledSpectrum(float t)
-        {
-            for (int i = 0; i < constants::num_spectrum_samples; i++)
-                c[i] = t;
-        }
-        
-        // Copy constructor
-        HOSTDEVICE SampledSpectrum(const SampledSpectrum& spd)
-        {
-            for (int i = 0; i < constants::num_spectrum_samples; i++)
-                c[i] = spd.c[i];
-        }
-
-        constexpr HOSTDEVICE SampledSpectrum(const float data[nSamples])
-        {
-            for (int i = 0; i < nSamples; i++)
-                c[i] = data[i];
-        }
+        float c[nSamples];
 
 #ifndef __CUDACC__ /// @note Not defined on CUDA kernel
         static HOSTDEVICE SampledSpectrum fromSample(const float* lambda, const float* v, int n)
@@ -119,12 +99,12 @@ namespace prayground {
             /// @todo Sort with lambda if the spectrum is randomly stored.
 
             SampledSpectrum ss;
-            for (int i = 0; i < constants::num_spectrum_samples; i++)
+            for (int i = 0; i < nSamples; i++)
             {
                 const float start_l = static_cast<float>(constants::min_lambda);
                 const float end_l = static_cast<float>(constants::max_lambda);
-                const float offset0 = float(i) / constants::num_spectrum_samples;
-                const float offset1 = float(i + 1) / constants::num_spectrum_samples;
+                const float offset0 = float(i) / nSamples;
+                const float offset1 = float(i + 1) / nSamples;
                 float lambda0 = Lerp(start_l, end_l, offset0);
                 float lambda1 = Lerp(start_l, end_l, offset1);
                 ss.c[i] = averageSpectrumSamples(lambda, v, n, lambda0, lambda1);
@@ -156,6 +136,21 @@ namespace prayground {
             return fromSample(lambda.data(), value.data(), static_cast<int>(lambda.size()));
         }
 #endif
+        static HOSTDEVICE SampledSpectrum zero()
+        {
+            SampledSpectrum ret;
+            for (int i = 0; i < nSamples; i++)
+                ret.c[i] = 0.0f;
+            return ret;
+        }
+
+        static HOSTDEVICE SampledSpectrum constant(const float t)
+        {
+            SampledSpectrum ret;
+            for (int i = 0; i < nSamples; i++)
+                ret.c[i] = t;
+            return ret;
+        }
 
         HOSTDEVICE float& operator[](int i) {
             return c[i];
@@ -169,14 +164,14 @@ namespace prayground {
         /* Addition */
         HOSTDEVICE SampledSpectrum& operator+=(const SampledSpectrum& s2)
         {
-            for (int i = 0; i < constants::num_spectrum_samples; i++)
+            for (int i = 0; i < nSamples; i++)
                 c[i] += s2.c[i];
             return *this;
         }
         HOSTDEVICE SampledSpectrum operator+(const SampledSpectrum& s2) const
         {
             SampledSpectrum ret = *this;
-            for (int i = 0; i < constants::num_spectrum_samples; i++)
+            for (int i = 0; i < nSamples; i++)
                 ret.c[i] += s2.c[i];
             return ret;
         }
@@ -184,14 +179,14 @@ namespace prayground {
         /* Subtraction */
         HOSTDEVICE SampledSpectrum& operator-=(const SampledSpectrum& s2)
         {
-            for (int i = 0; i < constants::num_spectrum_samples; i++)
+            for (int i = 0; i < nSamples; i++)
                 c[i] -= s2.c[i];
             return *this;
         }
         HOSTDEVICE SampledSpectrum operator-(const SampledSpectrum& s2) const
         {
             SampledSpectrum ret = *this;
-            for (int i = 0; i < constants::num_spectrum_samples; i++)
+            for (int i = 0; i < nSamples; i++)
                 ret.c[i] -= s2.c[i];
             return ret;
         }
@@ -199,27 +194,27 @@ namespace prayground {
         /* Multiplication */
         HOSTDEVICE SampledSpectrum& operator*=(const SampledSpectrum& s2)
         {
-            for (int i = 0; i < constants::num_spectrum_samples; i++)
+            for (int i = 0; i < nSamples; i++)
                 c[i] *= s2.c[i];
             return *this;
         }
         HOSTDEVICE SampledSpectrum operator*(const SampledSpectrum& s2) const
         {
             SampledSpectrum ret = *this;
-            for (int i = 0; i < constants::num_spectrum_samples; i++)
+            for (int i = 0; i < nSamples; i++)
                 ret.c[i] *= s2.c[i];
             return ret;
         }
         HOSTDEVICE SampledSpectrum& operator*=(const float& t)
         {
-            for (int i = 0; i < constants::num_spectrum_samples; i++)
+            for (int i = 0; i < nSamples; i++)
                 c[i] *= t;
             return *this;
         }
         HOSTDEVICE SampledSpectrum operator*(const float& t) const
         {
             SampledSpectrum ret = *this;
-            for (int i = 0; i < constants::num_spectrum_samples; i++)
+            for (int i = 0; i < nSamples; i++)
                 ret.c[i] *= t;
             return ret;
         }
@@ -232,27 +227,27 @@ namespace prayground {
         /* Division */
         HOSTDEVICE SampledSpectrum& operator/=(const SampledSpectrum& s2)
         {
-            for (int i = 0; i < constants::num_spectrum_samples; i++)
+            for (int i = 0; i < nSamples; i++)
                 c[i] /= s2.c[i] != 0.0f ? s2.c[i] : 1.0f;
             return *this;
         }
         HOSTDEVICE SampledSpectrum operator/(const SampledSpectrum& s2) const
         {
             SampledSpectrum ret = *this;
-            for (int i = 0; i < constants::num_spectrum_samples; i++)
+            for (int i = 0; i < nSamples; i++)
                 ret.c[i] /= s2.c[i] != 0.0f ? s2.c[i] : 1.0f;
             return ret;
         }
         HOSTDEVICE SampledSpectrum& operator/=(const float& t)
         {
-            for (int i = 0; i < constants::num_spectrum_samples; i++)
+            for (int i = 0; i < nSamples; i++)
                 c[i] /= t;
             return *this;
         }
         HOSTDEVICE SampledSpectrum operator/(const float& t) const
         {
             SampledSpectrum ret = *this;
-            for (int i = 0; i < constants::num_spectrum_samples; i++)
+            for (int i = 0; i < nSamples; i++)
                 ret.c[i] /= t;
             return ret;
         }
@@ -264,22 +259,22 @@ namespace prayground {
 
         HOSTDEVICE bool isBlack() const
         {
-            for (int i = 0; i < constants::num_spectrum_samples; i++)
+            for (int i = 0; i < nSamples; i++)
                 if (c[i] != 0.0f) return false;
             return true;
         }
 
         HOSTDEVICE Vec3f toXYZ() const
         {
-            Vec3f ret{0.0f, 0.0f, 0.0f};
-            for (int i = 0; i < constants::num_spectrum_samples; i++)
+            Vec3f ret{ 0.0f, 0.0f, 0.0f };
+            for (int i = 0; i < nSamples; i++)
             {
-                const float lambda = lerp(constants::min_lambda, constants::max_lambda, float(i) / constants::num_spectrum_samples);
+                const float lambda = lerp(constants::min_lambda, constants::max_lambda, float(i) / nSamples);
                 ret[0] += c[i] * CIE_X(lambda);
                 ret[1] += c[i] * CIE_Y(lambda);
-                ret[2] += c[i] * CIE_Z(lambda);                
+                ret[2] += c[i] * CIE_Z(lambda);
             }
-            const float scale = float(constants::max_lambda - constants::min_lambda) / (constants::CIE_Y_integral * constants::num_spectrum_samples);
+            const float scale = float(constants::max_lambda - constants::min_lambda) / (constants::CIE_Y_integral * nSamples);
 
             return ret * scale;
         }
@@ -292,13 +287,13 @@ namespace prayground {
 
         HOSTDEVICE float getSpectrumFromWavelength(const float& lambda) const
         {
-            return linearInterpSpectrumSamples(constants::spectrum_lambda, c, constants::num_spectrum_samples, lambda);
+            return linearInterpSpectrumSamples(constants::spectrum_lambda, c, nSamples, lambda);
         }
 
         HOSTDEVICE float y() const
         {
             float sum = 0.0f;
-            for (int i = 0; i < constants::num_spectrum_samples; i++)
+            for (int i = 0; i < nSamples; i++)
             {
                 sum += c[i];
             }
@@ -308,7 +303,7 @@ namespace prayground {
         friend SampledSpectrum sqrtf(const SampledSpectrum& s)
         {
             SampledSpectrum ret;
-            for (int i = 0; i < constants::num_spectrum_samples; i++)
+            for (int i = 0; i < nSamples; i++)
                 ret.c[i] = sqrtf(s.c[i]);
             return ret;
         }
@@ -316,7 +311,7 @@ namespace prayground {
         friend SampledSpectrum expf(const SampledSpectrum& s)
         {
             SampledSpectrum ret;
-            for (int i = 0; i < constants::num_spectrum_samples; i++)
+            for (int i = 0; i < nSamples; i++)
                 ret.c[i] = expf(s.c[i]);
             return ret;
         }
@@ -324,111 +319,98 @@ namespace prayground {
         friend SampledSpectrum powf(const SampledSpectrum& s, float t)
         {
             SampledSpectrum ret;
-            for (int i = 0; i < constants::num_spectrum_samples; i++)
+            for (int i = 0; i < nSamples; i++)
                 ret.c[i] = powf(s.c[i], t);
             return ret;
         }
-    private:
-        float c[nSamples];
     };
 
-    // Conversion from RGB to SampledSpectrum
-    class RGB2Spectrum {
-    public:
-        RGB2Spectrum() = default;
+    // Tables to reconstruct SampledSpectrum from RGB value.
+    namespace constants {
+        constexpr SampledSpectrum rgb2spectrum_white = {
+            1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.999997f,
+            0.999985f, 0.999973f, 0.999962f, 0.999952f, 0.999941f, 0.999929f, 0.999917f, 0.999907f, 0.999876f, 0.999813f,
+            0.999742f, 0.999671f, 0.999607f, 0.999543f, 0.99948f, 0.999409f, 0.999337f, 0.999296f, 0.999285f, 0.999274f,
+            0.999263f, 0.999251f, 0.99924f, 0.999229f, 0.999219f, 0.999207f, 0.99923f, 0.999294f, 0.999357f, 0.999421f,
+            0.999492f, 0.999564f, 0.999627f, 0.999691f, 0.999754f, 0.999808f, 0.999832f, 0.999853f, 0.999875f, 0.999896f,
+            0.99992f, 0.999943f, 0.999965f, 0.999986f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+            1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+            1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+            1.0f
+        };
 
-        // Initialization of tables must be performed on the host side, 
-        // for prohibiting on the heavy computation on the device.
-#ifndef __CUDACC__
-        void HOST init()
-        {
-            for (int i = 0; i < constants::num_spectrum_samples; i++)
-            {
-                const float lambda0 = lerp(constants::min_lambda, constants::max_lambda, float(i) / constants::num_spectrum_samples);
-                const float lambda1 = lerp(constants::min_lambda, constants::max_lambda, float(i + 1) / constants::num_spectrum_samples);
+        constexpr SampledSpectrum rgb2spectrum_cyan = {
+            0.969497f, 0.96649f, 0.963483f, 0.960476f, 0.957469f, 0.954086f, 0.950704f, 0.947697f, 0.94469f, 0.944651f,
+            0.951399f, 0.958321f, 0.964474f, 0.970627f, 0.97678f, 0.983702f, 0.990624f, 0.996777f, 1.00064f, 1.0007f, 
+            1.0007f, 1.0007f, 1.0007f, 1.0007f, 1.0007f, 1.0007f, 1.0007f, 1.0007f, 1.0007f, 1.0007f,
+            1.0007f, 1.0007f, 1.0007f, 1.0007f, 1.0007f, 1.0007f, 1.0007f, 1.0007f, 1.0007f, 1.0007f,
+            1.0007f, 1.0007f, 1.0007f, 1.0007f, 1.0007f, 0.96295f, 0.864155f, 0.774764f, 0.685373f, 0.595981f,
+            0.495416f, 0.394851f, 0.30546f, 0.216068f, 0.151914f, 0.132259f, 0.113625f, 0.0970615f, 0.0804981f, 0.0639347f, 
+            0.0453009f, 0.0266671f, 0.0101037f, 0.000100209f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 
+            0.0f
+        };
 
-                m_white[i] = averageSpectrumSamples(constants::rgb2spectrum_lambda, constants::rgb2spectrum_white_table, constants::num_rgb2spectrum_samples, lambda0, lambda1);
-                m_cyan[i] = averageSpectrumSamples(constants::rgb2spectrum_lambda, constants::rgb2spectrum_cyan_table, constants::num_rgb2spectrum_samples, lambda0, lambda1);
-                m_magenta[i] = averageSpectrumSamples(constants::rgb2spectrum_lambda, constants::rgb2spectrum_magenta_table, constants::num_rgb2spectrum_samples, lambda0, lambda1);
-                m_yellow[i] = averageSpectrumSamples(constants::rgb2spectrum_lambda, constants::rgb2spectrum_yellow_table, constants::num_rgb2spectrum_samples, lambda0, lambda1);
-                m_red[i] = averageSpectrumSamples(constants::rgb2spectrum_lambda, constants::rgb2spectrum_red_table, constants::num_rgb2spectrum_samples, lambda0, lambda1);
-                m_green[i] = averageSpectrumSamples(constants::rgb2spectrum_lambda, constants::rgb2spectrum_green_table, constants::num_rgb2spectrum_samples, lambda0, lambda1);
-                m_blue[i] = averageSpectrumSamples(constants::rgb2spectrum_lambda, constants::rgb2spectrum_blue_table, constants::num_rgb2spectrum_samples, lambda0, lambda1);
-            }
-            m_initialized = true;
-        }
-#endif // #ifndef __CUDACC__
+        constexpr SampledSpectrum rgb2spectrum_magenta = {
+            1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.998919f,
+            0.99523f, 0.991477f, 0.988141f, 0.984805f, 0.981469f, 0.977716f, 0.973963f, 0.970627f, 0.939169f, 0.860942f,
+            0.772133f, 0.683325f, 0.604383f, 0.525442f, 0.446501f, 0.357692f, 0.268883f, 0.213235f, 0.189447f, 0.165847f, 
+            0.139298f, 0.112748f, 0.0891481f, 0.0655483f, 0.0419485f, 0.0153988f, 0.00230198f, 0.00714035f, 0.0119895f, 0.0168386f,
+            0.0222939f, 0.0277491f, 0.0325982f, 0.0374474f, 0.0422965f, 0.0810752f, 0.173741f, 0.2575f, 0.341258f, 0.425017f, 
+            0.519246f, 0.613474f, 0.697233f, 0.780991f, 0.841711f, 0.862075f, 0.881508f, 0.89878f, 0.916053f, 0.933326f,
+            0.952758f, 0.97219f, 0.989463f, 0.999896f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+            1.0f, 1.0f, 0.999806f, 0.999373f, 0.998939f, 0.99845f, 0.997962f, 0.997528f,  0.997094f, 0.99666f, 
+            0.996171f
+        };
 
-        HOSTDEVICE INLINE const SampledSpectrum& whiteTable() const { return m_white; }
-        HOSTDEVICE INLINE const SampledSpectrum& cyanTable() const { return m_cyan; }
-        HOSTDEVICE INLINE const SampledSpectrum& magentaTable() const { return m_magenta; }
-        HOSTDEVICE INLINE const SampledSpectrum& yellowTable() const { return m_yellow; }
-        HOSTDEVICE INLINE const SampledSpectrum& redTable() const { return m_red; }
-        HOSTDEVICE INLINE const SampledSpectrum& greenTable() const { return m_green; }
-        HOSTDEVICE INLINE const SampledSpectrum& blueTable() const { return m_blue; }
+        constexpr SampledSpectrum rgb2spectrum_yellow = {
+            0.0000947062f, 0.0000841186f, 0.000073531f, 0.0000629434f, 0.0000523557f, 0.0000404447f, 0.0000285336f, 0.000017946f, 0.00000735839f, 0.0037336f, 
+            0.016477f, 0.0294397f, 0.040962f, 0.0524844f, 0.0640068f, 0.0769695f, 0.0899321f, 0.101455f, 0.130599f, 0.18905f, 
+            0.255311f, 0.321572f, 0.380471f, 0.43937f, 0.498269f, 0.56453f, 0.630792f, 0.679824f, 0.715362f, 0.75082f,
+            0.79071f, 0.8306f, 0.866058f, 0.901516f, 0.936974f, 0.976864f, 0.999987f, 1.0f, 1.0f, 1.0f,
+            1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.999982f, 0.999935f, 0.999893f, 0.999851f, 0.999808f,
+            0.999761f, 0.999713f, 0.999671f, 0.999628f, 0.998096f, 0.993271f, 0.988387f, 0.984044f, 0.979702f, 0.97536f,
+            0.970476f, 0.965591f, 0.961249f, 0.959041f, 0.960057f, 0.961236f, 0.962415f, 0.963464f, 0.964512f, 0.96556f,
+            0.966739f, 0.967918f, 0.969231f, 0.970871f, 0.972512f, 0.974359f, 0.976205f, 0.977846f, 0.979487f, 0.981128f, 
+            0.982974f
+        };
 
-        HOSTDEVICE INLINE SampledSpectrum getSpectrum(const Vec3f& rgb) const
-        {
-            SampledSpectrum ret(0.0f);
-            const float r = rgb[0];
-            const float g = rgb[1];
-            const float b = rgb[2];
+        constexpr SampledSpectrum rgb2spectrum_red = {
+            0.098569f, 0.0933069f, 0.0880449f, 0.0827828f, 0.0775208f, 0.071601f, 0.0656812f, 0.0604192f, 0.0551571f, 0.0498329f,
+            0.0437007f, 0.0375649f, 0.0321108f, 0.0266567f, 0.0212027f, 0.0150668f, 0.00893101f, 0.00347695f, 0.0000515556, 0.0f,
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0372223f, 0.134637f, 0.222778f, 0.31092f, 0.399062f,
+            0.498222f, 0.597382f, 0.685524f, 0.773666f, 0.837958f, 0.860654f, 0.882386f, 0.901703f, 0.92102f, 0.940337f,
+            0.962068f, 0.9838f, 1.00312f, 1.01478f, 1.0149f, 1.0149f, 1.0149f, 1.0149f, 1.0149f, 1.0149f,
+            1.0149f, 1.0149f, 1.0149f, 1.0149f, 1.0149f, 1.0149f, 1.0149f, 1.0149f, 1.0149f, 1.0149f,
+            1.0149f
+        }; 
 
-            if (r <= g && r <= b)
-            {
-                ret += m_white * r;
-                if (g <= b)
-                {
-                    ret += m_cyan * (g - r);
-                    ret += m_blue * (b - g);
-                }
-                else
-                {
-                    ret += m_cyan * (b - r);
-                    ret += m_green * (g - b);
-                }
-            }
-            else if (g <= r && g <= b)
-            {
-                ret += m_white * g;
-                if (r <= g)
-                {
-                    ret += m_magenta * (r - g);
-                    ret += m_blue * (b - r);
-                }
-                else
-                {
-                    ret += m_magenta * (b - g);
-                    ret += m_red * (r - b);
-                }
-            }
-            else // blue <= red && blue <= green
-            {
-                ret += m_white * b;
-                if (r <= g)
-                {
-                    ret += m_yellow * (r - b);
-                    ret += m_green * (g - r);
-                }
-                else
-                {
-                    ret += m_yellow * (g - b);
-                    ret += m_red * (r - g);
-                }
-            }
-            return ret;
-        }
+        constexpr SampledSpectrum rgb2spectrum_green = {
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.000936781f,
+            0.00413439f, 0.00738698f, 0.0102782f, 0.0131693f, 0.0160605f, 0.0193131f, 0.0225657f, 0.0254569f, 0.0574544f, 0.137858f,
+            0.229145f, 0.320431f, 0.401574f, 0.482718f, 0.563861f, 0.655148f, 0.746434f, 0.802617f, 0.824661f, 0.846504f,
+            0.871076f, 0.895649f, 0.917491f, 0.939333f, 0.961176f, 0.985748f, 0.997078f, 0.990927f, 0.984764f, 0.978603f,
+            0.97167f, 0.964738f, 0.958576f, 0.952414f, 0.946252f, 0.907499f, 0.817288f, 0.735773f, 0.654259f, 0.572745f,
+            0.481042f, 0.389339f, 0.307824f, 0.22631f, 0.166735f, 0.145366f, 0.124886f, 0.106681f, 0.0884759f, 0.070271f,
+            0.0497904f, 0.0293099f, 0.011105f, 0.000110141f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 0.000118189f, 0.000382479f, 0.000647169f, 0.000944946f, 0.00124272f, 0.00150741f, 0.0017721f, 0.00203679f,
+            0.00233457
+        }; 
 
-    private:
-        SampledSpectrum m_white;
-        SampledSpectrum m_cyan;
-        SampledSpectrum m_magenta;
-        SampledSpectrum m_yellow;
-        SampledSpectrum m_red;
-        SampledSpectrum m_green;
-        SampledSpectrum m_blue;
-        bool m_initialized{ false };
-    };
+        constexpr SampledSpectrum rgb2spectrum_blue = {
+            1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.99628f,
+            0.983584f, 0.970669f, 0.959189f, 0.947709f, 0.936229f, 0.923313f, 0.910398f, 0.898919f, 0.869683f, 0.810917f,
+            0.744299f, 0.67768f, 0.618464f, 0.559247f, 0.500031f, 0.433412f, 0.366793f, 0.317693f, 0.282429f, 0.247246f,
+            0.207665f, 0.168085f, 0.132902f, 0.0977197f, 0.062537f, 0.0229565f, 0.0000132998f, 0.0f, 0.0f, 0.0f, 
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0000134134f, 0.0000485177f, 0.0000802805f, 0.000112043f, 0.000143806f,
+            0.000179539f, 0.000215273f, 0.000247036f, 0.000278798f, 0.00164274f, 0.00594942f, 0.01031f, 0.0141861f, 0.0180622f, 0.0219383f,
+            0.0262989f, 0.0306595f, 0.0345356f, 0.0373546f, 0.0385777f, 0.0399356f, 0.0412934f, 0.0425004f, 0.0437074f, 0.0449144f,
+            0.0462723f, 0.0476301f, 0.0483596f, 0.0484989f, 0.0486365f, 0.0487914f, 0.0489462f, 0.0490839f, 0.0492215f, 0.0493591f,
+            0.049514
+        };
+    }
 
 #ifndef __CUDACC__
     /* Stream function of spectrum classes */
@@ -436,19 +418,6 @@ namespace prayground {
     {
         for (int i = 0; i < SampledSpectrum::nSamples; i++)
             out << spd[i] << ' ';
-        return out;
-    }
-
-    HOST inline std::ostream& operator<<(std::ostream& out, const RGB2Spectrum& r2s)
-    {
-        out << "RGB2Spectrum::white_table: " << r2s.whiteTable() << std::endl;
-        out << "RGB2Spectrum::cyan_table: " << r2s.cyanTable() << std::endl;
-        out << "RGB2Spectrum::magenta_table: " << r2s.magentaTable() << std::endl;
-        out << "RGB2Spectrum::yellow_table: " << r2s.yellowTable() << std::endl;
-        out << "RGB2Spectrum::red_table: " << r2s.redTable() << std::endl;
-        out << "RGB2Spectrum::green_table: " << r2s.greenTable() << std::endl;
-        out << "RGB2Spectrum::blue_table: " << r2s.blueTable();
-
         return out;
     }
 #endif
@@ -638,6 +607,58 @@ namespace prayground {
     HOSTDEVICE INLINE float Lerp(const float a, const float b, const float t)
     {
         return a + t * (b - a);
+    }
+
+    HOSTDEVICE INLINE SampledSpectrum rgb2spectrum(const Vec3f& rgb)
+    {
+        SampledSpectrum ret = SampledSpectrum::zero();
+        const float r = rgb[0];
+        const float g = rgb[1];
+        const float b = rgb[2];
+
+        if (r <= g && r <= b)
+        {
+            ret += constants::rgb2spectrum_white * r;
+            if (g <= b)
+            {
+                ret += constants::rgb2spectrum_cyan * (g - r);
+                ret += constants::rgb2spectrum_blue * (b - g);
+            }
+            else
+            {
+                ret += constants::rgb2spectrum_cyan * (b - r);
+                ret += constants::rgb2spectrum_green * (g - b);
+            }
+        }
+        else if (g <= r && g <= b)
+        {
+            ret += constants::rgb2spectrum_white * g;
+            if (r <= g)
+            {
+                ret += constants::rgb2spectrum_magenta * (r - g);
+                ret += constants::rgb2spectrum_blue * (b - r);
+            }
+            else
+            {
+                ret += constants::rgb2spectrum_magenta * (b - g);
+                ret += constants::rgb2spectrum_red * (r - b);
+            }
+        }
+        else // blue <= red && blue <= green
+        {
+            ret += constants::rgb2spectrum_white * b;
+            if (r <= g)
+            {
+                ret += constants::rgb2spectrum_yellow * (r - b);
+                ret += constants::rgb2spectrum_green * (g - r);
+            }
+            else
+            {
+                ret += constants::rgb2spectrum_yellow * (g - b);
+                ret += constants::rgb2spectrum_red * (r - g);
+            }
+        }
+        return ret;
     }
 
 } // namespace prayground

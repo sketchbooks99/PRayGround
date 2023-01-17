@@ -64,11 +64,6 @@ void App::setup()
     params.samples_per_launch = 1;
     params.max_depth = 8;
 
-    // Copy SPD data to convert RGB to spectrum by Smits's method (1999)
-    RGB2Spectrum rgb2spectrum;
-    rgb2spectrum.init();
-    params.rgb2spectrum = rgb2spectrum;
-
     initResultBufferOnDevice();
 
     // Camera settings
@@ -288,10 +283,10 @@ void App::setup()
         return make_shared<ConstantTexture>(ret, constant_prg_id);
     };
 
-    auto tex_white = make_shared<ConstantTexture>(SampledSpectrum(0.95f), constant_prg_id);
+    auto tex_white = make_shared<ConstantTexture>(SampledSpectrum::constant(0.95f), constant_prg_id);
     auto tex_red = createConstantTextureFromSPD(red);
     auto tex_green = createConstantTextureFromSPD(green);
-    auto yellow = rgb2spectrum.getSpectrum(Vec3f(0.7f, 0.7f, 0.3f));
+    auto yellow = rgb2spectrum(Vec3f(0.7f, 0.7f, 0.3f));
     auto tex_yellow = make_shared<ConstantTexture>(yellow, constant_prg_id);
     auto tex_grid = make_shared<BitmapTexture>("resources/image/grid.png", bitmap_prg_id);
 

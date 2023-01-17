@@ -79,69 +79,19 @@ namespace prayground {
     }
     
     template <typename ReturnSpectrumT>
-    DEVICE INLINE ReturnSpectrumT getBitmapTextureValue(const Vec2f& uv, void* tex_data, const RGB2Spectrum& rgb2spectrum = RGB2Spectrum())
+    DEVICE INLINE ReturnSpectrumT getBitmapTextureValue(const Vec2f& uv, void* tex_data)
     {
         const BitmapTexture::Data* bitmap = reinterpret_cast<BitmapTexture::Data*>(tex_data);
         const float4 c = tex2D<float4>(bitmap->texture, uv.x(), uv.y());
-        if constexpr (::cuda::std::is_same_v<ReturnSpectrumT, SampledSpectrum>)
-        {
-            assert()
-        }
+        return ReturnSpectrumT(c);
     }
-    
-    // Bitmap ------------------------------------------------------
-    extern "C" __device__ Vec4f __direct_callable__pg_bitmap_texture_Vec4f(const Vec2f& uv, void* tex_data) {
+
+    template <>
+    DEVICE INLINE SampledSpectrum getBitmapTextureValue<SampledSpectrum>(const Vec2f& uv, void* tex_data)
+    {
         const BitmapTexture::Data* bitmap = reinterpret_cast<BitmapTexture::Data*>(tex_data);
-        float4 c = tex2D<float4>(bitmap->texture, uv.x(), uv.y());
-        return Vec4f(c);
-    }
-
-    extern "C" __device__ Vec3f __direct_callable__pg_bitmap_texture_Vec3f(const Vec2f& uv, void* tex_data) {
-        const BitmapTexture::Data* bitmap = reinterpret_cast<BitmapTexture::Data*>(tex_data);
-        float4 c = tex2D<float4>(bitmap->texture, uv.x(), uv.y());
-        return Vec3f(c);
-    }
-
-    extern "C" __device__ SampledSpectrum __direct_callable__pg_bitmap_texture_Spectrum(const Vec2f& uv, void* tex_data) {
-        //const BitmapTexture::Data* bitmap = reinterpret_cast<BitmapTexture::Data*>(tex_data);
-        //float4 c = tex2D<float4>(bitmap->texture, uv.x(), uv.y());
-        //return Vec4f(c);
-        return SampledSpectrum{};
-    }
-
-    // Constant ------------------------------------------------------
-    extern "C" __device__ Vec4f __direct_callable__pg_constant_texture_Vec4f(const Vec2f& uv, void* tex_data) {
-        const ConstantTexture_<Vec4f>::Data* constant = reinterpret_cast<ConstantTexture_<Vec4f>::Data*>(tex_data);
-        return constant->color;
-    }
-
-    extern "C" __device__ Vec3f __direct_callable__pg_constant_texture_Vec3f(const Vec2f& uv, void* tex_data) {
-        const ConstantTexture_<Vec3f>::Data* constant = reinterpret_cast<ConstantTexture_<Vec3f>::Data*>(tex_data);
-        return constant->color;
-    }
-
-    extern "C" __device__ SampledSpectrum __direct_callable__pg_constant_texture_Spectrum(const Vec2f& uv, void* tex_data) {
-        const ConstantTexture_<SampledSpectrum>::Data* constant = reinterpret_cast<ConstantTexture_<SampledSpectrum>::Data*>(tex_data);
-        return constant->color;
-    }
-
-    // Checker ------------------------------------------------------
-    extern "C" __device__ Vec4f __direct_callable__pg_checker_texture_Vec4f(const Vec2f& uv, void* tex_data) {
-        const CheckerTexture_<Vec4f>::Data* checker = reinterpret_cast<CheckerTexture_<Vec4f>::Data*>(tex_data);
-        const bool is_odd = sinf(uv.x() * math::pi * checker->scale) * sinf(uv.y() * math::pi * checker->scale) < 0;
-        return is_odd ? checker->color1 : checker->color2;
-    }
-
-    extern "C" __device__ Vec4f __direct_callable__pg_checker_texture_Vec3f(const Vec2f& uv, void* tex_data) {
-        const CheckerTexture_<Vec3f>::Data* checker = reinterpret_cast<CheckerTexture_<Vec3f>::Data*>(tex_data);
-        const bool is_odd = sinf(uv.x() * math::pi * checker->scale) * sinf(uv.y() * math::pi * checker->scale) < 0;
-        return is_odd ? checker->color1 : checker->color2;
-    }
-
-    extern "C" __device__ SampledSpectrum __direct_callable__pg_checker_texture_Spectrum(const Vec2f& uv, void* tex_data) {
-        const CheckerTexture_<SampledSpectrum>::Data* checker = reinterpret_cast<CheckerTexture_<SampledSpectrum>::Data*>(tex_data);
-        const bool is_odd = sinf(uv.x() * math::pi * checker->scale) * sinf(uv.y() * math::pi * checker->scale) < 0;
-        return is_odd ? checker->color1 : checker->color2;
+        const float4 c = tex2D<float4>(bitmap->texture, uv.x(), uv.y());
+        return rgb2spectrum(Vec3f(c));
     }
 
 //#endif

@@ -423,22 +423,17 @@ extern "C" __device__ void __direct_callable__area_emitter(SurfaceInteraction* s
 // Texture functions ---------------------------------------------------------------
 extern "C" __device__ Spectrum __direct_callable__constant(SurfaceInteraction* si, void* tex_data)
 {
-    const ConstantTexture::Data* constant = reinterpret_cast<ConstantTexture::Data*>(tex_data);
-    return constant->color;
+    return getConstantTextureValue<SampledSpectrum>(si->shading.uv, tex_data);
 }
 
 extern "C" __device__ Spectrum __direct_callable__checker(SurfaceInteraction* si, void* tex_data)
 {
-    const CheckerTexture::Data* checker = reinterpret_cast<CheckerTexture::Data*>(tex_data);
-    const bool is_odd = sinf(si->shading.uv.x() * math::pi * checker->scale) * sinf(si->shading.uv.y() * math::pi * checker->scale);
-    return is_odd ? checker->color1 : checker->color2;
+    return getCheckerTextureValue<SampledSpectrum>(si->shading.uv, tex_data);
 }
 
-extern "C" __device__ Spectrum __direct_callable__bitmap(SurfaceInteraction * si, void* tex_data)
+extern "C" __device__ Spectrum __direct_callable__bitmap(SurfaceInteraction* si, void* tex_data)
 {
-    const BitmapTexture::Data* image = reinterpret_cast<BitmapTexture::Data*>(tex_data);
-    Vec4f c = tex2D<float4>(image->texture, si->shading.uv.x(), si->shading.uv.y());
-    return params.rgb2spectrum.getSpectrum(Vec3f(c));
+    return getBitmapTextureValue<SampledSpectrum>(si->shading.uv, tex_data);
 }
 
 // Hitgroup functions ---------------------------------------------------------------

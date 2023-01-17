@@ -64,16 +64,14 @@ namespace prayground {
     template <typename ReturnSpectrumT>
     DEVICE INLINE ReturnSpectrumT getConstantTextureValue(const Vec2f& uv, void* tex_data)
     {
-        using Texture_ = ConstantTexture_<ReturnSpectrumT>;
-        const Texture_::Data* constant = reinterpret_cast<Texture_::Data*>(tex_data);
+        const typename ConstantTexture_<ReturnSpectrumT>::Data* constant = reinterpret_cast<typename ConstantTexture_<ReturnSpectrumT>::Data*>(tex_data);
         return constant->color;
     }
 
     template <typename ReturnSpectrumT>
     DEVICE INLINE ReturnSpectrumT getCheckerTextureValue(const Vec2f& uv, void* tex_data)
     {
-        using Texture_ = CheckerTexture_<ReturnSpectrumT>;
-        const Texture_::Data* checker = reinterpret_cast<Texture_::Data*>(tex_data);
+        const typename CheckerTexture_<ReturnSpectrumT>::Data* checker = reinterpret_cast<typename CheckerTexture_<ReturnSpectrumT>::Data*>(tex_data);
         const bool is_odd = sinf(uv.x() * math::pi * checker->scale) * sinf(uv.y() * math::pi * checker->scale) < 0;
         return is_odd ? checker->color1 : checker->color2;
     }

@@ -45,7 +45,6 @@ namespace prayground {
         constexpr int max_lambda = 720;
         constexpr int num_spectrum_samples = 81;
         constexpr float CIE_Y_integral = 106.911594f;
-        constexpr int num_rgb2spectrum_samples = 10;
 
         constexpr float spectrum_lambda[num_spectrum_samples] = {
             380.00f, 384.25f, 388.50f, 392.75f, 397.00f, 401.25f, 405.50f, 409.75f, 414.00f, 418.25f,
@@ -57,33 +56,6 @@ namespace prayground {
             635.00f, 639.25f, 643.50f, 647.75f, 652.00f, 656.25f, 660.50f, 664.75f, 669.00f, 673.25f,
             677.50f, 681.75f, 686.00f, 690.25f, 694.50f, 698.75f, 703.00f, 707.25f, 711.50f, 715.75f,
             720.00f
-        };
-
-        /** @ref An RGB to Spectrum Conversion for Reflectances, Smits 2000 */
-        constexpr float rgb2spectrum_lambda[num_rgb2spectrum_samples] = {
-            380.00f, 417.78f, 455.55f, 493.33f, 531.11f,
-            568.89f, 606.67f, 644.44f, 682.22f, 720.00f
-        };
-        constexpr float rgb2spectrum_white_table[num_rgb2spectrum_samples] = {
-            1.0000f, 1.0000f, 0.9999f, 0.9993f, 0.9992f, 0.9998f, 1.0000f, 1.0000f, 1.0000f, 1.0000f
-        };
-        constexpr float rgb2spectrum_cyan_table[num_rgb2spectrum_samples] = {
-            0.9710f, 0.9426f, 1.0007f, 1.0007f, 1.0007f, 1.0007f, 0.1564f, 0.0000f, 0.0000f, 0.0000f
-        };
-        constexpr float rgb2spectrum_magenta_table[num_rgb2spectrum_samples] = {
-            1.0000f, 1.0000f, 0.9685f, 0.2229f, 0.0000f, 0.0458f, 0.8369f, 1.0000f, 1.0000f, 0.9959f
-        };
-        constexpr float rgb2spectrum_yellow_table[num_rgb2spectrum_samples] = {
-            0.0001f, 0.0000f, 0.1088f, 0.6651f, 1.0000f, 1.0000f, 0.9996f, 0.9586f, 0.9685f, 0.9840f
-        };
-        constexpr float rgb2spectrum_red_table[num_rgb2spectrum_samples] = {
-            0.1012f, 0.0515f, 0.0000f, 0.0000f, 0.0000f, 0.0000f, 0.8325f, 1.0149f, 1.0149f, 1.0149f
-        };
-        constexpr float rgb2spectrum_green_table[num_rgb2spectrum_samples] = {
-            0.0000f, 0.0000f, 0.0273f, 0.7937f, 1.0000f, 0.9418f, 0.1719f, 0.0000f, 0.0000f, 0.0025f
-        };
-        constexpr float rgb2spectrum_blue_table[num_rgb2spectrum_samples] = {
-            1.0000f, 1.0000f, 0.8916f, 0.3323f, 0.0000f, 0.0000f, 0.0003f, 0.0369f, 0.0483f, 0.0496f
         };
     }
 
@@ -326,6 +298,7 @@ namespace prayground {
     };
 
     // Tables to reconstruct SampledSpectrum from RGB value.
+    /// @ref An RGB to Spectrum Conversion for Reflectances, Smits 2000
     namespace constants {
         constexpr SampledSpectrum rgb2spectrum_white = {
             1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.999997f,

@@ -111,15 +111,6 @@ namespace prayground {
         return Ne;
     }
 
-    /// @todo : Implement
-    // HOSTDEVICE INLINE Vec3f sampleGTR1(const float u1, const float u2, const float roughness)
-    // {
-    //     Vec3f p;
-    //     const float a = pow2(roughness);
-    //     const float phi = 2.0f * math::pi * u1;
-    //     const float cos_theta = 1.0f;
-    // }
-
     /** 
      * @ref: http://www.pbr-book.org/3ed-2018/Reflection_Models/Specular_Reflection_and_Transmission.html
      * 

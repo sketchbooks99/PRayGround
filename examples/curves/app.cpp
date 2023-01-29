@@ -5,7 +5,9 @@ void App::initResultBufferOnDevice()
     params.frame = 0;
 
     result_bmp.allocateDevicePtr();
+    accum_bmp.allocateDevicePtr();
     params.result_buffer = reinterpret_cast<Vec4u*>(result_bmp.devicePtr());
+    params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bmp.devicePtr());
 
     CUDA_SYNC_CHECK();
 }
@@ -47,17 +49,21 @@ void App::setup()
     const int32_t height = pgGetHeight();
     result_bmp.allocate(PixelFormat::RGBA, width, height);
     result_bmp.allocateDevicePtr();
+    accum_bmp.allocate(PixelFormat::RGBA, width, height);
+    accum_bmp.allocateDevicePtr();
 
     // Configuration of launch parameters
     params.width = result_bmp.width();
     params.height = result_bmp.height();
     params.samples_per_launch = 1;
     params.frame = 0;
+    params.max_depth = 5;
     params.result_buffer = reinterpret_cast<Vec4u*>(result_bmp.devicePtr());
+    params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bmp.devicePtr());
 
     // Camera settings
     std::shared_ptr<Camera> camera(new Camera);
-    camera->setOrigin(0, 300, 500);
+    camera->setOrigin(175, 192, 405);
     camera->setLookat(0, 0, 0);
     camera->setUp(0, 1, 0);
     camera->setFov(40);
@@ -95,11 +101,18 @@ void App::setup()
     scene.bindCallablesProgram(glass_sample_bsdf_prg.program);
     scene.bindCallablesProgram(glass_pdf_prg.program);
 
+    Callable disney_sample_bsdf_prg = pipeline.createCallablesProgram(context, module, "__direct_callable__sample_disney", "__continuation_callable__bsdf_disney");
+    Callable disney_pdf_prg = pipeline.createCallablesProgram(context, module, "__direct_callable__pdf_disney", "");
+    scene.bindCallablesProgram(disney_sample_bsdf_prg.program);
+    scene.bindCallablesProgram(disney_pdf_prg.program);
+
     Callable area_emitter_prg = pipeline.createCallablesProgram(context, module, "__direct_callable__area_emitter", "");
     scene.bindCallablesProgram(area_emitter_prg.program);
 
     SurfaceCallableID diffuse_id{ diffuse_sample_bsdf_prg.ID, diffuse_sample_bsdf_prg.ID, diffuse_pdf_prg.ID };
+    SurfaceCallableID glass_id{ glass_sample_bsdf_prg.ID, glass_sample_bsdf_prg.ID, glass_pdf_prg.ID };
     SurfaceCallableID area_emitter_id{ area_emitter_prg.ID, area_emitter_prg.ID, area_emitter_prg.ID };
+    SurfaceCallableID disney_id{ disney_sample_bsdf_prg.ID, disney_sample_bsdf_prg.ID, disney_pdf_prg.ID };
 
     // Miss program
     std::array<ProgramGroup, NRay> miss_prgs;
@@ -134,72 +147,93 @@ void App::setup()
     auto green_constant = make_shared<ConstantTexture>(Vec3f(0.05f, 0.8f, 0.05f), constant_prg.ID);
     auto red_constant = make_shared<ConstantTexture>(Vec3f(0.8f, 0.05f, 0.05f), constant_prg.ID);
     auto white_constant = make_shared<ConstantTexture>(Vec3f(0.8f), constant_prg.ID);
-    auto floor_checker = make_shared<CheckerTexture>(Vec3f(0.3f), Vec3f(0.8f), 10, checker_prg.ID);
+    auto floor_checker = make_shared<CheckerTexture>(Vec3f(0.8f), Vec3f(0.3f), 10, checker_prg.ID);
     auto blue_constant = make_shared<ConstantTexture>(Vec3f(0.05f, 0.05f, 0.8f), constant_prg.ID);
-    auto black_constant = make_shared<ConstantTexture>(Vec3f(0.05f), constant_prg.ID);
+    auto yellow_constant = make_shared<ConstantTexture>(Vec3f(0.8f, 0.7f, 0.3f), constant_prg.ID);
+    auto black_constant = make_shared<ConstantTexture>(Vec3f(0.01f), constant_prg.ID);
 
     // Materials
     auto green_diffuse = make_shared<Diffuse>(diffuse_id, green_constant);
+    //auto red_diffuse = make_shared<Diffuse>(diffuse_id, red_constant);
+    auto green_disney = make_shared<Disney>(disney_id, green_constant);
+    green_disney->setMetallic(0.6f);
+    green_disney->setRoughness(0.05f);
+    green_disney->setSubsurface(0.1f);
+    green_disney->setAnisotropic(0.8f);
     auto red_diffuse = make_shared<Diffuse>(diffuse_id, red_constant);
-    auto white_diffuse = make_shared<Diffuse>(diffuse_id, white_constant);
-    auto floor_diffuse = make_shared<Diffuse>(diffuse_id, floor_checker);
-    auto blue_diffuse = make_shared<Diffuse>(diffuse_id, blue_constant);
+    auto yellow_diffuse = make_shared<Diffuse>(diffuse_id, yellow_constant);
     auto black_diffuse = make_shared<Diffuse>(diffuse_id, black_constant);
+    auto white_glass = make_shared<Dielectric>(glass_id, white_constant, 1.5f);
+    auto white_diffuse = make_shared<Diffuse>(diffuse_id, white_constant);
+    auto checker_diffuse = make_shared<Diffuse>(diffuse_id, floor_checker);
 
     // Shapes
     auto wall_plane = make_shared<Plane>(Vec2f(-25.0f), Vec2f(25.0f));
-    
-    // Groud floor
-    scene.addObject("floor", make_shared<Plane>(Vec2f(-500, -500), Vec2f(500, 500)), 
-        floor_diffuse, plane_prgs, Matrix4f::identity());
-
-    // Sphere
-    scene.addObject("sphere", make_shared<Sphere>(30),
-        black_diffuse, sphere_prgs, Matrix4f::translate(0, 100, 0));
 
     // Carpet far with curves
     constexpr int32_t NUM_SEGMENTS = 10;
     constexpr float CURVE_HEIGHT = 100.0f;
-    shared_ptr<Curves> floor_curves(new Curves(Curves::Type::CubicBSpline));
+    shared_ptr<Curves> curves(new Curves(Curves::Type::CubicBSpline));
 
     uint32_t seed = tea<4>(0, 0);
 
-    for (int x = -500; x <= 500; x += 25)
+    constexpr float CURVE_LENGTH = 1000.0f;
+    PerlinNoise pnoise(seed);
+    for (int z = -500; z <= 500; z += 5)
     {
-        for (int z = -500; z <= 500; z += 25)
+        // The number of vertices per curve
+        int32_t n_vertices = NUM_SEGMENTS + (int32_t)Curves::getNumVertexPerSegment(curves->curveType());
+        float x_interval = CURVE_LENGTH / (float)(n_vertices - 1);
+        int32_t base_idx = (int32_t)curves->vertices().size();
+        for (int s = 0; s < n_vertices; s++)
         {
-            int32_t num_vertices_per_curve = NUM_SEGMENTS + (int32_t)Curves::getNumVertexPerSegment(floor_curves->curveType());
-            float y_interval = CURVE_HEIGHT / (float)(num_vertices_per_curve - 1);
-            int32_t base_idx = (int32_t)floor_curves->vertices().size();
-            for (int s = 0; s < num_vertices_per_curve; s++)
-            {
-                float y = s * y_interval;
-                const float coeff = (float)s / NUM_SEGMENTS;
-                const float inv_coeff = (float)(num_vertices_per_curve - s) / num_vertices_per_curve;
-                float xoffset = rnd(seed, -5, 5) * sinf(math::pi * coeff);
-                float zoffset = rnd(seed, -5, 5) * cosf(math::pi * coeff);
-                xoffset *= coeff;
-                zoffset *= coeff;
-                const Vec3f v(x + xoffset, y, z + zoffset);
-                const float w = inv_coeff * 4.0f;
-                
-                floor_curves->addVertex(v);
-                floor_curves->addWidth(w);
+            float x = -500.0f + s * x_interval;
+            Vec3f p(x, 0, float(z));
+            const float offset = (float)s / NUM_SEGMENTS;
 
-                if (s < (num_vertices_per_curve - (int32_t)Curves::getNumVertexPerSegment(floor_curves->curveType())))
-                    floor_curves->addIndex(base_idx + s);
-            }
+            auto getOffsetedNoise = [pnoise, p](uint32_t& seed) -> float
+            {
+                return pnoise.noise(p + UniformSampler::get3D(seed));
+            };
+
+            const float radius = lerp(10.0f, 30.0f, getOffsetedNoise(seed)) * offset;
+            const float y = lerp(-100.f, 100.0f, getOffsetedNoise(seed));
+            const float xoffset = lerp(-10.0f, 10.0f, getOffsetedNoise(seed));
+            const float zoffset = lerp(-5.0f, 5.0f, getOffsetedNoise(seed));
+            const Vec3f v(x + xoffset, y, z);
+            
+            curves->addVertex(v);
+            curves->addWidth(radius);
+
+            if (s < (n_vertices - (int32_t)Curves::getNumVertexPerSegment(curves->curveType())))
+                curves->addIndex(base_idx + s);
         }
     }
 
-    scene.addObject("carpet", floor_curves, red_diffuse, curve_prgs, Matrix4f::identity());
+    // Curve primitives
+    scene.addObject("curves", curves, red_diffuse, curve_prgs, Matrix4f::identity());
 
-    //scene.addObject("box", make_shared<Box>(Vec3f(-15), Vec3f(15)),
-    //    green_diffuse, box_prgs, Matrix4f::translate(50, 50, 0));
+    // Sphere
+    scene.addObject("sphere", make_shared<Sphere>(50),
+        black_diffuse, sphere_prgs, Matrix4f::translate(0, 50, 0));
 
+    auto bunny = make_shared<TriangleMesh>("resources/model/bunny.obj");
+    bunny->calculateNormalSmooth();
+    scene.addObject("bunny", bunny,
+        green_disney, mesh_prgs, Matrix4f::translate(-80, 50, 80) * Matrix4f::rotate(math::pi / 12.0f, Vec3f(0.5f, 0.0f, 0.5f)) * Matrix4f::scale(500));
+
+    auto teapot = make_shared<TriangleMesh>("resources/model/teapot.obj");
+    teapot->calculateNormalSmooth();
+    scene.addObject("teapot", teapot,
+        yellow_diffuse, mesh_prgs, Matrix4f::translate(100, 30, -80) * Matrix4f::rotate(math::pi / 12.0f, Vec3f(0.0f, 0.0f, 1.0f)) * Matrix4f::scale(20));
+
+    scene.addObject("box", make_shared<Box>(Vec3f(-500, -200, -500), Vec3f(500, 500, 500)),
+        checker_diffuse, box_prgs, Matrix4f::identity());
+
+    // Light 
     scene.addLight("ceiling_light", make_shared<Plane>(Vec2f(-100.0f), Vec2f(100.0f)),
         make_shared<AreaEmitter>(area_emitter_id, make_shared<ConstantTexture>(Vec3f(1.0f), constant_prg.ID), 5.0f), 
-        plane_prgs, Matrix4f::translate(0, 300.0f, 0));
+        plane_prgs, Matrix4f::translate(0, 300, 0));
 
     CUDA_CHECK(cudaStreamCreate(&stream));
     scene.copyDataToDevice();
@@ -223,7 +257,11 @@ void App::update()
 
     result_bmp.copyFromDevice();
 
-    pgSetWindowName(toString(pgGetFrameRate()));
+    std::string msg = "origin: " + toString(scene.camera()->origin()) + ", lookat: " + toString(scene.camera()->lookat()) + ", samples: " + toString(params.frame);
+    pgSetWindowName(msg);
+
+    if (params.frame == 5000)
+        result_bmp.write(pgPathJoin(pgAppDir(), "curves.jpg"));
 }
 
 // ------------------------------------------------------------------
@@ -265,7 +303,8 @@ void App::mouseScrolled(float x, float y)
 // ------------------------------------------------------------------
 void App::keyPressed(int key)
 {
-
+    if (key == Key::S)
+        result_bmp.write(pgPathJoin(pgAppDir(), "curves.jpg"));
 }
 
 // ------------------------------------------------------------------

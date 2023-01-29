@@ -188,26 +188,27 @@ namespace prayground {
      **/ 
     HOSTDEVICE INLINE float GTR2(float NdotH, float a)
     {
-        float a2 = a*a;
-        float t = 1.0f - (1.0f-a2)*NdotH*NdotH;
-        return a2 / (math::pi * t*t);
+        float a2 = a * a;
+        float t = 1.0f - (1.0f - a2) * NdotH * NdotH;
+        return a2 / (math::pi * t * t);
     }
 
     HOSTDEVICE INLINE float GTR2_aniso(float NdotH, float HdotX, float HdotY, float ax, float ay)
     {
-        return 1.0f / ( math::pi * ax * ay * pow2( pow2(HdotX / ax) + pow2(HdotY / ay) + NdotH * NdotH) );
+        const float term = math::pi * ax * ay * pow2( pow2(HdotX / ax) + pow2(HdotY / ay) + NdotH * NdotH );
+        return 1.0f / term;
     }
 
     HOSTDEVICE INLINE float smithG_GGX(float NdotV, float alphaG)
     {
         float a = alphaG*alphaG;
         float b = NdotV*NdotV;
-        return 1 / (NdotV + sqrt(a + b - a*b));
+        return 1.0f / (NdotV + sqrt(a + b - a*b));
     }
 
     HOSTDEVICE INLINE float smithG_GGX_aniso(float NdotV, float VdotX, float VdotY, float ax, float ay)
     {
-        return 1 / (NdotV + sqrt(pow2(VdotX * ax) + pow2(VdotY * ay) + pow2(NdotV)));
+        return 1.0f / (NdotV + sqrt(pow2(VdotX * ax) + pow2(VdotY * ay) + pow2(NdotV)));
     }
 
     HOSTDEVICE INLINE Vec3f reflect(const Vec3f& wo, const Vec3f& n)

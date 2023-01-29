@@ -8,9 +8,9 @@ namespace prayground {
 
     class PerlinNoise {
     public:
-        HOSTDEVICE PerlinNoise(unsigned int seed);
+        HOSTDEVICE PerlinNoise(uint32_t seed);
 
-        HOSTDEVICE void setSeed(unsigned int seed);
+        HOSTDEVICE void setSeed(uint32_t seed);
 
         HOSTDEVICE float turb(const Vec3f& p, int depth=7) const;
 
@@ -48,7 +48,7 @@ namespace prayground {
     };
 
     // Definitions
-    INLINE HOSTDEVICE PerlinNoise::PerlinNoise(unsigned int seed) : m_seed{seed}
+    INLINE HOSTDEVICE PerlinNoise::PerlinNoise(uint32_t seed) : m_seed{seed}
     {
         m_rnd_vec = new Vec3f[POINT_COUNT];
         for (int i = 0; i < POINT_COUNT; i++) {
@@ -61,7 +61,7 @@ namespace prayground {
         m_perm_z = perlinGeneratePerm();
     }
 
-    void INLINE HOSTDEVICE PerlinNoise::setSeed(unsigned int seed)
+    void INLINE HOSTDEVICE PerlinNoise::setSeed(uint32_t seed)
     {
         m_seed = seed;
     }

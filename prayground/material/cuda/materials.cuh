@@ -11,7 +11,9 @@
 
 // Material include
 #include <prayground/material/conductor.h>
+#include <prayground/material/roughconductor.h>
 #include <prayground/material/dielectric.h>
+#include <prayground/material/roughdielectric.h>
 #include <prayground/material/diffuse.h>
 #include <prayground/material/disney.h>
 
@@ -23,12 +25,41 @@ namespace prayground {
     INLINE DEVICE Vec3f samplingSmoothConductor(
         const Conductor::Data* conductor, 
         const Vec3f& wo, 
-        Shading& shading, 
-        uint32_t& seed)
+        Shading& shading)
     {
         if (conductor->twosided)
             shading.n = faceforward(shading.n, -wo, shading.n);
         return reflect(wo, shading.n);
+    }
+
+    // ----------------------------------------------------------------------------------------
+    // RoughConductor
+    // ----------------------------------------------------------------------------------------
+    INLINE DEVICE Vec3f importanceSamplingRoughConductor(
+        const RoughConductor::Data* roughconductor,
+        const Vec3f& wo,
+        Shading& shading,
+        uint32_t& seed)
+    {
+        return Vec3f(0, 1, 0);
+    }
+
+    INLINE DEVICE Vec3f getRoughConductorBRDF(
+        const RoughConductor::Data* roughconductor,
+        const Vec3f& wo, const Vec3f& wi,
+        const Shading& shading,
+        uint32_t& seed)
+    {
+        return Vec3f(0);
+    }
+
+    INLINE DEVICE float getRoughConductorPDF(
+        const RoughConductor::Data* roughconductor,
+        const Vec3f& wo, const Vec3f& wi,
+        const Shading& shading,
+        uint32_t& seed)
+    {
+        return 1.0f;
     }
 
     // ----------------------------------------------------------------------------------------
@@ -135,9 +166,9 @@ namespace prayground {
     }
 
     INLINE DEVICE Vec3f getDisneyBRDF(
-        const Disney::Data* disney, 
-        const Vec3f& wo, const Vec3f& wi, 
-        const Shading& shading, 
+        const Disney::Data* disney,
+        const Vec3f& wo, const Vec3f& wi,
+        const Shading& shading,
         const Vec3f& base)
     {
         // V ... View vector, L ... Light vector, N ... Normal
@@ -159,18 +190,18 @@ namespace prayground {
         const float Fd90 = 0.5f + 2.0f * disney->roughness * pow2(LdotH);
         const float FVd90 = fresnelSchlickT(NdotV, Fd90);
         const float FLd90 = fresnelSchlickT(NdotL, Fd90);
-        const Vec3f f_diffuse = (base / math::pi) * FVd90 * FLd90;
+        Vec3f f_diffuse = (base / math::pi) * FVd90 * FLd90;
 
         // Subsurface
         const float Fss90 = disney->roughness * LdotH * LdotH;
         const float FVss90 = fresnelSchlickT(NdotV, Fss90);
         const float FLss90 = fresnelSchlickT(NdotL, Fss90);
-        const Vec3f f_subsurface = (base / math::pi) * 1.25f * (FVss90 * FLss90 * ((1.0f / (NdotV * NdotL)) - 0.5f) + 0.5f);
+        Vec3f f_subsurface = (base / math::pi) * 1.25f * (FVss90 * FLss90 * ((1.0f / (NdotV * NdotL)) - 0.5f) + 0.5f);
 
         // Sheen
         const Vec3f rho_tint = base / luminance(base);
         const Vec3f rho_sheen = lerp(Vec3f(1.0f), rho_tint, disney->sheen_tint);
-        const Vec3f f_sheen = disney->sheen * rho_sheen * powf(1.0f - LdotH, 5.0f);
+        Vec3f f_sheen = disney->sheen * rho_sheen * powf(1.0f - LdotH, 5.0f);
 
         // Spcular
         const Vec3f X = shading.dpdu;
@@ -184,15 +215,15 @@ namespace prayground {
         const Vec3f FHs0 = fresnelSchlickR(LdotH, Fs0);
         const float Ds = GTR2_aniso(NdotH, dot(H, X), dot(H, Y), ax, ay);
         float Gs = smithG_GGX_aniso(NdotL, dot(L, X), dot(L, Y), ax, ay);
-        Gs *= smithG_GGX_aniso(NdotV, dot(V, X), dot(V, Y), ax, ay);
-        const Vec3f f_specular = FHs0 * Ds * Gs;
+              Gs *= smithG_GGX_aniso(NdotV, dot(V, X), dot(V, Y), ax, ay);
+        Vec3f f_specular = FHs0 * Ds * Gs;
 
         // Clearcoat
         const float Fcc = fresnelSchlickR(LdotH, 0.04f);
         const float alpha_cc = lerp(0.1f, 0.001f, disney->clearcoat_gloss);
         const float Dcc = GTR1(NdotH, alpha_cc);
         const float Gcc = smithG_GGX(NdotV, 0.25f);
-        const Vec3f f_clearcoat = Vec3f(0.25f * disney->clearcoat * (Fcc * Dcc * Gcc));
+        Vec3f f_clearcoat = Vec3f(0.25f * disney->clearcoat * (Fcc * Dcc * Gcc));
 
         // Integrate all terms 
         const Vec3f out = (1.0f - disney->metallic) * (lerp(f_diffuse, f_subsurface, disney->subsurface) + f_sheen) + f_specular + f_clearcoat;
@@ -223,19 +254,19 @@ namespace prayground {
         const float Fd90 = 0.5f + 2.0f * disney->roughness * LdotH * LdotH;
         const float FVd90 = fresnelSchlickT(NdotV, Fd90);
         const float FLd90 = fresnelSchlickT(NdotL, Fd90);
-        const float f_diffuse = value * math::inv_pi * FVd90 * FLd90;
+        float f_diffuse = value * math::inv_pi * FVd90 * FLd90;
 
         // Subsurface
         const float Fss90 = disney->roughness * LdotH * LdotH;
         const float FVss90 = fresnelSchlickT(NdotV, Fss90);
         const float FLss90 = fresnelSchlickT(NdotL, Fss90);
-        const float f_subsurface = value * math::inv_pi * 1.25f * (FVss90 * FLss90 * ((1.0f / (NdotV * NdotL)) - 0.5f) + 0.5f);
+        float f_subsurface = value * math::inv_pi * 1.25f * (FVss90 * FLss90 * ((1.0f / (NdotV * NdotL)) - 0.5f) + 0.5f);
 
         // Sheen
         const float lumi = base.y() / constants::CIE_Y_integral;
         const float rho_tint = value / lumi;
         const float rho_sheen = lerp(1.0f, rho_tint, disney->sheen_tint);
-        const float f_sheen = disney->sheen * rho_sheen * pow5(1.0f - LdotH);
+        float f_sheen = disney->sheen * rho_sheen * pow5(1.0f - LdotH);
 
         // Spcular
         const Vec3f X = shading.dpdu;
@@ -250,14 +281,14 @@ namespace prayground {
         const float Ds = GTR2_aniso(NdotH, dot(H, X), dot(H, Y), ax, ay);
         float Gs = smithG_GGX_aniso(NdotL, dot(L, X), dot(L, Y), ax, ay);
         Gs *= smithG_GGX_aniso(NdotV, dot(V, X), dot(V, Y), ax, ay);
-        const float f_specular = FHs0 * Ds * Gs;
+        float f_specular = FHs0 * Ds * Gs;
 
         // Clearcoat
         const float Fcc = fresnelSchlickR(LdotH, 0.04f);
-        const float alpha_cc = lerp(0.001f, 0.1f, disney->clearcoat_gloss);
+        const float alpha_cc = lerp(0.1f, 0.001f, disney->clearcoat_gloss);
         const float Dcc = GTR1(NdotH, alpha_cc);
         const float Gcc = smithG_GGX(NdotV, 0.25f);
-        const float f_clearcoat = 0.25f * disney->clearcoat * Fcc * Dcc * Gcc;
+        float f_clearcoat = 0.25f * disney->clearcoat * Fcc * Dcc * Gcc;
 
         // Integrate all terms 
         const float out = (1.0f - disney->metallic) * (lerp(f_diffuse, f_subsurface, disney->subsurface) + f_sheen) + f_specular + f_clearcoat;
@@ -283,13 +314,20 @@ namespace prayground {
         if (NdotL <= 0.0f || NdotV <= 0.0f)
             return 0.0f;
 
+        const Vec3f X = shading.dpdu;
+        const Vec3f Y = shading.dpdv;
         const float alpha = fmaxf(0.001f, disney->roughness);
         const float alpha_cc = lerp(0.1f, 0.001f, disney->clearcoat_gloss);
+        const float aspect = sqrtf(1.0f - disney->anisotropic * 0.9f);
+        const float ax = fmaxf(0.001f, pow2(alpha) / aspect);
+        const float ay = fmaxf(0.001f, pow2(alpha) * aspect);
         const Vec3f H = (V + L) / 2.0f;
         const float NdotH = dot(N, H);
 
-        const float pdf_Ds = GTR2(NdotH, alpha);
-        const float pdf_Dcc = GTR1(NdotH, alpha_cc);
+        const float half_jacobian = 1.0f / (4.0f * dot(L, H));
+
+        const float pdf_Ds = GTR2_aniso(NdotH, dot(H, X), dot(H, Y), ax, ay) * NdotH * half_jacobian;
+        const float pdf_Dcc = GTR1(NdotH, alpha_cc) * NdotH * half_jacobian;
         const float ratio = 1.0f / (1.0f + disney->clearcoat);
         const float pdf_specular = (pdf_Dcc + ratio * (pdf_Ds - pdf_Dcc));
         const float pdf_diffuse = NdotL * math::inv_pi;

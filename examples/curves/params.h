@@ -34,9 +34,11 @@ struct LaunchParams {
 	uint32_t height;
 	uint32_t samples_per_launch;
 	int32_t frame;
+	uint32_t max_depth;
 
 	LightInfo light;
 
 	Vec4u* result_buffer;
+	Vec4f* accum_buffer;
 	OptixTraversableHandle handle;
 };

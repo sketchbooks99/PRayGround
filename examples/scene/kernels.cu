@@ -187,7 +187,10 @@ extern "C" __device__ void __closesthit__custom()
 
     Ray ray = getWorldRay();
 
+    // If you use the __intersection__pg_*() function for intersection test, 
+    // you can fetch shading frame from two attributes
     Shading* shading = getPtrFromTwoAttributes<Shading, 0>();
+
     // Transform shading frame to world space
     shading->n = optixTransformNormalFromObjectToWorldSpace(shading->n);
     shading->dpdu = optixTransformVectorFromObjectToWorldSpace(shading->dpdu);
@@ -210,32 +213,16 @@ extern "C" __device__ void __closesthit__mesh()
     Ray ray = getWorldRay();
 
     const int prim_id = optixGetPrimitiveIndex();
-    const Face face = mesh_data->faces[prim_id];
-    const float u = optixGetTriangleBarycentrics().x;
-    const float v = optixGetTriangleBarycentrics().y;
+    Shading shading = getMeshShading(mesh_data, optixGetTriangleBarycentrics(), prim_id);
+    // Transform shading from object to world space.
+    shading.n = optixTransformNormalFromObjectToWorldSpace(shading.n);
+    shading.dpdu = optixTransformVectorFromObjectToWorldSpace(shading.dpdu);
+    shading.dpdv = optixTransformVectorFromObjectToWorldSpace(shading.dpdv);
 
-    const Vec3f p0 = mesh_data->vertices[face.vertex_id.x()];
-    const Vec3f p1 = mesh_data->vertices[face.vertex_id.y()];
-    const Vec3f p2 = mesh_data->vertices[face.vertex_id.z()];
-
-    const Vec2f texcoord0 = mesh_data->texcoords[face.texcoord_id.x()];
-    const Vec2f texcoord1 = mesh_data->texcoords[face.texcoord_id.y()];
-    const Vec2f texcoord2 = mesh_data->texcoords[face.texcoord_id.z()];
-    const Vec2f texcoords = (1 - u - v) * texcoord0 + u * texcoord1 + v * texcoord2;
-
-    const Vec3f n0 = mesh_data->normals[face.normal_id.x()];
-    const Vec3f n1 = mesh_data->normals[face.normal_id.y()];
-    const Vec3f n2 = mesh_data->normals[face.normal_id.z()];
-
-    // Linear interpolation of normal by barycentric coordinates.
-    Vec3f local_n = (1.0f - u - v) * n0 + u * n1 + v * n2;
-    Vec3f world_n = optixTransformNormalFromObjectToWorldSpace(local_n);
-    world_n = normalize(world_n);
-
+    // Store the surface interaction data at the hit point
     SurfaceInteraction* si = getSurfaceInteraction();
     si->p = ray.at(ray.tmax);
-    si->shading.n = world_n;
-    si->shading.uv = texcoords;
+    si->shading = shading;
     si->t = ray.tmax;
     si->wo = ray.d;
     si->surface_info = data->surface_info;
@@ -275,18 +262,7 @@ extern "C" __device__ void __closesthit__shadow()
 // Diffuse -----------------------------------------------------------------------------------------------
 extern "C" __device__ void __direct_callable__sample_diffuse(SurfaceInteraction * si, void* mat_data) {
     const Diffuse::Data* diffuse = reinterpret_cast<Diffuse::Data*>(mat_data);
-
-    if (diffuse->twosided)
-        si->shading.n = faceforward(si->shading.n, -si->wo, si->shading.n);
-
-    si->trace_terminate = false;
-    uint32_t seed = si->seed;
-    Vec2f u = UniformSampler::get2D(seed);
-    Vec3f wi = cosineSampleHemisphere(u[0], u[1]);
-    Onb onb(si->shading.n);
-    onb.inverseTransform(wi);
-    si->wi = normalize(wi);
-    si->seed = seed;
+    si->wi = importanceSamplingDiffuse(diffuse, si->wo, si->shading, si->seed);
 }
 
 extern "C" __device__ Vec3f __continuation_callable__bsdf_diffuse(SurfaceInteraction * si, void* mat_data)
@@ -296,14 +272,12 @@ extern "C" __device__ Vec3f __continuation_callable__bsdf_diffuse(SurfaceInterac
         diffuse->texture.prg_id, si, diffuse->texture.data);
     si->albedo = albedo;
     si->emission = Vec3f(0.0f);
-    const float cosine = fmaxf(0.0f, dot(si->shading.n, si->wi));
-    return albedo * cosine * math::inv_pi;
+    return albedo * getDiffuseBRDF(si->wi, si->shading.n);
 }
 
 extern "C" __device__ float __direct_callable__pdf_diffuse(SurfaceInteraction * si, void* mat_data)
 {
-    const float cosine = fmaxf(0.0f, dot(si->shading.n, si->wi));
-    return cosine * cosine * math::inv_pi;
+    return getDiffusePDF(si->wi, si->shading.n);
 }
 
 // Dielectric --------------------------------------------------------------------------------------------

@@ -111,7 +111,11 @@ set(sources
   material/diffuse.cpp
   material/disney.h
   material/disney.cpp
-  material/isotropic.h 
+  material/roughconductor.h 
+  material/roughconductor.cpp 
+  material/roughdielectric.h
+  material/roughdielectric.cpp
+  material/isotropic.h
   material/cuda/materials.cuh
 
   # Textures ==========

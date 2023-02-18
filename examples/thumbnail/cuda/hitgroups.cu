@@ -385,15 +385,6 @@ extern "C" __device__ Vec3f __direct_callable__rnd_sample_plane(const AreaEmitte
 }
 
 // Sphere -------------------------------------------------------------------------------
-static __forceinline__ __device__ Vec2f getSphereUV(const Vec3f& p) {
-    float phi = atan2(p.z(), p.x());
-    if (phi < 0) phi += 2.0f * math::pi;
-    float theta = acos(p.y());
-    float u = phi / (2.0f * math::pi);
-    float v = theta * math::inv_pi;
-    return Vec2f(u, v);
-}
-
 static __forceinline__ __device__ bool hitSphere(
     const Sphere::Data* sphere, const Vec3f& o, const Vec3f& v, const float tmin, const float tmax, SurfaceInteraction& si)
 {

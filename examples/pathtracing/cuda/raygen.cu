@@ -116,7 +116,7 @@ extern "C" __device__ void __raygen__pinhole()
                         optixDirectCall<void, SurfaceInteraction*, void*>(
                             light.surface_info.callable_id.bsdf, &light_si, light.surface_info.data);
 
-                        Vec3f contrib_from_light = light_si.emission * NdotL * LNdotL / li.pdf;
+                        Vec3f contrib_from_light = light_si.emission * NdotL * LNdotL;
 
                         si.wi = li.wi;
 
@@ -124,8 +124,7 @@ extern "C" __device__ void __raygen__pinhole()
                         Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
                             si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
 
-                        radiance += contrib_from_light;
-                        throughput *= bsdf_val;
+                        result += contrib_from_light * bsdf_val * throughput / (li.pdf * (params.num_lights + 1));
 
                         is_contributed = true;
                     }
@@ -135,18 +134,21 @@ extern "C" __device__ void __raygen__pinhole()
                 optixDirectCall<void, SurfaceInteraction*, void*>(
                     si.surface_info.callable_id.sample, &si, si.surface_info.data);
 
-                if (!is_contributed)
                 {
                     // Evaluate BSDF
                     Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
                         si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
 
-                    throughput *= bsdf_val;
+                    float pdf_val = optixDirectCall<float, SurfaceInteraction*, void*>(
+                        si.surface_info.callable_id.pdf, &si, si.surface_info.data);
+
+                    if (pdf_val <= 0.0f) break;
+
+                    throughput *= bsdf_val / (pdf_val * (params.num_lights + 1));
                 }
             }
 
             result += si.emission * throughput;
-            result += radiance * throughput;
 
             if (si.trace_terminate || depth >= params.max_depth)
                 break;

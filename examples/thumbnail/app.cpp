@@ -374,7 +374,7 @@ void App::setup()
             case_disney->setRoughness(0.3f);
             case_disney->setSubsurface(0.0f);
             case_disney->setMetallic(0.9f);
-            case_disney->setAnisotropic(0.8f);
+            case_disney->setAnisotropic(0.0f);
             materials.emplace("case", case_disney);
             addHitgroupRecord(mesh_prg, shapes.at("mitsuba"), materials.at("case"));
         }

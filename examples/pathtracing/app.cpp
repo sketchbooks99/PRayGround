@@ -165,14 +165,14 @@ void App::setup()
 
     // Hitgroupプログラム
     // Plane
-    auto plane_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("custom"), PG_INTERSECTION_TEXT("plane"));
-    auto plane_shadow_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("shadow"), PG_INTERSECTION_TEXT("plane"));
+    auto plane_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("custom"), IS_FUNC_TEXT("pg_plane"));
+    auto plane_shadow_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("shadow"), IS_FUNC_TEXT("pg_plane"));
     // Sphere
-    auto sphere_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("custom"), PG_INTERSECTION_TEXT("sphere"));
-    auto sphere_shadow_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("shadow"), PG_INTERSECTION_TEXT("sphere"));
+    auto sphere_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("custom"), IS_FUNC_TEXT("pg_sphere"));
+    auto sphere_shadow_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("shadow"), IS_FUNC_TEXT("pg_sphere"));
     // Cylinder
-    auto cylinder_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("custom"), PG_INTERSECTION_TEXT("cylinder"));
-    auto cylinder_shadow_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("shadow"), PG_INTERSECTION_TEXT("cylinder"));
+    auto cylinder_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("custom"), IS_FUNC_TEXT("pg_cylinder"));
+    auto cylinder_shadow_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("shadow"), IS_FUNC_TEXT("pg_cylinder"));
     // Triangle mesh
     auto mesh_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("mesh"));
     auto mesh_shadow_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("shadow"));

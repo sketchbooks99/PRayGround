@@ -86,7 +86,6 @@ extern "C" __device__ void __raygen__pinhole()
         si.emission = Vec3f(0.0f);
         si.albedo = Vec3f(0.0f);
         si.trace_terminate = false;
-        si.radiance_evaled = false;
 
         float tmax = raygen->camera.farclip / dot(rd, normalize(raygen->camera.lookat - ro));
 
@@ -456,15 +455,6 @@ extern "C" __device__ float __continuation_callable__pdf_light_plane(
 }
 
 // Sphere -------------------------------------------------------------------------------
-static __forceinline__ __device__ Vec2f getSphereUV(const Vec3f& p) 
-{
-    const float phi = atan2(p.z(), p.x());
-    const float theta = asin(p.y());
-    const float u = 1.0f - (phi + math::pi) / (math::two_pi);
-    const float v = 1.0f - (theta + math::pi / 2.0f) / math::pi;
-    return Vec2f(u, v);
-}
-
 static __forceinline__ __device__ bool hitSphere(
     const Sphere::Data* sphere, const Vec3f& o, const Vec3f& v, 
     const float tmin, const float tmax, SurfaceInteraction& si)
@@ -717,7 +707,6 @@ extern "C" __device__ Vec3f __direct_callable__sample_dielectric(SurfaceInteract
         wi = reflect(si->wo, outward_normal);
     else    
         wi = refract(si->wo, outward_normal, cosine, ni, nt);
-    si->radiance_evaled = false;
     si->trace_terminate = false;
     si->seed = seed;
     return wi;
@@ -746,7 +735,6 @@ extern "C" __device__ Vec3f __direct_callable__sample_conductor(SurfaceInteracti
         si->shading.n = faceforward(si->shading.n, -si->wo, si->shading.n);
 
     si->trace_terminate = false;
-    si->radiance_evaled = false;
     return reflect(si->wo, si->shading.n);
 }
 
@@ -797,7 +785,6 @@ extern "C" __device__ Vec3f __direct_callable__sample_disney(SurfaceInteraction*
         onb.inverseTransform(h);
         wi = normalize(reflect(si->wo, h));
     }
-    si->radiance_evaled = false;
     si->trace_terminate = false;
     si->seed = seed;
     return wi;

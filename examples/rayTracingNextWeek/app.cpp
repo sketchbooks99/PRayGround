@@ -348,9 +348,10 @@ void App::setup()
         sbt_idx++;
         auto silver = make_shared<ConstantTexture>(Vec3f(0.8f, 0.8f, 0.9f), constant_prg_id);
         auto metal = make_shared<Disney>(disney_id, silver);
-        metal->setRoughness(0.5f);
+        metal->setRoughness(0.2f);
         metal->setMetallic(1.0f);
         metal->setSubsurface(0.0f);
+        metal->setAnisotropic(0.5f);
         auto transform = Matrix4f::identity();
         Primitive glass_sphere{ sphere, metal };
         setupPrimitive(sphere_prg, glass_sphere, transform);
@@ -470,7 +471,7 @@ void App::setup()
         setupPrimitive(box_medium_prg, atomosphere, Matrix4f::identity());
     }
 
-    // 光源データをGPU側にコピー
+    // Copy area emitter's info on device
     CUDABuffer<AreaEmitterInfo> d_area_emitter_infos;
     d_area_emitter_infos.copyToDevice(area_emitter_infos);
     params.lights = d_area_emitter_infos.deviceData();

@@ -125,9 +125,7 @@ extern "C" __device__ void __raygen__pinhole()
 
     const unsigned int image_index = idx.y() * params.width + idx.x();
 
-    if (result.x() != result.x()) result.x() = 0.0f;
-    if (result.y() != result.y()) result.y() = 0.0f;
-    if (result.z() != result.z()) result.z() = 0.0f;
+    if (!result.isValid()) result = Vec3f(0.0f);
 
     Vec3f accum_color = result / static_cast<float>(params.samples_per_launch);
 
@@ -172,7 +170,6 @@ extern "C" __device__ void __raygen__lens()
         si.emission = Vec3f(0.0f);
         si.albedo = Vec3f(0.0f);
         si.trace_terminate = false;
-        si.radiance_evaled = false;
 
         float tmax = raygen->camera.farclip / dot(rd, normalize(raygen->camera.lookat - ro));
 

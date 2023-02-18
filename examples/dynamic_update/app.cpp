@@ -272,9 +272,12 @@ void App::update()
 // ----------------------------------------------------------------
 void App::draw()
 {
-    result_bitmap.draw(0, 0, pgGetWidth() / 2, pgGetHeight() / 2);
-    normal_bitmap.draw(pgGetWidth() / 2, 0, pgGetWidth() / 2, pgGetHeight() / 2);
-    albedo_bitmap.draw(0, pgGetHeight() / 2, pgGetWidth() / 2, pgGetHeight() / 2);
+    const int32_t w = pgGetWidth();
+    const int32_t h = pgGetHeight();
+
+    result_bitmap.draw(0, 0, w / 2, h / 2);
+    normal_bitmap.draw(w / 2, 0, w / 2, h / 2);
+    albedo_bitmap.draw(0, h / 2, w / 2, h / 2);
 }
 
 // ----------------------------------------------------------------

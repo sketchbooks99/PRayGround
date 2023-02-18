@@ -78,9 +78,9 @@ void App::setup()
         ProgramGroup program;
         uint32_t ID;
     };
-    Callable bitmap_prg = pipeline.createCallablesProgram(context, module, "__direct_callable__pg_bitmap_texture_Vec3f", "");
-    Callable constant_prg = pipeline.createCallablesProgram(context, module, "__direct_callable__pg_constant_texture_Vec3f", "");
-    Callable checker_prg = pipeline.createCallablesProgram(context, module, "__direct_callable__pg_checker_texture_Vec3f", "");
+    Callable bitmap_prg = pipeline.createCallablesProgram(context, module, "__direct_callable__bitmap", "");
+    Callable constant_prg = pipeline.createCallablesProgram(context, module, "__direct_callable__constant", "");
+    Callable checker_prg = pipeline.createCallablesProgram(context, module, "__direct_callable__checker", "");
     scene.bindCallablesProgram(bitmap_prg.program);
     scene.bindCallablesProgram(constant_prg.program);
     scene.bindCallablesProgram(checker_prg.program);

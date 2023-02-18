@@ -173,3 +173,19 @@ extern "C" __device__ float __direct_callable__pdf_diffuse(SurfaceInteraction* s
 {
 
 }
+
+// Texture func
+extern "C" __device__ Vec3f __direct_callable__constant(SurfaceInteraction * si, void* tex_data)
+{
+    return getConstantTextureValue<Vec3f>(si->shading.uv, tex_data);
+}
+
+extern "C" __device__ Vec3f __direct_callable__checker(SurfaceInteraction * si, void* tex_data)
+{
+    return getCheckerTextureValue<Vec3f>(si->shading.uv, tex_data);
+}
+
+extern "C" __device__ Vec3f __direct_callable__bitmap(SurfaceInteraction * si, void* tex_data)
+{
+    return getBitmapTextureValue<Vec3f>(si->shading.uv, tex_data);
+}

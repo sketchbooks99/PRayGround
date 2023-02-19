@@ -124,16 +124,16 @@ void App::setup()
     mesh_prgs[1] = pipeline.createHitgroupProgram(context, module, "__closesthit__shadow");
 
     std::array<ProgramGroup, NRay> sphere_prgs;
-    sphere_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", IS_FUNC_TEXT("pg_sphere"));
-    sphere_prgs[1] = pipeline.createHitgroupProgram(context, module, "__closesthit__shadow", IS_FUNC_TEXT("pg_sphere"));
+    sphere_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", "__intersection__sphere");
+    sphere_prgs[1] = pipeline.createHitgroupProgram(context, module, "__closesthit__shadow", "__intersection__sphere");
 
     std::array<ProgramGroup, NRay> plane_prgs;
-    plane_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", IS_FUNC_TEXT("pg_plane"));
-    plane_prgs[1] = pipeline.createHitgroupProgram(context, module, "__closesthit__shadow", IS_FUNC_TEXT("pg_plane"));
+    plane_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", "__intersection__plane");
+    plane_prgs[1] = pipeline.createHitgroupProgram(context, module, "__closesthit__shadow", "__intersection__plane");
 
     std::array<ProgramGroup, NRay> box_prgs;
-    box_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", IS_FUNC_TEXT("pg_box"));
-    box_prgs[1] = pipeline.createHitgroupProgram(context, module, "__closesthit__shadow", IS_FUNC_TEXT("pg_box"));
+    box_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", "__intersection__box");
+    box_prgs[1] = pipeline.createHitgroupProgram(context, module, "__closesthit__shadow", "__intersection__box");
 
     std::array<ProgramGroup, NRay> curve_prgs;
     Module curve_module = pipeline.createBuiltinIntersectionModule(context, OPTIX_PRIMITIVE_TYPE_ROUND_CUBIC_BSPLINE);

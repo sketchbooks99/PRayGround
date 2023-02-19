@@ -423,17 +423,17 @@ extern "C" __device__ void __direct_callable__area_emitter(SurfaceInteraction* s
 // Texture functions ---------------------------------------------------------------
 extern "C" __device__ Spectrum __direct_callable__constant(SurfaceInteraction* si, void* tex_data)
 {
-    return getConstantTextureValue<SampledSpectrum>(si->shading.uv, tex_data);
+    return pgGetConstantTextureValue<SampledSpectrum>(si->shading.uv, tex_data);
 }
 
 extern "C" __device__ Spectrum __direct_callable__checker(SurfaceInteraction* si, void* tex_data)
 {
-    return getCheckerTextureValue<SampledSpectrum>(si->shading.uv, tex_data);
+    return pgGetCheckerTextureValue<SampledSpectrum>(si->shading.uv, tex_data);
 }
 
 extern "C" __device__ Spectrum __direct_callable__bitmap(SurfaceInteraction* si, void* tex_data)
 {
-    return getBitmapTextureValue<SampledSpectrum>(si->shading.uv, tex_data);
+    return pgGetBitmapTextureValue<SampledSpectrum>(si->shading.uv, tex_data);
 }
 
 // Hitgroup functions ---------------------------------------------------------------
@@ -548,7 +548,7 @@ extern "C" __device__ void __closesthit__sphere()
     si->shading.n = world_n;
     si->t = ray.tmax;
     si->wo = ray.d;
-    si->shading.uv = getSphereUV(local_n);
+    si->shading.uv = pgGetSphereUV(local_n);
     si->surface_info = data->surface_info;
 
     float phi = atan2(local_n.z(), local_n.x());

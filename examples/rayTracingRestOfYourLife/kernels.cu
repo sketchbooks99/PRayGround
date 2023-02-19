@@ -483,7 +483,7 @@ static __forceinline__ __device__ bool hitSphere(
     si.t = t;
     si.p = o + t * v;
     si.shading.n = si.p / radius;
-    si.shading.uv = getSphereUV(si.shading.n);
+    si.shading.uv = pgGetSphereUV(si.shading.n);
     return true;
 }
 
@@ -537,7 +537,7 @@ extern "C" __device__ void __closesthit__sphere() {
     si->shading.n = world_n;
     si->t = ray.tmax;
     si->wo = ray.d;
-    si->shading.uv = getSphereUV(local_n);
+    si->shading.uv = pgGetSphereUV(local_n);
     si->surface_info = data->surface_info;
 
     float phi = atan2(local_n.z(), local_n.x());

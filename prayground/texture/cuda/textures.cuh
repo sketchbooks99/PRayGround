@@ -62,14 +62,14 @@ namespace prayground {
     }
 
     template <typename ReturnSpectrumT>
-    DEVICE INLINE ReturnSpectrumT getConstantTextureValue(const Vec2f& uv, void* tex_data)
+    DEVICE INLINE ReturnSpectrumT pgGetConstantTextureValue(const Vec2f& uv, void* tex_data)
     {
         const typename ConstantTexture_<ReturnSpectrumT>::Data* constant = reinterpret_cast<typename ConstantTexture_<ReturnSpectrumT>::Data*>(tex_data);
         return constant->color;
     }
 
     template <typename ReturnSpectrumT>
-    DEVICE INLINE ReturnSpectrumT getCheckerTextureValue(const Vec2f& uv, void* tex_data)
+    DEVICE INLINE ReturnSpectrumT pgGetCheckerTextureValue(const Vec2f& uv, void* tex_data)
     {
         const typename CheckerTexture_<ReturnSpectrumT>::Data* checker = reinterpret_cast<typename CheckerTexture_<ReturnSpectrumT>::Data*>(tex_data);
         const bool is_odd = sinf(uv.x() * math::pi * checker->scale) * sinf(uv.y() * math::pi * checker->scale) < 0;
@@ -77,7 +77,7 @@ namespace prayground {
     }
     
     template <typename ReturnSpectrumT>
-    DEVICE INLINE ReturnSpectrumT getBitmapTextureValue(const Vec2f& uv, void* tex_data)
+    DEVICE INLINE ReturnSpectrumT pgGetBitmapTextureValue(const Vec2f& uv, void* tex_data)
     {
         const BitmapTexture::Data* bitmap = reinterpret_cast<BitmapTexture::Data*>(tex_data);
         const float4 c = tex2D<float4>(bitmap->texture, uv.x(), uv.y());
@@ -85,7 +85,7 @@ namespace prayground {
     }
 
     template <>
-    DEVICE INLINE SampledSpectrum getBitmapTextureValue<SampledSpectrum>(const Vec2f& uv, void* tex_data)
+    DEVICE INLINE SampledSpectrum pgGetBitmapTextureValue<SampledSpectrum>(const Vec2f& uv, void* tex_data)
     {
         const BitmapTexture::Data* bitmap = reinterpret_cast<BitmapTexture::Data*>(tex_data);
         const float4 c = tex2D<float4>(bitmap->texture, uv.x(), uv.y());

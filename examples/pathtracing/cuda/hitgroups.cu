@@ -54,7 +54,7 @@ extern "C" __device__ LightInteraction __direct_callable__rnd_sample_sphere(cons
     Shading shading;
     float time;
     // Get surface information (point, normal, texcoord) on the sphere, and calculate PDF
-    if (!intersectionSphere(sphere, ray, &shading, &time))
+    if (!pgIntersectionSphere(sphere, ray, &shading, &time))
         li.pdf = 0.0f;
     else
     {
@@ -72,6 +72,30 @@ extern "C" __device__ LightInteraction __direct_callable__rnd_sample_sphere(cons
 }
 
 // Custom shape -------------------------------------------------------------------------------
+extern "C" DEVICE void __intersection__sphere()
+{
+    pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
+    const Sphere::Data* sphere = reinterpret_cast<Sphere::Data*>(data->shape_data);
+    Ray ray = getLocalRay();
+    pgReportIntersectionSphere(sphere, ray);
+}
+
+extern "C" DEVICE void __intersection__plane()
+{
+    pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
+    const Plane::Data* plane = reinterpret_cast<Plane::Data*>(data->shape_data);
+    Ray ray = getLocalRay();
+    pgReportIntersectionPlane(plane, ray);
+}
+
+extern "C" DEVICE void __intersection__cylinder()
+{
+    pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
+    const Cylinder::Data* cylinder = reinterpret_cast<Cylinder::Data*>(data->shape_data);
+    Ray ray = getLocalRay();
+    pgReportIntersectionCylinder(cylinder, ray);
+}
+
 extern "C" DEVICE void __closesthit__custom()
 {
     const pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());

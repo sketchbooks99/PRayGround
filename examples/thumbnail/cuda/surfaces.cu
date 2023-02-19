@@ -102,7 +102,7 @@ extern "C" __device__ float __direct_callable__pdf_conductor(SurfaceInteraction*
 extern "C" __device__ void __direct_callable__sample_disney(SurfaceInteraction* si, void* mat_data)
 {
     const Disney::Data* disney = reinterpret_cast<Disney::Data*>(mat_data);
-    si->wi = importanceSamplingDisney(disney, si->wo, si->shading, si->seed);
+    si->wi = pgImportanceSamplingDisney(disney, si->wo, si->shading, si->seed);
     si->trace_terminate = false;
 }
 
@@ -110,14 +110,13 @@ extern "C" __device__ Vec3f __continuation_callable__bsdf_disney(SurfaceInteract
 {   
     const Disney::Data* disney = reinterpret_cast<Disney::Data*>(mat_data);
     const Vec4f base = optixDirectCall<Vec4f, const Vec2f&, void*>(disney->base.prg_id, si->shading.uv, disney->base.data);
-    return getDisneyBRDF(disney, si->wo, si->wi, si->shading, Vec3f(base));
+    return pgGetDisneyBRDF(disney, si->wo, si->wi, si->shading, Vec3f(base));
 }
 
 extern "C" __device__ float __direct_callable__pdf_disney(SurfaceInteraction* si, void* mat_data)
 {
     const Disney::Data* disney = reinterpret_cast<Disney::Data*>(mat_data);
-
-    return getDisneyPDF(disney, si->wo, si->wi, si->shading);
+    return pgGetDisneyPDF(disney, si->wo, si->wi, si->shading);
 }
 
 // Area emitter ------------------------------------------------------------------------------------------

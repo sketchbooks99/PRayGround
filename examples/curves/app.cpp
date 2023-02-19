@@ -1,5 +1,9 @@
 #include "app.h"
 
+#include <prayground/ext/imgui/imgui.h>
+#include <prayground/ext/imgui/imgui_impl_glfw.h>
+#include <prayground/ext/imgui/imgui_impl_opengl3.h>
+
 void App::initResultBufferOnDevice()
 {
     params.frame = 0;
@@ -127,16 +131,16 @@ void App::setup()
     mesh_prgs[1] = pipeline.createHitgroupProgram(context, module, "__closesthit__shadow");
 
     std::array<ProgramGroup, NRay> sphere_prgs;
-    sphere_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", IS_FUNC_TEXT("pg_sphere"));
-    sphere_prgs[1] = pipeline.createHitgroupProgram(context, module, "__closesthit__shadow", IS_FUNC_TEXT("pg_sphere"));
+    sphere_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", "__intersection__sphere");
+    sphere_prgs[1] = pipeline.createHitgroupProgram(context, module, "__closesthit__shadow", "__intersection__sphere");
 
     std::array<ProgramGroup, NRay> plane_prgs;
-    plane_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", IS_FUNC_TEXT("pg_plane"));
-    plane_prgs[1] = pipeline.createHitgroupProgram(context, module, "__closesthit__shadow", IS_FUNC_TEXT("pg_plane"));
+    plane_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", "__intersection__plane");
+    plane_prgs[1] = pipeline.createHitgroupProgram(context, module, "__closesthit__shadow", "__intersection__plane");
 
     std::array<ProgramGroup, NRay> box_prgs;
-    box_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", IS_FUNC_TEXT("pg_box"));
-    box_prgs[1] = pipeline.createHitgroupProgram(context, module, "__closesthit__shadow", IS_FUNC_TEXT("pg_box"));
+    box_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", "__intersection__box");
+    box_prgs[1] = pipeline.createHitgroupProgram(context, module, "__closesthit__shadow", "__intersection__box");
 
     std::array<ProgramGroup, NRay> curve_prgs;
     Module curve_module = pipeline.createBuiltinIntersectionModule(context, OPTIX_PRIMITIVE_TYPE_ROUND_CUBIC_BSPLINE);
@@ -156,9 +160,12 @@ void App::setup()
     auto green_diffuse = make_shared<Diffuse>(diffuse_id, green_constant);
     //auto red_diffuse = make_shared<Diffuse>(diffuse_id, red_constant);
     auto green_disney = make_shared<Disney>(disney_id, green_constant);
-    green_disney->setMetallic(0.6f);
-    green_disney->setRoughness(0.05f);
-    green_disney->setSubsurface(0.1f);
+    //green_disney->setMetallic(0.6f);
+    //green_disney->setRoughness(0.05f);
+    //green_disney->setSubsurface(0.1f);
+    //green_disney->setAnisotropic(0.8f);
+    green_disney->setMetallic(0.9f);
+    green_disney->setRoughness(0.5f);
     green_disney->setAnisotropic(0.8f);
     auto red_diffuse = make_shared<Diffuse>(diffuse_id, red_constant);
     auto yellow_diffuse = make_shared<Diffuse>(diffuse_id, yellow_constant);
@@ -242,6 +249,15 @@ void App::setup()
     pipeline.create(context);
 
     params.handle = scene.accelHandle();
+
+    // GUI settings
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(pgGetCurrentWindow()->windowPtr(), true);
+    ImGui_ImplOpenGL3_Init("#version 330");
 }
 
 // ------------------------------------------------------------------
@@ -267,7 +283,26 @@ void App::update()
 // ------------------------------------------------------------------
 void App::draw()
 {
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    ImGui::Begin("Curves example GUI");
+
+    const auto& camera = scene.camera();
+    ImGui::Text("Camera info:");
+    ImGui::Text("Origin: %f %f %f", camera->origin().x(), camera->origin().y(), camera->origin().z());
+    ImGui::Text("Lookat: %f %f %f", camera->lookat().x(), camera->lookat().y(), camera->lookat().z());
+
+    ImGui::Text("Frame rate: %.3f ms/frame (%.2f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+    ImGui::Text("Subframe index: %d", params.frame);
+
+    ImGui::End();
+    ImGui::Render();
+
     result_bmp.draw(0, 0);
+
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
 // ------------------------------------------------------------------

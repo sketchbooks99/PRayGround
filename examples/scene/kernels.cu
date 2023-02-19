@@ -181,13 +181,37 @@ extern "C" __device__ void __miss__shadow()
 }
 
 // Hitgroups 
+extern "C" __device__ void __intersection__sphere()
+{
+    pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
+    const Sphere::Data* sphere = reinterpret_cast<Sphere::Data*>(data->shape_data);
+    Ray ray = getLocalRay();
+    pgReportIntersectionSphere(sphere, ray);
+}
+
+extern "C" __device__ void __intersection__plane()
+{
+    pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
+    const Plane::Data* plane = reinterpret_cast<Plane::Data*>(data->shape_data);
+    Ray ray = getLocalRay();
+    pgReportIntersectionPlane(plane, ray);
+}
+
+extern "C" __device__ void __intersection__box()
+{
+    pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
+    const Box::Data* box = reinterpret_cast<Box::Data*>(data->shape_data);
+    Ray ray = getLocalRay();
+    pgReportIntersectionBox(box, ray);
+}
+
 extern "C" __device__ void __closesthit__custom()
 {
     pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
 
     Ray ray = getWorldRay();
 
-    // If you use the __intersection__pg_*() function for intersection test, 
+    // If you use the reportIntersection*() function in intersection program, 
     // you can fetch shading frame from two attributes
     Shading* shading = getPtrFromTwoAttributes<Shading, 0>();
 
@@ -213,7 +237,7 @@ extern "C" __device__ void __closesthit__mesh()
     Ray ray = getWorldRay();
 
     const int prim_id = optixGetPrimitiveIndex();
-    Shading shading = getMeshShading(mesh_data, optixGetTriangleBarycentrics(), prim_id);
+    Shading shading = pgGetMeshShading(mesh_data, optixGetTriangleBarycentrics(), prim_id);
     // Transform shading from object to world space.
     shading.n = optixTransformNormalFromObjectToWorldSpace(shading.n);
     shading.dpdu = optixTransformVectorFromObjectToWorldSpace(shading.dpdu);
@@ -239,7 +263,7 @@ extern "C" __device__ void __closesthit__curves()
     Ray ray = getWorldRay();
     Vec3f hit_point = optixTransformPointFromWorldToObjectSpace(ray.at(ray.tmax));
 
-    Shading shading = getCurvesShading(hit_point, primitive_id, optixGetPrimitiveType());
+    Shading shading = pgGetCurvesShading(hit_point, primitive_id, optixGetPrimitiveType());
     // Transform shading frame to world space
     shading.n = optixTransformNormalFromObjectToWorldSpace(shading.n);
     shading.dpdu = optixTransformVectorFromObjectToWorldSpace(shading.dpdu);
@@ -262,7 +286,7 @@ extern "C" __device__ void __closesthit__shadow()
 // Diffuse -----------------------------------------------------------------------------------------------
 extern "C" __device__ void __direct_callable__sample_diffuse(SurfaceInteraction * si, void* mat_data) {
     const Diffuse::Data* diffuse = reinterpret_cast<Diffuse::Data*>(mat_data);
-    si->wi = importanceSamplingDiffuse(diffuse, si->wo, si->shading, si->seed);
+    si->wi = pgImportanceSamplingDiffuse(diffuse, si->wo, si->shading, si->seed);
 }
 
 extern "C" __device__ Vec3f __continuation_callable__bsdf_diffuse(SurfaceInteraction * si, void* mat_data)
@@ -272,12 +296,12 @@ extern "C" __device__ Vec3f __continuation_callable__bsdf_diffuse(SurfaceInterac
         diffuse->texture.prg_id, si, diffuse->texture.data);
     si->albedo = albedo;
     si->emission = Vec3f(0.0f);
-    return albedo * getDiffuseBRDF(si->wi, si->shading.n);
+    return albedo * pgGetDiffuseBRDF(si->wi, si->shading.n);
 }
 
 extern "C" __device__ float __direct_callable__pdf_diffuse(SurfaceInteraction * si, void* mat_data)
 {
-    return getDiffusePDF(si->wi, si->shading.n);
+    return pgGetDiffusePDF(si->wi, si->shading.n);
 }
 
 // Dielectric --------------------------------------------------------------------------------------------

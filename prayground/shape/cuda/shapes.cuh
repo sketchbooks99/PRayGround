@@ -21,7 +21,7 @@ namespace prayground {
     // ----------------------------------------------------------------------------------------
     // Cylinder
     // ----------------------------------------------------------------------------------------
-    INLINE DEVICE Vec2f getCylinderUV(
+    INLINE DEVICE Vec2f pgGetCylinderUV(
         const Vec3f& p, const Cylinder::Data& cylinder, const bool hit_disk)
     {
         if (hit_disk)
@@ -41,7 +41,7 @@ namespace prayground {
         }
     }
 
-    INLINE DEVICE bool intersectionCylinder(
+    INLINE DEVICE bool pgIntersectionCylinder(
         const Cylinder::Data* cylinder, const Ray& ray, Shading* shading, float* time
     )
     {
@@ -93,7 +93,7 @@ namespace prayground {
         Vec3f n = hit_disk
             ? normalize(p - Vec3f(p.x(), 0.0f, p.z()))   // Hit at disk
             : normalize(p - Vec3f(0.0f, p.y(), 0.0f));   // Hit at side
-        Vec2f uv = getCylinderUV(p, *cylinder, hit_disk);
+        Vec2f uv = pgGetCylinderUV(p, *cylinder, hit_disk);
 
         shading->n = n;
         shading->uv = uv;
@@ -113,37 +113,11 @@ namespace prayground {
         return true;
     }
 
-    extern "C" DEVICE void IS_FUNC(pg_cylinder)()
+    INLINE DEVICE void pgReportIntersectionCylinder(const Cylinder::Data* cylinder, const Ray& ray)
     {
-        const pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
-        const Cylinder::Data* cylinder = reinterpret_cast<Cylinder::Data*>(data->shape_data);
-
-        Ray ray = getLocalRay();
-
         Shading shading;
         float time;
-        if (intersectionCylinder(cylinder, ray, &shading, &time))
-        {
-            // Pack shading pointer to two attributes
-            // If you'd like to unpack the pointer, use
-            // Shading* shading = getPtrFromTwoAttributes<Shading, 0>();
-            uint32_t a0, a1;
-            packPointer(&shading, a0, a1);
-            optixReportIntersection(time, 0, a0, a1);
-        }
-    }
-
-    extern "C" DEVICE void IS_FUNC(pg_cylinder_instanced)()
-    {
-        const pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
-        const int32_t idx = optixGetPrimitiveIndex();
-        const Cylinder::Data cylinder = reinterpret_cast<Cylinder::Data*>(data->shape_data)[idx];
-
-        Ray ray = getLocalRay();
-
-        Shading shading;
-        float time;
-        if (intersectionCylinder(&cylinder, ray, &shading, &time))
+        if (pgIntersectionCylinder(cylinder, ray, &shading, &time))
         {
             // Pack shading pointer to two attributes
             // If you'd like to unpack the pointer, use
@@ -157,7 +131,7 @@ namespace prayground {
     // ----------------------------------------------------------------------------------------
     // Box
     // ----------------------------------------------------------------------------------------
-    INLINE DEVICE Vec2f getBoxUV(const Vec3f& p, const Box::Data& box, const int axis)
+    INLINE DEVICE Vec2f pgGetBoxUV(const Vec3f& p, const Box::Data& box, const int axis)
     {
         int u_axis = (axis + 1) % 3;
         int v_axis = (axis + 2) % 3;
@@ -174,7 +148,7 @@ namespace prayground {
     }
 
     /* Return a hitting axis of box face, X=0, Y=1, Z=2 */
-    INLINE DEVICE bool intersectionBox(
+    INLINE DEVICE bool pgIntersectionBox(
         const Box::Data* box, const Ray& ray, Shading* shading, float* time
     )
     {
@@ -231,7 +205,7 @@ namespace prayground {
         Vec3f center_axis = p;
         center_axis[axis] = center[axis];
         Vec3f n = normalize(p - center_axis);
-        Vec2f uv = getBoxUV(p, *box, axis);
+        Vec2f uv = pgGetBoxUV(p, *box, axis);
 
         // Store the shading information
         shading->n = n;
@@ -261,37 +235,11 @@ namespace prayground {
         return true;
     }
 
-    extern "C" void DEVICE IS_FUNC(pg_box)()
+    INLINE DEVICE void pgReportIntersectionBox(const Box::Data* box, const Ray& ray)
     {
-        const pgHitgroupData* hg_data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
-        const Box::Data* box = reinterpret_cast<Box::Data*>(hg_data->shape_data);
-
-        Ray ray = getLocalRay();
-
         Shading shading;
         float time;
-        if (intersectionBox(box, ray, &shading, &time))
-        {
-            // Pack shading pointer to two attributes
-            // If you'd like to unpack the pointer, use
-            // Shading* shading = getPtrFromTwoAttributes<Shading, 0>();
-            uint32_t a0, a1;
-            packPointer(&shading, a0, a1);
-            optixReportIntersection(time, 0, a0, a1);
-        }
-    }
-
-    extern "C" void DEVICE IS_FUNC(pg_box_instanced)()
-    {
-        const pgHitgroupData* hg_data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
-        const int32_t idx = optixGetPrimitiveIndex();
-        const Box::Data box = reinterpret_cast<Box::Data*>(hg_data->shape_data)[idx];
-
-        Ray ray = getLocalRay();
-
-        Shading shading;
-        float time;
-        if (intersectionBox(&box, ray, &shading, &time))
+        if (pgIntersectionBox(box, ray, &shading, &time))
         {
             // Pack shading pointer to two attributes
             // If you'd like to unpack the pointer, use
@@ -305,14 +253,14 @@ namespace prayground {
     // ----------------------------------------------------------------------------------------
     // Plane
     // ----------------------------------------------------------------------------------------
-    INLINE DEVICE Vec2f getPlaneUV(const Vec2f p, const Plane::Data& plane)
+    INLINE DEVICE Vec2f pgGetPlaneUV(const Vec2f p, const Plane::Data& plane)
     {
         const float u = (p.x() - plane.min.x()) / (plane.max.x() - plane.min.x());
         const float v = (p.y() - plane.min.y()) / (plane.max.y() - plane.min.y());
         return Vec2f(u, v);
     }
 
-    INLINE DEVICE bool intersectionPlane(const Plane::Data* plane, const Ray& ray, Shading* shading, float* time)
+    INLINE DEVICE bool pgIntersectionPlane(const Plane::Data* plane, const Ray& ray, Shading* shading, float* time)
     {
         const float t = -ray.o.y() / ray.d.y();
         const float x = ray.o.x() + t * ray.d.x();
@@ -322,7 +270,7 @@ namespace prayground {
             plane->min.y() < z && z < plane->max.y() &&
             ray.tmin < t && t < ray.tmax)
         {
-            shading->uv = getPlaneUV(Vec2f(x, z), *plane);
+            shading->uv = pgGetPlaneUV(Vec2f(x, z), *plane);
             shading->n = Vec3f(0, 1, 0);
             shading->dpdu = Vec3f(1, 0, 0);
             shading->dpdv = Vec3f(0, 0, 1);
@@ -332,37 +280,11 @@ namespace prayground {
         return false;
     }
 
-    extern "C" DEVICE void IS_FUNC(pg_plane)()
+    INLINE DEVICE void pgReportIntersectionPlane(const Plane::Data* plane, const Ray& ray)
     {
-        const pgHitgroupData* hg_data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
-        const Plane::Data* plane = reinterpret_cast<Plane::Data*>(hg_data->shape_data);
-
-        Ray ray = getLocalRay();
-
         Shading shading;
         float time;
-        if (intersectionPlane(plane, ray, &shading, &time))
-        {
-            // Pack shading pointer to two attributes
-            // If you'd like to unpack the pointer, use
-            // Shading* shading = getPtrFromTwoAttributes<Shading, 0>();
-            uint32_t a0, a1;
-            packPointer(&shading, a0, a1);
-            optixReportIntersection(time, 0, a0, a1);
-        }
-    }
-
-    extern "C" DEVICE void IS_FUNC(pg_plane_instanced)()
-    {
-        const pgHitgroupData* hg_data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
-        const int32_t idx = optixGetPrimitiveIndex();
-        const Plane::Data plane = reinterpret_cast<Plane::Data*>(hg_data->shape_data)[idx];
-
-        Ray ray = getLocalRay();
-
-        Shading shading;
-        float time;
-        if (intersectionPlane(&plane, ray, &shading, &time))
+        if (pgIntersectionPlane(plane, ray, &shading, &time))
         {
             // Pack shading pointer to two attributes
             // If you'd like to unpack the pointer, use
@@ -376,7 +298,7 @@ namespace prayground {
     // ----------------------------------------------------------------------------------------
     // Sphere
     // ----------------------------------------------------------------------------------------
-    INLINE DEVICE Vec2f getSphereUV(const Vec3f& p) {
+    INLINE DEVICE Vec2f pgGetSphereUV(const Vec3f& p) {
         float phi = atan2(p.z(), p.x());
         if (phi < 0) phi += 2.0f * math::pi;
         float theta = acos(p.y());
@@ -385,7 +307,7 @@ namespace prayground {
         return Vec2f(u, v);
     }
 
-    INLINE DEVICE bool intersectionSphere(
+    INLINE DEVICE bool pgIntersectionSphere(
         const Sphere::Data* sphere, const Ray& ray, Shading* shading, float* time)
     {
         const Vec3f oc = ray.o - sphere->center;
@@ -409,7 +331,7 @@ namespace prayground {
 
         const Vec3f p = ray.at(t);
         shading->n = p / sphere->radius;
-        shading->uv = getSphereUV(shading->n);
+        shading->uv = pgGetSphereUV(shading->n);
 
         float phi = atan2(shading->n.z(), shading->n.x());
         if (phi < 0) phi += math::two_pi;
@@ -422,37 +344,11 @@ namespace prayground {
         return true;
     }
 
-    extern "C" DEVICE void IS_FUNC(pg_sphere)()
+    INLINE DEVICE void pgReportIntersectionSphere(const Sphere::Data* sphere, const Ray& ray)
     {
-        const pgHitgroupData* hg_data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
-        const Sphere::Data* sphere = reinterpret_cast<Sphere::Data*>(hg_data->shape_data);
-
-        Ray ray = getLocalRay();
-
         Shading shading;
         float time;
-        if (intersectionSphere(sphere, ray, &shading, &time))
-        {
-            // Pack shading pointer to two attributes
-            // If you'd like to unpack the pointer, use
-            // Shading* shading = getPtrFromTwoAttributes<Shading, 0>();
-            uint32_t a0, a1;
-            packPointer(&shading, a0, a1);
-            optixReportIntersection(time, 0, a0, a1);
-        }
-    }
-
-    extern "C" DEVICE void IS_FUNC(pg_sphere_instanced)()
-    {
-        const pgHitgroupData* hg_data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
-        const int32_t idx = optixGetPrimitiveIndex();
-        const Sphere::Data sphere = reinterpret_cast<Sphere::Data*>(hg_data->shape_data)[idx];
-
-        Ray ray = getLocalRay();
-
-        Shading shading;
-        float time;
-        if (intersectionSphere(&sphere, ray, &shading, &time))
+        if (pgIntersectionSphere(sphere, ray, &shading, &time))
         {
             // Pack shading pointer to two attributes
             // If you'd like to unpack the pointer, use
@@ -474,7 +370,7 @@ namespace prayground {
      * @param primitive_index : The primitive index of intersecting surface
      * @return Shading frame on triangle
     */
-    INLINE DEVICE Shading getMeshShading(const TriangleMesh::Data* mesh, const Vec2f& bc, const uint32_t primitive_index)
+    INLINE DEVICE Shading pgGetMeshShading(const TriangleMesh::Data* mesh, const Vec2f& bc, const uint32_t primitive_index)
     {
         Shading shading = {};
 
@@ -710,7 +606,7 @@ namespace prayground {
     };
 
     template <typename Interpolator, Curves::Type CurveType>
-    INLINE DEVICE Shading getCurvesShading(Vec3f& hit_point, const float u, const Interpolator& interpolator)
+    INLINE DEVICE Shading pgGetCurvesShading(Vec3f& hit_point, const float u, const Interpolator& interpolator)
     {   
         Shading shading;
         if (u == 0.0f)
@@ -760,7 +656,7 @@ namespace prayground {
         return shading;
     }
 
-    INLINE DEVICE Shading getCurvesShading(Vec3f& hit_point, const uint32_t primitive_idx, OptixPrimitiveType primitive_type)
+    INLINE DEVICE Shading pgGetCurvesShading(Vec3f& hit_point, const uint32_t primitive_idx, OptixPrimitiveType primitive_type)
     {
         const OptixTraversableHandle gas = optixGetGASTraversableHandle();
         const uint32_t gas_sbt_idx = optixGetSbtGASIndex();
@@ -774,7 +670,7 @@ namespace prayground {
             float4 p[2];
             optixGetLinearCurveVertexData(gas, primitive_idx, gas_sbt_idx, 0.0f, p);
             interpolator.initialize((Vec4f*)p);
-            return getCurvesShading<LinearInterpolator, Curves::Type::Linear>(hit_point, u, interpolator);
+            return pgGetCurvesShading<LinearInterpolator, Curves::Type::Linear>(hit_point, u, interpolator);
         }
         case OPTIX_PRIMITIVE_TYPE_ROUND_QUADRATIC_BSPLINE:
         {
@@ -782,7 +678,7 @@ namespace prayground {
             float4 p[3];
             optixGetQuadraticBSplineVertexData(gas, primitive_idx, gas_sbt_idx, 0.0f, p);
             interpolator.initializeFromBSpline((Vec4f*)p);
-            return getCurvesShading<QuadraticInterpolator, Curves::Type::QuadraticBSpline>(hit_point, u, interpolator);
+            return pgGetCurvesShading<QuadraticInterpolator, Curves::Type::QuadraticBSpline>(hit_point, u, interpolator);
         }
         case OPTIX_PRIMITIVE_TYPE_ROUND_CUBIC_BSPLINE:
         {
@@ -790,7 +686,7 @@ namespace prayground {
             float4 p[4];
             optixGetCubicBSplineVertexData(gas, primitive_idx, gas_sbt_idx, 0.0f, p);
             interpolator.initializeFromBSpline((Vec4f*)p);
-            return getCurvesShading<CubicInterpolator, Curves::Type::CubicBSpline>(hit_point, u, interpolator);
+            return pgGetCurvesShading<CubicInterpolator, Curves::Type::CubicBSpline>(hit_point, u, interpolator);
         }
         case OPTIX_PRIMITIVE_TYPE_ROUND_CATMULLROM:
         {
@@ -798,7 +694,7 @@ namespace prayground {
             float4 p[4];
             optixGetCatmullRomVertexData(gas, primitive_idx, gas_sbt_idx, 0.0f, p);
             interpolator.initializeFromCatmullRom((Vec4f*)p);
-            return getCurvesShading<CubicInterpolator, Curves::Type::CatmullRom>(hit_point, u, interpolator);
+            return pgGetCurvesShading<CubicInterpolator, Curves::Type::CatmullRom>(hit_point, u, interpolator);
         }
         default:
             return Shading{};

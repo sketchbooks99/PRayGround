@@ -268,7 +268,7 @@ void App::setup()
     textures.emplace("white", new ConstantTexture(Vec3f(1.0f), constant_prg_id));
     textures.emplace("checker", new CheckerTexture(Vec3f(0.9f), Vec3f(0.3f), 10, checker_prg_id));
     textures.emplace("black", black);
-    textures.emplace("gray", new ConstantTexture(Vec3f(0.25), constant_prg_id));
+    textures.emplace("gray", new ConstantTexture(Vec3f(0.25f), constant_prg_id));
     textures.emplace("orange", new ConstantTexture(Vec3f(0.8, 0.7, 0.3), constant_prg_id));
 
     // Materials

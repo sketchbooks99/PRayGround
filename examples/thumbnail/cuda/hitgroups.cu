@@ -412,7 +412,7 @@ static __forceinline__ __device__ bool hitSphere(
     si.t = t;
     si.p = o + t * v;
     si.shading.n = si.p / radius;
-    si.shading.uv = getSphereUV(si.shading.n);
+    si.shading.uv = pgGetSphereUV(si.shading.n);
     return true;
 }
 
@@ -437,7 +437,7 @@ extern "C" __device__ void __intersection__sphere() {
         bool check_second = true;
         if (t1 > ray.tmin && t1 < ray.tmax) {
             Vec3f normal = normalize((ray.at(t1) - center) / radius);
-            const Vec2f uv = getSphereUV(normal);
+            const Vec2f uv = pgGetSphereUV(normal);
             check_second = false;
             optixReportIntersection(t1, 0, Vec3f_as_ints(normal), Vec2f_as_ints(uv));
         }
@@ -446,7 +446,7 @@ extern "C" __device__ void __intersection__sphere() {
             float t2 = (-half_b + sqrtd) / a;
             if (t2 > ray.tmin && t2 < ray.tmax) {
                 Vec3f normal = normalize((ray.at(t2) - center) / radius);
-                const Vec2f uv = getSphereUV(normal);
+                const Vec2f uv = pgGetSphereUV(normal);
                 optixReportIntersection(t2, 0, Vec3f_as_ints(normal), Vec2f_as_ints(uv));
             }
         }

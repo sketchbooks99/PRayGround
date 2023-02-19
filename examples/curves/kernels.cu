@@ -117,8 +117,7 @@ extern "C" __device__ void __raygen__pinhole()
                 Vec3f bsdf = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
                     si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
 
-                if (pdf <= 0.0f)
-                    break;
+                if (pdf == 0.0f) break;
 
                 throughput *= bsdf / pdf;
             }
@@ -184,13 +183,37 @@ extern "C" __device__ void __miss__shadow()
 }
 
 // Hitgroups 
+extern "C" __device__ void __intersection__box()
+{
+    pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
+    auto* box = reinterpret_cast<Box::Data*>(data->shape_data);
+    Ray ray = getLocalRay();
+    pgReportIntersectionBox(box, ray);
+}
+
+extern "C" __device__ void __intersection__sphere()
+{
+    pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
+    auto* sphere = reinterpret_cast<Sphere::Data*>(data->shape_data);
+    Ray ray = getLocalRay();
+    pgReportIntersectionSphere(sphere, ray);
+}
+
+extern "C" __device__ void __intersection__plane()
+{
+    pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
+    auto* plane = reinterpret_cast<Plane::Data*>(data->shape_data);
+    Ray ray = getLocalRay();
+    pgReportIntersectionPlane(plane, ray);
+}
+
 extern "C" __device__ void __closesthit__custom()
 {
     pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
 
     Ray ray = getWorldRay();
 
-    // If you use `__intersection__pg_*` function for intersection test, 
+    // If you use `reportIntersection*` function for intersection test, 
     // you can fetch the shading on a surface from two attributes
     Shading* shading = getPtrFromTwoAttributes<Shading, 0>();
 
@@ -215,7 +238,7 @@ extern "C" __device__ void __closesthit__mesh()
 
     Ray ray = getWorldRay();
 
-    Shading shading = getMeshShading(mesh_data, optixGetTriangleBarycentrics(), optixGetPrimitiveIndex());
+    Shading shading = pgGetMeshShading(mesh_data, optixGetTriangleBarycentrics(), optixGetPrimitiveIndex());
 
     // Transform shading from object to world space
     shading.n = normalize(optixTransformNormalFromObjectToWorldSpace(shading.n));
@@ -241,11 +264,11 @@ extern "C" __device__ void __closesthit__curves()
     Ray ray = getWorldRay();
     Vec3f hit_point = optixTransformPointFromWorldToObjectSpace(ray.at(ray.tmax));
 
-    Shading shading = getCurvesShading(hit_point, primitive_id, optixGetPrimitiveType());
+    Shading shading = pgGetCurvesShading(hit_point, primitive_id, optixGetPrimitiveType());
     // Transform shading frame to world space
-    shading.n = optixTransformNormalFromObjectToWorldSpace(shading.n);
-    shading.dpdu = optixTransformVectorFromObjectToWorldSpace(shading.dpdu);
-    shading.dpdv = optixTransformVectorFromObjectToWorldSpace(shading.dpdv);
+    shading.n = normalize(optixTransformNormalFromObjectToWorldSpace(shading.n));
+    shading.dpdu = normalize(optixTransformVectorFromObjectToWorldSpace(shading.dpdu));
+    shading.dpdv = normalize(optixTransformVectorFromObjectToWorldSpace(shading.dpdv));
 
     SurfaceInteraction* si = getSurfaceInteraction();
     si->p = optixTransformPointFromObjectToWorldSpace(hit_point);
@@ -265,7 +288,7 @@ extern "C" __device__ void __closesthit__shadow()
 extern "C" __device__ void __direct_callable__sample_diffuse(SurfaceInteraction* si, void* data)
 {
     const Diffuse::Data* diffuse = reinterpret_cast<Diffuse::Data*>(data);
-    si->wi = importanceSamplingDiffuse(diffuse, si->wo, si->shading, si->seed);
+    si->wi = pgImportanceSamplingDiffuse(diffuse, si->wo, si->shading, si->seed);
     si->trace_terminate = false;
 }
 
@@ -275,19 +298,19 @@ extern "C" __device__ Vec3f __continuation_callable__bsdf_diffuse(SurfaceInterac
     const Vec3f albedo = optixDirectCall<Vec3f, const Vec2f&, void*>(diffuse->texture.prg_id, si->shading.uv, diffuse->texture.data);
     si->albedo = albedo;
     si->emission = Vec3f(0.0f);
-    return albedo * getDiffuseBRDF(si->wi, si->shading.n);
+    return albedo * pgGetDiffuseBRDF(si->wi, si->shading.n);
 }
 
 extern "C" __device__ float __direct_callable__pdf_diffuse(SurfaceInteraction* si, void* data)
 {
-    return getDiffusePDF(si->wi, si->shading.n);
+    return pgGetDiffusePDF(si->wi, si->shading.n);
 }
 
 // Dielectric
 extern "C" __device__ void __direct_callable__sample_glass(SurfaceInteraction* si, void* data)
 {
     const Dielectric::Data* dielectric = reinterpret_cast<Dielectric::Data*>(data);
-    si->wi = samplingSmoothDielectric(dielectric, si->wo, si->shading, si->seed);
+    si->wi = pgSamplingSmoothDielectric(dielectric, si->wo, si->shading, si->seed);
     si->trace_terminate = false;
 }
 
@@ -309,7 +332,7 @@ extern "C" __device__ float __direct_callable__pdf_glass(SurfaceInteraction* si,
 extern "C" __device__ void __direct_callable__sample_disney(SurfaceInteraction* si, void* data)
 {
     const Disney::Data* disney = reinterpret_cast<Disney::Data*>(data);
-    si->wi = importanceSamplingDisney(disney, si->wo, si->shading, si->seed);
+    si->wi = pgImportanceSamplingDisney(disney, si->wo, si->shading, si->seed);
     si->trace_terminate = false;
 }
 
@@ -317,13 +340,13 @@ extern "C" __device__ Vec3f __continuation_callable__bsdf_disney(SurfaceInteract
 {
     const Disney::Data* disney = reinterpret_cast<Disney::Data*>(data);
     const Vec3f base = optixDirectCall<Vec3f, const Vec2f&, void*>(disney->base.prg_id, si->shading.uv, disney->base.data);
-    return getDisneyBRDF(disney, si->wo, si->wi, si->shading, base);
+    return pgGetDisneyBRDF(disney, si->wo, si->wi, si->shading, base);
 }
 
 extern "C" __device__ float __direct_callable__pdf_disney(SurfaceInteraction * si, void* data)
 {
     const Disney::Data* disney = reinterpret_cast<Disney::Data*>(data);
-    return getDisneyPDF(disney, si->wo, si->wi, si->shading);
+    return pgGetDisneyPDF(disney, si->wo, si->wi, si->shading);
 }
 
 // Area emitter
@@ -345,13 +368,13 @@ extern "C" __device__ Vec3f __direct_callable__area_emitter(SurfaceInteraction* 
 
 // Textures
 extern "C" __device__ Vec3f __direct_callable__bitmap(const Vec2f& uv, void* tex_data) {
-    return getBitmapTextureValue<Vec3f>(uv, tex_data);
+    return pgGetBitmapTextureValue<Vec3f>(uv, tex_data);
 }
 
 extern "C" __device__ Vec3f __direct_callable__constant(const Vec2f& uv, void* tex_data) {
-    return getConstantTextureValue<Vec3f>(uv, tex_data);
+    return pgGetConstantTextureValue<Vec3f>(uv, tex_data);
 }
 
 extern "C" __device__ Vec3f __direct_callable__checker(const Vec2f& uv, void* tex_data) {
-    return getCheckerTextureValue<Vec3f>(uv, tex_data);
+    return pgGetCheckerTextureValue<Vec3f>(uv, tex_data);
 }

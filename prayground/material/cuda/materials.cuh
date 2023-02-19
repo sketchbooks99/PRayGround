@@ -22,7 +22,7 @@ namespace prayground {
     // ----------------------------------------------------------------------------------------
     // Conductor
     // ----------------------------------------------------------------------------------------
-    INLINE DEVICE Vec3f samplingSmoothConductor(
+    INLINE DEVICE Vec3f pgSamplingSmoothConductor(
         const Conductor::Data* conductor, 
         const Vec3f& wo, 
         Shading& shading)
@@ -35,7 +35,7 @@ namespace prayground {
     // ----------------------------------------------------------------------------------------
     // RoughConductor
     // ----------------------------------------------------------------------------------------
-    INLINE DEVICE Vec3f importanceSamplingRoughConductor(
+    INLINE DEVICE Vec3f pgImportanceSamplingRoughConductor(
         const RoughConductor::Data* roughconductor,
         const Vec3f& wo,
         Shading& shading,
@@ -44,7 +44,7 @@ namespace prayground {
         return Vec3f(0, 1, 0);
     }
 
-    INLINE DEVICE Vec3f getRoughConductorBRDF(
+    INLINE DEVICE Vec3f pgGetRoughConductorBRDF(
         const RoughConductor::Data* roughconductor,
         const Vec3f& wo, const Vec3f& wi,
         const Shading& shading,
@@ -53,7 +53,7 @@ namespace prayground {
         return Vec3f(0);
     }
 
-    INLINE DEVICE float getRoughConductorPDF(
+    INLINE DEVICE float pgGetRoughConductorPDF(
         const RoughConductor::Data* roughconductor,
         const Vec3f& wo, const Vec3f& wi,
         const Shading& shading,
@@ -65,7 +65,7 @@ namespace prayground {
     // ----------------------------------------------------------------------------------------
     // Dielectric
     // ----------------------------------------------------------------------------------------
-    INLINE DEVICE Vec3f samplingSmoothDielectric(
+    INLINE DEVICE Vec3f pgSamplingSmoothDielectric(
         const Dielectric::Data* dielectric,
         const Vec3f& wo,
         Shading& shading,
@@ -98,7 +98,7 @@ namespace prayground {
     // ----------------------------------------------------------------------------------------
     // Diffuse
     // ----------------------------------------------------------------------------------------
-    INLINE DEVICE Vec3f importanceSamplingDiffuse(
+    INLINE DEVICE Vec3f pgImportanceSamplingDiffuse(
         const Diffuse::Data* diffuse,
         const Vec3f& wo, Shading& shading, uint32_t& seed
     )
@@ -115,12 +115,12 @@ namespace prayground {
         return wi;
     }
 
-    INLINE DEVICE float getDiffuseBRDF(const Vec3f& wi, const Vec3f& n)
+    INLINE DEVICE float pgGetDiffuseBRDF(const Vec3f& wi, const Vec3f& n)
     {
         return fmaxf(0.0f, dot(n, wi));
     }
 
-    INLINE DEVICE float getDiffusePDF(const Vec3f& wi, const Vec3f& n)
+    INLINE DEVICE float pgGetDiffusePDF(const Vec3f& wi, const Vec3f& n)
     {
         return fmaxf(0.0f, dot(n, wi));
     }
@@ -128,7 +128,7 @@ namespace prayground {
     // ----------------------------------------------------------------------------------------
     // Disney
     // ----------------------------------------------------------------------------------------
-    INLINE DEVICE Vec3f importanceSamplingDisney(
+    INLINE DEVICE Vec3f pgImportanceSamplingDisney(
         const Disney::Data* disney, 
         const Vec3f& wo, Shading& shading, 
         uint32_t& seed
@@ -164,13 +164,15 @@ namespace prayground {
                 h = sampleGGXAniso(-wo, ax, ay, u[0], u[1]);
             }
             else
+            {
                 h = sampleGTR1(u[0], u[1], alpha_cc);
+            }
             onb.inverseTransform(h);
             return normalize(reflect(wo, h));
         }
     }
 
-    INLINE DEVICE Vec3f getDisneyBRDF(
+    INLINE DEVICE Vec3f pgGetDisneyBRDF(
         const Disney::Data* disney,
         const Vec3f& wo, const Vec3f& wi,
         const Shading& shading,
@@ -232,10 +234,11 @@ namespace prayground {
 
         // Integrate all terms 
         const Vec3f out = (1.0f - disney->metallic) * (lerp(f_diffuse, f_subsurface, disney->subsurface) + f_sheen) + f_specular + f_clearcoat;
+
         return out * clamp(NdotL, 0.0f, 1.0f);
     }
 
-    INLINE DEVICE Vec3f getDisneyBRDFSpectrum(
+    INLINE DEVICE Vec3f pgGetDisneyBRDFSpectrum(
         const Disney::Data* disney,
         const Vec3f& wo, const Vec3f& wi,
         Shading& shading,
@@ -300,7 +303,7 @@ namespace prayground {
         return out * clamp(NdotL, 0.0f, 1.0f);
     }
 
-    INLINE DEVICE float getDisneyPDF(
+    INLINE DEVICE float pgGetDisneyPDF(
         const Disney::Data* disney,
         const Vec3f& wo, const Vec3f& wi,
         const Shading& shading
@@ -337,7 +340,7 @@ namespace prayground {
         const float pdf_specular = (pdf_Dcc + ratio * (pdf_Ds - pdf_Dcc));
         const float pdf_diffuse = NdotL * math::inv_pi;
 
-        return fmaxf(1e-5f, diffuse_ratio * pdf_diffuse + specular_ratio * pdf_specular);
+        return fmaxf(0.0f, diffuse_ratio * pdf_diffuse + specular_ratio * pdf_specular);
     }
 
 } // namespace prayground

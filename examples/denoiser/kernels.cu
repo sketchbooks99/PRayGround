@@ -141,7 +141,7 @@ extern "C" __device__ void __raygen__pinhole()
                 Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
                     si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
 
-                if (bsdf_pdf == 0.0f) break;
+                if (bsdf_pdf <= 0.0f) break;
 
                 throughput *= bsdf_val / bsdf_pdf;
             }
@@ -226,7 +226,7 @@ extern "C" __device__ void __miss__envmap()
 // Diffuse -----------------------------------------------------------------------------------------------
 extern "C" __device__ void __direct_callable__sample_diffuse(SurfaceInteraction* si, void* mat_data) {
     const auto* diffuse = reinterpret_cast<Diffuse::Data*>(mat_data);
-    si->wi = importanceSamplingDiffuse(diffuse, si->wo, si->shading, si->seed);
+    si->wi = pgImportanceSamplingDiffuse(diffuse, si->wo, si->shading, si->seed);
     si->trace_terminate = false;
 }
 
@@ -236,18 +236,18 @@ extern "C" __device__ Vec3f __continuation_callable__bsdf_diffuse(SurfaceInterac
     const Vec4f albedo = optixDirectCall<Vec4f, const Vec2f&, void*>(diffuse->texture.prg_id, si->shading.uv, diffuse->texture.data);
     si->albedo = albedo;
     si->emission = Vec3f(0.0f);
-    return albedo * getDiffuseBRDF(si->wi, si->shading.n);
+    return albedo * pgGetDiffuseBRDF(si->wi, si->shading.n);
 }
 
 extern "C" __device__ float __direct_callable__pdf_diffuse(SurfaceInteraction* si, void* mat_data)
 {
-    return getDiffusePDF(si->wi, si->shading.n);
+    return pgGetDiffusePDF(si->wi, si->shading.n);
 }
 
 // Dielectric --------------------------------------------------------------------------------------------
 extern "C" __device__ void __direct_callable__sample_dielectric(SurfaceInteraction* si, void* mat_data) {
     const Dielectric::Data* dielectric = reinterpret_cast<Dielectric::Data*>(mat_data);
-    si->wi = samplingSmoothDielectric(dielectric, si->wo, si->shading, si->seed);
+    si->wi = pgSamplingSmoothDielectric(dielectric, si->wo, si->shading, si->seed);
     si->trace_terminate = false;
 }
 
@@ -290,39 +290,24 @@ extern "C" __device__ float __direct_callable__pdf_conductor(SurfaceInteraction*
 }
 
 // Disney BRDF ------------------------------------------------------------------------------------------
-extern "C" __device__ void __direct_callable__sample_disney(SurfaceInteraction* si, void* mat_data)
+extern "C" __device__ void __direct_callable__sample_disney(SurfaceInteraction * si, void* data)
 {
-    const Disney::Data* disney = reinterpret_cast<Disney::Data*>(mat_data);
-    si->wi = importanceSamplingDisney(disney, si->wo, si->shading, si->seed);
+    const Disney::Data* disney = reinterpret_cast<Disney::Data*>(data);
+    si->wi = pgImportanceSamplingDisney(disney, si->wo, si->shading, si->seed);
     si->trace_terminate = false;
 }
 
-/**
- * @ref: https://rayspace.xyz/CG/contents/Disney_principled_BRDF/
- * 
- * @note 
- * ===== Prefix =====
- * F : fresnel 
- * f : brdf function
- * G : geometry function
- * D : normal distribution function
- */
-extern "C" __device__ Vec3f __continuation_callable__bsdf_disney(SurfaceInteraction* si, void* mat_data)
-{   
-    const Disney::Data* disney = reinterpret_cast<Disney::Data*>(mat_data);
+extern "C" __device__ Vec3f __continuation_callable__bsdf_disney(SurfaceInteraction * si, void* data)
+{
+    const Disney::Data* disney = reinterpret_cast<Disney::Data*>(data);
     const Vec3f base = optixDirectCall<Vec3f, const Vec2f&, void*>(disney->base.prg_id, si->shading.uv, disney->base.data);
-    return getDisneyBRDF(disney, si->wo, si->wi, si->shading, base);
+    return pgGetDisneyBRDF(disney, si->wo, si->wi, si->shading, base);
 }
 
-/**
- * @ref http://simon-kallweit.me/rendercompo2015/report/#adaptivesampling
- * 
- * @todo Investigate correct evaluation of PDF.
- */
-extern "C" __device__ float __direct_callable__pdf_disney(SurfaceInteraction* si, void* mat_data)
+extern "C" __device__ float __direct_callable__pdf_disney(SurfaceInteraction * si, void* data)
 {
-    const Disney::Data* disney = reinterpret_cast<Disney::Data*>(mat_data);
-    return getDisneyPDF(disney, si->wo, si->wi, si->shading);
+    const Disney::Data* disney = reinterpret_cast<Disney::Data*>(data);
+    return pgGetDisneyPDF(disney, si->wo, si->wi, si->shading);
 }
 
 // Area emitter ------------------------------------------------------------------------------------------
@@ -501,7 +486,7 @@ static __forceinline__ __device__ bool hitSphere(const Sphere::Data* sphere_data
     si.t = t;
     si.p = o + t * v;
     si.shading.n = si.p / radius;
-    si.shading.uv = getSphereUV(si.shading.n);
+    si.shading.uv = pgGetSphereUV(si.shading.n);
     return true;
 }
 
@@ -556,7 +541,7 @@ extern "C" __device__ void __closesthit__sphere() {
     si->shading.n = world_n;
     si->t = ray.tmax;
     si->wo = ray.d;
-    si->shading.uv = getSphereUV(local_n);
+    si->shading.uv = pgGetSphereUV(local_n);
     si->surface_info = data->surface_info;
 
     float phi = atan2(local_n.z(), local_n.x());
@@ -637,7 +622,7 @@ extern "C" __device__ void __intersection__cylinder()
             Vec3f normal = hit_disk 
                          ? normalize(P - Vec3f(P.x(), 0.0f, P.z()))   // Hit at disk
                          : normalize(P - Vec3f(0.0f, P.y(), 0.0f));   // Hit at side
-            Vec2f uv = getCylinderUV(P, radius, height, hit_disk);
+            Vec2f uv = pgGetCylinderUV(P, *cylinder, hit_disk);
             if (hit_disk)
             {
                 const float rHit = sqrtf(P.x()*P.x() + P.z()*P.z());
@@ -662,7 +647,7 @@ extern "C" __device__ void __intersection__cylinder()
                 Vec3f normal = hit_disk
                             ? normalize(P - Vec3f(P.x(), 0.0f, P.z()))   // Hit at disk
                             : normalize(P - Vec3f(0.0f, P.y(), 0.0f));   // Hit at side
-                Vec2f uv = getCylinderUV(P, radius, height, hit_disk);
+                Vec2f uv = pgGetCylinderUV(P, *cylinder, hit_disk);
                 if (hit_disk)
                 {
                     const float rHit = sqrtf(P.x()*P.x() + P.z()*P.z());
@@ -713,7 +698,7 @@ extern "C" __device__ void __closesthit__mesh()
 
     Ray ray = getWorldRay();
 
-    Shading shading = getMeshShading(mesh_data, optixGetTriangleBarycentrics(), optixGetPrimitiveIndex());
+    Shading shading = pgGetMeshShading(mesh_data, optixGetTriangleBarycentrics(), optixGetPrimitiveIndex());
 
     // Linear interpolation of normal by barycentric coordinates.
     shading.n = normalize(optixTransformNormalFromObjectToWorldSpace(shading.n));

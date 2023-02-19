@@ -137,8 +137,6 @@ set(sources
   emitter/envmap.cpp
   emitter/point.h 
   emitter/point.cpp
-  emitter/cuda/area.cuh 
-  emitter/cuda/envmap.cuh
   
   prayground.h
 )

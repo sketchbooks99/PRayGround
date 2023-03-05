@@ -474,7 +474,7 @@ extern "C" __device__ void __closesthit__sphere() {
 
     // Calculate partial derivative on texture coordinates
     float phi = atan2(local_n.z(), local_n.x());
-    if (phi < 0) phi += 2.0f * math::pi;
+    if (phi < 0) phi += math::two_pi;
     const float theta = acos(local_n.y());
     const Vec3f dpdu = Vec3f(-math::two_pi * local_n.z(), 0, math::two_pi * local_n.x());
     const Vec3f dpdv = math::pi * Vec3f(local_n.y() * cos(phi), -sin(theta), local_n.y() * sin(phi));

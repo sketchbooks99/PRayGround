@@ -22,7 +22,7 @@
     std::shared_ptr<Window> pgGetCurrentWindow();
     void    pgSetWindowName(const std::string& name);
     void    pgRunApp(const std::shared_ptr<BaseApp>& app, const std::shared_ptr<Window>& window);
-    bool    pgWindowInitialized();
+    bool    pgAppWindowInitialized();
     void    pgExit();
 
     class AppRunner

@@ -161,7 +161,7 @@ namespace prayground {
                 const float aspect = sqrtf(1.0f - disney->anisotropic * 0.9f);
                 const float ax = fmaxf(0.001f, pow2(alpha) / aspect);
                 const float ay = fmaxf(0.001f, pow2(alpha) * aspect);
-                h = sampleGGXAniso(-wo, ax, ay, u[0], u[1]);
+                h = sampleGGXAniso(ax, ay, u[0], u[1]);
             }
             else
             {

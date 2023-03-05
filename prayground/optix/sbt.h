@@ -162,8 +162,12 @@ namespace prayground {
 
         void deleteHitgroupRecord(const int idx)
         {
-            UNIMPLEMENTED();
-            /// @todo Must be free corresponding pointer on device, and set SBT index correctly.
+            /// @todo Check if this works 
+            if (m_hitgroup_records.empty()) 
+                PG_LOG_WARN("An array of HitgroupRecords to be deleted is empty");
+            if (m_hitgroup_records.size() <= idx)
+                PG_LOG_WARN("The index", idx, "is out of bounds");
+            m_hitgroup_records.erase(m_hitgroup_records.begin() + idx);
         }
 
         void updateHitgroupRecordOnDevice()

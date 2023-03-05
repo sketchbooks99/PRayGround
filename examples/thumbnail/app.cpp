@@ -1,6 +1,6 @@
 #include "app.h"
 
-#define INTERACTIVE 1
+#define INTERACTIVE 0
 
 static void streamProgress(int frame, int max_frame, float elapsed_time, int bar_length)
 {

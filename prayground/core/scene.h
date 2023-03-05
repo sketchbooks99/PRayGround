@@ -25,8 +25,9 @@ namespace prayground {
     template <class T>
     concept DerivedFromCamera = std::derived_from<T, Camera>;
 
-    template <DerivedFromCamera _CamT, uint32_t N>
+    template <DerivedFromCamera _CamT, uint32_t _NRay>
     class Scene {
+    // Internal classes
     private:
         template <class T>
         struct Item {
@@ -64,8 +65,10 @@ namespace prayground {
             GeometryAccel gas;
             Transform matrix_transform;
         };
+
+    // Public interfaces
     public:
-        static constexpr uint32_t NRay = N;
+        static constexpr uint32_t NRay = _NRay;
         using CamT = _CamT;
         using SBT = pgDefaultSBT<CamT, NRay>;
 
@@ -207,14 +210,14 @@ namespace prayground {
     };
 
     // -------------------------------------------------------------------------------
-    template <DerivedFromCamera _CamT, uint32_t N>
+    template <DerivedFromCamera _CamT, uint32_t _NRay>
     inline Scene<_CamT, N>::Scene()
     {
         this->setup();
     }
 
     // -------------------------------------------------------------------------------
-    template <DerivedFromCamera _CamT, uint32_t N>
+    template <DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, N>::setup()
     {
         Settings settings;
@@ -224,7 +227,7 @@ namespace prayground {
         this->setup(settings);
     }
 
-    template <DerivedFromCamera _CamT, uint32_t N>
+    template <DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, N>::setup(const Scene::Settings& settings)
     {
         m_settings = settings;
@@ -241,7 +244,7 @@ namespace prayground {
     }
 
     // -------------------------------------------------------------------------------
-    template <DerivedFromCamera _CamT, uint32_t N>
+    template <DerivedFromCamera _CamT, uint32_t _NRay>
     template <class LaunchParams>
     inline void Scene<_CamT, N>::launchRay(
         const Context& ctx, const Pipeline& ppl, LaunchParams& l_params, CUstream stream,
@@ -262,7 +265,7 @@ namespace prayground {
     }
 
     // -------------------------------------------------------------------------------
-    template<DerivedFromCamera _CamT, uint32_t N>
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, N>::bindRaygenProgram(ProgramGroup& rg_prg)
     {
         // Fill the record header with the raygen program
@@ -270,7 +273,7 @@ namespace prayground {
         rg_prg.recordPackHeader(&rg_record);
     }
 
-    template<DerivedFromCamera _CamT, uint32_t N>
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, N>::bindMissPrograms(std::array<ProgramGroup, N>& miss_prgs)
     {
         // Fill record's headers with the miss programs
@@ -282,7 +285,7 @@ namespace prayground {
     }
 
     // -------------------------------------------------------------------------------
-    template<DerivedFromCamera _CamT, uint32_t N>
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, N>::bindCallablesProgram(ProgramGroup& prg)
     {
         // Add SBT record and fill the record header at the same time
@@ -293,7 +296,7 @@ namespace prayground {
     }
 
     // -------------------------------------------------------------------------------
-    template<DerivedFromCamera _CamT, uint32_t N>
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, N>::bindExceptionProgram(ProgramGroup& prg)
     {
         // Add SBT record and fill the record header at the same time
@@ -304,21 +307,21 @@ namespace prayground {
     }
 
     // -------------------------------------------------------------------------------
-    template <DerivedFromCamera _CamT, uint32_t N>
+    template <DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, N>::setCamera(const std::shared_ptr<_CamT>& camera)
     {
         m_camera = camera;
     }
 
     // -------------------------------------------------------------------------------
-    template<DerivedFromCamera _CamT, uint32_t N>
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline const std::shared_ptr<_CamT>& Scene<_CamT, N>::camera()
     {
         return m_camera;
     }
 
     // -------------------------------------------------------------------------------
-    template<DerivedFromCamera _CamT, uint32_t N>
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, N>::setEnvmap(const std::shared_ptr<Texture>& texture)
     {
         if (!m_envmap) 
@@ -327,14 +330,14 @@ namespace prayground {
             m_envmap->setTexture(texture);
     }
 
-    template<DerivedFromCamera _CamT, uint32_t N>
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline std::shared_ptr<EnvironmentEmitter> Scene<_CamT, N>::envmap() const
     {
         return m_envmap;
     }
 
     // -------------------------------------------------------------------------------
-    template <DerivedFromCamera _CamT, uint32_t N>
+    template <DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, N>::addObject(const std::string& name, std::shared_ptr<Shape> shape, std::shared_ptr<Material> material, 
         std::array<ProgramGroup, N>& hitgroup_prgs, const Matrix4f& transform)
     {
@@ -342,7 +345,7 @@ namespace prayground {
         addObject(name, shape, materials, hitgroup_prgs, transform);
     }
 
-    template<DerivedFromCamera _CamT, uint32_t N>
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, N>::addObject(const std::string& name, std::shared_ptr<Shape> shape, const std::vector<std::shared_ptr<Material>>& materials, 
         std::array<ProgramGroup, N>& hitgroup_prgs, const Matrix4f& transform)
     {
@@ -360,7 +363,7 @@ namespace prayground {
         m_current_sbt_id += N * (uint32_t)materials.size();
     }
 
-    template<DerivedFromCamera _CamT, uint32_t N>
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, N>::duplicateObject(const std::string& orig_name, const std::string& name, const Matrix4f& transform)
     {
         auto obj = findItem(m_objects, orig_name);
@@ -376,7 +379,7 @@ namespace prayground {
         addObject(name, obj_val.value.shape, obj_val.value.materials, transform);
     }
 
-    template<DerivedFromCamera _CamT, uint32_t N>
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, N>::updateObjectTransform(const std::string& name, const Matrix4f& transform)
     {
         auto obj = findItem(m_objects, name);
@@ -392,7 +395,7 @@ namespace prayground {
         obj_val.value.instance.setTransform(transform);
     }
 
-    template<DerivedFromCamera _CamT, uint32_t N>
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline bool Scene<_CamT, N>::deleteObject(const std::string& name)
     {
         // Search same name object and store the its SBT index
@@ -411,11 +414,16 @@ namespace prayground {
         for (auto& obj : m_moving_objects) { if (obj.ID > deleted_sbt_id) obj.ID -= offset; }
         for (auto& obj : m_moving_lights) { if (obj.ID > deleted_sbt_id) obj.ID -= offset; }
 
+        /** 
+         * @todo Should the SBT record corresponds to object be also deleted? 
+         * If so, I have to use m_sbt.deleteHitgroupRecord(idx) for deleted object
+         */ 
+
         return true;
     }
 
     // -------------------------------------------------------------------------------
-    template <DerivedFromCamera _CamT, uint32_t N>
+    template <DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, N>::addLight(const std::string& name, std::shared_ptr<Shape> shape, std::shared_ptr<AreaEmitter> emitter, 
         std::array<ProgramGroup, N>& hitgroup_prgs, const Matrix4f& transform)
     {
@@ -423,7 +431,7 @@ namespace prayground {
         addLight(name, shape, emitters, hitgroup_prgs, transform);
     }
 
-    template<DerivedFromCamera _CamT, uint32_t N>
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, N>::addLight(const std::string& name, std::shared_ptr<Shape> shape, const std::vector<std::shared_ptr<AreaEmitter>>& emitters, 
         std::array<ProgramGroup, N>& hitgroup_prgs, const Matrix4f& transform)
     {
@@ -442,7 +450,7 @@ namespace prayground {
         m_num_lights += shape->numPrimitives();
     }
 
-    template<DerivedFromCamera _CamT, uint32_t N>
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, N>::duplicateLight(const std::string& orig_name, const std::string& name, const Matrix4f& transform)
     {
         auto obj = findItem(m_lights, orig_name);
@@ -458,7 +466,7 @@ namespace prayground {
         addLight(name, Light{ obj_val.value.shape, obj_val.value.emitters, transform });
     }
 
-    template<DerivedFromCamera _CamT, uint32_t N>
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, N>::updateLightTransform(const std::string& name, const Matrix4f& transform)
     {
         auto obj = findItem(m_lights, name);
@@ -474,7 +482,7 @@ namespace prayground {
         obj_val.value.instance.setTransform(transform);
     }
 
-    template<DerivedFromCamera _CamT, uint32_t N>
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline bool Scene<_CamT, N>::deleteLight(const std::string& name)
     {
         // Search same name object and store the its SBT index
@@ -500,7 +508,7 @@ namespace prayground {
     }
 
     // -------------------------------------------------------------------------------
-    template<DerivedFromCamera _CamT, uint32_t N>
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, N>::addMovingObject(const std::string& name, std::shared_ptr<Shape> shape, std::shared_ptr<Material> material, 
         std::array<ProgramGroup, N>& hitgroup_prgs, const Matrix4f& begin_transform, const Matrix4f& end_transform, uint16_t num_key)
     {
@@ -508,7 +516,7 @@ namespace prayground {
         addMovingObject(name, shape, materials, hitgroup_prgs, begin_transform, end_transform, num_key);
     }
 
-    template<DerivedFromCamera _CamT, uint32_t N>
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, N>::addMovingObject(const std::string& name, std::shared_ptr<Shape> shape, const std::vector<std::shared_ptr<Material>>& materials, 
         std::array<ProgramGroup, N>& hitgroup_prgs, const Matrix4f& begin_transform, const Matrix4f& end_transform, uint16_t num_key)
     {
@@ -533,7 +541,7 @@ namespace prayground {
         m_current_sbt_id += N * (uint32_t)materials.size();
     }
 
-    template<DerivedFromCamera _CamT, uint32_t N>
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, N>::duplicateMovingObject(const std::string& orig_name, const std::string& name, const Matrix4f& begin_transform, const Matrix4f& end_transform, uint16_t num_key)
     {
         auto obj = findItem(m_moving_objects, orig_name);
@@ -549,7 +557,7 @@ namespace prayground {
         addMovingObject(name, obj_val.value.shape, obj_val.value.materials, begin_transform, end_transform, num_key);
     }
 
-    template<DerivedFromCamera _CamT, uint32_t N>
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, N>::updateMovingObjectTransform(const std::string& name, const Matrix4f& begin_transform, const Matrix4f& end_transform)
     {
         auto obj = findItem(m_moving_objects, name);
@@ -565,7 +573,7 @@ namespace prayground {
         obj_val.value.matrix_transform.setMatrixMotionTransform(begin_transform, end_transform);
     }
 
-    template<DerivedFromCamera _CamT, uint32_t N>
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline bool Scene<_CamT, N>::deleteMovingObject(const std::string& name)
     {
         // Search same name object and store the its SBT index
@@ -588,7 +596,7 @@ namespace prayground {
     }
 
     // -------------------------------------------------------------------------------
-    template<DerivedFromCamera _CamT, uint32_t N>
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, N>::addMovingLight(const std::string& name, std::shared_ptr<Shape> shape, std::shared_ptr<AreaEmitter> emitter, 
         std::array<ProgramGroup, N>& hitgroup_prgs, const Matrix4f& begin_transform, const Matrix4f& end_transform, uint16_t num_key)
     {
@@ -596,7 +604,7 @@ namespace prayground {
         addMovingLight(name, shape, emitters, hitgroup_prgs, begin_transform, end_transform, num_key);
     }
 
-    template<DerivedFromCamera _CamT, uint32_t N>
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, N>::addMovingLight(const std::string& name, std::shared_ptr<Shape> shape, const std::vector<std::shared_ptr<AreaEmitter>>& emitters, 
         std::array<ProgramGroup, N>& hitgroup_prgs, const Matrix4f& begin_transform, const Matrix4f& end_transform, uint16_t num_key)
     {
@@ -621,7 +629,7 @@ namespace prayground {
         m_current_sbt_id += N * (uint32_t)emitters.size();
     }
 
-    template<DerivedFromCamera _CamT, uint32_t N>
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, N>::duplicateMovingLight(const std::string& orig_name, const std::string& name, const Matrix4f& begin_transform, const Matrix4f& end_transform, uint16_t num_key)
     {
         auto obj = findItem(m_moving_lights, orig_name);
@@ -637,7 +645,7 @@ namespace prayground {
         addMovingLight(name, obj.value().shape, obj.value().emitters, begin_transform, end_transform, num_key);
     }
 
-    template<DerivedFromCamera _CamT, uint32_t N>
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, N>::updateMovingLightTransform(const std::string& name, const Matrix4f& begin_transform, const Matrix4f& end_transform)
     {
         auto obj = findItem(m_moving_lights, name);
@@ -653,7 +661,7 @@ namespace prayground {
         obj_val.value.matrix_transform.setMatrixMotionTransform(begin_transform, end_transform);
     }
 
-    template<DerivedFromCamera _CamT, uint32_t N>
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline bool Scene<_CamT, N>::deleteMovingLight(const std::string& name)
     {
         // Search same name object and store the its SBT index
@@ -678,7 +686,7 @@ namespace prayground {
     }
 
     // -------------------------------------------------------------------------------
-    template<DerivedFromCamera _CamT, uint32_t N>
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline std::vector<std::shared_ptr<AreaEmitter>> Scene<_CamT, N>::areaEmitters() const
     {
         std::vector<std::shared_ptr<AreaEmitter>> area_emitters;
@@ -695,14 +703,14 @@ namespace prayground {
         return area_emitters;
     }
 
-    template<DerivedFromCamera _CamT, uint32_t N>
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline uint32_t Scene<_CamT, N>::numLights() const
     {
         return m_num_lights;
     }
 
     // -------------------------------------------------------------------------------
-    template<DerivedFromCamera _CamT, uint32_t N>
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, N>::copyDataToDevice()
     {
         auto copyObjectDataToDevice = [&](auto& objects)
@@ -735,7 +743,7 @@ namespace prayground {
     }
 
     // -------------------------------------------------------------------------------
-    template<DerivedFromCamera _CamT, uint32_t N>
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, N>::buildAccel(const Context& ctx, CUstream stream)
     {
         /// @todo : Re-build IAS when it has been already builded.
@@ -783,19 +791,19 @@ namespace prayground {
         m_accel.build(ctx, stream);
     }
 
-    template<DerivedFromCamera _CamT, uint32_t N>
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, N>::updateAccel(const Context& ctx, CUstream stream)
     {
         m_accel.update(ctx, stream);
     }
 
-    template<DerivedFromCamera _CamT, uint32_t N>
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline OptixTraversableHandle Scene<_CamT, N>::accelHandle() const
     {
         return m_accel.handle();
     }
 
-    template <DerivedFromCamera _CamT, uint32_t N>
+    template <DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, N>::buildSBT()
     {
         // Raygen 
@@ -869,7 +877,7 @@ namespace prayground {
         m_sbt.createOnDevice();
     }
 
-    template<DerivedFromCamera _CamT, uint32_t N>
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, N>::updateSBT(uint32_t record_type)
     {
         if (!m_sbt.isOnDevice())
@@ -905,7 +913,7 @@ namespace prayground {
             ms_data.env_data = m_envmap->devicePtr();
             
             // Upload envmap data to device for each ray types
-            for (uint32_t i = 0; i < N; i++)
+            for (uint32_t i = 0; i < NRay; i++)
             {
                 CUDA_CHECK(cudaMemcpy(
                     reinterpret_cast<void*>(&ms_record[i].data),
@@ -953,7 +961,7 @@ namespace prayground {
                         e->copyToDevice();
                         pgHitgroupData hg_data;
                         hg_data = { shape->devicePtr(), e->surfaceInfo() };
-                        for (uint32_t i = 0; i < N; i++)
+                        for (uint32_t i = 0; i < NRay; i++)
                             hitgroup_datas.emplace_back(hg_data);
                     }
                 }
@@ -970,7 +978,7 @@ namespace prayground {
              * Array of pgHitgroupRecord ...
              *                 | pgHitgroupRecord        | pgHitgroupRecord        | ...
              * record inside : | header | pgHitgroupData | header | pgHitgroupData | ...
-             *                            �� "+ OPTIX_SBT_RECORD_HEADER_SIZE" makes 'dst' start here */
+             *                            ^ "+ OPTIX_SBT_RECORD_HEADER_SIZE" makes 'dst' start here */
             CUDA_CHECK(cudaMemcpy2D(
                 /* dst = */ reinterpret_cast<void*>(m_sbt.deviceHitgroupRecordPtr() + OPTIX_SBT_RECORD_HEADER_SIZE), /* dpitch = */ sizeof(pgHitgroupRecord),
                 /* src = */ hitgroup_datas.data(), /* spitch = */ sizeof(pgHitgroupData),

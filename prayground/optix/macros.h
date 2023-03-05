@@ -34,8 +34,6 @@
     #include <prayground/core/stream_helpers.h>
 #endif
 
-/// @todo Add PG_ prefix to all macros
-
 #ifdef __CUDACC__
     #define CALLABLE_FUNC extern "C" __device__
     #define INLINE __forceinline__

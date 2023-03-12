@@ -15,7 +15,6 @@ namespace prayground {
 
     /* 3D volume medium using NanoVDB format */
 
-    /// @todo Initliaze with a empty grid to enable procedual GridMedium calculation
     template <typename Spectrum>
     class VDBGrid_ : public Shape {
     public:

@@ -46,9 +46,6 @@ extern "C" __device__ void __raygen__pinhole()
         int depth = 0;
         for (;; ) {
 
-            if (depth >= params.max_depth)
-                break;
-
             trace(params.handle, ro, rd, 0.01f, tmax, 0, &si);
 
             // Get emission from area emitter
@@ -100,6 +97,7 @@ extern "C" __device__ void __raygen__pinhole()
                 }
 
                 bool is_contributed = false;
+                // Obtain contribution from selected area light
                 if (NdotL > 0.0f && LNdotL > 0.0f && li.pdf > 0.0f)
                 {
                     const bool occluded = traceShadow(params.handle, si.p, li.wi, 0.001f, dist_to_light - 0.001f);
@@ -142,24 +140,26 @@ extern "C" __device__ void __raygen__pinhole()
                     float pdf_val = optixDirectCall<float, SurfaceInteraction*, void*>(
                         si.surface_info.callable_id.pdf, &si, si.surface_info.data);
 
-                    if (pdf_val <= 0.0f) break;
-
-                    throughput *= bsdf_val / (pdf_val * (params.num_lights + 1));
+                    if (pdf_val <= 0.0f)
+                        si.trace_terminate = true;
+                    else
+                        throughput *= bsdf_val / (pdf_val * (params.num_lights + 1));
                 }
             }
 
             result += si.emission * throughput;
 
-            if (si.trace_terminate || depth >= params.max_depth)
-                break;
-
-            if (depth == 0) {
+            // Store surface information at primary intersections except for environment sphere
+            if (depth == 0 && si.surface_info.type != SurfaceType::None) {
                 albedo += si.albedo;
                 Vec3f op = si.p - ro;
                 float op_length = length(si.p - ro);
                 p_depth += (dot(normalize(op), normalize(raygen->camera.lookat - ro)) * op_length) / raygen->camera.farclip;
                 normal += si.shading.n;
             }
+
+            if (si.trace_terminate || depth >= params.max_depth)
+                break;
 
             // Make tmax large except for when the primary ray
             tmax = 1e16f;

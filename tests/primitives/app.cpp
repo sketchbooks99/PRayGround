@@ -100,16 +100,16 @@ void App::setup()
     mesh_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__mesh");
 
     std::array<ProgramGroup, NRay> sphere_prgs;
-    sphere_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", IS_FUNC_TEXT("pg_sphere"));
+    sphere_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", "__intersection__sphere");
 
     std::array<ProgramGroup, NRay> box_prgs;
-    box_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", IS_FUNC_TEXT("pg_box"));
+    box_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", "__intersection__box");
 
     std::array<ProgramGroup, NRay> plane_prgs;
-    plane_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", IS_FUNC_TEXT("pg_plane"));
+    plane_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", "__intersection__plane");
 
     std::array<ProgramGroup, NRay> cylinder_prgs;
-    cylinder_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", IS_FUNC_TEXT("pg_cylinder"));
+    cylinder_prgs[0] = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", "__intersection__cylinder");
 
     using PhongMaterial = CustomMaterial<PhongData>;
     SurfaceType phong_type = SurfaceType::RoughReflection;
@@ -166,8 +166,6 @@ void App::setup()
     scene.addObject("mesh_icosphere", make_shared<IcoSphereMesh>(1, 1), red_phong, mesh_prgs, Matrix4f::translate(-100, 0, 0) * Matrix4f::scale(50.0f));
     scene.addObject("mesh_uvsphere", make_shared<UVSphereMesh>(1, Vec2ui(20, 20)), blue_phong, mesh_prgs, Matrix4f::translate(100, 0, 0)* Matrix4f::scale(50.0f));
     scene.addObject("mesh_plane", make_shared<PlaneMesh>(), white_phong, mesh_prgs, Matrix4f::translate(0, -100, 0)* Matrix4f::scale(100.0f));
-
-
 
     CUDA_CHECK(cudaStreamCreate(&stream));
     scene.copyDataToDevice();

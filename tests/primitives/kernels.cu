@@ -99,6 +99,38 @@ extern "C" __device__ void __miss__envmap()
         env->texture.prg_id, si, env->texture.data);
 }
 
+extern "C" __device__ void __intersection__sphere()
+{
+    pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
+    const auto* sphere = reinterpret_cast<Sphere::Data*>(data->shape_data);
+    Ray ray = getLocalRay();
+    pgReportIntersectionSphere(sphere, ray);
+}
+
+extern "C" __device__ void __intersection__box()
+{
+    pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
+    const auto* box = reinterpret_cast<Box::Data*>(data->shape_data);
+    Ray ray = getLocalRay();
+    pgReportIntersectionBox(box, ray);
+}
+
+extern "C" __device__ void __intersection__plane()
+{
+    pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
+    const auto* plane = reinterpret_cast<Plane::Data*>(data->shape_data);
+    Ray ray = getLocalRay();
+    pgReportIntersectionPlane(plane, ray);
+}
+
+extern "C" __device__ void __intersection__cylinder()
+{
+    pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
+    const auto* cylinder = reinterpret_cast<Cylinder::Data*>(data->shape_data);
+    Ray ray = getLocalRay();
+    pgReportIntersectionCylinder(cylinder, ray);
+}
+
 extern "C" __device__ void __closesthit__mesh()
 {
     pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
@@ -108,7 +140,7 @@ extern "C" __device__ void __closesthit__mesh()
     Ray ray = getWorldRay();
 
     const Vec2f bc = optixGetTriangleBarycentrics();
-    Shading shading = getMeshShading(mesh, bc, prim_idx);
+    Shading shading = pgGetMeshShading(mesh, bc, prim_idx);
     shading.n = optixTransformNormalFromObjectToWorldSpace(shading.n);
     shading.dpdu = optixTransformVectorFromObjectToWorldSpace(shading.dpdu);
     shading.dpdv = optixTransformVectorFromObjectToWorldSpace(shading.dpdv);
@@ -177,15 +209,15 @@ extern "C" __device__ float __direct_callable__pdf_diffuse(SurfaceInteraction* s
 // Texture func
 extern "C" __device__ Vec3f __direct_callable__constant(SurfaceInteraction * si, void* tex_data)
 {
-    return getConstantTextureValue<Vec3f>(si->shading.uv, tex_data);
+    return pgGetConstantTextureValue<Vec3f>(si->shading.uv, tex_data);
 }
 
 extern "C" __device__ Vec3f __direct_callable__checker(SurfaceInteraction * si, void* tex_data)
 {
-    return getCheckerTextureValue<Vec3f>(si->shading.uv, tex_data);
+    return pgGetCheckerTextureValue<Vec3f>(si->shading.uv, tex_data);
 }
 
 extern "C" __device__ Vec3f __direct_callable__bitmap(SurfaceInteraction * si, void* tex_data)
 {
-    return getBitmapTextureValue<Vec3f>(si->shading.uv, tex_data);
+    return pgGetBitmapTextureValue<Vec3f>(si->shading.uv, tex_data);
 }

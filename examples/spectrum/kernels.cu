@@ -16,7 +16,7 @@ static INLINE DEVICE SurfaceInteraction* getSurfaceInteraction()
     return reinterpret_cast<SurfaceInteraction*>(unpackPointer(u0, u1));
 }
 
-static __forceinline__ __device__ void traceSpectrum(
+static INLINE DEVICE void traceSpectrum(
     OptixTraversableHandle handle, 
     const Vec3f& ro, const Vec3f& rd, 
     float tmin, float tmax, 
@@ -48,7 +48,7 @@ static __forceinline__ __device__ void traceSpectrum(
 // Raygen ------------------------------------------------------------------------------
 static __forceinline__ __device__ float uniformSpectrumPDF()
 {
-    return 1.0f / (max_lambda - min_lambda);
+    return 1.0f / (constants::max_lambda - constants::min_lambda);
 }
 
 // Raygen function
@@ -65,7 +65,7 @@ extern "C" __global__ void __raygen__spectrum()
     int i = params.samples_per_launch;
 
     // Uniform sampling of lambda
-    float lambda = lerp(float(min_lambda), float(max_lambda), rnd(seed));
+    float lambda = lerp(float(constants::min_lambda), float(constants::max_lambda), rnd(seed));
 
     do 
     {
@@ -85,7 +85,6 @@ extern "C" __global__ void __raygen__spectrum()
         si.emission = Spectrum{};
         si.albedo = Spectrum{};
         si.trace_terminate = false;
-        si.radiance_evaled = false;
 
         int depth = 0;
         for (;;)
@@ -133,9 +132,9 @@ extern "C" __global__ void __raygen__spectrum()
     const uint32_t image_idx = idx.y() * params.width + idx.x();
 
     Vec3f xyz_result = Vec3f(
-        radiance * CIE_X(lambda) / CIE_Y_integral / uniformSpectrumPDF(),
-        radiance * CIE_Y(lambda) / CIE_Y_integral / uniformSpectrumPDF(),
-        radiance * CIE_Z(lambda) / CIE_Y_integral / uniformSpectrumPDF());
+        radiance * CIE_X(lambda) / constants::CIE_Y_integral / uniformSpectrumPDF(),
+        radiance * CIE_Y(lambda) / constants::CIE_Y_integral / uniformSpectrumPDF(),
+        radiance * CIE_Z(lambda) / constants::CIE_Y_integral / uniformSpectrumPDF());
 
     Vec3f color = XYZToSRGB(xyz_result);
 
@@ -241,7 +240,6 @@ extern "C" __device__ float __direct_callable__sample_dielectric(const float& la
         si->wi = reflect(si->wo, outward_normal);
     else
         si->wi = refract(si->wo, outward_normal, cosine, ni, nt);
-    si->radiance_evaled = false;
     si->trace_terminate = false;
     si->seed = seed;
 
@@ -306,7 +304,7 @@ static __forceinline__ __device__ float disneyBRDF(
     const float f_subsurface = base * math::inv_pi * 1.25f * (FVss90 * FLss90 * ((1.0f / (NdotV * NdotL)) - 0.5f) + 0.5f);
 
     // Sheen
-    const float lumi = base_spectrum.y() / CIE_Y_integral;
+    const float lumi = base_spectrum.y() / constants::CIE_Y_integral;
     const float rho_tint = base / lumi;
     const float rho_sheen = lerp(1.0f, rho_tint, disney->sheen_tint);
     const float f_sheen = disney->sheen * rho_sheen * pow5(1.0f - LdotH);
@@ -383,7 +381,6 @@ extern "C" __device__ float __direct_callable__sample_disney(const float& lambda
         onb.inverseTransform(h);
         si->wi = normalize(reflect(si->wo, h));
     }
-    si->radiance_evaled = false;
     si->trace_terminate = false;
     si->seed = seed;
 
@@ -426,25 +423,17 @@ extern "C" __device__ void __direct_callable__area_emitter(SurfaceInteraction* s
 // Texture functions ---------------------------------------------------------------
 extern "C" __device__ Spectrum __direct_callable__constant(SurfaceInteraction* si, void* tex_data)
 {
-    const ConstantTexture::Data* constant = reinterpret_cast<ConstantTexture::Data*>(tex_data);
-    return constant->color;
+    return pgGetConstantTextureValue<SampledSpectrum>(si->shading.uv, tex_data);
 }
 
 extern "C" __device__ Spectrum __direct_callable__checker(SurfaceInteraction* si, void* tex_data)
 {
-    const CheckerTexture::Data* checker = reinterpret_cast<CheckerTexture::Data*>(tex_data);
-    const bool is_odd = sinf(si->shading.uv.x() * math::pi * checker->scale) * sinf(si->shading.uv.y() * math::pi * checker->scale);
-    return is_odd ? checker->color1 : checker->color2;
+    return pgGetCheckerTextureValue<SampledSpectrum>(si->shading.uv, tex_data);
 }
 
 extern "C" __device__ Spectrum __direct_callable__bitmap(SurfaceInteraction* si, void* tex_data)
 {
-    const BitmapTexture::Data* image = reinterpret_cast<BitmapTexture::Data*>(tex_data);
-    Vec4f c = tex2D<float4>(image->texture, si->shading.uv.x(), si->shading.uv.y());
-    return reconstructSpectrumFromRGB(Vec3f(c),
-        *params.white_spd, *params.cyan_spd, *params.magenta_spd, *params.yellow_spd, 
-        *params.red_spd, *params.green_spd, *params.blue_spd
-    );
+    return pgGetBitmapTextureValue<SampledSpectrum>(si->shading.uv, tex_data);
 }
 
 // Hitgroup functions ---------------------------------------------------------------
@@ -508,14 +497,6 @@ extern "C" __device__ void __closesthit__mesh()
     si->shading.dpdv = normalize(optixTransformVectorFromObjectToWorldSpace(dpdv.toCUVec()));
 }
 
-static __forceinline__ __device__ Vec2f getSphereUV(const Vec3f& p) {
-    float phi = atan2(p.z(), p.x());
-    float theta = asin(p.y());
-    float u = 1.0f - (phi + math::pi) / (2.0f * math::pi);
-    float v = 1.0f - (theta + math::pi / 2.0f) * math::inv_pi;
-    return Vec2f(u, v);
-}
-
 extern "C" __device__ void __intersection__sphere()
 {
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
@@ -567,7 +548,7 @@ extern "C" __device__ void __closesthit__sphere()
     si->shading.n = world_n;
     si->t = ray.tmax;
     si->wo = ray.d;
-    si->shading.uv = getSphereUV(local_n);
+    si->shading.uv = pgGetSphereUV(local_n);
     si->surface_info = data->surface_info;
 
     float phi = atan2(local_n.z(), local_n.x());

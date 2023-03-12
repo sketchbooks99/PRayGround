@@ -3,12 +3,6 @@ PRAYGROUND_add_executalbe(denoiser target_name
     app.cpp 
     app.h
     params.h
-    cuda/raygen.cu 
-    cuda/miss.cu 
-    cuda/hitgroups.cu 
-    cuda/surfaces.cu 
-    cuda/textures.cu 
-    cuda/util.cuh
     kernels.cu
 )
 

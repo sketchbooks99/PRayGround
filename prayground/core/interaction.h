@@ -91,26 +91,26 @@ namespace prayground {
         /** Position of intersection point in world coordinates. */
         Vec3f p;
 
+        /** ray time */
+        float t;
+
+        /** Shading frame */
+        Shading shading;
+
         /** Incident and outgoing directions at a surface. */
         Vec3f wi;
         Vec3f wo;
-
-        /** ray time */
-        float t;
 
         /** Albedo and self-emission from a surface attached with a shape. */
         Spectrum albedo;
         Spectrum emission;
 
-        /** Shading frame */
-        Shading shading;
-
+        /* For propagating random seed among path */
         uint32_t seed;
 
         SurfaceInfo surface_info;
 
         bool trace_terminate;
-        bool radiance_evaled; // For NEE
     };
 
     struct MediumInteraction {

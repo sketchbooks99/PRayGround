@@ -7,6 +7,8 @@
 #include <prayground/app/event.h>
 
 namespace prayground {
+    
+    constexpr uint32_t PG_MAX_WINDOW_NUM = 5;
 
     /**
      * @brief 

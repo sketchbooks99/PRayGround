@@ -39,16 +39,12 @@ extern "C" __device__ void __raygen__pinhole()
         si.seed = seed;
         si.emission = Vec3f(0.0f);
         si.albedo = Vec3f(0.0f);
-        si.trace_terminate = false;
-        si.radiance_evaled = false;
+        bool trace_terminate = false;
 
         float tmax = raygen->camera.farclip / dot(rd, normalize(raygen->camera.lookat - ro));
 
         int depth = 0;
         for (;; ) {
-
-            if (depth >= params.max_depth)
-                break;
 
             trace(params.handle, ro, rd, 0.01f, tmax, 0, &si);
 
@@ -101,6 +97,7 @@ extern "C" __device__ void __raygen__pinhole()
                 }
 
                 bool is_contributed = false;
+                // Obtain contribution from selected area light
                 if (NdotL > 0.0f && LNdotL > 0.0f && li.pdf > 0.0f)
                 {
                     const bool occluded = traceShadow(params.handle, si.p, li.wi, 0.001f, dist_to_light - 0.001f);
@@ -117,7 +114,7 @@ extern "C" __device__ void __raygen__pinhole()
                         optixDirectCall<void, SurfaceInteraction*, void*>(
                             light.surface_info.callable_id.bsdf, &light_si, light.surface_info.data);
 
-                        Vec3f contrib_from_light = light_si.emission * NdotL * LNdotL / li.pdf;
+                        Vec3f contrib_from_light = light_si.emission * NdotL * LNdotL;
 
                         si.wi = li.wi;
 
@@ -125,9 +122,7 @@ extern "C" __device__ void __raygen__pinhole()
                         Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
                             si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
 
-                        radiance += contrib_from_light;
-                        si.radiance_evaled = true;
-                        throughput *= bsdf_val;
+                        result += contrib_from_light * bsdf_val * throughput / (li.pdf * (params.num_lights + 1));
 
                         is_contributed = true;
                     }
@@ -137,29 +132,34 @@ extern "C" __device__ void __raygen__pinhole()
                 optixDirectCall<void, SurfaceInteraction*, void*>(
                     si.surface_info.callable_id.sample, &si, si.surface_info.data);
 
-                if (!is_contributed)
                 {
                     // Evaluate BSDF
                     Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
                         si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
 
-                    throughput *= bsdf_val;
+                    float pdf_val = optixDirectCall<float, SurfaceInteraction*, void*>(
+                        si.surface_info.callable_id.pdf, &si, si.surface_info.data);
+
+                    if (pdf_val <= 0.0f)
+                        si.trace_terminate = true;
+                    else
+                        throughput *= bsdf_val / (pdf_val * (params.num_lights + 1));
                 }
             }
 
             result += si.emission * throughput;
-            result += radiance * throughput;
 
-            if (si.trace_terminate || depth >= params.max_depth)
-                break;
-
-            if (depth == 0) {
+            // Store surface information at primary intersections except for environment sphere
+            if (depth == 0 && si.surface_info.type != SurfaceType::None) {
                 albedo += si.albedo;
                 Vec3f op = si.p - ro;
                 float op_length = length(si.p - ro);
                 p_depth += (dot(normalize(op), normalize(raygen->camera.lookat - ro)) * op_length) / raygen->camera.farclip;
                 normal += si.shading.n;
             }
+
+            if (si.trace_terminate || depth >= params.max_depth)
+                break;
 
             // Make tmax large except for when the primary ray
             tmax = 1e16f;

@@ -27,7 +27,7 @@ public:
     {
         m_color = c;
     }
-    T color() const
+    const T& color() const
     {
         return m_color;
     }

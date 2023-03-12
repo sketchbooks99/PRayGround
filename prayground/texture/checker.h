@@ -23,7 +23,7 @@ public:
     {
         m_color1 = c1;
     }
-    T color1() const
+    const T& color1() const
     {
         return m_color1;
     }
@@ -32,7 +32,7 @@ public:
     {
         m_color2 = c2;
     }
-    T color2() const
+    const T& color2() const
     {
         return m_color2;
     }

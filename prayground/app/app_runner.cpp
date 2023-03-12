@@ -11,7 +11,7 @@ namespace prayground {
             float start_time;
             float frame_rate = 60.0f;
             bool is_fix_fps = false;
-            bool is_window_initialized = false;
+            bool is_app_window_initialized = false;
         };
         RunnerState g_state;
     } // nonamed namespace
@@ -103,9 +103,9 @@ namespace prayground {
         g_state.runner->run();
     }
 
-    bool pgWindowInitialized()
+    bool pgAppWindowInitialized()
     {
-        return g_state.is_window_initialized;
+        return g_state.is_app_window_initialized;
     }
 
     void pgExit()
@@ -124,7 +124,7 @@ namespace prayground {
     void AppRunner::run() const
     {
         m_window->setup();
-        g_state.is_window_initialized = true;
+        g_state.is_app_window_initialized = true;
 
         m_app->setup();
 

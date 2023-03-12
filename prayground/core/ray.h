@@ -6,7 +6,12 @@
 namespace prayground {
 
     struct Ray {
-        HOSTDEVICE INLINE Vec3f at(const float time) { return o + d*time; }
+        Ray() = default;
+        Ray(const Vec3f& o, const Vec3f& d, float tmin, float tmax, float t = 0.0f)
+            : o(o), d(d), tmin(tmin), tmax(tmax), t(t) 
+        {}
+
+        HOSTDEVICE INLINE Vec3f at(const float time) const { return o + d * time; }
 
         /* Position of ray origin in world coordinates. */
         Vec3f o;
@@ -21,6 +26,11 @@ namespace prayground {
     };
 
     struct pRay {
+        pRay() = default;
+        pRay(const Vec3f& o, const Vec3f& d, const Vec3f& tangent, float tmin, float tmax, float t = 0.0f)
+            : o(o), d(d), tangent(tangent), tmin(tmin), tmax(tmax), t(t)
+        {}
+
         /** @todo Polarized ray */
         HOSTDEVICE INLINE Vec3f at(const float time) { return o + d*time; }
 
@@ -44,8 +54,8 @@ namespace prayground {
 
     INLINE DEVICE Ray getLocalRay() {
         Ray ray;
-        ray.o = optixTransformPointFromWorldToObjectSpace( optixGetWorldRayOrigin() );
-        ray.d = optixTransformVectorFromWorldToObjectSpace( optixGetWorldRayDirection() );
+        ray.o = optixGetObjectRayOrigin();
+        ray.d = optixGetObjectRayDirection();
         ray.tmin = optixGetRayTmin();
         ray.tmax = optixGetRayTmax();
         ray.t = optixGetRayTime();

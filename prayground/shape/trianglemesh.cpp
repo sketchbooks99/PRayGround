@@ -119,8 +119,10 @@ namespace prayground {
 
     uint32_t TriangleMesh::sbtIndex() const
     {
-        ASSERT(m_sbt_indices.size() != 1, "Detected invalid number of SBT indices. TriangleMesh::sbtIndex() can be called when the only ONE SBT index is set.");
-
+        if (m_sbt_indices.size() > 1)
+            PG_LOG_WARN("You should use TriangleMesh::sbtIndices() if the number of SBT indices is mush more 2");
+        if (m_sbt_indices.empty())
+            return 0;
         return m_sbt_indices.back();
     }
 
@@ -185,6 +187,11 @@ namespace prayground {
         m_vertices.emplace_back(v);
     }
 
+    void TriangleMesh::addVertex(float x, float y, float z)
+    {
+        m_vertices.emplace_back(Vec3f(x, y, z));
+    }
+
     void TriangleMesh::addFace(const Face& face)
     {
         m_faces.emplace_back(face);
@@ -201,9 +208,39 @@ namespace prayground {
         m_normals.emplace_back(n);
     }
 
+    void TriangleMesh::addNormal(float x, float y, float z)
+    {
+        m_normals.emplace_back(Vec3f(x, y, z));
+    }
+
     void TriangleMesh::addTexcoord(const Vec2f& texcoord)
     {
         m_texcoords.emplace_back(texcoord);
+    }
+
+    void TriangleMesh::addTexcoord(float x, float y)
+    {
+        m_texcoords.emplace_back(Vec2f(x, y));
+    }
+
+    const Vec3f& TriangleMesh::vertexAt(const int32_t i) const
+    {
+        return m_vertices[i];
+    }
+
+    const Vec3f& TriangleMesh::normalAt(const int32_t i) const
+    {
+        return m_normals[i];
+    }
+
+    const Face& TriangleMesh::faceAt(const int32_t i) const
+    {
+        return m_faces[i];
+    }
+
+    const Vec2f& TriangleMesh::texcoordAt(const int32_t i) const
+    {
+        return m_texcoords[i];
     }
 
     // ------------------------------------------------------------------
@@ -289,12 +326,36 @@ namespace prayground {
         }
     }
 
+    void TriangleMesh::calculateNormalFlat()
+    {
+        // Check if faces/vertices are empty.
+        ASSERT(m_faces.empty(), "Face array to construct triangle mesh is empty.");
+        ASSERT(m_vertices.empty(), "Vertex array to construct triangle mesh is empty.");
 
-    void TriangleMesh::smooth()
+        m_normals.clear();
+        for (auto& face : m_faces)
+        {
+            const Vec3f& v0 = vertexAt(face.vertex_id.x());
+            const Vec3f& v1 = vertexAt(face.vertex_id.y());
+            const Vec3f& v2 = vertexAt(face.vertex_id.z());
+
+            const Vec3f n = normalize(cross(v2 - v0, v1 - v0));
+            const int32_t n_id = static_cast<int32_t>(numNormals());
+
+            // Add three normals for each vertex
+            for (int32_t i = 0; i < 3; i++)
+                addNormal(n);
+
+            face.normal_id = Vec3i(n_id, n_id + 1, n_id + 2);
+        }
+    }
+
+    void TriangleMesh::calculateNormalSmooth()
     {
         m_normals.clear();
         m_normals.resize(m_vertices.size());
         auto counts = std::vector<int>(m_vertices.size(), 0);
+        // Accumerate normals on each vertices for the number of faces.
         for (size_t i = 0; i < m_faces.size(); i++)
         {
             m_faces[i].normal_id = m_faces[i].vertex_id;
@@ -317,6 +378,7 @@ namespace prayground {
             m_normals[idx] += N;
             counts[idx]++;
         }
+        // Averate normals with shared number of vertices.
         for (size_t i = 0; i < m_vertices.size(); i++)
         {
             m_normals[i] /= counts[i];
@@ -338,9 +400,11 @@ namespace prayground {
 
     uint32_t TriangleMesh::numMaterials() const
     {
-        ASSERT(m_sbt_indices.size() != 0, "Any SBT indices aren't set");
+        if (m_sbt_indices.empty())
+            return 1u;
 
         std::vector<uint32_t> sbt_counter;
+        // Count the number of sbt indices that doesn't duplicate
         for (auto& sbt_idx : m_sbt_indices)
         {
             auto itr = std::find(sbt_counter.begin(), sbt_counter.end(), sbt_idx);
@@ -350,8 +414,9 @@ namespace prayground {
         return static_cast<uint32_t>(sbt_counter.size());
     }
 
-    void TriangleMesh::addSbtIndices(const std::vector<uint32_t>& sbt_indices)
+    void TriangleMesh::setSbtIndices(const std::vector<uint32_t>& sbt_indices)
     {
+        m_sbt_indices.clear();
         std::copy(sbt_indices.begin(), sbt_indices.end(), std::back_inserter(m_sbt_indices));
     }
 

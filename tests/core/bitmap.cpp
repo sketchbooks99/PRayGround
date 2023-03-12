@@ -6,10 +6,6 @@
 
 using namespace std;
 
-/**
- * @todo Optimize bitmap rendering 
- */ 
-
 class App : public BaseApp
 {
 public:

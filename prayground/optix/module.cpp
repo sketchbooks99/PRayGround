@@ -265,9 +265,14 @@ void Module::setNumBounds(unsigned int num_bound)
     m_options.numBoundValues = num_bound;
 }
 
-OptixModuleCompileOptions Module::compileOptions() const 
+const OptixModuleCompileOptions& Module::compileOptions() const 
 { 
     return m_options; 
+}
+
+OptixModuleCompileOptions& Module::compileOptions()
+{
+    return m_options;
 }
 
 } // ::prayground

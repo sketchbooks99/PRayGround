@@ -1,4 +1,4 @@
-PRAYGROUND_add_executalbe(scene target_name
+PRAYGROUND_add_executalbe(curves target_name
     main.cpp 
     app.cpp 
     app.h

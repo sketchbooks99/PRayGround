@@ -1,12 +1,12 @@
 #pragma once
 
 #include <prayground/math/vec.h>
+#include <prayground/core/bsdf.h>
 
 #ifndef __CUDACC__
     #include <prayground/app/window.h>
-#else 
+//#else 
     // For random sampling for lens camera ray
-    #include <prayground/core/bsdf.h>
 #endif
 
 namespace prayground {
@@ -144,15 +144,14 @@ namespace prayground {
 #endif // __CUDACC__
     };
 
-#ifdef __CUDACC__
-    static __forceinline__ __device__ void getCameraRay(
+    INLINE HOSTDEVICE void getCameraRay(
         const Camera::Data& camera, const float x, const float y, Vec3f& ro, Vec3f& rd)
     {
         rd = normalize(x * camera.U + y * camera.V + camera.W);
         ro = camera.origin;
     }
 
-    static __forceinline__ __device__ void getLensCameraRay(
+    INLINE HOSTDEVICE void getLensCameraRay(
         const LensCamera::Data& camera, const float x, const float y, Vec3f& ro, Vec3f& rd, uint32_t& seed)
     {
         Vec3f _rd = (camera.aperture / 2.0f) * randomSampleInUnitDisk(seed);
@@ -170,7 +169,5 @@ namespace prayground {
         ro = camera.origin + offset;
         rd = normalize(center + x * horizontal + y * vertical - ro);
     }
-
-#endif // __CUDACC__
 
 } // namespace prayground

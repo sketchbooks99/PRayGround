@@ -49,12 +49,6 @@ struct RaygenData
     Camera::Data camera;
 };
 
-struct HitgroupData
-{
-    void* shape_data;
-    SurfaceInfo surface_info;
-};
-
 struct MissData
 {
     void* env_data;

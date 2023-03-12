@@ -3,6 +3,11 @@
 
 namespace prayground {
 
+    namespace {
+        // Manage the number of windows
+        uint32_t g_num_windows;
+    } // no-named namespace
+
     // ----------------------------------------------------------------
     Window::Window() 
     : Window("", 0, 0)

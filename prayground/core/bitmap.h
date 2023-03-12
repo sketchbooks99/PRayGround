@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <prayground/gl/shader.h>
+#include <prayground/app/window.h>
 #include <map>
 
 namespace prayground {
@@ -65,7 +66,7 @@ namespace prayground {
         int m_channels { 0 };
 
         // Member variables to draw Bitmap on OpenGL context
-        GLuint m_gltex; 
+        GLuint m_gltex;
         GLuint m_vbo, m_vao, m_ebo; // vertex buffer object, vertex array object, element buffer object
         gl::Shader m_shader;
     };

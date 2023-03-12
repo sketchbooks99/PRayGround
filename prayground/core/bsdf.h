@@ -92,33 +92,21 @@ namespace prayground {
         return Vec3f(cosf(phi) * sin_theta, sinf(phi) * sin_theta, cos_theta);
     }
 
-    /// @ref: https://jcgt.org/published/0007/04/01/
-    HOSTDEVICE INLINE Vec3f sampleGGXAniso(const Vec3f& v, const float ax, const float ay, const float u0, const float u1)
+    HOSTDEVICE INLINE Vec3f sampleGGXAniso(const float ax, const float ay, const float u0, const float u1)
     {
-        const Vec3f Vh = normalize(Vec3f(ax * v[0], ay * v[1], v[2]));
-        const float lensq = Vh[0] * Vh[0] + Vh[1] * Vh[1];
-        const float inv_sqrt_lensq = 1.0f / sqrtf(lensq);
-        const Vec3f T1 = lensq > 0 ? Vec3f(-Vh[1], Vh[0], 0) * inv_sqrt_lensq : Vec3f(1.0f, 0.0f, 0.0);
-        const Vec3f T2 = cross(Vh, T1);
-        const float r = sqrt(u0);
-        const float phi = math::two_pi * u1;
-        float t1 = r * cosf(phi); 
-        float t2 = r * sinf(phi);
-        float s = 0.5f * (1.0f + Vh[2]);
-        t2 = (1.0f - s) * sqrtf(1.0f - t1 * t1) + s * t2;
-        const Vec3f Nh = t1 * T1 + t2 * T2 + sqrtf(fmaxf(0.0f, 1.0f - t1 * t1 - t2 * t2)) * Vh;
-        const Vec3f Ne = normalize(Vec3f(ax * Nh[0], ay * Nh[1], fmaxf(0.0f, Nh[2])));
-        return Ne;
-    }
+        float phi = atanf((ax / ay) * tanf(2.0f * math::pi * u0));
+        if (u0 > 0.75f)
+            phi += math::two_pi;
+        else if (u1 > 0.25f)
+            phi += math::pi;
 
-    /// @todo : Implement
-    // HOSTDEVICE INLINE Vec3f sampleGTR1(const float u1, const float u2, const float roughness)
-    // {
-    //     Vec3f p;
-    //     const float a = pow2(roughness);
-    //     const float phi = 2.0f * math::pi * u1;
-    //     const float cos_theta = 1.0f;
-    // }
+        const float cosPhi = cosf(phi);
+        const float sinPhi = sinf(phi);
+        const float A = pow2(cosPhi / ax) + pow2(sinPhi / ax);
+        const float theta = sqrtf(u1 / ((1.0f - u1) * A));
+
+        return Vec3f(cosf(phi) * sinf(theta), sinf(phi) * sinf(theta), cosf(theta));
+    }
 
     /** 
      * @ref: http://www.pbr-book.org/3ed-2018/Reflection_Models/Specular_Reflection_and_Transmission.html
@@ -188,26 +176,36 @@ namespace prayground {
      **/ 
     HOSTDEVICE INLINE float GTR2(float NdotH, float a)
     {
-        float a2 = a*a;
-        float t = 1.0f - (1.0f-a2)*NdotH*NdotH;
-        return a2 / (math::pi * t*t);
+        float a2 = a * a;
+        float t = 1.0f - (1.0f - a2) * NdotH * NdotH;
+        return a2 / (math::pi * t * t);
     }
 
     HOSTDEVICE INLINE float GTR2_aniso(float NdotH, float HdotX, float HdotY, float ax, float ay)
     {
-        return 1.0f / ( math::pi * ax * ay * pow2( pow2(HdotX / ax) + pow2(HdotY / ay) + NdotH * NdotH) );
+        const float sinTheta = 1.0f - sqrtf(NdotH * NdotH);
+        const float tanTheta = sinTheta / NdotH;
+        const float tan2Theta = pow2(tanTheta);
+        if (isinf(tan2Theta) || isnan(tan2Theta))
+            return 0.0f;
+        const float cos4Theta = pow4(NdotH);
+
+        const float A = pow2(HdotX / ax) + pow2(HdotY / ay);
+        const float term = 1.0f + tan2Theta * A;
+        const float value = 1.0f / (math::pi * ax * ay * cos4Theta * pow2(term));
+        return value;
     }
 
     HOSTDEVICE INLINE float smithG_GGX(float NdotV, float alphaG)
     {
         float a = alphaG*alphaG;
         float b = NdotV*NdotV;
-        return 1 / (NdotV + sqrt(a + b - a*b));
+        return 1.0f / (NdotV + sqrt(a + b - a*b));
     }
 
     HOSTDEVICE INLINE float smithG_GGX_aniso(float NdotV, float VdotX, float VdotY, float ax, float ay)
     {
-        return 1 / (NdotV + sqrt(pow2(VdotX * ax) + pow2(VdotY * ay) + pow2(NdotV)));
+        return 1.0f / (NdotV + sqrt(pow2(VdotX * ax) + pow2(VdotY * ay) + pow2(NdotV)));
     }
 
     HOSTDEVICE INLINE Vec3f reflect(const Vec3f& wo, const Vec3f& n)

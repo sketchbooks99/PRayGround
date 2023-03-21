@@ -1,14 +1,16 @@
 #include "load3d.h"
 #include <prayground/core/file_util.h>
-#include <prayground/ext/happly/happly.h>
+#include <happly/happly.h>
 #include <algorithm>
 
 #ifndef TINEOBJLOADER_IMPLEMENTATION
 #define TINYOBJLOADER_IMPLEMENTATION
 #endif
-#include <prayground/ext/tinyobjloader/tiny_obj_loader.h>
+#include <tinyobjloader/tiny_obj_loader.h>
 
-#include <prayground/ext/nanovdb/util/IO.h>
+#include <nanovdb/util/IO.h>
+
+#include <tinyusdz/src/tinyusdz.hh>
 
 namespace prayground {
 
@@ -365,6 +367,10 @@ namespace prayground {
         ASSERT(nano_handle.size() != 0, "The size of grid data is zero.");
 
         handle = std::move(nano_handle);
+    }
+
+    void loadUSD(const std::filesystem::path& filepath, std::vector<Vec3f>& vertices, std::vector<Face>& faces, std::vector<Vec3f>& normals, std::vector<Vec2f>& texcoords)
+    {
     }
 
 } // namespace prayground

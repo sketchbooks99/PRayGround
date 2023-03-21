@@ -8,17 +8,17 @@
 #ifndef STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #endif
-#include <prayground/ext/stb/stb_image.h>
+#include <stb/stb_image.h>
 
 #ifndef STB_IMAGE_WRITE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #endif
-#include <prayground/ext/stb/stb_image_write.h>
+#include <stb/stb_image_write.h>
 
 #ifndef TINYEXR_IMPLEMENTATION
 #define TINYEXR_IMPLEMENTATION
 #endif
-#include <prayground/ext/tinyexr/tinyexr.h>
+#include <tinyexr/tinyexr.h>
 
 namespace prayground {
 

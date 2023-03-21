@@ -146,6 +146,11 @@ set(pg_target "prayground")
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${sources})
 
 add_library(${pg_target} STATIC ${sources})
+
+set_property(TARGET ${pg_target} PROPERTY CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 if (WIN32)
   target_compile_definitions(${pg_target} PUBLIC GLAD_GLAPI_EXPORT)
 endif()
@@ -154,8 +159,11 @@ target_link_libraries(${pg_target} LINK_PRIVATE
   ${GLFW_LIB_NAME}
   glad 
   imgui 
+  tinyusdz::tinyusdz_static
   ${CUDA_LIBRARIES}
 )
+
+target_include_directories(${pg_target} PRIVATE "${PRAYGROUND_EXTERNAL_DIR}")
 
 if(USING_GNU_C OR USING_GNU_CXX)
   if(GCC_LIBSTDCPP_HACK)

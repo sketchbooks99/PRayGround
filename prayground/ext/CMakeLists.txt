@@ -63,6 +63,8 @@ target_link_libraries(glad PUBLIC ${OPENGL_LIBRARIES})
 
 add_subdirectory(nanovdb)
 
+add_subdirectory(tinyusdz)
+
 set_property( TARGET glad PROPERTY FOLDER ${OPTIX_IDE_FOLDER} )
 set_property( TARGET glfw PROPERTY FOLDER ${OPTIX_IDE_FOLDER} )
 set_property( TARGET imgui PROPERTY FOLDER ${OPTIX_IDE_FOLDER} )

@@ -86,9 +86,9 @@ cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
 
 project(PRayGround VERSION 0.0.1)
 
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
-set(CMAKE_CXX_EXTENSIONS OFF)
+# set(CMAKE_CXX_STANDARD 20)
+# set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+# set(CMAKE_CXX_EXTENSIONS OFF)
 
 # As of CMake 2.6 policies were introduced in order to provide a mechanism for
 # adding backwards compatibility one feature at a time.  We will just specify
@@ -342,6 +342,10 @@ function(PRAYGROUND_add_executalbe target_name_base target_name_var)
     ${cmake_options}
   )
 
+  set_property(TARGET ${target_name} PROPERTY CXX_STANDARD 20)
+  set(CMAKE_CXX_STANDARD_REQUIRED ON)
+  set(CMAKE_CXX_EXTENSIONS OFF)
+
   # Most of the samples link against the sutil library and the optix library.  Here is the
   # rule that specifies this linkage.
 
@@ -349,6 +353,7 @@ function(PRAYGROUND_add_executalbe target_name_base target_name_var)
     ${GLFW_LIB_NAME}
     imgui
     nanovdb
+    tinyusdz::tinyusdz_static
     prayground
     )
 
@@ -356,7 +361,9 @@ function(PRAYGROUND_add_executalbe target_name_base target_name_var)
     COMPILE_DEFINITIONS
     "OPTIX_SAMPLE_NAME_DEFINE=${target_name};OPTIX_SAMPLE_DIR_DEFINE=${target_name}" )
 
-  target_include_directories(${target_name} PRIVATE "${PRAYGROUND_DIR}")
+  target_include_directories(${target_name} PRIVATE 
+    "${PRAYGROUND_DIR}"
+    "${PRAYGROUND_EXTERNAL_DIR}")
 
   if (WIN32)
     target_compile_options(${target_name} PUBLIC "/source-charset:utf-8")

@@ -2,13 +2,13 @@
 
 #include <prayground/core/shape.h>
 #include <prayground/core/aabb.h>
-#include <prayground/ext/nanovdb/NanoVDB.h>
+#include <nanovdb/NanoVDB.h>
 
 #ifndef __CUDACC__
 #include <prayground/core/file_util.h>
 #include <prayground/core/load3d.h>
-#include <prayground/ext/nanovdb/util/GridHandle.h>
-#include <prayground/ext/nanovdb/util/IO.h>
+#include <nanovdb/util/GridHandle.h>
+#include <nanovdb/util/IO.h>
 #endif // __CUDACC__
 
 namespace prayground {

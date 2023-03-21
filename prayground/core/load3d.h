@@ -3,7 +3,7 @@
 #include <prayground/core/attribute.h>
 #include <prayground/math/vec.h>
 #include <prayground/shape/trianglemesh.h>
-#include <prayground/ext/nanovdb/util/GridHandle.h>
+#include <nanovdb/util/GridHandle.h>
 #include <filesystem>
 #include <vector>
 
@@ -60,6 +60,15 @@ namespace prayground {
     void loadNanoVDB(
         const std::filesystem::path& filepath, 
         nanovdb::GridHandle<>& handle
+    );
+
+    // Load USD file
+    void loadUSD(
+        const std::filesystem::path& filepath, 
+        std::vector<Vec3f>& vertices, 
+        std::vector<Face>& faces, 
+        std::vector<Vec3f>& normals, 
+        std::vector<Vec2f>& texcoords
     );
 
 } // namespace prayground

@@ -1,8 +1,8 @@
 #include <prayground/prayground.h>
 #include "params.h"
-#include <prayground/ext/nanovdb/util/Ray.h>
-#include <prayground/ext/nanovdb/util/HDDA.h>
-#include <prayground/ext/nanovdb/util/SampleFromVoxels.h>
+#include <nanovdb/util/Ray.h>
+#include <nanovdb/util/HDDA.h>
+#include <nanovdb/util/SampleFromVoxels.h>
 
 extern "C" { __constant__ LaunchParams params; }
 

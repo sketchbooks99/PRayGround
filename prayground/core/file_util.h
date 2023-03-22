@@ -21,6 +21,9 @@ namespace prayground {
         return path;
     }
 
+    // Replace all upper characters to lower character.
+    std::string pgGetLowerString(std::string str);
+
     // Check if the file specified by relative path exists. 
     // Parent directories to seek the file are pgRootDir(), pgAppDir(), pgAppDir()/data and <path/to/app.exe>
     std::optional<std::filesystem::path> pgFindDataPath( const std::filesystem::path& relative_path );

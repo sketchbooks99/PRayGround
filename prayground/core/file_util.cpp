@@ -34,6 +34,15 @@ namespace prayground {
     }
 
     // -------------------------------------------------------------------------------
+    std::string pgGetLowerString(std::string str)
+    {
+        // Replace all letters to lower character
+        std::transform(str.begin(), str.end(), str.begin(), 
+            [](char c) { return std::tolower(c); });
+        return str;
+    }
+
+    // -------------------------------------------------------------------------------
     fs::path pgRootDir() {
         return fs::path(PRAYGROUND_DIR);
     }

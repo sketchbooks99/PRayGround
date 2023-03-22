@@ -1,15 +1,20 @@
 #include "load3d.h"
 #include <prayground/core/file_util.h>
-#include <happly/happly.h>
 #include <algorithm>
 
+// HapPLY
+#include <happly/happly.h>
+
+// tinyobjloader
 #ifndef TINEOBJLOADER_IMPLEMENTATION
 #define TINYOBJLOADER_IMPLEMENTATION
 #endif
 #include <tinyobjloader/tiny_obj_loader.h>
 
+// NanoVDB
 #include <nanovdb/util/IO.h>
 
+// TinyUSDZ
 #include <tinyusdz/src/tinyusdz.hh>
 
 namespace prayground {
@@ -369,8 +374,78 @@ namespace prayground {
         handle = std::move(nano_handle);
     }
 
-    void loadUSD(const std::filesystem::path& filepath, std::vector<Vec3f>& vertices, std::vector<Face>& faces, std::vector<Vec3f>& normals, std::vector<Vec2f>& texcoords)
+    // -------------------------------------------------------------------------------
+    void loadUSD(
+        const std::filesystem::path& filepath, 
+        std::vector<Vec3f>& vertices, 
+        std::vector<Face>& faces, 
+        std::vector<Vec3f>& normals, 
+        std::vector<Vec2f>& texcoords)
     {
+        std::string warn;
+        std::string err;
+
+        std::string ext = pgGetLowerString(pgGetExtension(filepath));
+
+        tinyusdz::Stage stage;
+
+        if (ext == ".usdc")
+        {
+            bool ret = tinyusdz::LoadUSDCFromFile(filepath.string(), &stage, &warn, &err);
+            if (!warn.empty())
+                pgLogWarn(warn);
+            if (!err.empty())
+                pgLogFatal(err);
+
+            if (!ret) 
+            {
+                pgLogFatal("Failed to load USDC file:", filepath.string());
+                return;
+            }
+        }
+        else if (ext == ".usda")
+        {
+            bool ret = tinyusdz::LoadUSDAFromFile(filepath.string(), &stage, &warn, &err);
+            if (!warn.empty())
+                pgLogWarn(warn);
+            if (!err.empty())
+                pgLogFatal(err);
+
+            if (!ret)
+            {
+                pgLogFatal("Failed to load USDA file:", filepath.string());
+                return;
+            }
+        }
+        else if (ext == ".usdz")
+        {
+            bool ret = tinyusdz::LoadUSDZFromFile(filepath.string(), &stage, &warn, &err);
+            if (!warn.empty())
+                pgLogWarn(warn);
+            if (!err.empty())
+                pgLogFatal(err);
+
+            if (!ret)
+            {
+                pgLogFatal("Failed to load USDZ file:", filepath.string());
+                return;
+            }
+        }
+        else 
+        {
+            // Try to auto detect format
+            bool ret = tinyusdz::LoadUSDFromFile(filepath.string(), &stage, &warn, &err);
+            if (!warn.empty())
+                pgLogWarn(warn);
+            if (!err.empty())
+                pgLogFatal(err);
+
+            if (!ret)
+            {
+                pgLogFatal("Failed to load USD file:", filepath.string());
+                return;
+            }
+        }
     }
 
 } // namespace prayground

@@ -71,7 +71,6 @@ extern "C" __device__ void __raygen__medium()
         si.emission = Vec3f(0.0f);
         si.albedo = Vec3f(0.0f);
         si.trace_terminate = false;
-        si.radiance_evaled = false;
 
         int depth = 0;
         for (;; ) {
@@ -276,14 +275,6 @@ extern "C" __device__ void __closesthit__plane()
     si->shading.dpdv = optixTransformNormalFromObjectToWorldSpace({0.0f, 0.0f, 1.0f});
 }
 
-static __forceinline__ __device__ Vec2f getSphereUV(const Vec3f& p) {
-    float phi = atan2(p.z(), p.x());
-    float theta = asin(p.y());
-    float u = 1.0f - (phi + math::pi) / (2.0f * math::pi);
-    float v = 1.0f - (theta + math::pi / 2.0f) / math::pi;
-    return Vec2f(u, v);
-}
-
 extern "C" __device__ void __intersection__sphere()
 {
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
@@ -335,7 +326,7 @@ extern "C" __device__ void __closesthit__sphere()
     si->shading.n = world_n;
     si->t = ray.tmax;
     si->wo = ray.d;
-    si->shading.uv = getSphereUV(local_n);
+    si->shading.uv = pgGetSphereUV(local_n);
     si->surface_info = data->surface_info;
 
     float phi = atan2(local_n.z(), local_n.x());

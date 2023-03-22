@@ -9,7 +9,7 @@
 using namespace std;
 
 using RaygenRecord = Record<RaygenData>;
-using HitgroupRecord = Record<HitgroupData>;
+using HitgroupRecord = Record<pgHitgroupData>;
 using MissRecord = Record<MissData>;
 using EmptyRecord = Record<EmptyData>;
 

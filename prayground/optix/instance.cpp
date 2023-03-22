@@ -87,14 +87,14 @@ void Instance::setTransform(const Matrix4f& matrix)
     memcpy(m_instance->transform, matrix.data(), sizeof(float)*12);
 }
 
-void Instance::translate(const float3& t)
+void Instance::translate(const Vec3f& t)
 {
     Matrix4f current_mat(m_instance->transform);
     current_mat *= Matrix4f::translate(t);
     setTransform(current_mat);
 }
 
-void Instance::scale(const float3& s)
+void Instance::scale(const Vec3f& s)
 {
     Matrix4f current_mat(m_instance->transform);
     current_mat *= Matrix4f::scale(s);
@@ -108,7 +108,7 @@ void Instance::scale(const float s)
     setTransform(current_mat);
 }
 
-void Instance::rotate(const float radians, const float3& axis)
+void Instance::rotate(const float radians, const Vec3f& axis)
 {
     Matrix4f current_mat(m_instance->transform);
     current_mat *= Matrix4f::rotate(radians, axis);
@@ -118,21 +118,21 @@ void Instance::rotate(const float radians, const float3& axis)
 void Instance::rotateX(const float radians)
 {
     Matrix4f current_mat(m_instance->transform);
-    current_mat *= Matrix4f::rotate(radians, make_float3(1.0f, 0.0f, 0.0f));
+    current_mat *= Matrix4f::rotate(radians, Vec3f(1.0f, 0.0f, 0.0f));
     setTransform(current_mat);
 }
 
 void Instance::rotateY(const float radians)
 {
     Matrix4f current_mat(m_instance->transform);
-    current_mat *= Matrix4f::rotate(radians, make_float3(0.0f, 1.0f, 0.0f));
+    current_mat *= Matrix4f::rotate(radians, Vec3f(0.0f, 1.0f, 0.0f));
     setTransform(current_mat);
 }
 
 void Instance::rotateZ(const float radians)
 {
     Matrix4f current_mat(m_instance->transform);
-    current_mat *= Matrix4f::rotate(radians, make_float3(0.0f, 0.0f, 1.0f));
+    current_mat *= Matrix4f::rotate(radians, Vec3f(0.0f, 0.0f, 1.0f));
     setTransform(current_mat);
 }
 
@@ -251,12 +251,12 @@ void ShapeInstance::setTransform(const Matrix4f& matrix)
     m_instance.setTransform(matrix);
 }
 
-void ShapeInstance::translate(const float3& t)
+void ShapeInstance::translate(const Vec3f& t)
 {
     m_instance.translate(t);
 }
 
-void ShapeInstance::scale(const float3& s)
+void ShapeInstance::scale(const Vec3f& s)
 {
     m_instance.translate(s);
 }
@@ -266,7 +266,7 @@ void ShapeInstance::scale(const float s)
     m_instance.scale(s);
 }
 
-void ShapeInstance::rotate(const float radians, const float3& axis)
+void ShapeInstance::rotate(const float radians, const Vec3f& axis)
 {
     m_instance.rotate(radians, axis);
 }
@@ -332,7 +332,6 @@ void ShapeInstance::buildAccel(const Context& ctx, CUstream stream)
 void ShapeInstance::updateAccel(const Context& ctx, CUstream stream)
 {
     m_gas.update(ctx, stream);
-    // GASが更新された場合はhandleも更新される？
     m_instance.setTraversableHandle(m_gas.handle());
 }
 
@@ -342,4 +341,4 @@ OptixInstance* ShapeInstance::rawInstancePtr() const
     return m_instance.rawInstancePtr();
 }
 
-} // ::prayground
+} // namespace prayground

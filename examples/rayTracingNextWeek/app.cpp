@@ -106,24 +106,24 @@ void App::setup()
     };
 
     // テクスチャ用のCallableプログラム
-    uint32_t constant_prg_id = setupCallable(module, DC_FUNC_STR("constant"), "");
-    uint32_t bitmap_prg_id = setupCallable(module, DC_FUNC_STR("bitmap"), "");
+    uint32_t constant_prg_id = setupCallable(module, DC_FUNC_TEXT("constant"), "");
+    uint32_t bitmap_prg_id = setupCallable(module, DC_FUNC_TEXT("bitmap"), "");
 
     // Surface用のCallableプログラム 
     // Diffuse
-    uint32_t diffuse_sample_bsdf_prg_id = setupCallable(module, DC_FUNC_STR("sample_diffuse"), CC_FUNC_STR("bsdf_diffuse"));
-    uint32_t diffuse_pdf_prg_id = setupCallable(module, DC_FUNC_STR("pdf_diffuse"), "");
+    uint32_t diffuse_sample_bsdf_prg_id = setupCallable(module, DC_FUNC_TEXT("sample_diffuse"), CC_FUNC_TEXT("bsdf_diffuse"));
+    uint32_t diffuse_pdf_prg_id = setupCallable(module, DC_FUNC_TEXT("pdf_diffuse"), "");
     // Dielectric
-    uint32_t dielectric_sample_bsdf_prg_id = setupCallable(module, DC_FUNC_STR("sample_dielectric"), CC_FUNC_STR("bsdf_dielectric"));
-    uint32_t dielectric_pdf_prg_id = setupCallable(module, DC_FUNC_STR("pdf_dielectric"), "");
+    uint32_t dielectric_sample_bsdf_prg_id = setupCallable(module, DC_FUNC_TEXT("sample_dielectric"), CC_FUNC_TEXT("bsdf_dielectric"));
+    uint32_t dielectric_pdf_prg_id = setupCallable(module, DC_FUNC_TEXT("pdf_dielectric"), "");
     // Disney
-    uint32_t disney_sample_bsdf_prg_id = setupCallable(module, DC_FUNC_STR("sample_disney"), CC_FUNC_STR("bsdf_disney"));
-    uint32_t disney_pdf_prg_id = setupCallable(module, DC_FUNC_STR("pdf_disney"), "");
+    uint32_t disney_sample_bsdf_prg_id = setupCallable(module, DC_FUNC_TEXT("sample_disney"), CC_FUNC_TEXT("bsdf_disney"));
+    uint32_t disney_pdf_prg_id = setupCallable(module, DC_FUNC_TEXT("pdf_disney"), "");
     // Isotropic
-    uint32_t isotropic_sample_bsdf_prg_id = setupCallable(module, DC_FUNC_STR("sample_isotropic"), CC_FUNC_STR("bsdf_isotropic"));
-    uint32_t isotropic_pdf_prg_id = setupCallable(module, DC_FUNC_STR("pdf_isotropic"), "");
+    uint32_t isotropic_sample_bsdf_prg_id = setupCallable(module, DC_FUNC_TEXT("sample_isotropic"), CC_FUNC_TEXT("bsdf_isotropic"));
+    uint32_t isotropic_pdf_prg_id = setupCallable(module, DC_FUNC_TEXT("pdf_isotropic"), "");
     // AreaEmitter
-    uint32_t area_emitter_prg_id = setupCallable(module, DC_FUNC_STR("area_emitter"), "");
+    uint32_t area_emitter_prg_id = setupCallable(module, DC_FUNC_TEXT("area_emitter"), "");
 
     SurfaceCallableID diffuse_id{ diffuse_sample_bsdf_prg_id, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
     SurfaceCallableID dielectric_id{ dielectric_sample_bsdf_prg_id, dielectric_sample_bsdf_prg_id, dielectric_pdf_prg_id };
@@ -132,7 +132,7 @@ void App::setup()
     SurfaceCallableID area_emitter_id{ area_emitter_prg_id, area_emitter_prg_id, area_emitter_prg_id };
 
     // Shape用のCallableプログラム(主に面光源サンプリング用)
-    uint32_t plane_sample_pdf_prg_id = setupCallable(module, DC_FUNC_STR("rnd_sample_plane"), CC_FUNC_STR("pdf_plane"));
+    uint32_t plane_sample_pdf_prg_id = setupCallable(module, DC_FUNC_TEXT("rnd_sample_plane"), CC_FUNC_TEXT("pdf_plane"));
 
     // 環境マッピング (Sphere mapping) 用のテクスチャとデータ準備
     auto env_texture = make_shared<ConstantTexture>(make_float3(0.0f), constant_prg_id);
@@ -141,7 +141,7 @@ void App::setup()
     env.copyToDevice();
 
     // Missプログラム
-    ProgramGroup miss_prg = pipeline.createMissProgram(context, module, MS_FUNC_STR("envmap"));
+    ProgramGroup miss_prg = pipeline.createMissProgram(context, module, MS_FUNC_TEXT("envmap"));
     // Missプログラム用のShader Binding Tableデータ
     MissRecord miss_record;
     miss_prg.recordPackHeader(&miss_record);
@@ -150,15 +150,15 @@ void App::setup()
 
     // Hitgroupプログラム
     // Plane
-    auto plane_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("plane"), IS_FUNC_STR("plane"));
+    auto plane_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_TEXT("plane"), IS_FUNC_TEXT("plane"));
     // Sphere
-    auto sphere_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("sphere"), IS_FUNC_STR("sphere"));
+    auto sphere_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_TEXT("sphere"), IS_FUNC_TEXT("sphere"));
     // Box
-    auto box_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("box"), IS_FUNC_STR("box"));
+    auto box_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_TEXT("box"), IS_FUNC_TEXT("box"));
     // Sphere medium
-    auto sphere_medium_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("sphere"), IS_FUNC_STR("sphere_medium"));
+    auto sphere_medium_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_TEXT("sphere"), IS_FUNC_TEXT("sphere_medium"));
     // Box medium
-    auto box_medium_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("box"), IS_FUNC_STR("box_medium"));
+    auto box_medium_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_TEXT("box"), IS_FUNC_TEXT("box_medium"));
 
     struct Primitive
     {
@@ -349,7 +349,7 @@ void App::setup()
         auto silver = make_shared<ConstantTexture>(Vec3f(0.8f, 0.8f, 0.9f), constant_prg_id);
         auto metal = make_shared<Disney>(disney_id, silver);
         metal->setRoughness(0.5f);
-        metal->setMetallic(1.0f);
+        metal->setMetallic(0.8f);
         metal->setSubsurface(0.0f);
         auto transform = Matrix4f::identity();
         Primitive glass_sphere{ sphere, metal };
@@ -470,7 +470,7 @@ void App::setup()
         setupPrimitive(box_medium_prg, atomosphere, Matrix4f::identity());
     }
 
-    // 光源データをGPU側にコピー
+    // Copy area emitter's info on device
     CUDABuffer<AreaEmitterInfo> d_area_emitter_infos;
     d_area_emitter_infos.copyToDevice(area_emitter_infos);
     params.lights = d_area_emitter_infos.deviceData();

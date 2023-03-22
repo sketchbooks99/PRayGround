@@ -97,13 +97,13 @@ void App::setup()
     };
 
     // テクスチャ用のCallableプログラム
-    uint32_t constant_prg_id = setupCallable(DC_FUNC_STR("constant"), "");
-    uint32_t bitmap_prg_id = setupCallable(DC_FUNC_STR("bitmap"), "");
+    uint32_t constant_prg_id = setupCallable(DC_FUNC_TEXT("constant"), "");
+    uint32_t bitmap_prg_id = setupCallable(DC_FUNC_TEXT("bitmap"), "");
 
     // Surface用のCallableプログラム 
     // Diffuse
-    uint32_t diffuse_sample_bsdf_prg_id = setupCallable(DC_FUNC_STR("sample_diffuse"), CC_FUNC_STR("bsdf_diffuse"));
-    uint32_t diffuse_pdf_prg_id = setupCallable(DC_FUNC_STR("pdf_diffuse"), "");
+    uint32_t diffuse_sample_bsdf_prg_id = setupCallable(DC_FUNC_TEXT("sample_diffuse"), CC_FUNC_TEXT("bsdf_diffuse"));
+    uint32_t diffuse_pdf_prg_id = setupCallable(DC_FUNC_TEXT("pdf_diffuse"), "");
     SurfaceCallableID diffuse_id = { diffuse_sample_bsdf_prg_id, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
 
     // 環境マッピング (Sphere mapping) 用のテクスチャとデータ準備
@@ -113,7 +113,7 @@ void App::setup()
     env.copyToDevice();
 
     // Missプログラム
-    ProgramGroup miss_prg = pipeline.createMissProgram(context, module, MS_FUNC_STR("envmap"));
+    ProgramGroup miss_prg = pipeline.createMissProgram(context, module, MS_FUNC_TEXT("envmap"));
     // Missプログラム用のShader Binding Tableデータ
     MissRecord miss_record;
     miss_prg.recordPackHeader(&miss_record);
@@ -122,7 +122,7 @@ void App::setup()
 
     // Hitgroupプログラム
     // Triangle mesh
-    auto mesh_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("mesh"));
+    auto mesh_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_TEXT("mesh"));
 
     uint32_t sbt_idx = 0;
 

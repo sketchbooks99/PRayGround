@@ -13,7 +13,8 @@ public:
 
 #ifndef __CUDACC__
     Sphere();
-    Sphere(const Vec3f& c, float r);
+    explicit Sphere(float r);
+    explicit Sphere(const Vec3f& c, float r);
 
     constexpr ShapeType type() override;
     OptixBuildInput createBuildInput() override;

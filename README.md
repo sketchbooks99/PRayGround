@@ -121,8 +121,8 @@ add_subdirectory(apps/<your-app-name>) # Add this line
 | <img src=examples/rayTracingNextWeek/rtNextWeek.jpg width=320> | <img src=examples/rayTracingRestOfYourLife/rtRestOfYourLife.jpg width=320> | ![](examples/dynamic_update/dynamic_update.gif) | 
 | [Motion blur](examples/motion_blur/) | [Denoiser](examples/denoiser/) (:warning: Support with OptiX 7.3~) | [Spectrum](examples/spectrum/) | 
 | <img src=examples/motion_blur/motion_blur.png width=320> | <img src=examples/denoiser/denoiser.png width=320> | <img src=examples/spectrum/spectrum.jpg width=320> |
-| [Volume](examples/pgVolume/) | | | 
-| <img src=examples/pgVolume/pgVolume.png width=320> | | |
+| [Volume](examples/pgVolume/) | [Curves](examples/curves/) | | 
+| <img src=examples/pgVolume/pgVolume.png width=320> | <img src=examples/curves/curves.jpg width=320>| |
 
 # External libraries
 - [glad](https://github.com/Dav1dde/glad) ... For OpenGL features

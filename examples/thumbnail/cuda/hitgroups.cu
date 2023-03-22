@@ -385,15 +385,6 @@ extern "C" __device__ Vec3f __direct_callable__rnd_sample_plane(const AreaEmitte
 }
 
 // Sphere -------------------------------------------------------------------------------
-static __forceinline__ __device__ Vec2f getSphereUV(const Vec3f& p) {
-    float phi = atan2(p.z(), p.x());
-    if (phi < 0) phi += 2.0f * math::pi;
-    float theta = acos(p.y());
-    float u = phi / (2.0f * math::pi);
-    float v = theta * math::inv_pi;
-    return Vec2f(u, v);
-}
-
 static __forceinline__ __device__ bool hitSphere(
     const Sphere::Data* sphere, const Vec3f& o, const Vec3f& v, const float tmin, const float tmax, SurfaceInteraction& si)
 {
@@ -421,7 +412,7 @@ static __forceinline__ __device__ bool hitSphere(
     si.t = t;
     si.p = o + t * v;
     si.shading.n = si.p / radius;
-    si.shading.uv = getSphereUV(si.shading.n);
+    si.shading.uv = pgGetSphereUV(si.shading.n);
     return true;
 }
 
@@ -446,7 +437,7 @@ extern "C" __device__ void __intersection__sphere() {
         bool check_second = true;
         if (t1 > ray.tmin && t1 < ray.tmax) {
             Vec3f normal = normalize((ray.at(t1) - center) / radius);
-            const Vec2f uv = getSphereUV(normal);
+            const Vec2f uv = pgGetSphereUV(normal);
             check_second = false;
             optixReportIntersection(t1, 0, Vec3f_as_ints(normal), Vec2f_as_ints(uv));
         }
@@ -455,7 +446,7 @@ extern "C" __device__ void __intersection__sphere() {
             float t2 = (-half_b + sqrtd) / a;
             if (t2 > ray.tmin && t2 < ray.tmax) {
                 Vec3f normal = normalize((ray.at(t2) - center) / radius);
-                const Vec2f uv = getSphereUV(normal);
+                const Vec2f uv = pgGetSphereUV(normal);
                 optixReportIntersection(t2, 0, Vec3f_as_ints(normal), Vec2f_as_ints(uv));
             }
         }
@@ -483,7 +474,7 @@ extern "C" __device__ void __closesthit__sphere() {
 
     // Calculate partial derivative on texture coordinates
     float phi = atan2(local_n.z(), local_n.x());
-    if (phi < 0) phi += 2.0f * math::pi;
+    if (phi < 0) phi += math::two_pi;
     const float theta = acos(local_n.y());
     const Vec3f dpdu = Vec3f(-math::two_pi * local_n.z(), 0, math::two_pi * local_n.x());
     const Vec3f dpdv = math::pi * Vec3f(local_n.y() * cos(phi), -sin(theta), local_n.y() * sin(phi));

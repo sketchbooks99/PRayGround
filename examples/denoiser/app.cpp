@@ -100,24 +100,25 @@ void App::setup()
     };
 
     // Callable programs for textures
-    uint32_t constant_prg_id = setupCallable(DC_FUNC_STR("constant"), "");
-    uint32_t checker_prg_id = setupCallable(DC_FUNC_STR("checker"), "");
+    uint32_t constant_prg_id = setupCallable(DC_FUNC_TEXT("constant"), "");
+    uint32_t checker_prg_id = setupCallable(DC_FUNC_TEXT("checker"), "");
+    uint32_t bitmap_prg_id = setupCallable(DC_FUNC_TEXT("bitmap"), "");
 
     // Callable programs for surfaces
     // Diffuse
-    uint32_t diffuse_sample_bsdf_prg_id = setupCallable(DC_FUNC_STR("sample_diffuse"), CC_FUNC_STR("bsdf_diffuse"));
-    uint32_t diffuse_pdf_prg_id = setupCallable(DC_FUNC_STR("pdf_diffuse"), "");
+    uint32_t diffuse_sample_bsdf_prg_id = setupCallable(DC_FUNC_TEXT("sample_diffuse"), CC_FUNC_TEXT("bsdf_diffuse"));
+    uint32_t diffuse_pdf_prg_id = setupCallable(DC_FUNC_TEXT("pdf_diffuse"), "");
     // Conductor
-    uint32_t conductor_sample_bsdf_prg_id = setupCallable(DC_FUNC_STR("sample_conductor"), CC_FUNC_STR("bsdf_conductor"));
-    uint32_t conductor_pdf_prg_id = setupCallable(DC_FUNC_STR("pdf_conductor"), "");
+    uint32_t conductor_sample_bsdf_prg_id = setupCallable(DC_FUNC_TEXT("sample_conductor"), CC_FUNC_TEXT("bsdf_conductor"));
+    uint32_t conductor_pdf_prg_id = setupCallable(DC_FUNC_TEXT("pdf_conductor"), "");
     // Dielectric
-    uint32_t dielectric_sample_bsdf_prg_id = setupCallable(DC_FUNC_STR("sample_dielectric"), CC_FUNC_STR("bsdf_dielectric"));
-    uint32_t dielectric_pdf_prg_id = setupCallable(DC_FUNC_STR("pdf_dielectric"), "");
+    uint32_t dielectric_sample_bsdf_prg_id = setupCallable(DC_FUNC_TEXT("sample_dielectric"), CC_FUNC_TEXT("bsdf_dielectric"));
+    uint32_t dielectric_pdf_prg_id = setupCallable(DC_FUNC_TEXT("pdf_dielectric"), "");
     // Disney
-    uint32_t disney_sample_bsdf_prg_id = setupCallable(DC_FUNC_STR("sample_disney"), CC_FUNC_STR("bsdf_disney"));
-    uint32_t disney_pdf_prg_id = setupCallable(DC_FUNC_STR("pdf_disney"), "");
+    uint32_t disney_sample_bsdf_prg_id = setupCallable(DC_FUNC_TEXT("sample_disney"), CC_FUNC_TEXT("bsdf_disney"));
+    uint32_t disney_pdf_prg_id = setupCallable(DC_FUNC_TEXT("pdf_disney"), "");
     // AreaEmitter
-    uint32_t area_emitter_prg_id = setupCallable(DC_FUNC_STR("area_emitter"), "");
+    uint32_t area_emitter_prg_id = setupCallable(DC_FUNC_TEXT("area_emitter"), "");
 
     SurfaceCallableID diffuse_id{diffuse_sample_bsdf_prg_id, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id};
     SurfaceCallableID conductor_id{conductor_sample_bsdf_prg_id, conductor_sample_bsdf_prg_id, conductor_pdf_prg_id};
@@ -130,7 +131,7 @@ void App::setup()
     env.copyToDevice();
 
     // Miss program
-    ProgramGroup miss_prg = pipeline.createMissProgram(context, module, MS_FUNC_STR("envmap"));
+    ProgramGroup miss_prg = pipeline.createMissProgram(context, module, MS_FUNC_TEXT("envmap"));
     // Shader binding table data for miss program
     MissRecord miss_record = {};
     miss_prg.recordPackHeader(&miss_record);
@@ -139,14 +140,14 @@ void App::setup()
 
     // Hitgroup program
     // Plane
-    auto plane_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("plane"), IS_FUNC_STR("plane"));
+    auto plane_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_TEXT("plane"), IS_FUNC_TEXT("plane"));
     // Sphere
-    auto sphere_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("sphere"), IS_FUNC_STR("sphere"));
+    auto sphere_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_TEXT("sphere"), IS_FUNC_TEXT("sphere"));
     // Triangle mesh
-    auto mesh_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("mesh"));
+    auto mesh_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_TEXT("mesh"));
 
     // Callable program for direct sampling of area emitter
-    uint32_t plane_sample_pdf_prg_id = setupCallable(DC_FUNC_STR("rnd_sample_plane"), CC_FUNC_STR("pdf_plane"));
+    uint32_t plane_sample_pdf_prg_id = setupCallable(DC_FUNC_TEXT("rnd_sample_plane"), CC_FUNC_TEXT("pdf_plane"));
 
     struct Primitive
     {
@@ -254,7 +255,7 @@ void App::setup()
     // Scene ----------------------------------------------------------
     // Shapes
     auto bunny = new TriangleMesh("resources/model/bunny.obj");
-    bunny->smooth();
+    bunny->calculateNormalSmooth();
     shapes.emplace("bunny", bunny);
     shapes.emplace("wall", new Plane(Vec2f(-275, -275), Vec2f(275, 275)));
     shapes.emplace("ceiling_light", new Plane(Vec2f(-60, -60), Vec2f(60, 60)));
@@ -267,7 +268,7 @@ void App::setup()
     textures.emplace("white", new ConstantTexture(Vec3f(1.0f), constant_prg_id));
     textures.emplace("checker", new CheckerTexture(Vec3f(0.9f), Vec3f(0.3f), 10, checker_prg_id));
     textures.emplace("black", black);
-    textures.emplace("gray", new ConstantTexture(Vec3f(0.25), constant_prg_id));
+    textures.emplace("gray", new ConstantTexture(Vec3f(0.25f), constant_prg_id));
     textures.emplace("orange", new ConstantTexture(Vec3f(0.8, 0.7, 0.3), constant_prg_id));
 
     // Materials

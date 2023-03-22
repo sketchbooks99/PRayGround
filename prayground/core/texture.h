@@ -12,6 +12,8 @@ namespace prayground {
     public:
         struct Data {
             void* data;
+
+            /* SBT index of direct/continuation callable program for texture fetch */
             uint32_t prg_id;
         };
 

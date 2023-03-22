@@ -82,7 +82,7 @@ namespace prayground {
         m_data = std::make_unique<PixelT[]>(m_channels * m_width * m_height);
         memcpy(m_data.get(), zero_arr.data(), m_channels * m_width * m_height * sizeof(PixelT));
 
-        if (pgWindowInitialized())
+        if (pgAppWindowInitialized())
             prepareGL();
     }
 
@@ -159,7 +159,7 @@ namespace prayground {
         m_channels = static_cast<int>(m_format);
         m_data.reset(raw_data);
 
-        if (pgWindowInitialized())
+        if (pgAppWindowInitialized())
             prepareGL();
     }
 
@@ -231,7 +231,7 @@ namespace prayground {
             stbi_image_free(raw_data);
         }
 
-        if (pgWindowInitialized())
+        if (pgAppWindowInitialized())
             prepareGL();
     }
 

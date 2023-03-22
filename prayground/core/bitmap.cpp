@@ -135,7 +135,7 @@ namespace prayground {
         std::optional<std::filesystem::path> filepath = pgFindDataPath(filename);
         ASSERT(filepath, "The input file for bitmap '" + filename.string() + "' is not found.");
 
-        auto ext = pgGetExtension(filepath.value());
+        auto ext = pgGetLowerString(pgGetExtension(filepath.value()));
 
         if (ext == ".png" || ext == ".PNG")
             pgLog("Loading PNG file '" + filepath.value().string() + "' ...");
@@ -170,7 +170,7 @@ namespace prayground {
         std::optional<std::filesystem::path> filepath = pgFindDataPath(filename);
         ASSERT(filepath, "The input file for bitmap '" + filename.string() + "' is not found.");
 
-        auto ext = pgGetExtension(filepath.value());
+        auto ext = pgGetLowerString(pgGetExtension(filepath.value()));
 
         // Load float image
         if (ext == ".exr" || ext == ".EXR" || ext == ".hdr" || ext == ".HDR")
@@ -245,7 +245,7 @@ namespace prayground {
     template <>
     void Bitmap_<unsigned char>::write(const std::filesystem::path& filepath, int quality) const 
     {
-        std::string ext = pgGetExtension(filepath);
+        std::string ext = pgGetLowerString(pgGetExtension(filepath));
 
         bool supported = ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" || ext == ".bmp" || ext == ".BMP" || ext == ".tga" || ext == ".TGA";
         if (!supported)
@@ -274,7 +274,7 @@ namespace prayground {
     template <> 
     void Bitmap_<float>::write(const std::filesystem::path& filepath, int quality) const 
     {
-        std::string ext = pgGetExtension(filepath);
+        std::string ext = pgGetLowerString(pgGetExtension(filepath));
     
         bool supported = ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" || ext == ".bmp" || ext == ".BMP" || ext == ".tga" || ext == ".TGA" ||
                          ext == ".exr" || ext == ".EXR" || ext == ".hdr" || ext == ".HDR";

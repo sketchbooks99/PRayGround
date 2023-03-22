@@ -41,7 +41,7 @@ namespace prayground {
             auto filepath = pgFindDataPath(filename);
             ASSERT(filepath, "The NanoVDB file '" + filename.string() + "' is not found.");
             
-            auto ext = pgGetExtension(filename);
+            auto ext = pgGetLowerString(pgGetExtension(filename));
             if (ext == ".nvdb")
             {
                 pgLog("Loading NanoVDB file '" + filepath.value().string() + " ...");

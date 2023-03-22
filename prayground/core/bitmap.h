@@ -1,9 +1,9 @@
 #pragma once
 
 #include <filesystem>
+#include <map>
 #include <prayground/gl/shader.h>
 #include <prayground/app/window.h>
-#include <map>
 
 namespace prayground {
 

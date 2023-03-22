@@ -246,7 +246,7 @@ namespace prayground {
     // ------------------------------------------------------------------
     void TriangleMesh::load(const fs::path& filename)
     {
-        std::string ext = pgGetExtension(filename);
+        std::string ext = pgGetLowerString(pgGetExtension(filename));
         if (ext == ".obj") {
             std::optional<fs::path> filepath = pgFindDataPath(filename);
             ASSERT(filepath, "The OBJ file '" + filename.string() + "' is not found.");
@@ -292,7 +292,7 @@ namespace prayground {
         const std::filesystem::path& mtlpath
     )
     {
-        std::string ext = pgGetExtension(objpath);
+        std::string ext = pgGetLowerString(pgGetExtension(objpath));
         ASSERT(ext == ".obj", "loadObjWithMtl() only supports .obj file format with .mtl file.");
 
         std::optional<fs::path> filepath = pgFindDataPath(objpath);

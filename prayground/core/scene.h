@@ -25,6 +25,13 @@ namespace prayground {
     template <class T>
     concept DerivedFromCamera = std::derived_from<T, Camera>;
 
+    /**
+     * @todo 
+     * Enable animated scene
+     * -[ ] Build/update acceleration structure and shader binding table with specific frame
+     * -[ ] Support animated object contains more than two keyframes
+    */
+
     template <DerivedFromCamera _CamT, uint32_t _NRay>
     class Scene {
     // Internal classes

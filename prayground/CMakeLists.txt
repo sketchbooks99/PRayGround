@@ -162,7 +162,9 @@ target_link_libraries(${pg_target} LINK_PRIVATE
   ${CUDA_LIBRARIES}
 )
 
-target_include_directories(${pg_target} PRIVATE "${PRAYGROUND_EXTERNAL_DIR}")
+target_include_directories(${pg_target} PRIVATE 
+  "${PRAYGROUND_EXTERNAL_DIR}"
+  "${PRAYGROUND_EXTERNAL_DIR}/tinyusdz/src")
 
 if(USING_GNU_C OR USING_GNU_CXX)
   if(GCC_LIBSTDCPP_HACK)

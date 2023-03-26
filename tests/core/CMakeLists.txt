@@ -1,6 +1,6 @@
-PRAYGROUND_add_executalbe(core target_name
-    main.cpp
-    # load_and_write_hdr.cpp
+PRAYGROUND_add_executalbe(load3d target_name
+    # main.cpp
+    load3d.cpp
 )
 
 target_compile_definitions(

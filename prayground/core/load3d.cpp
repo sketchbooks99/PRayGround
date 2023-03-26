@@ -16,6 +16,14 @@
 
 // TinyUSDZ
 #include <tinyusdz/src/tinyusdz.hh>
+#include <tinyusdz/src/tydra/render-data.hh>
+#include <tinyusdz/src/tydra/scene-access.hh>
+#include <tinyusdz/src/tydra/shader-network.hh>
+#include <tinyusdz/src/usdShade.hh>
+#include <tinyusdz/src/pprinter.hh>
+#include <tinyusdz/src/prim-pprint.hh>
+#include <tinyusdz/src/value-pprint.hh>
+#include <tinyusdz/src/value-types.hh>
 
 namespace prayground {
 
@@ -446,6 +454,24 @@ namespace prayground {
                 return;
             }
         }
+
+        auto primVisitFunc = [](const tinyusdz::Path& abs_path, const tinyusdz::Prim& prim, const int32_t level, void* userdata, std::string *err) -> bool {
+            (void)err;
+            std::cout << tinyusdz::pprint::Indent(level) << "[" << level << "] (" << prim.data().type_name() << ") " << prim.local_path().prim_part() << " : AbsPath " << tinyusdz::to_string(abs_path) << "\n";
+
+            // Use as() or is() for Prim specific processing.
+            if (const tinyusdz::Material *pm = prim.as<tinyusdz::Material>()) {
+                (void)pm;
+                std::cout << tinyusdz::pprint::Indent(level) << "  Got Material!\n";
+                // return false + `err` empty if you want to terminate traversal earlier.
+                //return false;
+            }
+            return true;
+        };
+
+        void* userdata = nullptr;
+
+        tinyusdz::tydra::VisitPrims(stage, primVisitFunc, userdata);
     }
 
 } // namespace prayground

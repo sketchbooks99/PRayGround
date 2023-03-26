@@ -202,11 +202,14 @@ if(NOT PASSED_FIRST_CONFIGURE)
     endif()
   endif()
 
-  if(CMAKE_CXX_STANDARD GREATER 17)
-    set(PRAYGROUND_NVRTC_CXX "-std=c++17")
-  else()
-    set(PRAYGROUND_NVRTC_CXX "")
-  endif()
+  # if(CMAKE_CXX_STANDARD GREATER 17)
+  #   set(PRAYGROUND_NVRTC_CXX "-std=c++17")
+  # else()
+  #   set(PRAYGROUND_NVRTC_CXX "")
+  # endif()
+
+  set(PRAYGROUND_NVRTC_CXX "-std=c++17")
+  
   set(CUDA_NVRTC_FLAGS ${PRAYGROUND_NVRTC_CXX} -arch compute_60 -use_fast_math -lineinfo -default-device -rdc true -D__x86_64 CACHE STRING "Semi-colon delimit multiple arguments." FORCE)
 endif(NOT PASSED_FIRST_CONFIGURE)
 

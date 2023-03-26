@@ -1,4 +1,5 @@
 #include "bitmap.h"
+#include <prayground_config.h>
 #include <prayground/core/spectrum.h>
 #include <prayground/core/cudabuffer.h>
 #include <prayground/core/file_util.h>
@@ -15,9 +16,15 @@
 #endif
 #include <stb/stb_image_write.h>
 
-#ifndef TINYEXR_IMPLEMENTATION
-#define TINYEXR_IMPLEMENTATION
-#endif
+/** 
+ * When TINYUSDZ_WITH_EXR is enabled, TINYEXR_IMPLEMENTATION should not be defined
+ * to avoid multiple definition error.
+*/
+#if !TINYUSDZ_WITH_EXR
+    #ifndef TINYEXR_IMPLEMENTATION
+        #define TINYEXR_IMPLEMENTATION
+    #endif // TINYEXR_IMPLEMENTATION
+#endif // TINYUSDZ_WITH_EXR
 #include <tinyexr/tinyexr.h>
 
 namespace prayground {

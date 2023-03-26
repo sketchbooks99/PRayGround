@@ -40,3 +40,5 @@
 
 // NVRTC compiler options
 #define CUDA_NVRTC_OPTIONS @CUDA_NVRTC_OPTIONS@
+
+#cmakedefine01 TINYUSDZ_WITH_EXR

@@ -156,8 +156,8 @@ endif()
 
 target_link_libraries(${pg_target} LINK_PRIVATE
   ${GLFW_LIB_NAME}
-  glad 
-  imgui 
+  glad
+  imgui
   tinyusdz::tinyusdz_static
   ${CUDA_LIBRARIES}
 )

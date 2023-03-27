@@ -383,6 +383,7 @@ add_subdirectory(prayground)
 # Example apps 
 # 
 # Please uncomment the target you'd like to build
+# TODO: Allow standalone build of applications
 ################################################################
 add_subdirectory(examples/single_gas)
 add_subdirectory(examples/dynamic_update)

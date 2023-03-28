@@ -384,10 +384,10 @@ namespace prayground {
 
     // -------------------------------------------------------------------------------
     void loadUSD(
-        const std::filesystem::path& filepath, 
-        std::vector<Vec3f>& vertices, 
-        std::vector<Face>& faces, 
-        std::vector<Vec3f>& normals, 
+        const std::filesystem::path& filepath,
+        std::vector<Vec3f>& vertices,
+        std::vector<Face>& faces,
+        std::vector<Vec3f>& normals,
         std::vector<Vec2f>& texcoords)
     {
         std::string warn;
@@ -405,7 +405,7 @@ namespace prayground {
             if (!err.empty())
                 pgLogFatal(err);
 
-            if (!ret) 
+            if (!ret)
             {
                 pgLogFatal("Failed to load USDC file:", filepath.string());
                 return;
@@ -439,7 +439,7 @@ namespace prayground {
                 return;
             }
         }
-        else 
+        else
         {
             // Try to auto detect format
             bool ret = tinyusdz::LoadUSDFromFile(filepath.string(), &stage, &warn, &err);
@@ -455,23 +455,27 @@ namespace prayground {
             }
         }
 
-        auto primVisitFunc = [](const tinyusdz::Path& abs_path, const tinyusdz::Prim& prim, const int32_t level, void* userdata, std::string *err) -> bool {
-            (void)err;
-            std::cout << tinyusdz::pprint::Indent(level) << "[" << level << "] (" << prim.data().type_name() << ") " << prim.local_path().prim_part() << " : AbsPath " << tinyusdz::to_string(abs_path) << "\n";
+        using XformMap = std::map<std::string, const tinyusdz::Xform*>;
+        using MeshMap = std::map<std::string, const tinyusdz::GeomMesh*>;
+        using MaterialMap = std::map<std::string, const tinyusdz::Material*>;
+        using PreviewSurfaceMap = std::map<std::string, std::pair<const tinyusdz::Shader*, const tinyusdz::UsdPreviewSurface*>>;
+        using UVTextureMap = std::map <std::string, std::pair < const tinyusdz::Shader*, const tinyusdz::UsdUVTexture*>>;
+        using PrimvarReader_float2Map = std::map<std::string, std::pair<const tinyusdz::Shader*, const tinyusdz::UsdPrimvarReader_float2*>>;
 
-            // Use as() or is() for Prim specific processing.
-            if (const tinyusdz::Material *pm = prim.as<tinyusdz::Material>()) {
-                (void)pm;
-                std::cout << tinyusdz::pprint::Indent(level) << "  Got Material!\n";
-                // return false + `err` empty if you want to terminate traversal earlier.
-                //return false;
-            }
-            return true;
-        };
+        XformMap xformMap;
+        MeshMap meshMap;
+        MaterialMap materialMap;
+        PreviewSurfaceMap surfaceMap;
+        UVTextureMap textureMap;
+        PrimvarReader_float2Map preaderMap;
 
-        void* userdata = nullptr;
-
-        tinyusdz::tydra::VisitPrims(stage, primVisitFunc, userdata);
+        // Collect and make full path <-> Prim/Shader mapping
+        tinyusdz::tydra::ListPrims(stage, xformMap);
+        tinyusdz::tydra::ListPrims(stage, meshMap);
+        tinyusdz::tydra::ListPrims(stage, materialMap);
+        tinyusdz::tydra::ListShaders(stage, surfaceMap);
+        tinyusdz::tydra::ListShaders(stage, textureMap);
+        tinyusdz::tydra::ListShaders(stage, preaderMap);
     }
 
 } // namespace prayground

@@ -1,5 +1,6 @@
 #include "load3d.h"
 #include <prayground/core/file_util.h>
+#include <prayground/core/scene.h>
 #include <algorithm>
 
 // HapPLY
@@ -13,17 +14,6 @@
 
 // NanoVDB
 #include <nanovdb/util/IO.h>
-
-// TinyUSDZ
-#include <tinyusdz/src/tinyusdz.hh>
-#include <tinyusdz/src/tydra/render-data.hh>
-#include <tinyusdz/src/tydra/scene-access.hh>
-#include <tinyusdz/src/tydra/shader-network.hh>
-#include <tinyusdz/src/usdShade.hh>
-#include <tinyusdz/src/pprinter.hh>
-#include <tinyusdz/src/prim-pprint.hh>
-#include <tinyusdz/src/value-pprint.hh>
-#include <tinyusdz/src/value-types.hh>
 
 namespace prayground {
 
@@ -383,99 +373,95 @@ namespace prayground {
     }
 
     // -------------------------------------------------------------------------------
-    void loadUSD(
-        const std::filesystem::path& filepath,
-        std::vector<Vec3f>& vertices,
-        std::vector<Face>& faces,
-        std::vector<Vec3f>& normals,
-        std::vector<Vec2f>& texcoords)
-    {
-        std::string warn;
-        std::string err;
+    //bool loadUSDToScene(
+    //    const std::filesystem::path& filepath,
+    //    Scene<Camera, 1>& scene)
+    //{
+    //    std::string warn;
+    //    std::string err;
 
-        std::string ext = pgGetLowerString(pgGetExtension(filepath));
+    //    std::string ext = pgGetLowerString(pgGetExtension(filepath));
 
-        tinyusdz::Stage stage;
+    //    tinyusdz::Stage stage;
 
-        if (ext == ".usdc")
-        {
-            bool ret = tinyusdz::LoadUSDCFromFile(filepath.string(), &stage, &warn, &err);
-            if (!warn.empty())
-                pgLogWarn(warn);
-            if (!err.empty())
-                pgLogFatal(err);
+    //    if (ext == ".usdc")
+    //    {
+    //        bool ret = tinyusdz::LoadUSDCFromFile(filepath.string(), &stage, &warn, &err);
+    //        if (!warn.empty())
+    //            pgLogWarn(warn);
+    //        if (!err.empty())
+    //            pgLogFatal(err);
 
-            if (!ret)
-            {
-                pgLogFatal("Failed to load USDC file:", filepath.string());
-                return;
-            }
-        }
-        else if (ext == ".usda")
-        {
-            bool ret = tinyusdz::LoadUSDAFromFile(filepath.string(), &stage, &warn, &err);
-            if (!warn.empty())
-                pgLogWarn(warn);
-            if (!err.empty())
-                pgLogFatal(err);
+    //        if (!ret)
+    //        {
+    //            pgLogFatal("Failed to load USDC file:", filepath.string());
+    //            return;
+    //        }
+    //    }
+    //    else if (ext == ".usda")
+    //    {
+    //        bool ret = tinyusdz::LoadUSDAFromFile(filepath.string(), &stage, &warn, &err);
+    //        if (!warn.empty())
+    //            pgLogWarn(warn);
+    //        if (!err.empty())
+    //            pgLogFatal(err);
 
-            if (!ret)
-            {
-                pgLogFatal("Failed to load USDA file:", filepath.string());
-                return;
-            }
-        }
-        else if (ext == ".usdz")
-        {
-            bool ret = tinyusdz::LoadUSDZFromFile(filepath.string(), &stage, &warn, &err);
-            if (!warn.empty())
-                pgLogWarn(warn);
-            if (!err.empty())
-                pgLogFatal(err);
+    //        if (!ret)
+    //        {
+    //            pgLogFatal("Failed to load USDA file:", filepath.string());
+    //            return;
+    //        }
+    //    }
+    //    else if (ext == ".usdz")
+    //    {
+    //        bool ret = tinyusdz::LoadUSDZFromFile(filepath.string(), &stage, &warn, &err);
+    //        if (!warn.empty())
+    //            pgLogWarn(warn);
+    //        if (!err.empty())
+    //            pgLogFatal(err);
 
-            if (!ret)
-            {
-                pgLogFatal("Failed to load USDZ file:", filepath.string());
-                return;
-            }
-        }
-        else
-        {
-            // Try to auto detect format
-            bool ret = tinyusdz::LoadUSDFromFile(filepath.string(), &stage, &warn, &err);
-            if (!warn.empty())
-                pgLogWarn(warn);
-            if (!err.empty())
-                pgLogFatal(err);
+    //        if (!ret)
+    //        {
+    //            pgLogFatal("Failed to load USDZ file:", filepath.string());
+    //            return;
+    //        }
+    //    }
+    //    else
+    //    {
+    //        // Try to auto detect format
+    //        bool ret = tinyusdz::LoadUSDFromFile(filepath.string(), &stage, &warn, &err);
+    //        if (!warn.empty())
+    //            pgLogWarn(warn);
+    //        if (!err.empty())
+    //            pgLogFatal(err);
 
-            if (!ret)
-            {
-                pgLogFatal("Failed to load USD file:", filepath.string());
-                return;
-            }
-        }
+    //        if (!ret)
+    //        {
+    //            pgLogFatal("Failed to load USD file:", filepath.string());
+    //            return;
+    //        }
+    //    }
 
-        using XformMap = std::map<std::string, const tinyusdz::Xform*>;
-        using MeshMap = std::map<std::string, const tinyusdz::GeomMesh*>;
-        using MaterialMap = std::map<std::string, const tinyusdz::Material*>;
-        using PreviewSurfaceMap = std::map<std::string, std::pair<const tinyusdz::Shader*, const tinyusdz::UsdPreviewSurface*>>;
-        using UVTextureMap = std::map <std::string, std::pair < const tinyusdz::Shader*, const tinyusdz::UsdUVTexture*>>;
-        using PrimvarReader_float2Map = std::map<std::string, std::pair<const tinyusdz::Shader*, const tinyusdz::UsdPrimvarReader_float2*>>;
+    //    tinyusdz::tydra::RenderScene render_scene;
+    //    tinyusdz::tydra::RenderSceneConverter converter;
 
-        XformMap xformMap;
-        MeshMap meshMap;
-        MaterialMap materialMap;
-        PreviewSurfaceMap surfaceMap;
-        UVTextureMap textureMap;
-        PrimvarReader_float2Map preaderMap;
+    //    std::string usd_basedir = tinyusdz::io::GetBaseDir(filepath.string());
 
-        // Collect and make full path <-> Prim/Shader mapping
-        tinyusdz::tydra::ListPrims(stage, xformMap);
-        tinyusdz::tydra::ListPrims(stage, meshMap);
-        tinyusdz::tydra::ListPrims(stage, materialMap);
-        tinyusdz::tydra::ListShaders(stage, surfaceMap);
-        tinyusdz::tydra::ListShaders(stage, textureMap);
-        tinyusdz::tydra::ListShaders(stage, preaderMap);
-    }
+    //    converter.set_search_path({usd_basedir});
+
+    //    bool ret = converter.ConvertToRenderScene(stage, &render_scene);
+    //    if (!ret)
+    //    {
+    //        pgLogFatal("Failed to convert USD Scene to render scene:", converter.GetError());
+    //        return false;
+    //    }
+
+    //    if (converter.GetWarning().size())
+    //        pgLogWarn(converter.GetWarning());
+
+    //    pgLog(DumpRenderScene(render_scene));
+
+    //    return true;
+    //}
 
 } // namespace prayground

@@ -10,11 +10,8 @@ int main()
         pgLogFatal("File is not found:", filepath.value().string());
         return 1;
     }
-    vector<Vec3f> vertices;
-    vector<Face> faces;
-    vector<Vec3f> normals;
-    vector<Vec2f> texcoords;
-    loadUSD(filepath.value(), vertices, faces, normals, texcoords);
+    Scene<Camera, 1> scene;
+    loadUSDToScene(filepath.value(), scene);
 
     return 0;
 }

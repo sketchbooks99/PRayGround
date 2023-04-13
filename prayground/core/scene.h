@@ -30,6 +30,7 @@ namespace prayground {
      * Enable animated scene
      * -[ ] Build/update acceleration structure and shader binding table with specific frame
      * -[ ] Support animated object contains more than two keyframes
+     * -[ ] Make Object and Light class to be public struct, and separate GAS from current Object and Light class
     */
 
     template <DerivedFromCamera _CamT, uint32_t _NRay>

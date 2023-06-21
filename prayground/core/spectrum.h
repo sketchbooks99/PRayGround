@@ -86,7 +86,6 @@ namespace prayground {
 
         static HOST SampledSpectrum fromFile(const std::filesystem::path& filepath)
         {
-            SampledSpectrum ss;
             std::vector<float> lambda;
             std::vector<float> value;
 
@@ -505,7 +504,7 @@ namespace prayground {
     * will be good for computation cost.
     * @ref http://cwyman.org/papers/jcgt13_xyzApprox.pdf
     */
-    static HOSTDEVICE INLINE float gauss(const float& x, const float& mu, const float& sigma1, const float& sigma2)
+    HOSTDEVICE INLINE float gauss(const float& x, const float& mu, const float& sigma1, const float& sigma2)
     {
         return x < mu ? expf(-0.5f * (x - mu) * (x - mu) / (sigma1 * sigma1)) : expf(-0.5f * (x - mu) * (x - mu) / (sigma2 * sigma2));
     }

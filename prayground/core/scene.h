@@ -333,7 +333,7 @@ namespace prayground {
     inline void Scene<_CamT, _NRay>::setEnvmap(const std::shared_ptr<Texture>& texture)
     {
         if (!m_envmap) 
-            m_envmap = make_shared<EnvironmentEmitter>(texture);
+            m_envmap = std::make_shared<EnvironmentEmitter>(texture);
         else
             m_envmap->setTexture(texture);
     }

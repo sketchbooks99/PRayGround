@@ -186,7 +186,11 @@ namespace prayground {
         const float sinTheta = 1.0f - sqrtf(NdotH * NdotH);
         const float tanTheta = sinTheta / NdotH;
         const float tan2Theta = pow2(tanTheta);
+#ifndef __CUDACC__
+        if (std::isinf(tan2Theta) || std::isnan(tan2Theta))
+#else
         if (isinf(tan2Theta) || isnan(tan2Theta))
+#endif
             return 0.0f;
         const float cos4Theta = pow4(NdotH);
 

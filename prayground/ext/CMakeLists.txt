@@ -64,6 +64,7 @@ target_link_libraries(glad PUBLIC ${OPENGL_LIBRARIES})
 add_subdirectory(nanovdb)
 
 add_subdirectory(tinyusdz)
+set_property(TARGET tinyusdz::tinyusdz_static PROPERTY CXX_STANDARD 17)
 
 set_property( TARGET glad PROPERTY FOLDER ${OPTIX_IDE_FOLDER} )
 set_property( TARGET glfw PROPERTY FOLDER ${OPTIX_IDE_FOLDER} )

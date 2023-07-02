@@ -13,6 +13,3 @@
 [submodule "prayground/ext/tinyobjloader"]
 	path = prayground/ext/tinyobjloader
 	url = https://github.com/tinyobjloader/tinyobjloader.git
-[submodule "prayground/ext/tinyusdz"]
-	path = prayground/ext/tinyusdz
-	url = https://github.com/syoyo/tinyusdz

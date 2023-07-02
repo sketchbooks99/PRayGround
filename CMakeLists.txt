@@ -355,7 +355,6 @@ function(PRAYGROUND_add_executalbe target_name_base target_name_var)
     ${GLFW_LIB_NAME}
     imgui
     nanovdb
-    tinyusdz::tinyusdz_static
     prayground
     )
 

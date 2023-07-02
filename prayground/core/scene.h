@@ -1,6 +1,7 @@
 #pragma once 
 
 #include <unordered_map>
+#include <optional>
 
 #include <prayground/core/util.h>
 #include <prayground/core/shape.h>

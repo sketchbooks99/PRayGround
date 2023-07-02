@@ -11,7 +11,7 @@ int main()
         return 1;
     }
     Scene<Camera, 1> scene;
-    loadUSDToScene(filepath.value(), scene);
+    // loadUSDToScene(filepath.value(), scene);
 
     return 0;
 }

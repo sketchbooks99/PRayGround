@@ -63,6 +63,10 @@ target_link_libraries(glad PUBLIC ${OPENGL_LIBRARIES})
 
 add_subdirectory(nanovdb)
 
+# Build OpenUSD as static library
+set(PXR_BUILD_MONOLITHIC ON)
+add_subdirectory(OpenUSD)
+
 set_property( TARGET glad PROPERTY FOLDER ${OPTIX_IDE_FOLDER} )
 set_property( TARGET glfw PROPERTY FOLDER ${OPTIX_IDE_FOLDER} )
 set_property( TARGET imgui PROPERTY FOLDER ${OPTIX_IDE_FOLDER} )

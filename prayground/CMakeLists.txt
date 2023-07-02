@@ -157,6 +157,7 @@ endif()
 target_link_libraries(${pg_target} LINK_PRIVATE
   ${GLFW_LIB_NAME}
   glad
+  usd_ms
   imgui
   ${CUDA_LIBRARIES}
 )

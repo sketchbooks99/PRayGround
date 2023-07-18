@@ -47,6 +47,7 @@
 #include "core/bsdf.h"
 #include "core/interaction.h"
 #include "core/onb.h"
+#include "core/ray.h"
 
 #include "optix/sbt.h"
 
@@ -58,11 +59,13 @@
 #include "math/vec.h"
 
 // shape include
+#include "shape/box.h"
+#include "shape/curves.h"
+#include "shape/cylinder.h"
+#include "shape/plane.h"
+#include "shape/primitivemesh.h"
 #include "shape/sphere.h"
 #include "shape/trianglemesh.h"
-#include "shape/plane.h"
-#include "shape/cylinder.h"
-#include "shape/box.h"
 #include "shape/shapegroup.h"
 
 // material include 
@@ -71,6 +74,7 @@
 #include "material/diffuse.h"
 #include "material/disney.h"
 #include "material/isotropic.h"
+#include "material/custom.h"
 
 // emitter include 
 #include "emitter/area.h"
@@ -89,7 +93,11 @@
 #ifdef __CUDACC__ // GPU only
 #include "optix/cuda/device_util.cuh"
 #include "math/vec_math.h"
-#include "core/ray.h"
+// Contains intersection test programs for custom primitives
+// and utility functions for triangle/curves primitives.
+#include "shape/cuda/shapes.cuh"
+#include "material/cuda/materials.cuh"
+#include "texture/cuda/textures.cuh"
 #endif // __CUDACC__
 
 using namespace prayground;

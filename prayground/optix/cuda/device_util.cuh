@@ -13,7 +13,25 @@
 #define PG_MAX_NUM_ATTRIBUTES_STR "8"
 #define PG_MAX_NUM_PAYLOADS_STR "8"
 
+#ifdef __CUDACC__
+
+#include <cuda/std/type_traits>
+
 namespace prayground {
+
+    INLINE DEVICE void* unpackPointer( uint32_t i0, uint32_t i1 )
+    {
+        const uint64_t uptr = static_cast<uint64_t>( i0 ) << 32 | i1;
+        void* ptr = reinterpret_cast<void*>( uptr );
+        return ptr;
+    }
+
+    INLINE DEVICE void packPointer(void* ptr, uint32_t& i0, uint32_t& i1)
+    {
+        const uint64_t uptr = reinterpret_cast<uint64_t>( ptr );
+        i0 = uptr >> 32;
+        i1 = uptr & 0x00000000ffffffff;
+    }
 
     template <uint32_t i>
     INLINE DEVICE uint32_t getAttribute()
@@ -36,29 +54,6 @@ namespace prayground {
             return optixGetAttribute_6();
         if constexpr (i == 7)
             return optixGetAttribute_7();
-    }
-
-    template <uint32_t i>
-    INLINE DEVICE void setAttribute(uint32_t value)
-    {
-        static_assert(i < PG_MAX_NUM_ATTRIBUTES, 
-            "Index to set attribute exceeds the maximum number of attributes (" PG_MAX_NUM_ATTRIBUTES_STR ")");
-        if constexpr (i == 0)
-            optixSetAttribute_0(value);
-        if constexpr (i == 1)
-            optixSetAttribute_1(value);
-        if constexpr (i == 2)
-            optixSetAttribute_2(value);
-        if constexpr (i == 3)
-            optixSetAttribute_3(value);
-        if constexpr (i == 4)
-            optixSetAttribute_4(value);
-        if constexpr (i == 5)
-            optixSetAttribute_5(value);
-        if constexpr (i == 6)
-            optixSetAttribute_6(value);
-        if constexpr (i == 7)
-            optixSetAttribute_7(value);
     }
 
     template <uint32_t i>
@@ -189,45 +184,6 @@ namespace prayground {
         T c(a); a = b; b = c;
     }
 
-    INLINE DEVICE void* unpackPointer( uint32_t i0, uint32_t i1 )
-    {
-        const uint64_t uptr = static_cast<uint64_t>( i0 ) << 32 | i1;
-        void* ptr = reinterpret_cast<void*>( uptr );
-        return ptr;
-    }
-
-    INLINE DEVICE void packPointer(void* ptr, uint32_t& i0, uint32_t& i1)
-    {
-        const uint64_t uptr = reinterpret_cast<uint64_t>( ptr );
-        i0 = uptr >> 32;
-        i1 = uptr & 0x00000000ffffffff;
-    }
-
-    template <typename... Payloads>
-    INLINE DEVICE auto pgTrace(
-        OptixTraversableHandle handle,
-        Vec3f                  ray_origin,
-        Vec3f                  ray_direction,
-        float                  tmin,
-        float                  tmax,
-        uint32_t               ray_type,
-        uint32_t               ray_count, 
-        Payloads...            payloads
-    ) -> decltype(std::initializer_list<uint32_t>{payloads...}, void())
-    {
-        optixTrace(
-            handle,
-            ray_origin,
-            ray_direction,
-            tmin,
-            tmax,
-            0.0f,                // rayTime
-            OptixVisibilityMask( 1 ),
-            OPTIX_RAY_FLAG_NONE,
-            ray_type,        
-            ray_count,           
-            ray_type, 
-            payloads...);
-    }
-
 } // namespace prayground
+
+#endif

@@ -332,7 +332,6 @@ function(PRAYGROUND_add_executalbe target_name_base target_name_var)
     CUDA_WRAP_SRCS( ${target_name} PTX generated_files ${source_files} ${cmake_options} OPTIONS ${options} )
   endif()
 
-
   # Here is where we create the rule to make the executable.  We define a target name and
   # list all the source files used to create the target.  In addition we also pass along
   # the cmake_options parsed out of the arguments.
@@ -385,18 +384,19 @@ add_subdirectory(prayground)
 # 
 # Please uncomment the target you'd like to build
 ################################################################
-# add_subdirectory(examples/single_gas)
-# add_subdirectory(examples/dynamic_update)
-# add_subdirectory(examples/motion_blur)
-# add_subdirectory(examples/pathtracing)
-# add_subdirectory(examples/objscene)
-# add_subdirectory(examples/rayTracingNextWeek)
-# add_subdirectory(examples/rayTracingRestOfYourLife)
-# add_subdirectory(examples/denoiser)
-# add_subdirectory(examples/thumbnail)
-# add_subdirectory(examples/spectrum)
-# add_subdirectory(examples/pgVolume)
+add_subdirectory(examples/single_gas)
+add_subdirectory(examples/dynamic_update)
+add_subdirectory(examples/motion_blur)
+add_subdirectory(examples/pathtracing)
+add_subdirectory(examples/objscene)
+add_subdirectory(examples/rayTracingNextWeek)
+add_subdirectory(examples/rayTracingRestOfYourLife)
+add_subdirectory(examples/denoiser)
+add_subdirectory(examples/thumbnail)
+add_subdirectory(examples/spectrum)
+add_subdirectory(examples/pgVolume)
 # add_subdirectory(examples/scene)
+add_subdirectory(examples/curves)
 
 ################################################################
 # Applications
@@ -404,7 +404,6 @@ add_subdirectory(prayground)
 # Please add your custom applications to build :-)
 ################################################################
 # add_subdirectory(apps/empty_app)
-add_subdirectory(apps/Restir)
 
 ################################################################
 # Unit test
@@ -412,6 +411,7 @@ add_subdirectory(apps/Restir)
 # add_subdirectory(tests/math)
 # add_subdirectory(tests/core)
 # add_subdirectory(tests/thrust)
+# add_subdirectory(tests/primitives)
 
 #################################################################
 

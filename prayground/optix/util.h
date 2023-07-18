@@ -35,7 +35,7 @@ namespace prayground {
     HOSTDEVICE INLINE float dequantizeUnsigned8Bits( const unsigned char i )
     {
        enum { N = (1 << 8) - 1 };
-       return fminf((float)i / (float)N, 1.f);
+       return min(((float)i / (float)N), 1.f);
     }
 
     HOSTDEVICE INLINE unsigned char quantizeUnsigned8Bits(float x)
@@ -155,11 +155,11 @@ namespace prayground {
         switch (level) {
         case OPTIX_COMPILE_DEBUG_LEVEL_DEFAULT:  return out << "OPTIX_COMPILE_DEBUG_LEVEL_DEFAULT";
         case OPTIX_COMPILE_DEBUG_LEVEL_NONE:     return out << "OPTIX_COMPILE_DEBUG_LEVEL_NONE";
-#if OPTIX_VERSION == 70400
+#if OPTIX_VERSION < 70400
+        case OPTIX_COMPILE_DEBUG_LEVEL_LINEINFO: return out << "OPTIX_COMPILE_DEBUG_LEVEL_LINEINFO";
+#else 
         case OPTIX_COMPILE_DEBUG_LEVEL_MINIMAL:  return out << "OPTIX_COMPILE_DEBUG_LEVEL_MINIMAL";
         case OPTIX_COMPILE_DEBUG_LEVEL_MODERATE:  return out << "OPTIX_COMPILE_DEBUG_LEVEL_MODERATE";
-#else 
-        case OPTIX_COMPILE_DEBUG_LEVEL_LINEINFO: return out << "OPTIX_COMPILE_DEBUG_LEVEL_LINEINFO";
 #endif
         case OPTIX_COMPILE_DEBUG_LEVEL_FULL:     return out << "OPTIX_COMPILE_DEBUG_LEVEL_FULL";
         default:                                 return out << "";

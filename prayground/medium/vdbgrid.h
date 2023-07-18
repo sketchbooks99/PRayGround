@@ -15,7 +15,6 @@ namespace prayground {
 
     /* 3D volume medium using NanoVDB format */
 
-    /// @todo Initliaze with a empty grid to enable procedual GridMedium calculation
     template <typename Spectrum>
     class VDBGrid_ : public Shape {
     public:
@@ -101,6 +100,11 @@ namespace prayground {
         {
             if (d_aabb_buffer) CUDA_CHECK(cudaFree(reinterpret_cast<void*>(d_aabb_buffer)));
             return createSingleCustomBuildInput(d_aabb_buffer, this->bound(), m_sbt_index);
+        }
+
+        uint32_t numPrimitives() const override 
+        {
+            return 1;
         }
 
         Data getData() 

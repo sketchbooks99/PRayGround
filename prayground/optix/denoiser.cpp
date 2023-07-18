@@ -239,7 +239,11 @@ void Denoiser::init(
             m_scratch_size
         ));
 
+#if OPTIX_VERSION <= 70400
         m_params.denoiseAlpha = 0;
+#else 
+        m_params.denoiseAlpha = OPTIX_DENOISER_ALPHA_MODE_COPY;
+#endif
         m_params.hdrIntensity = m_intensity;
         m_params.hdrAverageColor = m_avg_color;
         m_params.blendFactor = 0.0f;

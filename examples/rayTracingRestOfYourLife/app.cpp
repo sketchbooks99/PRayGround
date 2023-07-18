@@ -97,24 +97,24 @@ void App::setup()
     };
 
     // テクスチャ用のCallableプログラム
-    uint32_t constant_prg_id = setupCallable(DC_FUNC_STR("constant"), "");
+    uint32_t constant_prg_id = setupCallable(DC_FUNC_TEXT("constant"), "");
 
     // Surface用のCallableプログラム 
     // Diffuse
-    uint32_t diffuse_sample_bsdf_prg_id = setupCallable(DC_FUNC_STR("sample_diffuse"), CC_FUNC_STR("bsdf_diffuse"));
-    uint32_t diffuse_pdf_prg_id = setupCallable(DC_FUNC_STR("pdf_diffuse"), "");
+    uint32_t diffuse_sample_bsdf_prg_id = setupCallable(DC_FUNC_TEXT("sample_diffuse"), CC_FUNC_TEXT("bsdf_diffuse"));
+    uint32_t diffuse_pdf_prg_id = setupCallable(DC_FUNC_TEXT("pdf_diffuse"), "");
     // Dielectric
-    uint32_t dielectric_sample_bsdf_prg_id = setupCallable(DC_FUNC_STR("sample_dielectric"), CC_FUNC_STR("bsdf_dielectric"));
-    uint32_t dielectric_pdf_prg_id = setupCallable(DC_FUNC_STR("pdf_dielectric"), "");
+    uint32_t dielectric_sample_bsdf_prg_id = setupCallable(DC_FUNC_TEXT("sample_dielectric"), CC_FUNC_TEXT("bsdf_dielectric"));
+    uint32_t dielectric_pdf_prg_id = setupCallable(DC_FUNC_TEXT("pdf_dielectric"), "");
     // AreaEmitter
-    uint32_t area_emitter_prg_id = setupCallable(DC_FUNC_STR("area_emitter"), "");
+    uint32_t area_emitter_prg_id = setupCallable(DC_FUNC_TEXT("area_emitter"), "");
 
     SurfaceCallableID diffuse_id{ diffuse_sample_bsdf_prg_id, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
     SurfaceCallableID dielectric_id{ dielectric_sample_bsdf_prg_id, dielectric_sample_bsdf_prg_id, dielectric_pdf_prg_id };
     SurfaceCallableID area_emitter_id{ area_emitter_prg_id, area_emitter_prg_id, area_emitter_prg_id };
 
     // Shape用のCallableプログラム(主に面光源サンプリング用)
-    uint32_t plane_sample_pdf_prg_id = setupCallable(DC_FUNC_STR("sample_light_plane"), CC_FUNC_STR("pdf_light_plane"));
+    uint32_t plane_sample_pdf_prg_id = setupCallable(DC_FUNC_TEXT("sample_light_plane"), CC_FUNC_TEXT("pdf_light_plane"));
 
     // 環境マッピング (Sphere mapping) 用のテクスチャとデータ準備
     auto env_texture = make_shared<ConstantTexture>(Vec3f(0.0f), constant_prg_id);
@@ -136,14 +136,14 @@ void App::setup()
 
     // Hitgroupプログラム
     // Plane
-    auto plane_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("plane"), IS_FUNC_STR("plane"));
-    auto plane_shadow_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("shadow"), IS_FUNC_STR("plane"));
+    auto plane_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_TEXT("plane"), IS_FUNC_TEXT("plane"));
+    auto plane_shadow_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_TEXT("shadow"), IS_FUNC_TEXT("plane"));
     // Sphere
-    auto sphere_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("sphere"), IS_FUNC_STR("sphere"));
-    auto sphere_shadow_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("shadow"), IS_FUNC_STR("sphere"));
+    auto sphere_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_TEXT("sphere"), IS_FUNC_TEXT("sphere"));
+    auto sphere_shadow_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_TEXT("shadow"), IS_FUNC_TEXT("sphere"));
     // Triangle mesh
-    auto mesh_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("mesh"));
-    auto mesh_shadow_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("shadow"));
+    auto mesh_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_TEXT("mesh"));
+    auto mesh_shadow_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_TEXT("shadow"));
 
     struct Primitive
     {

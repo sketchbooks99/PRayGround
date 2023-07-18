@@ -7,7 +7,6 @@
 
 namespace prayground {
 
-    /** @todo Make this be pgToString() */
     template <typename T>
     std::string toString(T t) 
     {

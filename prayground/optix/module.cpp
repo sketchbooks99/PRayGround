@@ -135,10 +135,10 @@ Module::Module()
 {
     m_options.maxRegisterCount = OPTIX_COMPILE_DEFAULT_MAX_REGISTER_COUNT;
     m_options.optLevel = OPTIX_COMPILE_OPTIMIZATION_DEFAULT;
-#if OPTIX_VERSION == 70400
-    m_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_MODERATE;
-#else 
+#if OPTIX_VERSION < 70400
     m_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_LINEINFO;
+#else 
+    m_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_MINIMAL;
 #endif
 }
 
@@ -265,9 +265,14 @@ void Module::setNumBounds(unsigned int num_bound)
     m_options.numBoundValues = num_bound;
 }
 
-OptixModuleCompileOptions Module::compileOptions() const 
+const OptixModuleCompileOptions& Module::compileOptions() const 
 { 
     return m_options; 
+}
+
+OptixModuleCompileOptions& Module::compileOptions()
+{
+    return m_options;
 }
 
 } // ::prayground

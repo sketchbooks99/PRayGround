@@ -62,7 +62,6 @@ extern "C" __device__ void __raygen__pinhole()
         si.emission = Vec3f(0.0f);
         si.albedo = Vec3f(0.0f);
         si.trace_terminate = false;
-        si.radiance_evaled = false;
 
         float tmax = raygen->camera.farclip / dot(rd, normalize(raygen->camera.lookat - ro));
 
@@ -273,7 +272,6 @@ extern "C" __device__ void __direct_callable__sample_dielectric(SurfaceInteracti
         si->wi = reflect(si->wo, outward_normal);
     else    
         si->wi = refract(si->wo, outward_normal, cosine, ni, nt);
-    si->radiance_evaled = false;
     si->trace_terminate = false;
     si->seed = seed;
 }
@@ -301,7 +299,6 @@ extern "C" __device__ void __direct_callable__sample_conductor(SurfaceInteractio
 
     si->wi = reflect(si->wo, si->shading.n);
     si->trace_terminate = false;
-    si->radiance_evaled = false;
 }
 
 extern "C" __device__ Vec3f __continuation_callable__bsdf_conductor(SurfaceInteraction* si, void* mat_data)

@@ -121,14 +121,14 @@ add_subdirectory(apps/<your-app-name>) # Add this line
 | <img src=examples/rayTracingNextWeek/rtNextWeek.jpg width=320> | <img src=examples/rayTracingRestOfYourLife/rtRestOfYourLife.jpg width=320> | ![](examples/dynamic_update/dynamic_update.gif) | 
 | [Motion blur](examples/motion_blur/) | [Denoiser](examples/denoiser/) (:warning: Support with OptiX 7.3~) | [Spectrum](examples/spectrum/) | 
 | <img src=examples/motion_blur/motion_blur.png width=320> | <img src=examples/denoiser/denoiser.png width=320> | <img src=examples/spectrum/spectrum.jpg width=320> |
-| [Volume](examples/pgVolume/) | | | 
-| <img src=examples/pgVolume/pgVolume.png width=320> | | |
+| [Volume](examples/pgVolume/) | [Curves](examples/curves/) | | 
+| <img src=examples/pgVolume/pgVolume.png width=320> | <img src=examples/curves/curves.jpg width=320>| |
 
 # External libraries
-- [glad](https://github.com/Dav1dde/glad) ... For OpenGL features
-- [GLFW](https://github.com/glfw/glfw) ... For OpenGL
-- [hapPLY](https://github.com/nmwsharp/happly) ... For loading PLY mesh
-- [Dear ImGui](https://github.com/ocornut/imgui) ... For easy GUI usage
-- [stb](https://github.com/nothings/stb) ... To read/write image of PNG, JPG format
-- [tinyexr](https://github.com/syoyo/tinyexr/) ... To read/write(future work) image of OpenEXR format
-- [tinyobjloader](https://github.com/tinyobjloader/tinyobjloader) ... For loading OBJ mesh
+- [glad](https://github.com/Dav1dde/glad) (MIT license) ... For OpenGL features
+- [GLFW](https://github.com/glfw/glfw) (Zlib license) ... For OpenGL
+- [hapPLY](https://github.com/nmwsharp/happly) (MIT license) ... For loading PLY mesh
+- [Dear ImGui](https://github.com/ocornut/imgui) (MIT license)... For easy GUI usage
+- [stb](https://github.com/nothings/stb) (MIT license)... To read/write image of PNG, JPG format
+- [tinyexr](https://github.com/syoyo/tinyexr/) ... To read/write image of OpenEXR format
+- [tinyobjloader](https://github.com/tinyobjloader/tinyobjloader) (MIT and ISC license) ... For loading OBJ mesh

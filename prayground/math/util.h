@@ -88,4 +88,12 @@ namespace prayground {
         return a < b ? a : b;
     }
 
+    HOSTDEVICE INLINE float pgMap(
+        const float val, 
+        const float base_min, const float base_max, 
+        const float dst_min, const float dst_max)
+    {
+        return dst_min + (dst_max - dst_min) * (val / (base_max - base_min));
+    }
+
 } // namespace prayground

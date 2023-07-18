@@ -77,7 +77,7 @@ void App::setup()
     params.width = result_bitmap.width();
     params.height = result_bitmap.height();
     params.samples_per_launch = 1;
-    params.max_depth = 10;
+    params.max_depth = 5;
     params.white = 1.0f;
 
     initResultBufferOnDevice();
@@ -110,25 +110,25 @@ void App::setup()
     };
 
     // テクスチャ用のCallableプログラム
-    uint32_t constant_prg_id = setupCallable(textures_module, DC_FUNC_STR("constant"), "");
-    uint32_t checker_prg_id = setupCallable(textures_module, DC_FUNC_STR("checker"), "");
-    uint32_t bitmap_prg_id = setupCallable(textures_module, DC_FUNC_STR("bitmap"), "");
+    uint32_t constant_prg_id = setupCallable(textures_module, DC_FUNC_TEXT("constant"), "");
+    uint32_t checker_prg_id = setupCallable(textures_module, DC_FUNC_TEXT("checker"), "");
+    uint32_t bitmap_prg_id = setupCallable(textures_module, DC_FUNC_TEXT("bitmap"), "");
 
     // Surface用のCallableプログラム 
     // Diffuse
-    uint32_t diffuse_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_diffuse"), CC_FUNC_STR("bsdf_diffuse"));
-    uint32_t diffuse_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_diffuse"), "");
+    uint32_t diffuse_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_TEXT("sample_diffuse"), CC_FUNC_TEXT("bsdf_diffuse"));
+    uint32_t diffuse_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_TEXT("pdf_diffuse"), "");
     // Conductor
-    uint32_t conductor_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_conductor"), CC_FUNC_STR("bsdf_conductor"));
-    uint32_t conductor_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_conductor"), "");
+    uint32_t conductor_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_TEXT("sample_conductor"), CC_FUNC_TEXT("bsdf_conductor"));
+    uint32_t conductor_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_TEXT("pdf_conductor"), "");
     // Dielectric
-    uint32_t dielectric_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_dielectric"), CC_FUNC_STR("bsdf_dielectric"));
-    uint32_t dielectric_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_dielectric"), "");
+    uint32_t dielectric_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_TEXT("sample_dielectric"), CC_FUNC_TEXT("bsdf_dielectric"));
+    uint32_t dielectric_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_TEXT("pdf_dielectric"), "");
     // Disney
-    uint32_t disney_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("sample_disney"), CC_FUNC_STR("bsdf_disney"));
-    uint32_t disney_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("pdf_disney"), "");
+    uint32_t disney_sample_bsdf_prg_id = setupCallable(surfaces_module, DC_FUNC_TEXT("sample_disney"), CC_FUNC_TEXT("bsdf_disney"));
+    uint32_t disney_pdf_prg_id = setupCallable(surfaces_module, DC_FUNC_TEXT("pdf_disney"), "");
     // AreaEmitter
-    uint32_t area_emitter_prg_id = setupCallable(surfaces_module, DC_FUNC_STR("area_emitter"), "");
+    uint32_t area_emitter_prg_id = setupCallable(surfaces_module, DC_FUNC_TEXT("area_emitter"), "");
 
     SurfaceCallableID diffuse_id{ diffuse_sample_bsdf_prg_id, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
     SurfaceCallableID conductor_id{ conductor_sample_bsdf_prg_id, conductor_sample_bsdf_prg_id, conductor_pdf_prg_id };
@@ -137,8 +137,8 @@ void App::setup()
     SurfaceCallableID area_emitter_id{ area_emitter_prg_id, area_emitter_prg_id, area_emitter_prg_id };
 
     // Shape用のCallableプログラム(主に面光源サンプリング用)
-    uint32_t plane_sample_pdf_prg_id = setupCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_plane"), CC_FUNC_STR("pdf_plane"));
-    uint32_t sphere_sample_pdf_prg_id = setupCallable(hitgroups_module, DC_FUNC_STR("rnd_sample_sphere"), CC_FUNC_STR("pdf_sphere"));
+    uint32_t plane_sample_pdf_prg_id = setupCallable(hitgroups_module, DC_FUNC_TEXT("rnd_sample_plane"), "");
+    uint32_t sphere_sample_pdf_prg_id = setupCallable(hitgroups_module, DC_FUNC_TEXT("rnd_sample_sphere"), "");
 
     // 環境マッピング (Sphere mapping) 用のテクスチャとデータ準備
     // 画像ファイルはリポジトリには含まれていないので、任意の画像データを設定してください
@@ -152,28 +152,30 @@ void App::setup()
     env.copyToDevice();
 
     // Missプログラム
-    ProgramGroup miss_prg = pipeline.createMissProgram(context, miss_module, MS_FUNC_STR("envmap"));
+    ProgramGroup miss_prg = pipeline.createMissProgram(context, miss_module, MS_FUNC_TEXT("envmap"));
+    ProgramGroup miss_shadow_prg = pipeline.createMissProgram(context, miss_module, MS_FUNC_TEXT("shadow"));
     // Missプログラム用のShader Binding Tableデータ
     MissRecord miss_record;
     miss_prg.recordPackHeader(&miss_record);
     miss_record.data.env_data = env.devicePtr();
     MissRecord miss_shadow_record;
-    miss_prg.recordPackHeader(&miss_shadow_record);
+    miss_shadow_prg.recordPackHeader(&miss_shadow_record);
+    miss_shadow_record.data.env_data = env.devicePtr();
     sbt.setMissRecord({ miss_record, miss_shadow_record });
 
     // Hitgroupプログラム
     // Plane
-    auto plane_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("plane"), IS_FUNC_STR("plane"));
-    auto plane_shadow_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("shadow"), IS_FUNC_STR("plane"));
+    auto plane_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("custom"), IS_FUNC_TEXT("plane"));
+    auto plane_shadow_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("shadow"), IS_FUNC_TEXT("plane"));
     // Sphere
-    auto sphere_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("sphere"), IS_FUNC_STR("sphere"));
-    auto sphere_shadow_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("shadow"), IS_FUNC_STR("sphere"));
+    auto sphere_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("custom"), IS_FUNC_TEXT("sphere"));
+    auto sphere_shadow_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("shadow"), IS_FUNC_TEXT("sphere"));
     // Cylinder
-    auto cylinder_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("cylinder"), IS_FUNC_STR("cylinder"));
-    auto cylinder_shadow_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("shadow"), IS_FUNC_STR("cylinder"));
+    auto cylinder_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("custom"), IS_FUNC_TEXT("cylinder"));
+    auto cylinder_shadow_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("shadow"), IS_FUNC_TEXT("cylinder"));
     // Triangle mesh
-    auto mesh_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("mesh"));
-    auto mesh_shadow_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_STR("shadow"));
+    auto mesh_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("mesh"));
+    auto mesh_shadow_prg = pipeline.createHitgroupProgram(context, hitgroups_module, CH_FUNC_TEXT("shadow"));
 
     struct Primitive
     {
@@ -191,28 +193,31 @@ void App::setup()
     {
         // データをGPU側に用意
         primitive.shape->copyToDevice();
-        primitive.shape->setSbtIndex(sbt_idx);
+        primitive.shape->setSbtIndex(0);
+        //primitive.shape->setSbtIndex(sbt_idx);
         primitive.material->copyToDevice();
 
         // Shader Binding Table へのデータの登録
         HitgroupRecord record;
         prg.recordPackHeader(&record);
-        record.data = 
+        pgHitgroupData hg_data = 
         {
-            .shape_data = primitive.shape->devicePtr(), 
-            .surface_info = 
+            .shape_data = primitive.shape->devicePtr(),
+            .surface_info =
             {
                 .data = primitive.material->devicePtr(),
                 .callable_id = primitive.material->surfaceCallableID(),
                 .type = primitive.material->surfaceType()
             }
         };
+        record.data = hg_data;
 
         HitgroupRecord shadow_record;
         shadow_prg.recordPackHeader(&shadow_record);
+        shadow_record.data = hg_data;
 
         sbt.addHitgroupRecord({ record, shadow_record });
-        sbt_idx++;
+        sbt_idx += SBT::NRay;
 
         // GASをビルドし、IASに追加
         ShapeInstance instance{primitive.shape->type(), primitive.shape, transform};
@@ -236,28 +241,34 @@ void App::setup()
         uint32_t sample_pdf_id
     )
     {        
-        ASSERT(dynamic_pointer_cast<Plane>(shape) || dynamic_pointer_cast<Sphere>(shape), "The shape of area emitter must be a plane or sphere.");
+        const bool is_plane = dynamic_pointer_cast<Plane>(shape) != nullptr;
+        const bool is_sphere = dynamic_pointer_cast<Sphere>(shape) != nullptr;
+
+        ASSERT(is_plane || is_sphere, "The shape of area emitter must be a plane or sphere.");
 
         shape->copyToDevice();
-        shape->setSbtIndex(sbt_idx);
+        shape->setSbtIndex(0);
+        //shape->setSbtIndex(sbt_idx);
         area.copyToDevice();
 
         HitgroupRecord record;
         prg.recordPackHeader(&record);
-        record.data = 
+        pgHitgroupData hg_data = 
         {
-            .shape_data = shape->devicePtr(), 
-            .surface_info = 
+            .shape_data = shape->devicePtr(),
+            .surface_info =
             {
                 .data = area.devicePtr(),
                 .callable_id = area_emitter_id,
                 .type = SurfaceType::AreaEmitter
             }
         };
+        record.data = hg_data;
 
         HitgroupRecord shadow_record = {};
         shadow_prg.recordPackHeader(&shadow_record);
-        sbt_idx++;
+        shadow_record.data = hg_data;
+        sbt_idx += SBT::NRay;
 
         sbt.addHitgroupRecord({ record, shadow_record });
 
@@ -279,7 +290,9 @@ void App::setup()
             .objToWorld = transform,
             .worldToObj = transform.inverse(), 
             .sample_id = sample_pdf_id,
-            .pdf_id = sample_pdf_id
+            .pdf_id = sample_pdf_id, 
+            .twosided = is_plane, 
+            .surface_info = area.surfaceInfo()
         };
         area_emitter_infos.push_back(area_emitter_info);
     };
@@ -306,7 +319,7 @@ void App::setup()
     {
         // Shape
         auto armadillo = make_shared<TriangleMesh>("resources/model/Armadillo.ply");
-        armadillo->smooth();
+        armadillo->calculateNormalSmooth();
         // Texture
         auto armadillo_constant = make_shared<ConstantTexture>(Vec3f(1.0f), constant_prg_id);
         armadillo_constant->copyToDevice();
@@ -326,7 +339,7 @@ void App::setup()
         auto teapot_constant = make_shared<ConstantTexture>(Vec3f(0.325f, 0.702f, 0.709f), constant_prg_id);
         teapot_constant->copyToDevice();
         // Material
-        auto teapot_diffuse = make_shared<Diffuse>(diffuse_id, teapot_constant);
+        auto teapot_diffuse = make_shared<Diffuse>(diffuse_id, teapot_constant, false);
         // Transform
         Matrix4f transform = Matrix4f::translate(-250.0f, -275.0f, -150.0f) * Matrix4f::scale(40.0f);
         Primitive primitive { teapot, teapot_diffuse, diffuse_sample_bsdf_prg_id, diffuse_pdf_prg_id };
@@ -532,7 +545,8 @@ void App::close()
 // ----------------------------------------------------------------
 void App::mouseDragged(float x, float y, int button)
 {
-    camera_update = true;
+    if (button == MouseButton::Middle)
+        camera_update = true;
 }
 
 // ----------------------------------------------------------------

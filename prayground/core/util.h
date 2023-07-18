@@ -174,7 +174,7 @@ inline void pgLogFatal(Head head, Args... args) { Message(MSG_FATAL, "[Fatal]", 
     do {                                                        \
         std::stringstream ss;                                   \
         ss << "(" __FILE__ << ":" << __LINE__ << ") :";         \
-        Message(MSG_NORMAL, ss.str(), msg, __VA_ARGS__);        \
+        pgLog(ss.str(), msg, ##__VA_ARGS__);        \
     }                                                           \
     while (0)
 
@@ -182,7 +182,7 @@ inline void pgLogFatal(Head head, Args... args) { Message(MSG_FATAL, "[Fatal]", 
     do {                                                        \
         std::stringstream ss;                                   \
         ss << "(" __FILE__ << ":" << __LINE__ << ") :";         \
-        Message(MSG_WARNING, ss.str(), msg, __VA_ARGS__);       \
+        pgLogWarn(ss.str(), msg, ##__VA_ARGS__);       \
     }                                                           \
     while (0)
 
@@ -190,7 +190,7 @@ inline void pgLogFatal(Head head, Args... args) { Message(MSG_FATAL, "[Fatal]", 
     do {                                                        \
         std::stringstream ss;                                   \
         ss << "(" __FILE__ << ":" << __LINE__ << ") :";         \
-        Message(MSG_FATAL, ss.str(), msg, __VA_ARGS__);         \
+        pgLogFatal(ss.str(), msg, ##__VA_ARGS__);         \
     }                                                           \
     while (0)
 

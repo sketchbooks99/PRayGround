@@ -41,9 +41,6 @@ void App::setup()
     OPTIX_CHECK(optixInit());
     context.create();
 
-    // Initialize SampledSpectrum class
-    SampledSpectrum::init();
-
     // Instance acceleration structureの初期化
     scene_ias = InstanceAccel{InstanceAccel::Type::Instances};
 
@@ -66,23 +63,6 @@ void App::setup()
     params.height = result_bitmap.height();
     params.samples_per_launch = 1;
     params.max_depth = 8;
-
-    // Copy SPD data to convert RGB to spectrum by Smits's method (1999)
-    constexpr size_t spd_size = sizeof(SampledSpectrum);
-    CUDA_CHECK(cudaMalloc(&params.white_spd, spd_size));
-    CUDA_CHECK(cudaMemcpy(params.white_spd, &SampledSpectrum::rgb2spectrum_spd_white, spd_size, cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMalloc(&params.cyan_spd, spd_size));
-    CUDA_CHECK(cudaMemcpy(params.cyan_spd, &SampledSpectrum::rgb2spectrum_spd_cyan, spd_size, cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMalloc(&params.magenta_spd, spd_size));
-    CUDA_CHECK(cudaMemcpy(params.magenta_spd, &SampledSpectrum::rgb2spectrum_spd_magenta, spd_size, cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMalloc(&params.yellow_spd, spd_size));
-    CUDA_CHECK(cudaMemcpy(params.yellow_spd, &SampledSpectrum::rgb2spectrum_spd_yellow, spd_size, cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMalloc(&params.red_spd, spd_size));
-    CUDA_CHECK(cudaMemcpy(params.red_spd, &SampledSpectrum::rgb2spectrum_spd_red, spd_size, cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMalloc(&params.green_spd, spd_size));
-    CUDA_CHECK(cudaMemcpy(params.green_spd, &SampledSpectrum::rgb2spectrum_spd_green, spd_size, cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMalloc(&params.blue_spd, spd_size));
-    CUDA_CHECK(cudaMemcpy(params.blue_spd, &SampledSpectrum::rgb2spectrum_spd_blue, spd_size, cudaMemcpyHostToDevice));
 
     initResultBufferOnDevice();
 
@@ -116,23 +96,23 @@ void App::setup()
     };
 
     // Callables programs for texture
-    uint32_t constant_prg_id = setupCallable(module, DC_FUNC_STR("constant"), "");
-    uint32_t bitmap_prg_id = setupCallable(module, DC_FUNC_STR("bitmap"), "");
+    uint32_t constant_prg_id = setupCallable(module, DC_FUNC_TEXT("constant"), "");
+    uint32_t bitmap_prg_id = setupCallable(module, DC_FUNC_TEXT("bitmap"), "");
 
     // Callables programs for surfaces
     // Diffuse
-    uint32_t diffuse_prg_id = setupCallable(module, DC_FUNC_STR("sample_diffuse"), "");
+    uint32_t diffuse_prg_id = setupCallable(module, DC_FUNC_TEXT("sample_diffuse"), "");
     // Dielectric
-    uint32_t dielectric_prg_id = setupCallable(module, DC_FUNC_STR("sample_dielectric"), "");
+    uint32_t dielectric_prg_id = setupCallable(module, DC_FUNC_TEXT("sample_dielectric"), "");
     // AreaEmitter
-    uint32_t area_emitter_prg_id = setupCallable(module, DC_FUNC_STR("area_emitter"), "");
+    uint32_t area_emitter_prg_id = setupCallable(module, DC_FUNC_TEXT("area_emitter"), "");
 
     SurfaceCallableID diffuse_id = { 0, diffuse_prg_id, 0 };
     SurfaceCallableID dielectric_id = { 0, dielectric_prg_id, 0 };
     SurfaceCallableID area_emitter_id = { 0, area_emitter_prg_id, 0 };
 
     // Shape用のCallableプログラム(主に面光源サンプリング用)
-    uint32_t plane_sample_pdf_prg_id = setupCallable(module, DC_FUNC_STR("rnd_sample_plane"), CC_FUNC_STR("pdf_plane"));
+    uint32_t plane_sample_pdf_prg_id = setupCallable(module, DC_FUNC_TEXT("rnd_sample_plane"), CC_FUNC_TEXT("pdf_plane"));
 
     // 環境マッピング (Sphere mapping) 用のテクスチャとデータ準備
     auto env_texture = make_shared<FloatBitmapTexture>("resources/image/sepulchral_chapel_rotunda_4k.exr", bitmap_prg_id);
@@ -141,7 +121,7 @@ void App::setup()
     env.copyToDevice();
 
     // Missプログラム
-    ProgramGroup miss_prg = pipeline.createMissProgram(context, module, MS_FUNC_STR("envmap"));
+    ProgramGroup miss_prg = pipeline.createMissProgram(context, module, MS_FUNC_TEXT("envmap"));
     // Missプログラム用のShader Binding Tableデータ
     MissRecord miss_record;
     miss_prg.recordPackHeader(&miss_record);
@@ -150,11 +130,11 @@ void App::setup()
 
     // Hitgroupプログラム
     // Plane
-    auto plane_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("plane"), IS_FUNC_STR("plane"));
+    auto plane_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_TEXT("plane"), IS_FUNC_TEXT("plane"));
     // Sphere
-    auto sphere_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("sphere"), IS_FUNC_STR("sphere"));
+    auto sphere_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_TEXT("sphere"), IS_FUNC_TEXT("sphere"));
     // Triangle mesh
-    auto mesh_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_STR("mesh"));
+    auto mesh_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_TEXT("mesh"));
 
     struct Primitive
     {
@@ -303,14 +283,10 @@ void App::setup()
         return make_shared<ConstantTexture>(ret, constant_prg_id);
     };
 
-    auto tex_white = make_shared<ConstantTexture>(SampledSpectrum(0.95f), constant_prg_id);
+    auto tex_white = make_shared<ConstantTexture>(SampledSpectrum::constant(0.95f), constant_prg_id);
     auto tex_red = createConstantTextureFromSPD(red);
     auto tex_green = createConstantTextureFromSPD(green);
-    auto yellow = reconstructSpectrumFromRGB(
-        Vec3f(0.7f, 0.7f, 0.3f), SampledSpectrum::rgb2spectrum_spd_white,
-        SampledSpectrum::rgb2spectrum_spd_cyan, SampledSpectrum::rgb2spectrum_spd_magenta, SampledSpectrum::rgb2spectrum_spd_yellow,
-        SampledSpectrum::rgb2spectrum_spd_red, SampledSpectrum::rgb2spectrum_spd_green, SampledSpectrum::rgb2spectrum_spd_blue
-    );
+    auto yellow = rgb2spectrum(Vec3f(0.7f, 0.7f, 0.3f));
     auto tex_yellow = make_shared<ConstantTexture>(yellow, constant_prg_id);
     auto tex_grid = make_shared<BitmapTexture>("resources/image/grid.png", bitmap_prg_id);
 
@@ -341,7 +317,7 @@ void App::setup()
     // Bunny
     {
         auto mesh = make_shared<TriangleMesh>("resources/model/bunny.obj");
-        mesh->smooth();
+        mesh->calculateNormalSmooth();
         auto diffuse = make_shared<Diffuse>(diffuse_id, tex_red);
         auto transform = Matrix4f::translate(-0.5, -0.07f, 0.0f) * Matrix4f::scale(2.0f);
         Primitive p{ mesh, diffuse, diffuse_prg_id };
@@ -351,7 +327,7 @@ void App::setup()
     // Armadillo
     {
         auto mesh = make_shared<TriangleMesh>("resources/model/Armadillo.ply");
-        mesh->smooth();
+        mesh->calculateNormalSmooth();
         auto diffuse = make_shared<Diffuse>(diffuse_id, tex_green);
         auto transform = Matrix4f::translate(-0.2f, 0.15f, -0.5f) * Matrix4f::rotate(math::pi * 7/6, {0,1,0}) * Matrix4f::scale(0.003f);
         Primitive p{ mesh, diffuse, diffuse_prg_id };
@@ -361,7 +337,7 @@ void App::setup()
     // Dragon
     {
         auto mesh = make_shared<TriangleMesh>("resources/model/dragon.obj");
-        mesh->smooth();
+        mesh->calculateNormalSmooth();
         auto diffuse = make_shared<Diffuse>(diffuse_id, tex_yellow);
         auto transform = Matrix4f::translate(0.5f, 0.13f, 0.7f) * Matrix4f::rotate(math::pi/3, {0,1,0}) * Matrix4f::scale(0.4f);
         Primitive p{ mesh, diffuse, diffuse_prg_id };

@@ -22,6 +22,8 @@ public:
 
     explicit operator OptixPipeline() const { return m_pipeline; }
     explicit operator OptixPipeline&() { return m_pipeline; }
+
+    [[nodiscard]] Module createBuiltinIntersectionModule(const Context& ctx, OptixPrimitiveType primitive_type);
         
     [[nodiscard]] Module createModuleFromCudaFile(const Context& ctx, const std::filesystem::path& filename);
     [[nodiscard]] Module createModuleFromCudaSource(const Context& ctx, const std::string& source);

@@ -49,7 +49,8 @@ public:
     void setBoundValues( OptixModuleCompileBoundValueEntry* bound_values);
     void setNumBounds( unsigned int num_bound );
 
-    OptixModuleCompileOptions compileOptions() const;
+    const OptixModuleCompileOptions& compileOptions() const;
+    OptixModuleCompileOptions& compileOptions();
 
 private:
     OptixModule m_module { nullptr };

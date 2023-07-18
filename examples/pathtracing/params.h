@@ -19,6 +19,9 @@ struct AreaEmitterInfo
 
     uint32_t sample_id;
     uint32_t pdf_id;
+    bool twosided = false;
+
+    SurfaceInfo surface_info;
 };
 
 struct LaunchParams 
@@ -44,12 +47,6 @@ struct LaunchParams
 struct RaygenData
 {
     Camera::Data camera;
-};
-
-struct HitgroupData
-{
-    void* shape_data;
-    SurfaceInfo surface_info;
 };
 
 struct MissData

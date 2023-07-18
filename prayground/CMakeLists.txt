@@ -28,6 +28,7 @@ set(sources
   core/util.h
   core/shaders/bitmap.vert
   core/shaders/bitmap.frag
+  # core/cuda/spectrum.cu
 
   # Math libraries ==========
   math/matrix.h
@@ -78,47 +79,51 @@ set(sources
   optix/transform.h
   optix/transform.cpp
   optix/sbt.h 
-  optix/cuda/texture.cuh
   optix/cuda/device_util.cuh
 
   # Shapes ==========
   shape/box.h
   shape/box.cpp
+  shape/curves.h 
+  shape/curves.cpp
   shape/cylinder.h 
-  shape/cylinder.cpp 
+  shape/cylinder.cpp
+  shape/gltfmesh.h 
+  shape/gltfmesh.cpp
   shape/plane.h 
   shape/plane.cpp 
+  shape/primitivemesh.h 
+  shape/primitivemesh.cpp
   shape/shapegroup.h
   shape/sphere.h 
   shape/sphere.cpp
   shape/trianglemesh.h
   shape/trianglemesh.cpp
-  shape/cuda/cylinder.cuh 
-  shape/cuda/plane.cuh 
-  shape/cuda/sphere.cuh 
-  shape/cuda/trianglemesh.cuh
-  shape/cuda/box.cuh
+  shape/cuda/shapes.cuh
  
   # Materials ==========
   material/conductor.h 
   material/conductor.cpp 
+  material/custom.h
   material/dielectric.h 
   material/dielectric.cpp 
   material/diffuse.h 
   material/diffuse.cpp
   material/disney.h
   material/disney.cpp
-  material/isotropic.h 
-  material/cuda/conductor.cuh
-  material/cuda/dielectric.cuh
-  material/cuda/diffuse.cuh
-  material/cuda/disney.cuh
+  material/roughconductor.h 
+  material/roughconductor.cpp 
+  material/roughdielectric.h
+  material/roughdielectric.cpp
+  material/isotropic.h
+  material/cuda/materials.cuh
 
   # Textures ==========
   texture/bitmap.h
   texture/bitmap.cpp
   texture/checker.h 
   texture/constant.h  
+  texture/cuda/textures.cuh
 
   # Medium ==========
   medium/gridmedium.h
@@ -130,12 +135,10 @@ set(sources
   emitter/area.cpp 
   emitter/envmap.h
   emitter/envmap.cpp
-  emitter/cuda/area.cuh 
-  emitter/cuda/envmap.cuh
+  emitter/point.h 
+  emitter/point.cpp
   
   prayground.h
-
-  # OPTIONS -rdc true
 )
 
 set(pg_target "prayground")

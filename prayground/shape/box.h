@@ -13,7 +13,7 @@ public:
 
 #ifndef __CUDACC__
     Box();
-    Box(const Vec3f& min, const Vec3f& max);
+    explicit Box(const Vec3f& min, const Vec3f& max);
 
     constexpr ShapeType type() override;
 

@@ -25,7 +25,6 @@ namespace prayground {
         SurfaceInfo surfaceInfo() const;
 
         void copyToDevice() override;
-        void free() override;
 
         EmitterType type() const override { return EmitterType::Area; }
         

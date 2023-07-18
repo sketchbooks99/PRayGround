@@ -67,7 +67,7 @@ namespace prayground {
     template <DerivedFromCamera _Camera, uint32_t _NRay>
     void loadUSD(const std::filesystem::path& filepath, Scene<_Camera, _NRay>& out_scene)
     {
-        .
+        
     }
 
 } // namespace prayground

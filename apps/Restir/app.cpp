@@ -71,8 +71,8 @@ void App::setup()
 
     // Initialize camera
     shared_ptr<Camera> camera(new Camera);
-    camera->setOrigin(-1500, 300, 0);
-    camera->setLookat(1000, 300, 0);
+    camera->setOrigin(10.0f, 5.0f, 0.0f);
+    camera->setLookat(0.0f, 5.0f, 0.0f);
     camera->setUp(0, 1, 0);
     camera->setFov(40);
     camera->setAspect((float)width / height);
@@ -108,13 +108,13 @@ void App::setup()
     }
 
     // Disney
-    {
-        Callables brdf_sample = pipeline.createCallablesProgram(context, module, "__direct_callable__sample_disney", "__continuation_callable__brdf_disney");
-        Callables pdf = pipeline.createCallablesProgram(context, module, "__direct_callable__pdf_disney", "");
-        disney_id = { brdf_sample.ID, brdf_sample.ID, pdf.ID };
-        scene.bindCallablesProgram(brdf_sample.program);
-        scene.bindCallablesProgram(pdf.program);
-    }
+    // {
+    //     Callables brdf_sample = pipeline.createCallablesProgram(context, module, "__direct_callable__sample_disney", "__continuation_callable__brdf_disney");
+    //     Callables pdf = pipeline.createCallablesProgram(context, module, "__direct_callable__pdf_disney", "");
+    //     disney_id = { brdf_sample.ID, brdf_sample.ID, pdf.ID };
+    //     scene.bindCallablesProgram(brdf_sample.program);
+    //     scene.bindCallablesProgram(pdf.program);
+    // }
 
     // Area emitter
     {
@@ -141,7 +141,7 @@ void App::setup()
     // Load obj scene
     std::vector<Attributes> material_attribs;
     shared_ptr<TriangleMesh> scene_mesh(new TriangleMesh());
-    scene_mesh->loadWithMtl("C:/Users/lunae/Documents/3DScenes/Sponza/sponza.obj", material_attribs);
+    scene_mesh->loadWithMtl("resources/model/sponza/sponza.obj", material_attribs);
 
     cudaTextureDesc tex_desc = {};
     tex_desc.addressMode[0] = cudaAddressModeWrap;
@@ -178,7 +178,7 @@ void App::setup()
 
     uint32_t seed = tea<4>(0, 0);
 
-    constexpr int NUM_LIGHTS = 1000;
+    constexpr int NUM_LIGHTS = 100;
     for (int i = 0; i < NUM_LIGHTS; i++)
     {
         LightInfo light;
@@ -187,8 +187,8 @@ void App::setup()
         float intensity = rnd(seed) * 10.0f;
         light.emission = color * intensity;
 
-        float scale = rnd(seed) * 100.0f;
-        Vec3f center = (Vec3f(rnd(seed), rnd(seed) * 0.5f + 0.5f, rnd(seed)) * 2.0f - 1.0f) * 2500.0f;
+        float scale = rnd(seed) * 1.0f;
+        Vec3f center = (Vec3f(rnd(seed), rnd(seed) * 0.5f + 0.5f, rnd(seed)) * 2.0f - 1.0f) * 20.0f;
         Vec3f v0 = (Vec3f(rnd(seed), rnd(seed), rnd(seed)) * 2.0f - 1.0f) * scale + center;
         Vec3f v1 = (Vec3f(rnd(seed), rnd(seed), rnd(seed)) * 2.0f - 1.0f) * scale + center;
         Vec3f v2 = (Vec3f(rnd(seed), rnd(seed), rnd(seed)) * 2.0f - 1.0f) * scale + center;

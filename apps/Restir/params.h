@@ -20,7 +20,7 @@ enum class RayType : uint32_t
 {
     Radiance = 0,
     Shadow = 1,
-    NRay = 2
+    Count = 2
 };
 
 struct Triangle {
@@ -38,6 +38,7 @@ struct LightInfo {
 
 struct Reservoir {
     int y;          // The output sample (the index of light)
+    Vec3f p;        // The position of the light
     int M;          // The number of samples seen so far
     float wsum;     // The sum of weights
     float W;        // Probabilistic weight
@@ -56,8 +57,10 @@ struct Reservoir {
             return;
         wsum += weight;
         M++;
-        if (rnd(seed) < (weight / wsum))
+        if (rnd(seed) < (weight / wsum)) {
             y = i;
+            W = weight;
+        }
     }
 };
 

@@ -4,6 +4,7 @@ PRAYGROUND_add_executalbe(Restir target_name
     app.h
     params.h 
     kernels.cu
+    kernels2.cu
 )
 
 target_compile_definitions(

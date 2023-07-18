@@ -6,8 +6,10 @@
 #include <prayground/shape/plane.h>
 #include <prayground/shape/sphere.h>
 #include <prayground/shape/trianglemesh.h>
+#include <prayground/shape/curves.h>
 #include <prayground/core/ray.h>
 #include <prayground/core/interaction.h>
+#include <prayground/core/onb.h>
 #include <prayground/optix/sbt.h>
 
 #ifdef __CUDACC__

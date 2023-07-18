@@ -29,7 +29,7 @@ static __forceinline__ __device__ void trace(
         handle, ro, rd,
         tmin, tmax, 0,
         OptixVisibilityMask(1), OPTIX_RAY_FLAG_NONE,
-        (uint32_t)RayType::Radiance, (uint32_t)RayType::NRay, (uint32_t)RayType::Radiance,
+        (uint32_t)RayType::Radiance, (uint32_t)RayType::Count, (uint32_t)RayType::Radiance,
         u0, u1);
 }
 
@@ -42,7 +42,7 @@ static __forceinline__ __device__ bool traceShadow(
         handle, ro, rd,
         tmin, tmax, 0.0f,
         OptixVisibilityMask(1), OPTIX_RAY_FLAG_TERMINATE_ON_FIRST_HIT,
-        (uint32_t)RayType::Shadow, (uint32_t)RayType::NRay, (uint32_t)RayType::Shadow,
+        (uint32_t)RayType::Shadow, (uint32_t)RayType::Count, (uint32_t)RayType::Shadow,
         hit
     );
     return static_cast<bool>(hit);
@@ -64,15 +64,14 @@ static __forceinline__ __device__ Reservoir reservoirSampling(int32_t num_strate
 
 // p^(x) = \rho(x) * Le(x) * G(x), where \rho(x) = BRDF
 static __forceinline__ __device__ float targetPDF(
-    const Vec3f& brdf, SurfaceInteraction* si, const Vec3f& to_light, const LightInfo& light)
+    const Vec3f& brdf, SurfaceInteraction* si, const Vec3f& to_light, const float d, const LightInfo& light)
 {
     float3 N = light.triangle.n;
-    N = faceforward(N, normalize(-to_light), N);
+    N = faceforward(N, -to_light, N);
     const float area = length(cross(light.triangle.v1 - light.triangle.v0, light.triangle.v2 - light.triangle.v0)) * 0.5f;
-    const float cos_theta = fmaxf(dot(light.triangle.n, normalize(-to_light)), 0.0001f);
-    const float d = length(to_light);
+    const float cos_theta = fmaxf(dot(N, -to_light), 0.0001f);
 
-    return fmaxf(length(brdf * light.emission) / (d * d) * cos_theta, 0.0f);
+    return fmaxf(length(brdf * light.emission) / (d * d) * cos_theta, 0.00001f);
 }
 
 static __forceinline__ __device__ Vec3f randomSampleOnTriangle(uint32_t& seed, const Triangle& triangle)
@@ -92,22 +91,21 @@ static __forceinline__ __device__ Reservoir reservoirImportanceSampling(
         int light_idx = rndInt(seed, 0, params.num_lights - 1);
         LightInfo light = params.lights[light_idx];
 
-        /// @todo : Occlusion test must be here. 
         const Vec3f light_p = randomSampleOnTriangle(seed, light.triangle);
 
-        const Vec3f to_light = light_p - si->p;
-        const float d = length(to_light);
+        const Vec3f to_light = normalize(light_p - si->p);
+        const float d = length(light_p - si->p);
 
         const bool occluded = traceShadow(params.handle, si->p, normalize(to_light), 0.001f, d - 0.001f, si);
         if (occluded)
             continue;
 
-        // Get brdf wrt the sampled light
+        // Get brdf w.r.t the sampled light
         Vec3f brdf = optixContinuationCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
             si->surface_info.callable_id.bsdf, si, si->surface_info.data, light_p);
         float pdf = 1.0f / params.num_lights;
-        // Get target pdf 
-        const float target_pdf = targetPDF(brdf, si, light_p - si->p, light);
+        // Get target pdf
+        const float target_pdf = targetPDF(brdf, si, to_light, d, light);
         // update reservoir
         r.update(light_idx, target_pdf / pdf, seed);
     }
@@ -117,9 +115,10 @@ static __forceinline__ __device__ Reservoir reservoirImportanceSampling(
     Vec3f brdf = optixContinuationCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
         si->surface_info.callable_id.bsdf, si, si->surface_info.data, light_p);
 
-    r.W = fmaxf( (1.0f / targetPDF(brdf, si, light_p - si->p, light)) * (1.0f / r.M) * r.wsum, 0.0f);
-    if (isinf(r.W) || isnan(r.W))
-        r.W = 0.0f;
+     //r.W = fmaxf( (1.0f / targetPDF(brdf, si, normalize(light_p - si->p), length(light_p - si->p), light)) * (1.0f / M) * r.wsum, 0.0001f);
+     r.W /= (r.wsum * r.M);
+     if (isinf(r.W) || isnan(r.W))
+         r.W = 0.0f;
 
     return r;
 }
@@ -133,7 +132,7 @@ Reservoir combineResevoirs(SurfaceInteraction* si, const Reservoir* r, int num_r
         Vec3f light_p = randomSampleOnTriangle(seed, light.triangle);
         Vec3f brdf = optixContinuationCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
             si->surface_info.callable_id.bsdf, si, si->surface_info.data, light_p);
-        s.update(r[i].y, targetPDF(brdf, si, light_p - si->p, light) * r[i].W * r[i].M, seed);
+        s.update(r[i].y, targetPDF(brdf, si, normalize(light_p - si->p), length(light_p - si->p), light) * r[i].W * r[i].M, seed);
     }
 }
 
@@ -244,6 +243,8 @@ extern "C" __device__ void __raygen__restir()
     const Vec3ui idx(optixGetLaunchIndex());
     uint32_t seed = tea<4>(idx.x() * params.width + idx.y(), frame);
 
+    printf("idx: %d, %d\n", idx.x(), idx.y());
+
     Vec3f result(0.0f);
 
     int spl = params.samples_per_launch;
@@ -276,9 +277,6 @@ extern "C" __device__ void __raygen__restir()
         {
             trace(params.handle, ro, rd, 0.01f, 1e16f, &si);
 
-            result += si.emission;
-            result += radiance * throughput;
-
             if (si.trace_terminate || depth >= params.max_depth)
             {
                 result += si.emission * throughput;
@@ -297,8 +295,6 @@ extern "C" __device__ void __raygen__restir()
             else 
             {
                 Reservoir r = reservoirImportanceSampling(&si, M, seed);
-                if (r.W == 0.0f)
-                    break;
 
                 LightInfo light = params.lights[r.y];
                 const Vec3f light_p = randomSampleOnTriangle(seed, light.triangle);
@@ -306,9 +302,9 @@ extern "C" __device__ void __raygen__restir()
                 const float d = length(to_light);
 
                 float weight = 0.0f;
-                //const bool occluded = traceShadow(params.handle, si.p, normalize(to_light), 0.001f, d - 0.001f, &si);
-                //if (!occluded)
-                //{
+                const bool occluded = traceShadow(params.handle, si.p, normalize(to_light), 0.001f, d - 0.001f, &si);
+                if (!occluded)
+                {
                     const float nDl = dot(si.shading.n, normalize(to_light));
 
                     Vec3f LN = light.triangle.n;
@@ -321,27 +317,28 @@ extern "C" __device__ void __raygen__restir()
                         const float d = length(to_light);
                         weight = LnDl * nDl * area / (math::pi * d * d);
                     }
-                //}
+                }
                 Vec3f brdf = optixContinuationCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
                     si.surface_info.callable_id.bsdf, &si, si.surface_info.data, light_p);
                 float pdf = optixDirectCall<float, SurfaceInteraction*, void*, const Vec3f&>(
                     si.surface_info.callable_id.pdf, &si, si.surface_info.data, light_p);
                 
-                if (pdf > 0.0f && !isinf(r.W) && !isnan(r.W)) {
-                    result += (r.W * light.emission * brdf * weight) / pdf;
+                // if (pdf > 0.0f && !isinf(r.W) && !isnan(r.W)) 
+                if (pdf > 0.0f && r.W > 0.0f)
+                {
+                     //result += (r.W * light.emission * brdf * weight);
+                    result += (light.emission * brdf * weight) / r.W;
                     break;
                 }
 
                 // Uniform hemisphere sampling
-                si.trace_terminate = true;
+                si.trace_terminate = false;
                 Vec2f u = UniformSampler::get2D(seed);
                 Vec3f wi = cosineSampleHemisphere(u[0], u[1]);
                 Onb onb(si.shading.n);
                 onb.inverseTransform(wi);
                 si.wi = normalize(wi);
                 si.seed = seed;
-
-                throughput *= brdf / pdf;
             }
 
             ro = si.p;

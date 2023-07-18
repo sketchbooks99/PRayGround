@@ -7,7 +7,6 @@
 #include <prayground_config.h>
 
 #include <cuda_gl_interop.h>
-#include <cuda_runtime.h>
 
 // core utilities
 #include "core/util.h"
@@ -37,8 +36,20 @@
 #include "app/input.h"
 
 #include "gl/shader.h"
+#else // __CUDACC__
+
+#include "optix/cuda/device_util.cuh"
+#include "math/vec_math.h"
+// Contains intersection test programs for custom primitives
+// and utility functions for triangle/curves primitives.
+#include "shape/cuda/shapes.cuh"
+#include "material/cuda/materials.cuh"
+#include "texture/cuda/textures.cuh"
+
 #endif // __CUDACC__
 
+// Both CPU and GPU
+#include <cuda_runtime.h>
 #include <optix.h>
 
 #include "core/spectrum.h"
@@ -89,15 +100,5 @@
 #include "medium/atmosphere.h"
 #include "medium/gridmedium.h"
 #include "medium/vdbgrid.h"
-
-#ifdef __CUDACC__ // GPU only
-#include "optix/cuda/device_util.cuh"
-#include "math/vec_math.h"
-// Contains intersection test programs for custom primitives
-// and utility functions for triangle/curves primitives.
-#include "shape/cuda/shapes.cuh"
-#include "material/cuda/materials.cuh"
-#include "texture/cuda/textures.cuh"
-#endif // __CUDACC__
 
 using namespace prayground;

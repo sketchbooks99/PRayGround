@@ -66,18 +66,19 @@ static __forceinline__ __device__ Reservoir reservoirSampling(int32_t num_strate
 static __forceinline__ __device__ float targetPDF(
     const Vec3f& brdf, SurfaceInteraction* si, const Vec3f& to_light, const float d, const LightInfo& light)
 {
-    float3 N = light.triangle.n;
+    Vec3f N = light.triangle.n;
     N = faceforward(N, -to_light, N);
     const float area = length(cross(light.triangle.v1 - light.triangle.v0, light.triangle.v2 - light.triangle.v0)) * 0.5f;
-    const float cos_theta = fmaxf(dot(N, -to_light), 0.0001f);
+    const float cos_theta = fmaxf(dot(N, -to_light), 0.0f);
 
-    return fmaxf(length(brdf * light.emission) / (d * d) * cos_theta, 0.00001f);
+    return length(brdf * light.emission * cos_theta) / (d * d);
 }
 
 static __forceinline__ __device__ Vec3f randomSampleOnTriangle(uint32_t& seed, const Triangle& triangle)
 {
     // Uniform sampling of barycentric coordinates on a triangle
-    Vec2f uv = UniformSampler::get2D(seed);
+    //Vec2f uv = UniformSampler::get2D(seed);
+    Vec2f uv(0.5f);
     return triangle.v0 * (1.0f - uv.x() - uv.y()) + triangle.v1 * uv.x() + triangle.v2 * uv.y();
 }
 
@@ -115,10 +116,9 @@ static __forceinline__ __device__ Reservoir reservoirImportanceSampling(
     Vec3f brdf = optixContinuationCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
         si->surface_info.callable_id.bsdf, si, si->surface_info.data, light_p);
 
-     //r.W = fmaxf( (1.0f / targetPDF(brdf, si, normalize(light_p - si->p), length(light_p - si->p), light)) * (1.0f / M) * r.wsum, 0.0001f);
-     r.W /= (r.wsum * r.M);
-     if (isinf(r.W) || isnan(r.W))
-         r.W = 0.0f;
+    r.W = (1.0f / targetPDF(brdf, si, normalize(light_p - si->p), length(light_p - si->p), light)) * ((1.0f / r.M) * r.wsum);
+    if (isnan(r.W) || isinf(r.W) || r.W < 0.0f)
+        r.W = 0.0f;
 
     return r;
 }
@@ -126,6 +126,7 @@ static __forceinline__ __device__ Reservoir reservoirImportanceSampling(
 Reservoir combineResevoirs(SurfaceInteraction* si, const Reservoir* r, int num_reservoirs, uint32_t& seed)
 {
     Reservoir s;
+    int32_t accum_m = 0;
     for (int i = 0; i < num_reservoirs; i++)
     {
         LightInfo light = params.lights[r[i].y];
@@ -133,105 +134,20 @@ Reservoir combineResevoirs(SurfaceInteraction* si, const Reservoir* r, int num_r
         Vec3f brdf = optixContinuationCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
             si->surface_info.callable_id.bsdf, si, si->surface_info.data, light_p);
         s.update(r[i].y, targetPDF(brdf, si, normalize(light_p - si->p), length(light_p - si->p), light) * r[i].W * r[i].M, seed);
+        accum_m += r[i].M;
     }
-}
+    
+    s.M = accum_m;
+    LightInfo light = params.lights[s.y];
+    const Vec3f light_p = randomSampleOnTriangle(seed, light.triangle);
+    Vec3f brdf = optixContinuationCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
+        si->surface_info.callable_id.bsdf, si, si->surface_info.data, light_p);
 
-extern "C" __device__ void __raygen__path()
-{
-    const auto* raygen = reinterpret_cast<pgRaygenData<Camera>*>(optixGetSbtDataPointer());
+    s.W = (1.0f / targetPDF(brdf, si, normalize(light_p - si->p), length(light_p - si->p), light)) * ((1.0f / s.M) * s.wsum);
+    if (isnan(s.W) || isinf(s.W) || s.W < 0.0f)
+        s.W = 0.0f;
 
-    const int frame = params.frame;
-    const Vec3ui idx(optixGetLaunchIndex());
-    uint32_t seed = tea<4>(idx.x() * params.width + idx.y(), frame);
-
-    Vec3f result(0.0f);
-
-    int spl = params.samples_per_launch;
-
-    for (int i = 0; i < spl; i++)
-    {
-        const Vec2f jitter = UniformSampler::get2D(seed) - 0.5f;
-
-        const Vec2f d = 2.0f * Vec2f(
-            (static_cast<float>(idx.x()) + jitter.x()) / params.width,
-            (static_cast<float>(idx.y()) + jitter.y()) / params.height
-        ) - 1.0f;
-
-        Vec3f ro, rd;
-        getCameraRay(raygen->camera, d.x(), d.y(), ro, rd);
-
-        Vec3f throughput(1.0f);
-
-        SurfaceInteraction si;
-        si.seed = seed;
-        si.emission = Vec3f(0.0f);
-        si.albedo = Vec3f(0.0f);
-        si.trace_terminate = false;
-
-        int depth = 0;
-        for (;;)
-        {
-            if (depth >= params.max_depth)
-                break;
-
-            trace(params.handle, ro, rd, 0.01f, 1e16f, &si);
-
-            if (si.trace_terminate)
-            {
-                result += si.emission * throughput;
-                break;
-            }
-
-            if (si.surface_info.type == SurfaceType::AreaEmitter)
-            {
-                // Evaluation of emittance from area emitter
-                const Vec3f emission = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
-                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
-                result += emission * throughput;
-                if (si.trace_terminate)
-                    break;
-            }
-            else
-            {
-                optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.callable_id.sample, &si, si.surface_info.data);
-
-                const Vec3f brdf = optixContinuationCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
-                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data, si.p + si.wi);
-
-                float pdf = optixDirectCall<float, SurfaceInteraction*, void*, const Vec3f&>(
-                    si.surface_info.callable_id.pdf, &si, si.surface_info.data, si.p + si.wi);
-                
-                if (pdf != 0.0f)
-                    throughput *= brdf / pdf;
-            }
-
-            ro = si.p;
-            rd = si.wi;
-
-            ++depth;
-        }
-    }
-
-    const uint32_t image_idx = idx.y() * params.width + idx.x();
-
-    // Nan | Inf check
-    if (result.x() != result.x()) result.x() = 0.0f;
-    if (result.y() != result.y()) result.y() = 0.0f;
-    if (result.z() != result.z()) result.z() = 0.0f;
-
-    Vec3f accum = result / static_cast<float>(spl);
-
-    if (frame > 0)
-    {
-        const float a = 1.0f / static_cast<float>(frame + 1);
-        const Vec3f accum_prev = Vec3f(params.accum_buffer[image_idx]);
-        accum = lerp(accum_prev, accum, a);
-    }
-
-    params.accum_buffer[image_idx] = Vec4f(accum, 1.0f);
-    Vec3u color = make_color(reinhardTonemap(accum, params.white));
-    params.result_buffer[image_idx] = Vec4u(color, 255);
+    return s;
 }
 
 // raygen 
@@ -242,8 +158,6 @@ extern "C" __device__ void __raygen__restir()
     const int frame = params.frame;
     const Vec3ui idx(optixGetLaunchIndex());
     uint32_t seed = tea<4>(idx.x() * params.width + idx.y(), frame);
-
-    printf("idx: %d, %d\n", idx.x(), idx.y());
 
     Vec3f result(0.0f);
 
@@ -326,8 +240,7 @@ extern "C" __device__ void __raygen__restir()
                 // if (pdf > 0.0f && !isinf(r.W) && !isnan(r.W)) 
                 if (pdf > 0.0f && r.W > 0.0f)
                 {
-                     //result += (r.W * light.emission * brdf * weight);
-                    result += (light.emission * brdf * weight) / r.W;
+                    result += (r.W * light.emission * brdf * weight);
                     break;
                 }
 
@@ -622,4 +535,103 @@ extern "C" __device__ Vec3f __direct_callable__checker(SurfaceInteraction* si, v
     const Vec2f uv = si->shading.uv;
     const bool is_odd = sinf(uv.x() * math::pi * checker->scale) * sinf(uv.y() * math::pi * checker->scale) < 0.0f;
     return lerp(checker->color1, checker->color2, (float)is_odd);
+}
+
+// Reference path tracing 
+extern "C" __device__ void __raygen__path()
+{
+    const auto* raygen = reinterpret_cast<pgRaygenData<Camera>*>(optixGetSbtDataPointer());
+
+    const int frame = params.frame;
+    const Vec3ui idx(optixGetLaunchIndex());
+    uint32_t seed = tea<4>(idx.x() * params.width + idx.y(), frame);
+
+    Vec3f result(0.0f);
+
+    int spl = params.samples_per_launch;
+
+    for (int i = 0; i < spl; i++)
+    {
+        const Vec2f jitter = UniformSampler::get2D(seed) - 0.5f;
+
+        const Vec2f d = 2.0f * Vec2f(
+            (static_cast<float>(idx.x()) + jitter.x()) / params.width,
+            (static_cast<float>(idx.y()) + jitter.y()) / params.height
+        ) - 1.0f;
+
+        Vec3f ro, rd;
+        getCameraRay(raygen->camera, d.x(), d.y(), ro, rd);
+
+        Vec3f throughput(1.0f);
+
+        SurfaceInteraction si;
+        si.seed = seed;
+        si.emission = Vec3f(0.0f);
+        si.albedo = Vec3f(0.0f);
+        si.trace_terminate = false;
+
+        int depth = 0;
+        for (;;)
+        {
+            if (depth >= params.max_depth)
+                break;
+
+            trace(params.handle, ro, rd, 0.01f, 1e16f, &si);
+
+            if (si.trace_terminate)
+            {
+                result += si.emission * throughput;
+                break;
+            }
+
+            if (si.surface_info.type == SurfaceType::AreaEmitter)
+            {
+                // Evaluation of emittance from area emitter
+                const Vec3f emission = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
+                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
+                result += emission * throughput;
+                if (si.trace_terminate)
+                    break;
+            }
+            else
+            {
+                optixDirectCall<void, SurfaceInteraction*, void*>(
+                    si.surface_info.callable_id.sample, &si, si.surface_info.data);
+
+                const Vec3f brdf = optixContinuationCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
+                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data, si.p + si.wi);
+
+                float pdf = optixDirectCall<float, SurfaceInteraction*, void*, const Vec3f&>(
+                    si.surface_info.callable_id.pdf, &si, si.surface_info.data, si.p + si.wi);
+
+                if (pdf != 0.0f)
+                    throughput *= brdf / pdf;
+            }
+
+            ro = si.p;
+            rd = si.wi;
+
+            ++depth;
+        }
+    }
+
+    const uint32_t image_idx = idx.y() * params.width + idx.x();
+
+    // Nan | Inf check
+    if (result.x() != result.x()) result.x() = 0.0f;
+    if (result.y() != result.y()) result.y() = 0.0f;
+    if (result.z() != result.z()) result.z() = 0.0f;
+
+    Vec3f accum = result / static_cast<float>(spl);
+
+    if (frame > 0)
+    {
+        const float a = 1.0f / static_cast<float>(frame + 1);
+        const Vec3f accum_prev = Vec3f(params.accum_buffer[image_idx]);
+        accum = lerp(accum_prev, accum, a);
+    }
+
+    params.accum_buffer[image_idx] = Vec4f(accum, 1.0f);
+    Vec3u color = make_color(reinhardTonemap(accum, params.white));
+    params.result_buffer[image_idx] = Vec4u(color, 255);
 }

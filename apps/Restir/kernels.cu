@@ -123,19 +123,21 @@ static __forceinline__ __device__ Reservoir reservoirImportanceSampling(
     return r;
 }
 
-Reservoir combineResevoirs(SurfaceInteraction* si, const Reservoir* r, int num_reservoirs, uint32_t& seed)
+Reservoir combineResevoirs(SurfaceInteraction* si, uint32_t& seed, const std::initializer_list<Reservoir>& reservoirs)
 {
     Reservoir s;
     int32_t accum_m = 0;
-    for (int i = 0; i < num_reservoirs; i++)
+    // for (int i = 0; i < num_reservoirs; i++)
+    for (const Reservoir& r : reservoirs)
     {
-        LightInfo light = params.lights[r[i].y];
+        LightInfo light = params.lights[r.y];
         Vec3f light_p = randomSampleOnTriangle(seed, light.triangle);
         Vec3f brdf = optixContinuationCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
             si->surface_info.callable_id.bsdf, si, si->surface_info.data, light_p);
-        s.update(r[i].y, targetPDF(brdf, si, normalize(light_p - si->p), length(light_p - si->p), light) * r[i].W * r[i].M, seed);
-        accum_m += r[i].M;
+        s.update(r.y, targetPDF(brdf, si, normalize(light_p - si->p), length(light_p - si->p), light) * r.W * r.M, seed);
+        accum_m += r.M;
     }
+    // }
     
     s.M = accum_m;
     LightInfo light = params.lights[s.y];
@@ -157,6 +159,7 @@ extern "C" __device__ void __raygen__restir()
 
     const int frame = params.frame;
     const Vec3ui idx(optixGetLaunchIndex());
+    const uint32_t image_idx = idx.y() * params.width + idx.x();
     uint32_t seed = tea<4>(idx.x() * params.width + idx.y(), frame);
 
     Vec3f result(0.0f);
@@ -208,7 +211,8 @@ extern "C" __device__ void __raygen__restir()
             }
             else 
             {
-                Reservoir r = reservoirImportanceSampling(&si, M, seed);
+                params.reservoirs[image_idx] = reservoirImportanceSampling(&si, M, seed);
+                Reservoir& r = params.reservoirs[image_idx];
 
                 LightInfo light = params.lights[r.y];
                 const Vec3f light_p = randomSampleOnTriangle(seed, light.triangle);
@@ -217,6 +221,22 @@ extern "C" __device__ void __raygen__restir()
 
                 float weight = 0.0f;
                 const bool occluded = traceShadow(params.handle, si.p, normalize(to_light), 0.001f, d - 0.001f, &si);
+
+                // Temporal reuse
+                // It's not working well :(
+                if (params.frame > 0)
+                {
+                    if (occluded) r.W = 0.0f;
+
+                    int32_t nx = rndInt(seed, idx.x() - 1, idx.x() + 1);
+                    int32_t ny = rndInt(seed, idx.y() - 1, idx.y() + 1);
+                    nx = clamp(nx, 0, int32_t(params.width - 1));
+                    ny = clamp(ny, 0, int32_t(params.height - 1));
+                    const int32_t neighbor_idx = ny * params.width + nx;
+                    const Reservoir& neighbor = params.reservoirs[neighbor_idx];
+                    r = combineResevoirs(&si, seed, { r, neighbor });
+                }
+                
                 if (!occluded)
                 {
                     const float nDl = dot(si.shading.n, normalize(to_light));
@@ -261,7 +281,6 @@ extern "C" __device__ void __raygen__restir()
         }
     }
 
-    const uint32_t image_idx = idx.y() * params.width + idx.x();
 
     // Nan | Inf check
     if (!result.isValid()) 

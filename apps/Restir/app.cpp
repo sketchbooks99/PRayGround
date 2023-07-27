@@ -69,6 +69,15 @@ void App::setup()
     params.result_buffer = reinterpret_cast<Vec4u*>(result_bmp.devicePtr());
     params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bmp.devicePtr());
 
+    // Allocate a buffer for reservoirs
+    CUDABuffer<Reservoir> reservoirs;
+    reservoirs.allocate(sizeof(Reservoir) * params.width * params.height);
+    params.reservoirs = reservoirs.deviceData();
+
+    CUDABuffer<Reservoir> prev_reservoirs;
+    prev_reservoirs.allocate(sizeof(Reservoir) * params.width * params.height);
+    params.prev_reservoirs = prev_reservoirs.deviceData();
+
     // Initialize camera
     shared_ptr<Camera> camera(new Camera);
     camera->setOrigin(10.0f, 5.0f, 0.0f);
@@ -106,15 +115,6 @@ void App::setup()
         scene.bindCallablesProgram(brdf_sample.program);
         scene.bindCallablesProgram(pdf.program);
     }
-
-    // Disney
-    // {
-    //     Callables brdf_sample = pipeline.createCallablesProgram(context, module, "__direct_callable__sample_disney", "__continuation_callable__brdf_disney");
-    //     Callables pdf = pipeline.createCallablesProgram(context, module, "__direct_callable__pdf_disney", "");
-    //     disney_id = { brdf_sample.ID, brdf_sample.ID, pdf.ID };
-    //     scene.bindCallablesProgram(brdf_sample.program);
-    //     scene.bindCallablesProgram(pdf.program);
-    // }
 
     // Area emitter
     {
@@ -247,6 +247,9 @@ void App::update()
     CUDA_SYNC_CHECK();
 
     params.frame++;
+    
+    // Copy reservoirs of previous frame
+    CUDA_CHECK(cudaMemcpy(params.prev_reservoirs, params.reservoirs, sizeof(Reservoir) * params.width * params.height, cudaMemcpyDeviceToDevice));
 
     result_bmp.copyFromDevice();
 

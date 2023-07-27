@@ -82,5 +82,8 @@ struct LaunchParams {
     int num_lights;
     
     // Streamed reservoir
-    //Reservoir reservoirs[NUM_CANDIDATES];
+    // Should prepare the reservoirs for each pixels
+    Reservoir* reservoirs;
+
+    Reservoir* prev_reservoirs;
 };

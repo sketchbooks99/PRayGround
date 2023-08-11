@@ -688,6 +688,7 @@ namespace prayground {
             interpolator.initializeFromBSpline((Vec4f*)p);
             return pgGetCurvesShading<CubicInterpolator, Curves::Type::CubicBSpline>(hit_point, u, interpolator);
         }
+#if OPTIX_VERSION >= 70400
         case OPTIX_PRIMITIVE_TYPE_ROUND_CATMULLROM:
         {
             CubicInterpolator interpolator;
@@ -696,6 +697,7 @@ namespace prayground {
             interpolator.initializeFromCatmullRom((Vec4f*)p);
             return pgGetCurvesShading<CubicInterpolator, Curves::Type::CatmullRom>(hit_point, u, interpolator);
         }
+#endif
         default:
             return Shading{};
         }

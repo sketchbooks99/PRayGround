@@ -54,9 +54,6 @@ namespace prayground {
     {
         OptixBuildInput bi = {};
 
-        OptixCurveEndcapFlags end_cap_flags = m_curve_type == Curves::Type::Linear ?
-            OPTIX_CURVE_ENDCAP_DEFAULT :
-            OPTIX_CURVE_ENDCAP_ON;
         bi.type = static_cast<OptixBuildInputType>(this->type());
         bi.curveArray.curveType = static_cast<OptixPrimitiveType>(m_curve_type);
         bi.curveArray.vertexBuffers = &d_vertices;
@@ -71,7 +68,14 @@ namespace prayground {
         bi.curveArray.numPrimitives = static_cast<uint32_t>(m_indices.size());
         bi.curveArray.flag = OPTIX_GEOMETRY_FLAG_NONE;
         bi.curveArray.primitiveIndexOffset = 0;
+
+#if OPTIX_VERSION >= 70400
+        OptixCurveEndcapFlags end_cap_flags = m_curve_type == Curves::Type::Linear ?
+            OPTIX_CURVE_ENDCAP_DEFAULT :
+            OPTIX_CURVE_ENDCAP_ON;
         bi.curveArray.endcapFlags = end_cap_flags;
+#endif
+
         return bi;
     }
 
@@ -166,7 +170,9 @@ namespace prayground {
         case Curves::Type::QuadraticBSpline:
             return 3;
         case Curves::Type::CubicBSpline:
+#if OPTIX_VERSION >= 70400
         case Curves::Type::CatmullRom:
+#endif
             return 4;
         default:
             return 0;

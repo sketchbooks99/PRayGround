@@ -44,10 +44,11 @@ namespace prayground {
         case OPTIX_PRIMITIVE_TYPE_ROUND_CATMULLROM:
             builtin_is_options.curveEndcapFlags = OPTIX_CURVE_ENDCAP_ON;
             break;
-#endif
         case OPTIX_PRIMITIVE_TYPE_ROUND_LINEAR:
             builtin_is_options.curveEndcapFlags = OPTIX_CURVE_ENDCAP_DEFAULT;
             break;
+        
+#endif
         case OPTIX_PRIMITIVE_TYPE_TRIANGLE:
 
 #if OPTIX_VERSION >= 70500
@@ -62,8 +63,10 @@ namespace prayground {
         builtin_is_options.builtinISModuleType = primitive_type;
         builtin_is_options.usesMotionBlur = m_compile_options.usesMotionBlur;
 
+#if OPTIX_VERSION >= 70400
         // This must be enabled for using curve primitive, and also enabled in the buildFlags for GAS?
-        builtin_is_options.buildFlags = OPTIX_BUILD_FLAG_ALLOW_RANDOM_VERTEX_ACCESS; 
+        builtin_is_options.buildFlags = OPTIX_BUILD_FLAG_ALLOW_RANDOM_VERTEX_ACCESS;
+#endif
 
         OptixModuleCompileOptions& module_options = m_modules.back().compileOptions();
         OPTIX_CHECK(optixBuiltinISModuleGet(

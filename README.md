@@ -16,7 +16,7 @@ Before building the project, please be sure to check requirements and your envir
 - C++ compiler which supports C++20 
     - Linux (Tested : g++ 10.3.0)
     - Windows (Tested : Visual Studio 2019, version 16.10.2) 
-- OptiX 7 (Tested : 7.3, 7.4)
+- OptiX 7 (Tested : 7.3, 7.4, 7.5, 7.6, 7.7)
 - CMake 3.0 minimum (Tested : cmake 3.16.3)
 
 # :inbox_tray: Cloning

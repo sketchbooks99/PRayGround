@@ -216,6 +216,7 @@ void Module::createFromPtxSource(const Context& ctx, const std::string& source, 
     char log[2048];
     size_t sizeof_log = sizeof(log);
 
+#if OPTIX_VERSION < 70700
     OPTIX_CHECK_LOG(optixModuleCreateFromPTX(
         static_cast<OptixDeviceContext>(ctx),
         &m_options,
@@ -226,6 +227,18 @@ void Module::createFromPtxSource(const Context& ctx, const std::string& source, 
         &sizeof_log,
         &m_module
     ));
+#else
+    OPTIX_CHECK_LOG(optixModuleCreate(
+        static_cast<OptixDeviceContext>(ctx),
+        &m_options,
+        &pipeline_options,
+        source.c_str(),
+        source.size(),
+        log,
+        &sizeof_log,
+        &m_module
+    ));
+#endif
 }
 
 void Module::destroy()

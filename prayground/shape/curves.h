@@ -21,7 +21,9 @@ namespace prayground {
             QuadraticBSpline = OPTIX_PRIMITIVE_TYPE_ROUND_QUADRATIC_BSPLINE,
             CubicBSpline = OPTIX_PRIMITIVE_TYPE_ROUND_CUBIC_BSPLINE,
             Linear = OPTIX_PRIMITIVE_TYPE_ROUND_LINEAR,
+#if OPTIX_VERSION >= 70400
             CatmullRom = OPTIX_PRIMITIVE_TYPE_ROUND_CATMULLROM
+#endif
         };
 
 #ifndef __CUDACC__

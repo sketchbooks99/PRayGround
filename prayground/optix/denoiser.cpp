@@ -241,7 +241,7 @@ void Denoiser::init(
 
 #if OPTIX_VERSION <= 70400
         m_params.denoiseAlpha = 0;
-#else 
+#elif OPTIX_VERSION < 80000 
         m_params.denoiseAlpha = OPTIX_DENOISER_ALPHA_MODE_COPY;
 #endif
         m_params.hdrIntensity = m_intensity;

@@ -65,7 +65,6 @@ namespace prayground {
         case OPTIX_ERROR_INVALID_DEVICE_CONTEXT:            return out << "OPTIX_ERROR_INVALID_DEVICE_CONTEXT";
         case OPTIX_ERROR_CUDA_NOT_INITIALIZED:              return out << "OPTIX_ERROR_CUDA_NOT_INITIALIZED";
         case OPTIX_ERROR_VALIDATION_FAILURE:                return out << "OPTIX_ERROR_VALIDATION_FAILURE";
-        case OPTIX_ERROR_INVALID_PTX:                       return out << "OPTIX_ERROR_INVALID_PTX";
         case OPTIX_ERROR_INVALID_LAUNCH_PARAMETER:          return out << "OPTIX_ERROR_INVALID_LAUNCH_PARAMETER";
         case OPTIX_ERROR_INVALID_PAYLOAD_ACCESS:            return out << "OPTIX_ERROR_INVALID_PAYLOAD_ACCESS";
         case OPTIX_ERROR_INVALID_ATTRIBUTE_ACCESS:          return out << "OPTIX_ERROR_INVALID_ATTRIBUTE_ACCESS";
@@ -76,7 +75,6 @@ namespace prayground {
         case OPTIX_ERROR_INTERNAL_COMPILER_ERROR:           return out << "OPTIX_ERROR_INTERNAL_COMPILER_ERROR";
         case OPTIX_ERROR_DENOISER_MODEL_NOT_SET:            return out << "OPTIX_ERROR_DENOISER_MODEL_NOT_SET";
         case OPTIX_ERROR_DENOISER_NOT_INITIALIZED:          return out << "OPTIX_ERROR_DENOISER_NOT_INITIALIZED";
-        case OPTIX_ERROR_ACCEL_NOT_COMPATIBLE:              return out << "OPTIX_ERROR_ACCEL_NOT_COMPATIBLE";
         case OPTIX_ERROR_NOT_SUPPORTED:                     return out << "OPTIX_ERROR_NOT_SUPPORTED";
         case OPTIX_ERROR_UNSUPPORTED_ABI_VERSION:           return out << "OPTIX_ERROR_UNSUPPORTED_ABI_VERSION";
         case OPTIX_ERROR_FUNCTION_TABLE_SIZE_MISMATCH:      return out << "OPTIX_ERROR_FUNCTION_TABLE_SIZE_MISMATCH";
@@ -87,6 +85,30 @@ namespace prayground {
         case OPTIX_ERROR_CUDA_ERROR:                        return out << "OPTIX_ERROR_CUDA_ERROR";
         case OPTIX_ERROR_INTERNAL_ERROR:                    return out << "OPTIX_ERROR_INTERNAL_ERROR";
         case OPTIX_ERROR_UNKNOWN:                           return out << "OPTIX_ERROR_UNKNOWN";
+
+#if OPTIX_VERSION >= 70400
+        case OPTIX_ERROR_ILLEGAL_DURING_TASK_EXECUTE:       return out << "OPTIX_ERROR_ILLEGAL_DURING_TASK_EXECUTE";
+        case OPTIX_ERROR_PAYLOAD_TYPE_MISMATCH:             return out << "OPTIX_ERROR_PAYLOAD_TYPE_MISMATCH";
+        case OPTIX_ERROR_PAYLOAD_TYPE_RESOLUTION_FAILED:    return out << "OPTIX_ERROR_PAYLOAD_TYPE_RESOLUTION_FAILED";
+        case OPTIX_ERROR_PAYLOAD_TYPE_ID_INVALID:           return out << "OPTIX_ERROR_PAYLOAD_TYPE_ID_INVALID";
+#endif
+
+#if OPTIX_VERSION >= 70500
+        case OPTIX_ERROR_DEVICE_OUT_OF_MEMORY:              return out << "OPTIX_ERROR_DEVICE_OUT_OF_MEMORY";
+#endif
+
+#if OPTIX_VERSION >= 70600
+        case OPTIX_ERROR_NOT_COMPATIBLE:                    return out << "OPTIX_ERROR_NOT_COMPATIBLE";
+#else
+        case OPTIX_ERROR_ACCEL_NOT_COMPATIBLE:              return out << "OPTIX_ERROR_ACCEL_NOT_COMPATIBLE";
+#endif
+
+#if OPTIX_VERSION >= 70700
+        case OPTIX_ERROR_INVALID_INPUT:                     return out << "OPTIX_ERROR_INVALID_INPUT";
+#else
+        case OPTIX_ERROR_INVALID_PTX:                       return out << "OPTIX_ERROR_INVALID_PTX";
+#endif
+
         default:                                            return out << "";
         }
     }
@@ -194,7 +216,11 @@ namespace prayground {
      */
     inline std::ostream& operator<<(std::ostream& out, const OptixPipelineLinkOptions& lop) {
                 out << "maxTraceDepth: " <<  lop.maxTraceDepth << std::endl;
+#if OPTIX_VERSION >= 70700
+        return  out;
+#else
         return  out << "debugLevel: " << lop.debugLevel;
+#endif
     }
 
     /**

@@ -67,7 +67,10 @@ public:
 
     /** Link options */
     void setLinkOptions(const OptixPipelineLinkOptions& op);
+#if OPTIX_VERSION < 70700
+    // OptixPipelineLinkOptions.debugLevel is deprecated after OptiX 7.7
     void setLinkDebugLevel(const OptixCompileDebugLevel& debug_level);
+#endif
     OptixPipelineLinkOptions linkOptions() const;
 
     /** Depth of traversal */

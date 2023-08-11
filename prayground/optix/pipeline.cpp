@@ -245,7 +245,11 @@ namespace prayground {
         // Specify the max traversal depth and calculate the stack sizes.
         OptixStackSizes stack_sizes = {};
         for (auto& optix_prg_group : optix_prg_groups) {
+#if OPTIX_VERSION < 70700
             OPTIX_CHECK(optixUtilAccumulateStackSizes(optix_prg_group, &stack_sizes));
+#else
+            OPTIX_CHECK(optixUtilAccumulateStackSizes(optix_prg_group, &stack_sizes, m_pipeline));
+#endif
         }
     
         uint32_t dc_stacksize_from_traversal;
@@ -398,11 +402,12 @@ namespace prayground {
     {
         m_link_options = l_op;
     }
-
+#if OPTIX_VERSION < 70700
     void Pipeline::setLinkDebugLevel(const OptixCompileDebugLevel& debug_level)
     {
         m_link_options.debugLevel = debug_level;
     }
+#endif
 
     OptixPipelineLinkOptions Pipeline::linkOptions() const
     {
@@ -475,7 +480,9 @@ namespace prayground {
     void Pipeline::_initLinkOptions()
     {
         m_link_options.maxTraceDepth = 5;
+#if OPTIX_VERSION < 70700
         m_link_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_FULL;
+#endif
     }
 
 } // namespace prayground

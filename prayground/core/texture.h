@@ -10,6 +10,14 @@ namespace prayground {
 
     class Texture {
     public:
+        enum class Type : uint8_t {
+            None            = 0,
+            Constant        = 1 << 0,
+            Checkerboard    = 1 << 1,
+            Bitmap          = 1 << 2,
+            Custom          = 1 << 3,
+        };
+
         struct Data {
             void* data;
 

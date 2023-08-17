@@ -413,7 +413,6 @@ add_subdirectory(examples/curves)
 # add_subdirectory(tests/core)
 # add_subdirectory(tests/thrust)
 # add_subdirectory(tests/primitives)
-add_subdirectory(tests/cexpr_map)
 
 #################################################################
 

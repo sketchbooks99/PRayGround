@@ -63,6 +63,8 @@ set(sources
   optix/context.cpp
   optix/denoiser.h 
   optix/denoiser.cpp
+  optix/dmm.h
+  optix/dmm.cpp
   optix/geometry_accel.h 
   optix/geometry_accel.cpp
   optix/util.h 
@@ -73,6 +75,8 @@ set(sources
   optix/macros.h 
   optix/module.h 
   optix/module.cpp
+  optix/omm.h
+  optix/omm.cpp
   optix/pipeline.h 
   optix/pipeline.cpp
   optix/program.h 

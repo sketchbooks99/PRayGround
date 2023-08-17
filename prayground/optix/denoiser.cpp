@@ -2,6 +2,7 @@
 #include <prayground/app/app_runner.h>
 #include <prayground/core/util.h>
 #include <prayground/optix/macros.h>
+#include <prayground/optix/util.h>
 #include <optix_stubs.h>
 #include <optix_denoiser_tiling.h>
 
@@ -96,11 +97,7 @@ static OptixImage2D createOptixImage2D(const int width, const int height, const 
 // --------------------------------------------------------------------
 Denoiser::Denoiser()
 {
-    std::string version;
-    if (OPTIX_VERSION == 70100) version = "7.1";
-    else if (OPTIX_VERSION == 70200) version = "7.2";
-    else if (OPTIX_VERSION == 70300) version = "7.3";
-    else if (OPTIX_VERSION == 70400) version = "7.4";
+    std::string version = pgGetOptixVersionString(OPTIX_VERSION);
     if (OPTIX_VERSION <= 70200)
     {
         pgLogFatal("Currently, Denoiser is supported with OptiX 7.3~ (Your version is " + version + ".");

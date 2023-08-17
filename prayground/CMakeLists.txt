@@ -8,6 +8,7 @@ set(sources
   core/bsdf.h 
   core/camera.h 
   core/camera.cpp
+  core/cexpr_map.h
   core/spectrum.h 
   core/cudabuffer.h 
   core/emitter.h 

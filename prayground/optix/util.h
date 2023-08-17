@@ -30,6 +30,11 @@
 
 #include <prayground/optix/macros.h>
 #include <prayground/math/util.h>
+
+#ifndef __CUDACC__
+#include <prayground/core/cexpr_map.h>
+#endif
+
 namespace prayground {
 
     HOSTDEVICE INLINE float dequantizeUnsigned8Bits( const unsigned char i )
@@ -46,6 +51,23 @@ namespace prayground {
     }
 
 #ifndef __CUDACC__
+    inline const char* pgGetOptixVersionString(uint32_t optix_version)
+    {
+        constexpr auto version_list = util::makeConstexprMap<uint32_t, const char*>({
+            {70000, "7.0"},
+            {70100, "7.1"},
+            {70200, "7.2"},
+            {70300, "7.3"},
+            {70400, "7.4"},
+            {70500, "7.5"},
+            {70600, "7.6"},
+            {70700, "7.7"},
+            {80000, "8.0"}
+        });
+
+        return version_list[optix_version];
+    }
+
     /*********************************************************************************** 
      * Stream helper functions
     ***********************************************************************************/

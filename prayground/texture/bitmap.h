@@ -6,7 +6,7 @@
 namespace prayground {
 
 template <typename PixelT>
-class BitmapTexture_ final : public Texture, Bitmap_<PixelT> {
+class BitmapTexture_ final : public Texture, public Bitmap_<PixelT> {
 public:
     using ColorType = PixelT;
     struct Data
@@ -32,7 +32,7 @@ private:
     /*Bitmap_<PixelT> m_bitmap;*/
 
     cudaTextureDesc m_tex_desc {};
-    cudaTextureObject_t d_texture;
+    cudaTextureObject_t d_texture{ 0 };
     cudaArray_t d_array { nullptr };
 #endif // __CUDACC__
 };

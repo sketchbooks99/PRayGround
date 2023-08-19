@@ -106,18 +106,6 @@ namespace prayground {
         Texture::free();
     }
 
-    //template<typename PixelT>
-    //int32_t BitmapTexture_<PixelT>::width() const
-    //{
-    //    return m_bitmap.width();
-    //}
-
-    //template<typename PixelT>
-    //int32_t BitmapTexture_<PixelT>::height() const
-    //{
-    //    return m_bitmap.height();
-    //}
-
     template<typename PixelT>
     void BitmapTexture_<PixelT>::setTextureDesc(const cudaTextureDesc& desc)
     {

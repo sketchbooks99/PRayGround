@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <prayground/core/texture.h>
 
 namespace prayground {
@@ -18,6 +18,11 @@ public:
     CheckerTexture_(const T& c1, const T& c2, float s, int prg_id)
         : Texture(prg_id), m_color1(c1), m_color2(c2), m_scale(s)
     {}
+
+    constexpr TextureType type() override 
+    { 
+        return TextureType::Checkerboard; 
+    }
 
     void setColor1(const T& c1)
     {

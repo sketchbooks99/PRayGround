@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <prayground/core/util.h>
 #include <prayground/optix/macros.h>
@@ -19,8 +19,6 @@ namespace prayground {
         using Type = T;
 
         CUDABuffer();
-        explicit CUDABuffer(const std::vector<T>& vec);
-        explicit CUDABuffer(const T* data, size_t size);
 
         // Cast operator from CUDABuffer<T> to CUdeviceptr.
         operator CUdeviceptr() { return d_ptr; }
@@ -52,18 +50,6 @@ namespace prayground {
     inline CUDABuffer<T>::CUDABuffer()
     {
 
-    }
-
-    template <class T>
-    inline CUDABuffer<T>::CUDABuffer(const std::vector<T>& vec)
-    {
-        copyToDevice(vec);
-    }
-
-    template <class T>
-    inline CUDABuffer<T>::CUDABuffer(const T* data, size_t size)
-    {
-        copyToDevice(data, size);
     }
 
     // --------------------------------------------------------------------

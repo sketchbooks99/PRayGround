@@ -1,13 +1,27 @@
-#pragma once
+﻿#pragma once
 
+#include <prayground/math/vec.h>
+
+#ifndef __CUDACC__
 #include <filesystem>
 #include <prayground/gl/shader.h>
 #include <prayground/app/window.h>
 #include <map>
+#include <variant>
+#endif
 
 namespace prayground {
 
     /// @todo Casting bitmap to OptixImage2D
+
+    namespace impl {
+        template <typename PixelT> struct PixelDecl {};
+        template <> struct PixelDecl<uint8_t> { using V1 = uint8_t; using V2 = Vec2u; using V3 = Vec3u; using V4 = Vec4u; };
+        template <> struct PixelDecl<float> { using V1 = float; using V2 = Vec2f; using V3 = Vec3f; using V4 = Vec4f; };
+        template <> struct PixelDecl<int8_t> { using V1 = int8_t; using V2 = Vec2c; using V3 = Vec3c; using V4 = Vec4c; };
+        template <> struct PixelDecl<double> { using V1 = double; using V2 = Vec2d; using V3 = Vec3d; using V4 = Vec4d; };
+        template <> struct PixelDecl<int32_t> { using V1 = int32_t; using V2 = Vec2i; using V3 = Vec3i; using V4 = Vec4i; };
+    } // namespace impl
 
     enum class PixelFormat : int 
     {
@@ -20,6 +34,14 @@ namespace prayground {
 
     template <typename PixelT>
     class Bitmap_ {
+    private:
+#ifndef __CUDACC__
+        using V1 = typename impl::PixelDecl<PixelT>::V1;
+        using V2 = typename impl::PixelDecl<PixelT>::V2;
+        using V3 = typename impl::PixelDecl<PixelT>::V3;
+        using V4 = typename impl::PixelDecl<PixelT>::V4;
+        using PixelVariant = std::variant<typename impl::PixelDecl<PixelT>::V1, typename impl::PixelDecl<PixelT>::V2, typename impl::PixelDecl<PixelT>::V3, typename impl::PixelDecl<PixelT>::V4>;
+
     public:
         using Type = PixelT;
 
@@ -30,7 +52,7 @@ namespace prayground {
         /// @todo: Check if "Disallow the copy-constructor"
         // Bitmap_(const Bitmap_& bmp) = delete;
 
-        void allocate(PixelFormat format, int width, int height);
+        void allocate(PixelFormat format, int width, int height, PixelT* data = nullptr);
         void setData(PixelT* data, int offset_x, int offset_y, int width, int height);
         void setData(PixelT* data, const int2& offset, const int2& res);
 
@@ -45,6 +67,14 @@ namespace prayground {
         void allocateDevicePtr();
         void copyToDevice();
         void copyFromDevice();
+
+        // Return pixel value in vector type. 
+        // Please use std::get<VecT> to unpack pixel vector
+        // 
+        // Example: 
+        // Bitmap<uint8_t> bmp(PixelFormat::RGB, 512, 512);
+        // Vec3u pixel = std::get<Vec3u>(bmp.at(10, 10));
+        PixelVariant at(int32_t x, int32_t y);
 
         PixelT* data() const { return m_data.get(); }
         PixelT* devicePtr() const { return d_data; }
@@ -69,9 +99,10 @@ namespace prayground {
         GLuint m_gltex;
         GLuint m_vbo, m_vao, m_ebo; // vertex buffer object, vertex array object, element buffer object
         gl::Shader m_shader;
+#endif
     };
 
-    using Bitmap = Bitmap_<unsigned char>;
+    using Bitmap = Bitmap_<uint8_t>;
     using FloatBitmap = Bitmap_<float>;
 
 } // namespace prayground

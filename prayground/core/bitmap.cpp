@@ -1,4 +1,4 @@
-#include "bitmap.h"
+﻿#include "bitmap.h"
 #include <prayground/core/spectrum.h>
 #include <prayground/core/cudabuffer.h>
 #include <prayground/core/file_util.h>
@@ -32,9 +32,7 @@ namespace prayground {
     template <typename PixelT>
     Bitmap_<PixelT>::Bitmap_(PixelFormat format, int width, int height, PixelT* data)
     {
-        allocate(format, width, height);
-        if (data)
-            memcpy(m_data.get(), data, sizeof(PixelT) * m_width * m_height * m_channels);
+        allocate(format, width, height, data);
     }
 
     // --------------------------------------------------------------------
@@ -53,7 +51,7 @@ namespace prayground {
 
     // --------------------------------------------------------------------
     template <typename PixelT>
-    void Bitmap_<PixelT>::allocate(PixelFormat format, int width, int height)
+    void Bitmap_<PixelT>::allocate(PixelFormat format, int width, int height, PixelT* data)
     {
         m_width = width; 
         m_height = height;
@@ -77,10 +75,17 @@ namespace prayground {
                 THROW("Invalid type of allocation");
         }
 
-        // Zero-initialization of pixel data
-        std::vector<PixelT> zero_arr(m_channels * m_width * m_height, static_cast<PixelT>(0));
+        // Initialization of pixel data
         m_data = std::make_unique<PixelT[]>(m_channels * m_width * m_height);
-        memcpy(m_data.get(), zero_arr.data(), m_channels * m_width * m_height * sizeof(PixelT));
+        if (data)
+        {
+            memcpy(m_data.get(), data, sizeof(PixelT) * m_width * m_height * m_channels);
+        }
+        else
+        {
+            std::vector<PixelT> zero_arr(m_channels * m_width * m_height, static_cast<PixelT>(0));
+            memcpy(m_data.get(), zero_arr.data(), m_channels * m_width * m_height * sizeof(PixelT));
+        }
 
         if (pgAppWindowInitialized())
             prepareGL();
@@ -489,6 +494,27 @@ namespace prayground {
         ));
     }
 
+    template<typename PixelT>
+    typename Bitmap_<PixelT>::PixelVariant Bitmap_<PixelT>::at(int32_t x, int32_t y)
+    {
+        int32_t base_idx = (y * m_width + x) * m_channels;
+
+        switch (m_format)
+        {
+        case PixelFormat::GRAY:
+            return Bitmap_<PixelT>::V1{m_data[base_idx]};
+        case PixelFormat::GRAY_ALPHA:
+            return Bitmap_<PixelT>::V2{m_data[base_idx], m_data[base_idx + 1]};
+        case PixelFormat::RGB:
+            return Bitmap_<PixelT>::V3{m_data[base_idx], m_data[base_idx + 1], m_data[base_idx + 2]};
+        case PixelFormat::RGBA:
+            return Bitmap_<PixelT>::V4{m_data[base_idx], m_data[base_idx + 1], m_data[base_idx + 3], m_data[base_idx + 4]};
+        case PixelFormat::NONE:
+        default:
+            return Bitmap_<PixelT>::V1{m_data[base_idx]};
+        }
+    }
+
     // --------------------------------------------------------------------
     template <typename PixelT>
     OptixImage2D Bitmap_<PixelT>::toOptixImage2D() const
@@ -527,8 +553,8 @@ namespace prayground {
 
     template class Bitmap_<float>;
     template class Bitmap_<double>;
-    template class Bitmap_<unsigned char>;
-    template class Bitmap_<char>;
-    template class Bitmap_<int>;
+    template class Bitmap_<uint8_t>;
+    template class Bitmap_<int8_t>;
+    template class Bitmap_<int32_t>;
 
 } // namespace prayground

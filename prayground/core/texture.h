@@ -1,4 +1,4 @@
-#pragma once 
+﻿#pragma once 
 
 #include <prayground/core/util.h>
 
@@ -8,15 +8,16 @@
 
 namespace prayground {
 
+    enum class TextureType : uint32_t {
+        None = 0,
+        Constant = 1 << 0,
+        Checkerboard = 1 << 1,
+        Bitmap = 1 << 2,
+        Custom = 1 << 3
+    };
+
     class Texture {
     public:
-        enum class Type : uint8_t {
-            None            = 0,
-            Constant        = 1 << 0,
-            Checkerboard    = 1 << 1,
-            Bitmap          = 1 << 2,
-            Custom          = 1 << 3,
-        };
 
         struct Data {
             void* data;
@@ -27,6 +28,8 @@ namespace prayground {
 
 #ifndef __CUDACC__
         Texture(int prg_id) : m_prg_id(prg_id) {}
+
+        virtual constexpr TextureType type() = 0;
 
         // Preparing texture data on the device.
         virtual void copyToDevice() = 0;

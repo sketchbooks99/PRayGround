@@ -1,4 +1,4 @@
-// Opacity Micro Map
+﻿// Opacity Micro Map
 // Supported with Ada GPU and after OptiX 7.6
 
 #pragma once
@@ -6,6 +6,7 @@
 #include <optix.h>
 #include <functional>
 #include <prayground/optix/context.h>
+#include <prayground/optix/macros.h>
 #include <prayground/shape/trianglemesh.h>
 #include <prayground/core/texture.h>
 
@@ -40,11 +41,5 @@ namespace prayground {
         OptixMicromapBuffers m_buffers;
         std::shared_ptr<TriangleMesh> m_mesh_ptr;
     };
-    
-    extern "C" HOST void calculateOpacityMapOnDevice(
-        unsigned short** out_opacity_data, 
-        const Vec2f* texcoords, const Face* faces, 
-        const void* texture_data, Texture::Type texture_type,
-        const OpacityMicroMap::Settings& settings);
 
 } // namespace prayground

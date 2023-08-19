@@ -1,15 +1,12 @@
-#pragma once
+﻿#pragma once
 
 #include <prayground/core/texture.h>
-
-#ifndef __CUDACC__
-    #include <prayground/core/bitmap.h>
-#endif
+#include <prayground/core/bitmap.h>
 
 namespace prayground {
 
 template <typename PixelT>
-class BitmapTexture_ final : public Texture {
+class BitmapTexture_ final : public Texture, Bitmap_<PixelT> {
 public:
     using ColorType = PixelT;
     struct Data
@@ -21,11 +18,10 @@ public:
     BitmapTexture_(const std::filesystem::path& filename, int prg_id);
     BitmapTexture_(const std::filesystem::path& filename, cudaTextureDesc desc, int prg_id);
 
+    constexpr TextureType type() override;
+
     void copyToDevice() override;
     void free() override;
-
-    int32_t width() const;
-    int32_t height() const;
 
     void setTextureDesc(const cudaTextureDesc& desc);
     cudaTextureDesc textureDesc() const;
@@ -33,7 +29,7 @@ public:
 private:
     using Vec_t = std::conditional_t<std::is_same_v<PixelT, float>, float4, uchar4>;
 
-    Bitmap_<PixelT> m_bitmap;
+    /*Bitmap_<PixelT> m_bitmap;*/
 
     cudaTextureDesc m_tex_desc {};
     cudaTextureObject_t d_texture;

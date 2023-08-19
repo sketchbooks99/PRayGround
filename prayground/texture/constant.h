@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <prayground/core/texture.h>
 
@@ -22,6 +22,11 @@ public:
     ConstantTexture_(const T& c, int prg_id)
         : Texture(prg_id), m_color(c)
     {}
+
+    constexpr TextureType type() override
+    {
+        return TextureType::Constant;
+    }
 
     void setColor(const T& c)
     {

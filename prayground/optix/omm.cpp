@@ -85,13 +85,9 @@ namespace prayground {
             const Vec2f bary1 = barycentricInterop(uv0, uv1, uv2, mbc.uv1);
             const Vec2f bary2 = barycentricInterop(uv0, uv1, uv2, mbc.uv2);
 
-            const Vec2i idx0{ (int)(bary0.x() * width), (int)(bary0.y() * height) };
-            const Vec2i idx1{ (int)(bary1.x() * width), (int)(bary1.y() * height) };
-            const Vec2i idx2{ (int)(bary2.x() * width), (int)(bary2.y() * height) };
-
-            Vec4u pixel0 = std::get<Vec4u>(opacity_texture->at(idx0.x(), idx0.y()));
-            Vec4u pixel1 = std::get<Vec4u>(opacity_texture->at(idx1.x(), idx1.y()));
-            Vec4u pixel2 = std::get<Vec4u>(opacity_texture->at(idx2.x(), idx2.y()));
+            Vec4u pixel0 = opacity_texture->eval(bary0);
+            Vec4u pixel1 = opacity_texture->eval(bary1);
+            Vec4u pixel2 = opacity_texture->eval(bary2);
 
             if (pixel0.w() == 0 && pixel1.w() == 0 && pixel2.w() == 0)
                 return OPTIX_OPACITY_MICROMAP_STATE_TRANSPARENT;
@@ -135,13 +131,9 @@ namespace prayground {
             const Vec2f bary1 = barycentricInterop(uv0, uv1, uv2, mbc.uv1);
             const Vec2f bary2 = barycentricInterop(uv0, uv1, uv2, mbc.uv2);
 
-            const Vec2i idx0{ (int)(bary0.x() * width), (int)(bary0.y() * height) };
-            const Vec2i idx1{ (int)(bary1.x() * width), (int)(bary1.y() * height) };
-            const Vec2i idx2{ (int)(bary2.x() * width), (int)(bary2.y() * height) };
-
-            Vec4f pixel0 = std::get<Vec4f>(opacity_texture->at(idx0.x(), idx0.y()));
-            Vec4f pixel1 = std::get<Vec4f>(opacity_texture->at(idx1.x(), idx1.y()));
-            Vec4f pixel2 = std::get<Vec4f>(opacity_texture->at(idx2.x(), idx2.y()));
+            Vec4f pixel0 = opacity_texture->eval(bary0);
+            Vec4f pixel1 = opacity_texture->eval(bary1);
+            Vec4f pixel2 = opacity_texture->eval(bary2);
 
             if (pixel0.w() == 0 && pixel1.w() == 0 && pixel2.w() == 0)
                 return OPTIX_OPACITY_MICROMAP_STATE_TRANSPARENT;

@@ -495,7 +495,7 @@ namespace prayground {
     }
 
     template<typename PixelT>
-    typename Bitmap_<PixelT>::PixelVariant Bitmap_<PixelT>::at(int32_t x, int32_t y)
+    typename Bitmap_<PixelT>::PixelVariant Bitmap_<PixelT>::at(int32_t x, int32_t y) const
     {
         int32_t base_idx = (y * m_width + x) * m_channels;
 

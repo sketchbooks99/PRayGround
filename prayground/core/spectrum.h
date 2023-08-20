@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <optix.h>
 #include <vector_types.h>

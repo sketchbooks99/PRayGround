@@ -15,14 +15,14 @@ namespace prayground {
             pgLogFatal("The texture file '" + filename.string() + "' is not found.");
             int width = 512;
             int height = 512;
-            Vec_t magenta;
+            ColorType magenta;
             if constexpr (std::is_same_v<PixelT, unsigned char>)
-                magenta = make_uchar4(255, 0, 255, 255);
+                magenta = Vec4u(255, 0, 255, 255);
             else 
-                magenta = make_float4(1.0f, 0.0f, 1.0f, 1.0f);
-            std::vector<Vec_t> pixels(width * height, magenta);
+                magenta = Vec4f(1.0f, 0.0f, 1.0f, 1.0f);
+            std::vector<ColorType> pixels(width * height, magenta);
             //m_bitmap = Bitmap_<PixelT>(PixelFormat::RGBA, width, height, reinterpret_cast<Bitmap_<PixelT>::Type*>(pixels.data()));
-            Bitmap_<PixelT>::allocate(PixelFormat::RGBA, width, height, reinterpret_cast<ColorType*>(pixels.data()));
+            Bitmap_<PixelT>::allocate(PixelFormat::RGBA, width, height, reinterpret_cast<PixelT*>(pixels.data()));
         }
         else
         {
@@ -61,12 +61,22 @@ namespace prayground {
 
     // ---------------------------------------------------------------------
     template <typename PixelT>
+    BitmapTexture_<PixelT>::ColorType BitmapTexture_<PixelT>::eval(const Vec2f& texcoord) const
+    {
+        int32_t x = texcoord.x() * Bitmap_<PixelT>::width();
+        int32_t y = texcoord.y() * Bitmap_<PixelT>::height();
+        ColorType pixel = std::get<ColorType>(Bitmap_<PixelT>::at(x, y));
+        return pixel;
+    }
+
+    // ---------------------------------------------------------------------
+    template <typename PixelT>
     void BitmapTexture_<PixelT>::copyToDevice()
     {
         // Alloc CUDA array in device memory.
-        int32_t pitch = Bitmap_<PixelT>::width() * sizeof(Vec_t);
+        int32_t pitch = Bitmap_<PixelT>::width() * sizeof(ColorType);
 
-        cudaChannelFormatDesc channel_desc = cudaCreateChannelDesc<Vec_t>();
+        cudaChannelFormatDesc channel_desc = cudaCreateChannelDesc<ColorType>();
 
         CUDA_CHECK( cudaMallocArray( &d_array, &channel_desc, Bitmap_<PixelT>::width(), Bitmap_<PixelT>::height() ) );
         PixelT* raw_data = Bitmap_<PixelT>::data();
@@ -79,15 +89,15 @@ namespace prayground {
         res_desc.res.array.array = d_array;
 
         CUDA_CHECK( cudaCreateTextureObject( &d_texture, &res_desc, &m_tex_desc, nullptr ) );
-        BitmapTexture::Data texture_data = { 
+        BitmapTexture_<PixelT>::Data texture_data = { 
             .texture = d_texture
         };
 
         if (!d_data) 
-            CUDA_CHECK( cudaMalloc( &d_data, sizeof(BitmapTexture::Data) ) );
+            CUDA_CHECK( cudaMalloc( &d_data, sizeof(BitmapTexture_<PixelT>::Data) ) );
         CUDA_CHECK( cudaMemcpy(
             d_data, 
-            &texture_data, sizeof(BitmapTexture::Data), 
+            &texture_data, sizeof(BitmapTexture_<PixelT>::Data), 
             cudaMemcpyHostToDevice
         ));
     }

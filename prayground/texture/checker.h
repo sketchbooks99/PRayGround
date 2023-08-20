@@ -6,7 +6,7 @@ namespace prayground {
 template <typename T>
 class CheckerTexture_ final : public Texture {
 public:
-    using DataType = T;
+    using ColorType = T;
     struct Data
     {
         T color1;
@@ -22,6 +22,13 @@ public:
     constexpr TextureType type() override 
     { 
         return TextureType::Checkerboard; 
+    }
+
+    ColorType eval(const Vec2f& texcoord) const
+    {
+        const bool is_odd = sinf(texcoord.x() * math::pi * m_scale) * sinf(texcoord.y() * math::pi * m_scale) < 0;
+        auto color = is_odd ? m_color1 : m_color2;
+        return color;
     }
 
     void setColor1(const T& c1)

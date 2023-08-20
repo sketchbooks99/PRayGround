@@ -68,13 +68,13 @@ namespace prayground {
         void copyToDevice();
         void copyFromDevice();
 
-        // Return pixel value in vector type. 
+        // Return pixel value in the form of std::variant
         // Please use std::get<VecT> to unpack pixel vector
         // 
         // Example: 
         // Bitmap<uint8_t> bmp(PixelFormat::RGB, 512, 512);
         // Vec3u pixel = std::get<Vec3u>(bmp.at(10, 10));
-        PixelVariant at(int32_t x, int32_t y);
+        PixelVariant at(int32_t x, int32_t y) const;
 
         PixelT* data() const { return m_data.get(); }
         PixelT* devicePtr() const { return d_data; }

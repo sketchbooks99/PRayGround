@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <vector_functions.h>
 #include <prayground/optix/macros.h>

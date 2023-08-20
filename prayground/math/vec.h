@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <vector_types.h>
 #include <vector_functions.h>
@@ -7,6 +7,7 @@
 
 #ifndef __CUDACC__
 #include <iostream>
+#include <type_traits>
 #endif // __CUDACC__
 
 #define VEC_DECL_T(name)               \
@@ -738,5 +739,16 @@ namespace prayground {
     INLINE HOSTDEVICE Vec4<T> faceforward(const Vec4<T>& n, const Vec4<T>& i, const Vec4<T>& nref)
     {
         return n * copysignf(1.0f, dot(i, nref));
+    }
+
+    // Type traits
+    namespace impl {
+#ifndef __CUDACC__
+        template <typename T>
+        using is_uint8_vector = std::disjunction<std::is_same<T, uint8_t>, std::is_same<T, Vec2u>, std::is_same<T, Vec3u>, std::is_same<T, Vec4u>>;
+
+        template <typename T>
+        using is_float_vector = std::disjunction<std::is_same<T, float>, std::is_same<T, Vec2f>, std::is_same<T, Vec3f>, std::is_same<T, Vec4f>>;
+#endif
     }
 }

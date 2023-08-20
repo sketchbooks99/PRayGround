@@ -1,9 +1,11 @@
 ﻿#pragma once 
 
 #include <prayground/core/util.h>
+#include <prayground/core/spectrum.h>
 
 #ifndef __CUDACC__
     #include <map>
+    #include <type_traits>
 #endif
 
 namespace prayground {
@@ -15,6 +17,18 @@ namespace prayground {
         Bitmap = 1 << 2,
         Custom = 1 << 3
     };
+
+    inline std::ostream& operator<<(std::ostream& out, TextureType type)
+    {
+        switch (type)
+        {
+        case TextureType::None:         return out << "TextureType::None";
+        case TextureType::Constant:     return out << "TextureType::Constant";
+        case TextureType::Checkerboard: return out << "TextureType::Checkerboard";
+        case TextureType::Bitmap:       return out << "TextureType::Bitmap";
+        case TextureType::Custom:       return out << "TextureType::Custom";
+        }
+    }
 
     class Texture {
     public:
@@ -46,11 +60,11 @@ namespace prayground {
 
         void setProgramId(const uint32_t prg_id) { m_prg_id = prg_id; }
         uint32_t programId() const { return m_prg_id; }
-#endif
 
     protected:
         void* d_data{ nullptr };
         uint32_t m_prg_id;
+#endif
     };
 
 } // namespace prayground

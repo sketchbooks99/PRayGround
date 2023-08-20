@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include <prayground/core/texture.h>
+#include <prayground/core/spectrum.h>
 
 namespace prayground {
 
@@ -26,6 +27,11 @@ public:
     constexpr TextureType type() override
     {
         return TextureType::Constant;
+    }
+
+    ColorType eval(const Vec2f& texcoord) const
+    {
+        return m_color;
     }
 
     void setColor(const T& c)

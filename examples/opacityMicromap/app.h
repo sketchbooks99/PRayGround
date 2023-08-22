@@ -3,6 +3,8 @@
 #include <prayground/prayground.h>
 #include "params.h"
 
+using namespace std;
+
 class App : public BaseApp 
 {
 public:
@@ -28,4 +30,11 @@ private:
 
     LaunchParams params;
 
+    Bitmap result_bmp;
+    FloatBitmap accum_bmp;
+
+    static constexpr uint32_t NRay = 1;
+    Scene<Camera, NRay> scene;
+
+    bool is_camera_updated;
 };

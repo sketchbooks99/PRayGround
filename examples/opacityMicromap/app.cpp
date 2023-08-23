@@ -1,4 +1,4 @@
-﻿#include "app.h"
+#include "app.h"
 
 void App::initResultBufferOnDevice()
 {
@@ -63,8 +63,8 @@ void App::setup()
 
     // Camera settings
     std::shared_ptr<Camera> camera(new Camera);
-    camera->setOrigin(0, 0, 100);
-    camera->setLookat(0, 0, 0);
+    camera->setOrigin(-400, 300, 800);
+    camera->setLookat(-400, 300, 0);
     camera->setUp(0, 1, 0);
     camera->setFov(40);
     camera->setAspect((float)width / height);
@@ -82,19 +82,63 @@ void App::setup()
     scene.setEnvmap(make_shared<ConstantTexture>(Vec3f(0.3f), 0));
 
     // Hitgroup program
-    std::array<ProgramGroup, NRay> mesh_prg{pipeline.createHitgroupProgram(context, module, "__closesthit__mesh")};
+    std::array<ProgramGroup, NRay> mesh_prg{pipeline.createHitgroupProgram(context, module, "__closesthit__mesh", "", "__anyhit__opacity")};
+
+    // Load opacity texture
+    auto model = make_shared<TriangleMesh>();
+    vector<Attributes> material_attributes;
+    model->loadWithMtl("resources/model/white_oak/white_oak.obj", material_attributes);
+
+    cudaTextureDesc texture_desc = {};
+    texture_desc.addressMode[0] = cudaAddressModeWrap;
+    texture_desc.addressMode[1] = cudaAddressModeWrap;
+    texture_desc.filterMode = cudaFilterModeLinear;
+    texture_desc.normalizedCoords = 1;
+    texture_desc.sRGB = 1;
+
+    vector<shared_ptr<Material>> materials;
+    for (const auto& ma : material_attributes)
+    {
+        shared_ptr<Texture> texture;
+        std::string texture_name = ma.findOneString("diffuse_texture", "");
+        if (!texture_name.empty())
+            texture = make_shared<BitmapTexture>(texture_name, texture_desc, 2);
+        else
+            texture = make_shared<ConstantTexture>(ma.findOneVec3f("diffuse", Vec3f(0.5f)), 0);
+        auto diffuse = make_shared<Diffuse>(SurfaceCallableID{}, texture);
+        materials.emplace_back(diffuse);
+    }
+    scene.addObject("tree", model, materials, mesh_prg, Matrix4f::identity());
+
+    CUDA_CHECK(cudaStreamCreate(&stream));
+    scene.copyDataToDevice();
+    scene.buildAccel(context, stream);
+    scene.buildSBT();
+    pipeline.create(context);
+
+    params.handle = scene.accelHandle();
 }
 
 // ------------------------------------------------------------------
 void App::update()
 {
+    handleCameraUpdate();
 
+    scene.launchRay(context, pipeline, params, stream, result_bmp.width(), result_bmp.height(), 1);
+    CUDA_CHECK(cudaStreamSynchronize(stream));
+    CUDA_SYNC_CHECK();
+
+    params.frame++;
+
+    result_bmp.copyFromDevice();
+
+    pgSetWindowName("Origin: " + toString(scene.camera()->origin()) + ", Lookat: " + toString(scene.camera()->lookat()));
 }
 
 // ------------------------------------------------------------------
 void App::draw()
 {
-
+    result_bmp.draw();
 }
 
 // ------------------------------------------------------------------
@@ -106,7 +150,7 @@ void App::mousePressed(float x, float y, int button)
 // ------------------------------------------------------------------
 void App::mouseDragged(float x, float y, int button)
 {
-    
+    if (button == MouseButton::Middle) is_camera_updated = true;
 }
 
 // ------------------------------------------------------------------
@@ -124,7 +168,7 @@ void App::mouseMoved(float x, float y)
 // ------------------------------------------------------------------
 void App::mouseScrolled(float x, float y)
 {
-    
+    is_camera_updated = true;
 }
 
 // ------------------------------------------------------------------

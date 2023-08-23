@@ -16,11 +16,11 @@ namespace prayground {
 
     namespace impl {
         template <typename PixelT> struct PixelDecl {};
-        template <> struct PixelDecl<uint8_t> { using V1 = uint8_t; using V2 = Vec2u; using V3 = Vec3u; using V4 = Vec4u; };
-        template <> struct PixelDecl<float> { using V1 = float; using V2 = Vec2f; using V3 = Vec3f; using V4 = Vec4f; };
-        template <> struct PixelDecl<int8_t> { using V1 = int8_t; using V2 = Vec2c; using V3 = Vec3c; using V4 = Vec4c; };
-        template <> struct PixelDecl<double> { using V1 = double; using V2 = Vec2d; using V3 = Vec3d; using V4 = Vec4d; };
-        template <> struct PixelDecl<int32_t> { using V1 = int32_t; using V2 = Vec2i; using V3 = Vec3i; using V4 = Vec4i; };
+        template <> struct PixelDecl<uint8_t>   { using V1 = uint8_t;   using V2 = uchar2;  using V3 = uchar3;  using V4 = uchar4; };
+        template <> struct PixelDecl<float>     { using V1 = float;     using V2 = float2;  using V3 = float3;  using V4 = float4; };
+        template <> struct PixelDecl<int8_t>    { using V1 = int8_t;    using V2 = char2;   using V3 = char3;   using V4 = char4; };
+        template <> struct PixelDecl<double>    { using V1 = double;    using V2 = double2; using V3 = double3; using V4 = double4; };
+        template <> struct PixelDecl<int32_t>   { using V1 = int32_t;   using V2 = int2;    using V3 = int3;    using V4 = int4; };
     } // namespace impl
 
     enum class PixelFormat : int 

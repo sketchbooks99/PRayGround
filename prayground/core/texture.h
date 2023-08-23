@@ -18,6 +18,7 @@ namespace prayground {
         Custom = 1 << 3
     };
 
+#ifndef __CUDACC__
     inline std::ostream& operator<<(std::ostream& out, TextureType type)
     {
         switch (type)
@@ -29,6 +30,7 @@ namespace prayground {
         case TextureType::Custom:       return out << "TextureType::Custom";
         }
     }
+#endif
 
     class Texture {
     public:

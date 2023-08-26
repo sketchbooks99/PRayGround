@@ -81,7 +81,8 @@ namespace prayground {
         void loadWithMtl(
             const std::filesystem::path& objpath, 
             std::vector<Attributes>& material_attribs, 
-            const std::filesystem::path& mtlpath = "");
+            const std::filesystem::path& mtlpath = ""
+        );
 
         /* Calculate normals based on triangle faces. The normals are stored for each faces, 
          * so more memory size will be required than smoothed normals. */

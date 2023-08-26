@@ -41,7 +41,7 @@ extern "C" GLOBAL void __raygen__pinhole()
         const Vec2f d = 2.0f * Vec2f(
             (static_cast<float>(idx.x()) + jitter.x()) / params.width,
             (static_cast<float>(idx.y()) + jitter.y()) / params.height
-        );
+        ) - 1.0f;
 
         Vec3f ro, rd;
         getCameraRay(raygen->camera, d.x(), d.y(), ro, rd);
@@ -146,5 +146,7 @@ extern "C" GLOBAL void __closesthit__mesh()
 
 extern "C" GLOBAL void __anyhit__opacity()
 {
+    setPayload<2>(1u);
 
+    
 }

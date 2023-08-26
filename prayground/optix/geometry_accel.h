@@ -2,6 +2,7 @@
 #include <optix.h>
 #include <prayground/core/shape.h>
 #include <prayground/optix/context.h>
+#include <prayground/optix/omm.h>
 #include <vector>
 #include <memory>
 

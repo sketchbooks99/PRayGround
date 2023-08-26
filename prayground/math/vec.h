@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <vector_types.h>
 #include <vector_functions.h>
@@ -492,6 +492,12 @@ namespace prayground {
     INLINE HOSTDEVICE Vec2<T> faceforward(const Vec2<T>& n, const Vec2<T>& i, const Vec2<T>& nref)
     {
         return n * copysignf(1.0f, dot(i, nref));
+    }
+
+    template <typename T>
+    HOSTDEVICE INLINE T barycentricInterop(const T& a, const T& b, const T& c, const Vec2f& bc)
+    {
+        return (1.0f - bc.x() - bc.y()) * a + bc.x() * b + bc.y() * c;
     }
 
     // ----------------------------------------------------------------------

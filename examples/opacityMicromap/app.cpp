@@ -63,8 +63,8 @@ void App::setup()
 
     // Camera settings
     std::shared_ptr<Camera> camera(new Camera);
-    camera->setOrigin(-400, 300, 800);
-    camera->setLookat(-400, 300, 0);
+    camera->setOrigin(0, 300, 1000);
+    camera->setLookat(0, 300, 0);
     camera->setUp(0, 1, 0);
     camera->setFov(40);
     camera->setAspect((float)width / height);

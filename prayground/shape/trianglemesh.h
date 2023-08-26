@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #ifndef __CUDACC__
 #include <prayground/core/util.h>
@@ -9,6 +9,8 @@
 #include <prayground/core/shape.h>
 #include <prayground/math/vec.h>
 #include <prayground/math/util.h>
+
+#include <prayground/optix/omm.h>
 
 namespace prayground {
 
@@ -128,6 +130,11 @@ namespace prayground {
         CUdeviceptr d_texcoords { 0 };
         CUdeviceptr d_sbt_indices{ 0 };
 
+#if OPTIX_VERSION >= 70600
+        OpacityMicromap m_opacitymap;
+#elif OPTIX_VERSION >= 70700
+#endif
+
 #endif // __CUDACC__
     };
 
@@ -142,11 +149,5 @@ namespace prayground {
         return out;
     }
 #endif
-
-    template <typename T>
-    HOSTDEVICE INLINE T barycentricInterop(const T& a, const T& b, const T& c, const Vec2f& bc)
-    {
-        return (1.0f - bc.x() - bc.y()) * a + bc.x() * b + bc.y() * c;
-    }
 
 } // namespace prayground

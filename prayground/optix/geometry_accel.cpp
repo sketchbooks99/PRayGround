@@ -39,7 +39,7 @@ void GeometryAccel::build(const Context& ctx, CUstream stream)
     {
         cuda_free(d_buffer);
         m_handle = 0;
-        d_buffer = 0; 
+        d_buffer = 0;
         m_count = 0;
     }
 

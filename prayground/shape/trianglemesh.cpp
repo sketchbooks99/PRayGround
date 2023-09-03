@@ -83,6 +83,8 @@ namespace prayground {
         bi.triangleArray.sbtIndexOffsetBuffer = d_sbt_indices;
         bi.triangleArray.sbtIndexOffsetSizeInBytes = sizeof(uint32_t);
         bi.triangleArray.sbtIndexOffsetStrideInBytes = sizeof(uint32_t);
+        if (m_use_opacitymap)
+            bi.triangleArray.opacityMicromap = m_opacitymap.getBuildInputForGAS();
         return bi;
     }
 
@@ -152,6 +154,73 @@ namespace prayground {
         };
 
         return data;
+    }
+
+    // ------------------------------------------------------------------
+    void TriangleMesh::setupOpacitymap(
+        const Context& ctx, 
+        uint32_t subdivision_level, 
+        OptixOpacityMicromapFormat format, 
+        OpacityMicromap::OpacityFunction function, 
+        uint32_t build_flags)
+    {
+        std::vector<Vec3i> faces;
+        std::for_each(m_faces.begin(), m_faces.end(), [&faces](const Face& face) { faces.push_back(face.texcoord_id); });
+        OpacityMicromap::Input input = {
+            .subdivision_level = subdivision_level,
+            .format = format,
+            .texcoords = m_texcoords.data(),
+            .faces = faces.data(),
+            .num_faces = static_cast<uint32_t>(faces.size()),
+            .opacity_bitmap_or_function = function
+        };
+
+        m_opacitymap.build(ctx, input, build_flags);
+        m_use_opacitymap = true;
+    }
+
+    void TriangleMesh::setupOpacitymap(
+        const Context& ctx, 
+        uint32_t subdivision_level, 
+        OptixOpacityMicromapFormat format, 
+        const std::shared_ptr<BitmapTexture>& bitmap, 
+        uint32_t build_flags)
+    {
+        std::vector<Vec3i> faces;
+        std::for_each(m_faces.begin(), m_faces.end(), [&faces](const Face& face) { faces.push_back(face.texcoord_id); });
+        OpacityMicromap::Input input = {
+            .subdivision_level = subdivision_level, 
+            .format = format, 
+            .texcoords = m_texcoords.data(),
+            .faces = faces.data(),
+            .num_faces = static_cast<uint32_t>(faces.size()),
+            .opacity_bitmap_or_function = bitmap
+        };
+
+        m_opacitymap.build(ctx, input, build_flags);
+        m_use_opacitymap = true;
+    }
+
+    void TriangleMesh::setupOpacitymap(
+        const Context& ctx, 
+        uint32_t subdivision_level, 
+        OptixOpacityMicromapFormat format, 
+        const std::shared_ptr<FloatBitmapTexture>& float_bitmap, 
+        uint32_t build_flags)
+    {
+        std::vector<Vec3i> faces;
+        std::for_each(m_faces.begin(), m_faces.end(), [&faces](const Face& face) { faces.push_back(face.texcoord_id); });
+        OpacityMicromap::Input input = {
+            .subdivision_level = subdivision_level,
+            .format = format,
+            .texcoords = m_texcoords.data(),
+            .faces = faces.data(),
+            .num_faces = static_cast<uint32_t>(faces.size()),
+            .opacity_bitmap_or_function = float_bitmap
+        };
+
+        m_opacitymap.build(ctx, input, build_flags);
+        m_use_opacitymap = true;
     }
 
     // ------------------------------------------------------------------

@@ -1,4 +1,4 @@
-﻿#include "bitmap.h"
+#include "bitmap.h"
 #include <prayground/core/spectrum.h>
 #include <prayground/core/cudabuffer.h>
 #include <prayground/core/file_util.h>
@@ -21,12 +21,6 @@
 #include <prayground/ext/tinyexr/tinyexr.h>
 
 namespace prayground {
-
-    template <typename PixelT>
-    Bitmap_<PixelT>::Bitmap_()
-    {
-    
-    }
 
     // --------------------------------------------------------------------
     template <typename PixelT>

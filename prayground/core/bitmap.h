@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <prayground/math/vec.h>
 
@@ -45,7 +45,7 @@ namespace prayground {
     public:
         using Type = PixelT;
 
-        Bitmap_();
+        Bitmap_() = default;
         Bitmap_(PixelFormat format, int width, int height, PixelT* data = nullptr);
         explicit Bitmap_(const std::filesystem::path& filename);
         explicit Bitmap_(const std::filesystem::path& filename, PixelFormat format);

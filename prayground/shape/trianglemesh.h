@@ -3,14 +3,13 @@
 #ifndef __CUDACC__
 #include <prayground/core/util.h>
 #include <prayground/core/attribute.h>
+#include <prayground/optix/omm.h>
 #include <filesystem>
 #endif
 
 #include <prayground/core/shape.h>
 #include <prayground/math/vec.h>
 #include <prayground/math/util.h>
-
-#include <prayground/optix/omm.h>
 
 namespace prayground {
 
@@ -56,6 +55,22 @@ namespace prayground {
         uint32_t sbtIndex() const override;
 
         Data getData();
+
+        void setupOpacitymap(const Context& ctx, 
+            uint32_t subdivision_level, 
+            OptixOpacityMicromapFormat format, 
+            OpacityMicromap::OpacityFunction function, 
+            uint32_t build_flags=OPTIX_OPACITY_MICROMAP_FLAG_NONE);
+        void setupOpacitymap(const Context& ctx, 
+            uint32_t subdivision_level, 
+            OptixOpacityMicromapFormat format, 
+            const std::shared_ptr<BitmapTexture>& bitmap, 
+            uint32_t build_flags = OPTIX_OPACITY_MICROMAP_FLAG_NONE);
+        void setupOpacitymap(const Context& ctx, 
+            uint32_t subdivision_level, 
+            OptixOpacityMicromapFormat format, 
+            const std::shared_ptr<FloatBitmapTexture>& float_bitmap, 
+            uint32_t build_flags = OPTIX_OPACITY_MICROMAP_FLAG_NONE);
 
         /**
          * @note
@@ -132,6 +147,7 @@ namespace prayground {
         CUdeviceptr d_sbt_indices{ 0 };
 
 #if OPTIX_VERSION >= 70600
+        bool m_use_opacitymap{ false };
         OpacityMicromap m_opacitymap;
 #elif OPTIX_VERSION >= 70700
 #endif

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <prayground/prayground.h>
 #include "params.h"
@@ -29,12 +29,13 @@ private:
     Pipeline pipeline;
 
     LaunchParams params;
+    CUDABuffer<LaunchParams> d_params;
 
     Bitmap result_bmp;
     FloatBitmap accum_bmp;
 
-    static constexpr uint32_t NRay = 1;
-    Scene<Camera, NRay> scene;
+    pgDefaultSBT<Camera, 1> sbt;
 
+    Camera camera;
     bool is_camera_updated;
 };

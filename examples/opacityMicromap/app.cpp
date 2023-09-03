@@ -6,6 +6,7 @@ void App::initResultBufferOnDevice()
 
     result_bmp.allocateDevicePtr();
     accum_bmp.allocateDevicePtr();
+
     params.result_buffer = reinterpret_cast<Vec4u*>(result_bmp.devicePtr());
     params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bmp.devicePtr());
 
@@ -18,7 +19,15 @@ void App::handleCameraUpdate()
         return;
     is_camera_updated = false;
 
-    scene.updateSBT(+(SBTRecordType::Raygen));
+    pgRaygenRecord<Camera>* rg_record = reinterpret_cast<pgRaygenRecord<Camera>*>(sbt.deviceRaygenRecordPtr());
+    pgRaygenData<Camera> rg_data;
+    rg_data.camera = camera.getData();
+
+    CUDA_CHECK(cudaMemcpy(
+        reinterpret_cast<void*>(&rg_record->data),
+        &rg_data, sizeof(pgRaygenData<Camera>),
+        cudaMemcpyHostToDevice
+    ));
 
     initResultBufferOnDevice();
 }
@@ -61,62 +70,96 @@ void App::setup()
     params.result_buffer = reinterpret_cast<Vec4u*>(result_bmp.devicePtr());
     params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bmp.devicePtr());
 
+    initResultBufferOnDevice();
+
     // Camera settings
-    std::shared_ptr<Camera> camera(new Camera);
-    camera->setOrigin(0, 300, 1000);
-    camera->setLookat(0, 300, 0);
-    camera->setUp(0, 1, 0);
-    camera->setFov(40);
-    camera->setAspect((float)width / height);
-    camera->enableTracking(pgGetCurrentWindow());
+    camera.setOrigin(0, 0, -5);
+    camera.setLookat(0, 0, 0);
+    camera.setUp(0, 1, 0);
+    camera.setFov(40);
+    camera.setAspect((float)width / height);
+    camera.enableTracking(pgGetCurrentWindow());
 
     // Raygen program
     ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, module, "__raygen__pinhole");
-    scene.bindRaygenProgram(raygen_prg);
-    scene.setCamera(camera);
+    pgRaygenRecord<Camera> raygen_record;
+    raygen_prg.recordPackHeader(&raygen_record);
+    raygen_record.data.camera = camera.getData();
+    sbt.setRaygenRecord(raygen_record);
+
+    // Setup environment emitter
+    auto env_texture = make_shared<FloatBitmapTexture>("resources/image/drackenstein_quarry_4k.exr", 2);
+    env_texture->copyToDevice();
+    EnvironmentEmitter env{ env_texture };
+    env.copyToDevice();
 
     // Miss program
-    std::array<ProgramGroup, NRay> miss_prg{pipeline.createMissProgram(context, module, "__miss__envmap")};
-    miss_prg[0] = pipeline.createMissProgram(context, module, "__miss__envmap");
-    scene.bindMissPrograms(miss_prg);
-    scene.setEnvmap(make_shared<ConstantTexture>(Vec3f(0.3f), 0));
+    ProgramGroup miss_prg = pipeline.createMissProgram(context, module, "__miss__envmap");
+    pgMissRecord miss_record;
+    miss_prg.recordPackHeader(&miss_record);
+    miss_record.data.env_data = env.devicePtr();
+    sbt.setMissRecord({ miss_record });
 
     // Hitgroup program
-    std::array<ProgramGroup, NRay> mesh_prg{pipeline.createHitgroupProgram(context, module, "__closesthit__mesh", "", "__anyhit__opacity")};
+    ProgramGroup mesh_prg = pipeline.createHitgroupProgram(context, module, "__closesthit__mesh", "", "__anyhit__opacity");
 
     // Load opacity texture
-    auto model = make_shared<TriangleMesh>();
-    vector<Attributes> material_attributes;
-    model->loadWithMtl("resources/model/white_oak/white_oak.obj", material_attributes);
+    std::vector<Vec3f> vertices = { Vec3f(-1, 1, 0), Vec3f(-1, -1, 0), Vec3f(1, -1, 0), Vec3f(1, 1, 0) };
+    std::vector<Vec3f> normals = { Vec3f(0, 0, -1), Vec3f(0, 0, -1), Vec3f(0, 0, -1), Vec3f(0, 0, -1) };
+    std::vector<Vec2f> texcoords = { Vec2f(0, 0), Vec2f(0, 1), Vec2f(1, 1), Vec2f(1, 0) };
+    std::vector<Face> faces = {
+        {Vec3i(0, 1, 2), Vec3i(0, 1, 2), Vec3i(0, 1, 2)},
+        {Vec3i(0, 2, 3), Vec3i(0, 2, 3), Vec3i(0, 2, 3)}
+    };
 
-    cudaTextureDesc texture_desc = {};
-    texture_desc.addressMode[0] = cudaAddressModeWrap;
-    texture_desc.addressMode[1] = cudaAddressModeWrap;
-    texture_desc.filterMode = cudaFilterModeLinear;
-    texture_desc.normalizedCoords = 1;
-    texture_desc.sRGB = 1;
+    auto mesh = make_shared<TriangleMesh>(vertices, faces, normals, texcoords);
+    mesh->copyToDevice();
 
-    vector<shared_ptr<Material>> materials;
-    for (const auto& ma : material_attributes)
+    auto diffuse = make_shared<Diffuse>(SurfaceCallableID{}, make_shared<ConstantTexture>(Vec3f(1.0f), 0));
+    diffuse->copyToDevice();
+
+    pgHitgroupRecord hitgroup_record;
+    mesh_prg.recordPackHeader(&hitgroup_record);
+    hitgroup_record.data = {
+        .shape_data = mesh->devicePtr(),
+        .surface_info = {
+            .data = diffuse->devicePtr(),
+            .callable_id = diffuse->surfaceCallableID(),
+            .type = diffuse->surfaceType()
+        }
+    };
+
+    sbt.addHitgroupRecord({ hitgroup_record });
+
+    auto omm_function = [](const OpacityMicromap::MicroBarycentrics& bc, const Vec2f& uv0, const Vec2f& uv1, const Vec2f& uv2) -> int
     {
-        shared_ptr<Texture> texture;
-        std::string texture_name = ma.findOneString("diffuse_texture", "");
-        if (!texture_name.empty())
-            texture = make_shared<BitmapTexture>(texture_name, texture_desc, 2);
+        // Calculate texcoords for each micro triangles in opacity micromap
+        const Vec2f micro_uv0 = barycentricInterop(uv0, uv1, uv2, bc.uv0);
+        const Vec2f micro_uv1 = barycentricInterop(uv0, uv1, uv2, bc.uv1);
+        const Vec2f micro_uv2 = barycentricInterop(uv0, uv1, uv2, bc.uv1);
+
+        const bool in_circle0 = (length(micro_uv0 - 0.5f)) < 0.25f;
+        const bool in_circle1 = (length(micro_uv1 - 0.5f)) < 0.25f;
+        const bool in_circle2 = (length(micro_uv2 - 0.5f)) < 0.25f;
+
+        if (in_circle0 && in_circle1 && in_circle2)
+            return OPTIX_OPACITY_MICROMAP_STATE_TRANSPARENT;
         else
-            texture = make_shared<ConstantTexture>(ma.findOneVec3f("diffuse", Vec3f(0.5f)), 0);
-        auto diffuse = make_shared<Diffuse>(SurfaceCallableID{}, texture);
-        materials.emplace_back(diffuse);
-    }
-    scene.addObject("tree", model, materials, mesh_prg, Matrix4f::identity());
+            return OPTIX_OPACITY_MICROMAP_STATE_OPAQUE;
+    };
+
+    mesh->setupOpacitymap(context, 2, OPTIX_OPACITY_MICROMAP_FORMAT_2_STATE, omm_function, OPTIX_OPACITY_MICROMAP_FLAG_NONE);
+
+    GeometryAccel gas{ ShapeType::Mesh };
+    gas.addShape(mesh);
+    gas.allowCompaction();
+    gas.build(context, stream);
 
     CUDA_CHECK(cudaStreamCreate(&stream));
-    scene.copyDataToDevice();
-    scene.buildAccel(context, stream);
-    scene.buildSBT();
+    sbt.createOnDevice();
+    params.handle = gas.handle();
     pipeline.create(context);
-
-    params.handle = scene.accelHandle();
+    d_params.allocate(sizeof(LaunchParams));
 }
 
 // ------------------------------------------------------------------
@@ -124,15 +167,24 @@ void App::update()
 {
     handleCameraUpdate();
 
-    scene.launchRay(context, pipeline, params, stream, result_bmp.width(), result_bmp.height(), 1);
+    d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);
+    optixLaunch(
+        static_cast<OptixPipeline>(pipeline),
+        stream,
+        d_params.devicePtr(),
+        sizeof(LaunchParams),
+        &sbt.sbt(),
+        params.width,
+        params.height,
+        1
+    );
+
     CUDA_CHECK(cudaStreamSynchronize(stream));
     CUDA_SYNC_CHECK();
 
     params.frame++;
 
     result_bmp.copyFromDevice();
-
-    pgSetWindowName("Origin: " + toString(scene.camera()->origin()) + ", Lookat: " + toString(scene.camera()->lookat()));
 }
 
 // ------------------------------------------------------------------

@@ -57,12 +57,26 @@ extern "C" GLOBAL void __raygen__pinhole()
             if (depth >= params.max_depth)
                 break;
 
-            trace(params.handle, ro, rd, 0.01f, 1e10f, 0, &si);
+            //trace(params.handle, ro, rd, 0.01f, 1e10f, 0, &si);
+            uint32_t u0, u1, u2 = 0;
+            packPointer(&si, u0, u1);
+            optixTrace(
+                params.handle, ro, rd,
+                0.01f, 1e10f, 0,
+                OptixVisibilityMask(1), OPTIX_RAY_FLAG_NONE,
+                0, 1, 0,
+                u0, u1, u2
+            );
 
             if (si.trace_terminate) {
-                result = si.albedo;
+                result += si.emission;
                 break;
             }
+
+            if (u2 == 1)
+                result = Vec3f(1.0f, 0.0f, 1.0f);
+            else
+                result = si.albedo;
 
             if (depth == 0)
                 normal = si.shading.n;
@@ -147,6 +161,4 @@ extern "C" GLOBAL void __closesthit__mesh()
 extern "C" GLOBAL void __anyhit__opacity()
 {
     setPayload<2>(1u);
-
-    
 }

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <prayground/core/texture.h>
 #include <prayground/core/bitmap.h>
@@ -16,6 +16,7 @@ public:
 #ifndef __CUDACC__
     using ColorType = std::conditional_t<std::is_same_v<PixelT, float>, float4, uchar4>;
 
+    BitmapTexture_() = default;
     BitmapTexture_(const std::filesystem::path& filename, int prg_id);
     BitmapTexture_(const std::filesystem::path& filename, cudaTextureDesc desc, int prg_id);
 

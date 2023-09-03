@@ -1,4 +1,4 @@
-﻿#pragma once 
+#pragma once 
 
 #include <prayground/core/util.h>
 #include <prayground/core/spectrum.h>
@@ -43,6 +43,7 @@ namespace prayground {
         };
 
 #ifndef __CUDACC__
+        Texture() = default;
         Texture(int prg_id) : m_prg_id(prg_id) {}
 
         virtual constexpr TextureType type() = 0;

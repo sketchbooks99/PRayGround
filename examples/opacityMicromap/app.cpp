@@ -73,7 +73,7 @@ void App::setup()
     initResultBufferOnDevice();
 
     // Camera settings
-    camera.setOrigin(0, 0, -5);
+    camera.setOrigin(0, 0, 5);
     camera.setLookat(0, 0, 0);
     camera.setUp(0, 1, 0);
     camera.setFov(40);
@@ -113,6 +113,7 @@ void App::setup()
     };
 
     auto mesh = make_shared<TriangleMesh>(vertices, faces, normals, texcoords);
+    mesh->setSbtIndex(0);
     mesh->copyToDevice();
 
     auto diffuse = make_shared<Diffuse>(SurfaceCallableID{}, make_shared<ConstantTexture>(Vec3f(1.0f), 0));
@@ -148,7 +149,7 @@ void App::setup()
             return OPTIX_OPACITY_MICROMAP_STATE_OPAQUE;
     };
 
-    mesh->setupOpacitymap(context, 2, OPTIX_OPACITY_MICROMAP_FORMAT_2_STATE, omm_function, OPTIX_OPACITY_MICROMAP_FLAG_NONE);
+    mesh->setupOpacitymap(context, stream, 4, OPTIX_OPACITY_MICROMAP_FORMAT_4_STATE, omm_function, OPTIX_OPACITY_MICROMAP_FLAG_NONE);
 
     GeometryAccel gas{ ShapeType::Mesh };
     gas.addShape(mesh);

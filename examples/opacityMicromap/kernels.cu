@@ -73,10 +73,11 @@ extern "C" GLOBAL void __raygen__pinhole()
                 break;
             }
 
-            if (u2 == 1)
+            /*if (u2 == 1)
                 result = Vec3f(1.0f, 0.0f, 1.0f);
             else
-                result = si.albedo;
+                result = si.albedo;*/
+            result = si.albedo;
 
             if (depth == 0)
                 normal = si.shading.n;
@@ -154,7 +155,7 @@ extern "C" GLOBAL void __closesthit__mesh()
     si->shading = shading;
     si->t = ray.tmax;
     si->wo = ray.d;
-    si->albedo = Vec3f(1.0f);
+    si->albedo = Vec3f(shading.uv, 1.0f);
     si->surface_info = data->surface_info;
 }
 

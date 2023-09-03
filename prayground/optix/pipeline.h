@@ -63,6 +63,7 @@ public:
     void setNumAttributes(const int num_attributes);
     void setLaunchVariableName(const char* params_name);
     void setExceptionFlags(OptixExceptionFlags flags);
+    void enableOpacityMap();
     OptixPipelineCompileOptions compileOptions() const;
 
     /** Link options */

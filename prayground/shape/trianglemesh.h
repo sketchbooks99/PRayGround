@@ -56,17 +56,20 @@ namespace prayground {
 
         Data getData();
 
-        void setupOpacitymap(const Context& ctx, 
+        void setupOpacitymap(const Context& ctx,
+            CUstream stream,
             uint32_t subdivision_level, 
             OptixOpacityMicromapFormat format, 
             OpacityMicromap::OpacityFunction function, 
             uint32_t build_flags=OPTIX_OPACITY_MICROMAP_FLAG_NONE);
         void setupOpacitymap(const Context& ctx, 
+            CUstream stream,
             uint32_t subdivision_level, 
             OptixOpacityMicromapFormat format, 
             const std::shared_ptr<BitmapTexture>& bitmap, 
             uint32_t build_flags = OPTIX_OPACITY_MICROMAP_FLAG_NONE);
         void setupOpacitymap(const Context& ctx, 
+            CUstream stream,
             uint32_t subdivision_level, 
             OptixOpacityMicromapFormat format, 
             const std::shared_ptr<FloatBitmapTexture>& float_bitmap, 

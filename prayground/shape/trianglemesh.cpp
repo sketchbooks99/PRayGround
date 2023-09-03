@@ -159,6 +159,7 @@ namespace prayground {
     // ------------------------------------------------------------------
     void TriangleMesh::setupOpacitymap(
         const Context& ctx, 
+        CUstream stream,
         uint32_t subdivision_level, 
         OptixOpacityMicromapFormat format, 
         OpacityMicromap::OpacityFunction function, 
@@ -175,13 +176,14 @@ namespace prayground {
             .opacity_bitmap_or_function = function
         };
 
-        m_opacitymap.build(ctx, input, build_flags);
+        m_opacitymap.build(ctx, stream, input, build_flags);
         m_use_opacitymap = true;
     }
 
     void TriangleMesh::setupOpacitymap(
         const Context& ctx, 
-        uint32_t subdivision_level, 
+        CUstream stream,
+        uint32_t subdivision_level,
         OptixOpacityMicromapFormat format, 
         const std::shared_ptr<BitmapTexture>& bitmap, 
         uint32_t build_flags)
@@ -197,13 +199,14 @@ namespace prayground {
             .opacity_bitmap_or_function = bitmap
         };
 
-        m_opacitymap.build(ctx, input, build_flags);
+        m_opacitymap.build(ctx, stream, input, build_flags);
         m_use_opacitymap = true;
     }
 
     void TriangleMesh::setupOpacitymap(
         const Context& ctx, 
-        uint32_t subdivision_level, 
+        CUstream stream,
+        uint32_t subdivision_level,
         OptixOpacityMicromapFormat format, 
         const std::shared_ptr<FloatBitmapTexture>& float_bitmap, 
         uint32_t build_flags)
@@ -219,7 +222,7 @@ namespace prayground {
             .opacity_bitmap_or_function = float_bitmap
         };
 
-        m_opacitymap.build(ctx, input, build_flags);
+        m_opacitymap.build(ctx, stream, input, build_flags);
         m_use_opacitymap = true;
     }
 

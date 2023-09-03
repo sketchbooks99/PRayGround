@@ -16,6 +16,7 @@ void App::setup()
     pipeline.setContinuationCallableDepth(4);
     pipeline.setNumPayloads(5);
     pipeline.setNumAttributes(5);
+    pipeline.enableOpacityMap();
 
     // Create modules
     Module module = pipeline.createModuleFromCudaFile(context, "kernels.cu");
@@ -95,7 +96,7 @@ void App::setup()
     // Build GAS
     gas = GeometryAccel{ShapeType::Mesh};
     gas.addShape(bunny);
-    gas.allowCompaction();
+    //gas.allowCompaction();
     gas.build(context, stream);
     
     // Create sbt and pipeline to launch ray

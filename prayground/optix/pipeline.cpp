@@ -1,4 +1,4 @@
-﻿#include "pipeline.h"
+#include "pipeline.h"
 #include <prayground_config.h>
 #include <optix_stubs.h>
 #include <optix_function_table_definition.h>
@@ -393,6 +393,11 @@ namespace prayground {
     void Pipeline::setExceptionFlags(OptixExceptionFlags flags)
     {
         m_compile_options.exceptionFlags = flags;
+    }
+
+    void Pipeline::enableOpacityMap()
+    {
+        m_compile_options.allowOpacityMicromaps = true;
     }
 
     OptixPipelineCompileOptions Pipeline::compileOptions() const

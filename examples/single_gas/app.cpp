@@ -96,7 +96,7 @@ void App::setup()
     // Build GAS
     gas = GeometryAccel{ShapeType::Mesh};
     gas.addShape(bunny);
-    //gas.allowCompaction();
+    gas.allowCompaction();
     gas.build(context, stream);
     
     // Create sbt and pipeline to launch ray

@@ -82,8 +82,13 @@ void GeometryAccel::build(const Context& ctx, CUstream stream)
     ));
 
     OptixAccelEmitDesc emit_property = {};
-    emit_property.type = OPTIX_PROPERTY_TYPE_COMPACTED_SIZE;
-    emit_property.result = (CUdeviceptr)((char*)d_buffer_temp_output_gas_and_compacted_size + compacted_size_offset);
+    uint32_t num_emit_properties = 0;
+    if ((m_options.buildFlags & OPTIX_BUILD_FLAG_ALLOW_COMPACTION) != 0)
+    {
+        emit_property.type = OPTIX_PROPERTY_TYPE_COMPACTED_SIZE;
+        emit_property.result = (CUdeviceptr)((char*)d_buffer_temp_output_gas_and_compacted_size + compacted_size_offset);
+        num_emit_properties = 1;
+    }
 
     OPTIX_CHECK(optixAccelBuild(
         static_cast<OptixDeviceContext>(ctx),
@@ -96,8 +101,8 @@ void GeometryAccel::build(const Context& ctx, CUstream stream)
         d_buffer_temp_output_gas_and_compacted_size,
         gas_buffer_sizes.outputSizeInBytes, 
         &m_handle, 
-        &emit_property, 
-        1
+        num_emit_properties > 0 ? &emit_property : nullptr, 
+        num_emit_properties
     ));
 
     d_buffer_size = gas_buffer_sizes.outputSizeInBytes;

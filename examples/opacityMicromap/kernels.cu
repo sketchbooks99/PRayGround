@@ -73,10 +73,6 @@ extern "C" GLOBAL void __raygen__pinhole()
                 break;
             }
 
-            /*if (u2 == 1)
-                result = Vec3f(1.0f, 0.0f, 1.0f);
-            else
-                result = si.albedo;*/
             result = si.albedo;
 
             if (depth == 0)
@@ -144,7 +140,8 @@ extern "C" GLOBAL void __closesthit__mesh()
     Ray ray = getWorldRay();
     const Vec2f bc = optixGetTriangleBarycentrics();
 
-    Shading shading = pgGetMeshShading(mesh, bc, optixGetPrimitiveIndex());
+    const uint32_t prim_idx = optixGetPrimitiveIndex();
+    Shading shading = pgGetMeshShading(mesh, bc, prim_idx);
 
     shading.n = optixTransformNormalFromObjectToWorldSpace(shading.n);
     shading.dpdu = optixTransformVectorFromObjectToWorldSpace(shading.dpdu);
@@ -155,7 +152,10 @@ extern "C" GLOBAL void __closesthit__mesh()
     si->shading = shading;
     si->t = ray.tmax;
     si->wo = ray.d;
-    si->albedo = Vec3f(shading.uv, 1.0f);
+    if (prim_idx == 0)
+        si->albedo = Vec3f(shading.uv, 1.0f);
+    else
+        si->albedo = Vec3f(shading.uv, 0.0f);
     si->surface_info = data->surface_info;
 }
 

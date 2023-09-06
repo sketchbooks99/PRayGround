@@ -64,7 +64,7 @@ void App::setup()
     // Configuration of launch parameters
     params.width = width;
     params.height = height;
-    params.samples_per_launch = 4;
+    params.samples_per_launch = 1;
     params.frame = 0;
     params.max_depth = 5;
     params.result_buffer = reinterpret_cast<Vec4u*>(result_bmp.devicePtr());
@@ -104,33 +104,15 @@ void App::setup()
     ProgramGroup mesh_prg = pipeline.createHitgroupProgram(context, module, "__closesthit__mesh", "", "__anyhit__opacity");
 
     // Load opacity texture
-    std::vector<Vec3f> vertices = { Vec3f(-1, 1, 0), Vec3f(-1, -1, 0), Vec3f(1, -1, 0), Vec3f(1, 1, 0) };
-    std::vector<Vec3f> normals = { Vec3f(0, 0, -1), Vec3f(0, 0, -1), Vec3f(0, 0, -1), Vec3f(0, 0, -1) };
-    std::vector<Vec2f> texcoords = { Vec2f(0, 0), Vec2f(0, 1), Vec2f(1, 1), Vec2f(1, 0) };
+    //std::vector<Vec3f> vertices = { Vec3f(-1, 1, 0), Vec3f(-1, -1, 0), Vec3f(1, -1, 0), Vec3f(1, 1, 0) };
+    std::vector<Vec3f> vertices = { Vec3f(-1, -1, 0), Vec3f(1, -1, 0), Vec3f(0, 0.67f, 0)};
+    std::vector<Vec3f> normals = { Vec3f(0, 0, -1), Vec3f(0, 0, -1), Vec3f(0, 0, -1)/* , Vec3f(0, 0, -1) */};
+    //std::vector<Vec2f> texcoords = { Vec2f(0, 0), Vec2f(0, 1), Vec2f(1, 1), Vec2f(1, 0) };
+    std::vector<Vec2f> texcoords = { Vec2f(0, 0), Vec2f(1, 0), Vec2f(0, 0.5)/* , Vec2f(1, 0) */};
     std::vector<Face> faces = {
-        {Vec3i(0, 1, 2), Vec3i(0, 1, 2), Vec3i(0, 1, 2)},
-        {Vec3i(0, 2, 3), Vec3i(0, 2, 3), Vec3i(0, 2, 3)}
+        {Vec3i(0, 1, 2), Vec3i(0, 1, 2), Vec3i(0, 1, 2)}
+        //{Vec3i(0, 2, 3), Vec3i(0, 2, 3), Vec3i(0, 2, 3)}
     };
-
-    auto mesh = make_shared<TriangleMesh>(vertices, faces, normals, texcoords);
-    mesh->setSbtIndex(0);
-    mesh->copyToDevice();
-
-    auto diffuse = make_shared<Diffuse>(SurfaceCallableID{}, make_shared<ConstantTexture>(Vec3f(1.0f), 0));
-    diffuse->copyToDevice();
-
-    pgHitgroupRecord hitgroup_record;
-    mesh_prg.recordPackHeader(&hitgroup_record);
-    hitgroup_record.data = {
-        .shape_data = mesh->devicePtr(),
-        .surface_info = {
-            .data = diffuse->devicePtr(),
-            .callable_id = diffuse->surfaceCallableID(),
-            .type = diffuse->surfaceType()
-        }
-    };
-
-    sbt.addHitgroupRecord({ hitgroup_record });
 
     auto omm_function = [](const OpacityMicromap::MicroBarycentrics& bc, const Vec2f& uv0, const Vec2f& uv1, const Vec2f& uv2) -> int
     {
@@ -149,11 +131,30 @@ void App::setup()
             return OPTIX_OPACITY_MICROMAP_STATE_OPAQUE;
     };
 
+    auto mesh = make_shared<TriangleMesh>(vertices, faces, normals, texcoords);
+    mesh->setSbtIndex(0);
     mesh->setupOpacitymap(context, stream, 4, OPTIX_OPACITY_MICROMAP_FORMAT_4_STATE, omm_function, OPTIX_OPACITY_MICROMAP_FLAG_NONE);
+    mesh->copyToDevice();
+
+    auto diffuse = make_shared<Diffuse>(SurfaceCallableID{}, make_shared<ConstantTexture>(Vec3f(1.0f), 0));
+    diffuse->copyToDevice();
+
+    pgHitgroupRecord hitgroup_record;
+    mesh_prg.recordPackHeader(&hitgroup_record);
+    hitgroup_record.data = {
+        .shape_data = mesh->devicePtr(),
+        .surface_info = {
+            .data = diffuse->devicePtr(),
+            .callable_id = diffuse->surfaceCallableID(),
+            .type = diffuse->surfaceType()
+        }
+    };
+
+    sbt.addHitgroupRecord({ hitgroup_record });
 
     GeometryAccel gas{ ShapeType::Mesh };
     gas.addShape(mesh);
-    gas.allowCompaction();
+    //gas.allowCompaction();
     gas.build(context, stream);
 
     CUDA_CHECK(cudaStreamCreate(&stream));

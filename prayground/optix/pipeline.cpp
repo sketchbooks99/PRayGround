@@ -269,13 +269,14 @@ namespace prayground {
             &cc_stacksize
         ));
 
-        const uint32_t max_traversal_depth = 5; 
+        if ((m_compile_options.traversableGraphFlags & OPTIX_TRAVERSABLE_GRAPH_FLAG_ALLOW_SINGLE_GAS) != 0)
+            m_max_traversable_graph_depth = 1;
         OPTIX_CHECK(optixPipelineSetStackSize(
             m_pipeline,
             dc_stacksize_from_traversal, 
             dc_stacksize_from_state, 
             cc_stacksize, 
-            max_traversal_depth
+            m_max_traversable_graph_depth
         ));
     }
 
@@ -451,6 +452,16 @@ namespace prayground {
     uint32_t Pipeline::directCallableDepth() const
     {
         return m_dc_depth;
+    }
+
+    void Pipeline::setMaxTraversableGraphDepth(const uint32_t depth)
+    {
+        m_max_traversable_graph_depth = depth;
+    }
+
+    uint32_t Pipeline::maxTraversableGraphDepth() const
+    {
+        return m_max_traversable_graph_depth;
     }
 
 

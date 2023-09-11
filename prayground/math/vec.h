@@ -4,6 +4,7 @@
 #include <vector_functions.h>
 #include <prayground/core/util.h>
 #include <prayground/math/util.h>
+#include <prayground/optix/macros.h>
 
 #ifndef __CUDACC__
 #include <iostream>
@@ -70,7 +71,7 @@ namespace prayground {
     template <> struct CUVec4<uint64_t> { using Type = ulonglong4; };
 
     template <typename T>
-    class __align__(sizeof(T) * 2) Vec2 {
+    class PG_ALIGN(sizeof(T) * 2) Vec2 {
     public:
         using CUVec = typename CUVec2<T>::Type;
         using Type = T;
@@ -162,7 +163,7 @@ namespace prayground {
     };
 
     template <typename T>
-    class Vec3 {
+    class PG_ALIGN(sizeof(T) * 4) Vec3 {
     public:
         using CUVec = typename CUVec3<T>::Type;
         using Type = T;
@@ -265,7 +266,7 @@ namespace prayground {
     };
 
     template <typename T>
-    class __align__(sizeof(T) * 4) Vec4 {
+    class PG_ALIGN(sizeof(T) * 4) Vec4 {
     public:
         using CUVec = typename CUVec4<T>::Type;
         using Type = T;

@@ -24,7 +24,7 @@ static INLINE DEVICE void trace(
 // raygen
 extern "C" GLOBAL void __raygen__pinhole()
 {
-    const pgRaygenData<Camera>* raygen = (pgRaygenData<Camera>*)optixGetSbtDataPointer();
+    const RaygenData* raygen = (RaygenData*)optixGetSbtDataPointer();
 
     const int frame = params.frame;
 
@@ -45,6 +45,8 @@ extern "C" GLOBAL void __raygen__pinhole()
 
         Vec3f ro, rd;
         getCameraRay(raygen->camera, d.x(), d.y(), ro, rd);
+
+        Vec3f throughput(1.0f);
 
         SurfaceInteraction si;
         si.seed = seed;
@@ -69,14 +71,19 @@ extern "C" GLOBAL void __raygen__pinhole()
             );
 
             if (si.trace_terminate) {
-                result += si.emission;
+                result += Vec3f(si.emission) * throughput;
                 break;
             }
 
-            result = si.albedo;
+            // Sample next direction
+            optixDirectCall<void, SurfaceInteraction*, void*>(si.surface_info.callable_id.sample, &si, si.surface_info.data);
+            // Evaluate BSDF 
+            Vec4f bsdf = optixDirectCall<Vec4f, SurfaceInteraction*, void*>(si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
+            // Evaluate PDF
+            float pdf = optixDirectCall<float, SurfaceInteraction*, void*>(si.surface_info.callable_id.pdf, &si, si.surface_info.data);
+            pdf = fmaxf(1e-5f, pdf);
 
-            if (depth == 0)
-                normal = si.shading.n;
+            throughput *= bsdf / pdf;
             
             // Generate next path
             ro = si.p;
@@ -106,9 +113,9 @@ extern "C" GLOBAL void __raygen__pinhole()
 }
 
 // miss
-extern "C" GLOBAL void __miss__envmap()
+extern "C" DEVICE void __miss__envmap()
 {
-    pgMissData* data = reinterpret_cast<pgMissData*>(optixGetSbtDataPointer());
+    MissData* data = reinterpret_cast<MissData*>(optixGetSbtDataPointer());
     auto* env = reinterpret_cast<EnvironmentEmitter::Data*>(data->env_data);
     // Get pointer of SurfaceInteraction from two payload values
     SurfaceInteraction* si = getPtrFromTwoPayloads<SurfaceInteraction, 0>();
@@ -123,18 +130,14 @@ extern "C" GLOBAL void __miss__envmap()
     si->shading.uv = shading.uv;
     si->trace_terminate = true;
     si->surface_info.type = SurfaceType::None;
-    if (env->texture.prg_id == CONSTANT_TEXTURE_PRG_ID)
-        si->emission = pgGetConstantTextureValue<Vec4f>(si->shading.uv, env->texture.data);
-    else if (env->texture.prg_id == CHECKER_TEXTURE_PRG_ID)
-        si->emission = pgGetCheckerTextureValue<Vec4f>(si->shading.uv, env->texture.data);
-    else if (env->texture.prg_id == BITMAP_TEXTURE_PRG_ID)
-        si->emission = pgGetBitmapTextureValue<Vec4f>(si->shading.uv, env->texture.data);
+    si->emission = optixDirectCall<Vec4f, const Vec2f&, void*>(
+        env->texture.prg_id, si->shading.uv, env->texture.data);
 }
 
 // Mesh
 extern "C" GLOBAL void __closesthit__mesh()
 {
-    pgHitgroupData* data = (pgHitgroupData*)optixGetSbtDataPointer();
+    HitgroupData* data = (HitgroupData*)optixGetSbtDataPointer();
     const TriangleMesh::Data* mesh = reinterpret_cast<TriangleMesh::Data*>(data->shape_data);
 
     Ray ray = getWorldRay();
@@ -152,14 +155,86 @@ extern "C" GLOBAL void __closesthit__mesh()
     si->shading = shading;
     si->t = ray.tmax;
     si->wo = ray.d;
-    if (prim_idx == 0)
-        si->albedo = Vec3f(shading.uv, 1.0f);
-    else
-        si->albedo = Vec3f(shading.uv, 0.0f);
     si->surface_info = data->surface_info;
 }
 
 extern "C" GLOBAL void __anyhit__opacity()
 {
+    HitgroupData* data = (HitgroupData*)optixGetSbtDataPointer();
+    const TriangleMesh::Data* mesh = reinterpret_cast<TriangleMesh::Data*>(data->shape_data);
+
+    // Notify execution of anyhit shader
     setPayload<2>(1u);
+
+    const Vec2f bc = optixGetTriangleBarycentrics();
+    const uint32_t prim_idx = optixGetPrimitiveIndex();
+
+    auto* si = getPtrFromTwoPayloads<SurfaceInteraction, 0>();
+
+    const Face face = mesh->faces[prim_idx];
+
+    const Vec2f texcoord0 = mesh->texcoords[face.texcoord_id.x()];
+    const Vec2f texcoord1 = mesh->texcoords[face.texcoord_id.y()];
+    const Vec2f texcoord2 = mesh->texcoords[face.texcoord_id.z()];
+
+    const Vec2f texcoord = barycentricInterop(texcoord0, texcoord1, texcoord2, bc);
+
+    const Vec4f opacity = optixDirectCall<Vec4f, const Vec2f&, void*>(data->opacity_texture.prg_id, texcoord, data->opacity_texture.data);
+    if (opacity.w() == 0)
+        optixIgnoreIntersection();
+}
+
+// Textures
+extern "C" DEVICE Vec4f __direct_callable__bitmap(const Vec2f& uv, void* tex_data)
+{
+    return pgGetBitmapTextureValue<Vec4f>(uv, tex_data);
+}
+
+extern "C" DEVICE Vec4f __direct_callable__constant(const Vec2f& uv, void* tex_data)
+{
+    return pgGetConstantTextureValue<Vec4f>(uv, tex_data);
+}
+
+extern "C" DEVICE Vec4f __direct_callable__checker(const Vec2f& uv, void* tex_data)
+{
+    return pgGetCheckerTextureValue<Vec4f>(uv, tex_data);
+}
+
+// Surfaces
+extern "C" DEVICE void __direct_callable__sample_diffuse(SurfaceInteraction* si, void* data)
+{
+    const Diffuse::Data* diffuse = reinterpret_cast<Diffuse::Data*>(data);
+    si->wi = pgImportanceSamplingDiffuse(diffuse, si->wo, si->shading, si->seed);
+    si->trace_terminate = false;
+}
+
+extern "C" DEVICE Vec4f __direct_callable__bsdf_diffuse(SurfaceInteraction* si, void* data)
+{
+    const Diffuse::Data* diffuse = reinterpret_cast<Diffuse::Data*>(data);
+    const Vec4f albedo = optixDirectCall<Vec4f, const Vec2f&, void*>(diffuse->texture.prg_id, si->shading.uv, diffuse->texture.data);
+    si->albedo = albedo;
+    si->emission = Vec4f(0.0f);
+    return albedo * pgGetDiffuseBRDF(si->wi, si->shading.n);
+}
+
+extern "C" DEVICE float __direct_callable__pdf_diffuse(SurfaceInteraction* si, void* data)
+{
+    return pgGetDiffusePDF(si->wi, si->shading.n);
+}
+
+extern "C" DEVICE Vec4f __direct_callable__area_emitter(SurfaceInteraction * si, void* data)
+{
+    const auto* area = reinterpret_cast<AreaEmitter::Data*>(data);
+    si->trace_terminate = true;
+    float is_emitted = dot(si->wo, si->shading.n) < 0.0f ? 1.0f : 0.0f;
+    if (area->twosided)
+    {
+        is_emitted = 1.0f;
+        si->shading.n = faceforward(si->shading.n, -si->wo, si->shading.n);
+    }
+
+    const Vec4f base = optixDirectCall<Vec4f, const Vec2f&, void*>(area->texture.prg_id, si->shading.uv, area->texture.data);
+    si->albedo = base;
+    si->emission = base * area->intensity * is_emitted;
+    return si->emission;
 }

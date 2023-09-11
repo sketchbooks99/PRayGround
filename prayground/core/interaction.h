@@ -1,8 +1,9 @@
 #pragma once
 
-#include <prayground/math/vec.h>
 #include <curand.h>
 #include <curand_kernel.h>
+
+#include <prayground/math/vec.h>
 
 #ifdef __CUDACC__
 #include <prayground/optix/cuda/device_util.cuh>

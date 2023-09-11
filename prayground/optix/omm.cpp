@@ -5,16 +5,18 @@
 #include <prayground/core/cudabuffer.h>
 
 namespace prayground {
+    // ------------------------------------------------------------------
     OpacityMicromap::OpacityMicromap()
         : m_buffers{{}}
     {
 
     }
 
+    // ------------------------------------------------------------------
     void OpacityMicromap::build(const Context& ctx, CUstream stream, const Input& input, uint32_t build_flags)
     {
         ASSERT(input.texcoords != nullptr, "Incorrect texture coodinate data");
-        ASSERT(input.faces != nullptr || input.num_faces > 0, "Incorrect face data");
+        ASSERT(input.faces != nullptr && input.num_faces > 0, "Incorrect face data");
         ASSERT(input.format != OPTIX_OPACITY_MICROMAP_FORMAT_NONE, "Invalid format");
 
         const int num_micro_triangles = 1 << (input.subdivision_level * 2);
@@ -22,13 +24,13 @@ namespace prayground {
         size_t num_states_per_elem = 16 / input.format;
         size_t num_elems_per_face = (num_micro_triangles / 16 * input.format);
 
-        uint16_t* omm_opacity_data = new uint16_t[input.num_faces * num_elems_per_face]{};
+        std::vector<uint16_t> omm_opacity_data(input.num_faces * num_elems_per_face);
 
         bool is_bitmap = std::holds_alternative<std::shared_ptr<BitmapTexture>>(input.opacity_bitmap_or_function);
         bool is_fbitmap = std::holds_alternative<std::shared_ptr<FloatBitmapTexture>>(input.opacity_bitmap_or_function);
         bool is_lambda = std::holds_alternative<OpacityMicromap::OpacityFunction>(input.opacity_bitmap_or_function);
 
-        ASSERT(is_bitmap || is_lambda, "Invalid bitmap or function to construct opacity micromap");
+        ASSERT(is_bitmap || is_fbitmap || is_lambda, "Invalid bitmap or function to construct opacity micromap");
 
         for (size_t i = 0; i < input.num_faces; i++)
         {
@@ -38,11 +40,8 @@ namespace prayground {
 
             for (uint32_t j = 0; j < num_micro_triangles; j++)
             {
-                // Barycentric coordinates at micro triangle
-                float2 bary0, bary1, bary2;
-                optixMicromapIndexToBaseBarycentrics(j, input.subdivision_level, bary0, bary1, bary2);
-
-                auto barycentrics = OpacityMicromap::MicroBarycentrics{ bary0, bary1, bary2 };
+                // Get barycentric coordinates of micro triangle in opacity map
+                auto barycentrics = OpacityMicromap::indexToBarycentrics(j, input.subdivision_level);
 
                 int state = 0;
                 if (is_bitmap)
@@ -51,8 +50,6 @@ namespace prayground {
                     state = evaluateOpacitymapFromBitmap(input.format, std::get<std::shared_ptr<FloatBitmapTexture>>(input.opacity_bitmap_or_function), barycentrics, uv0, uv1, uv2);
                 else if (is_lambda)
                     state = std::get<OpacityMicromap::OpacityFunction>(input.opacity_bitmap_or_function)(barycentrics, uv0, uv1, uv2);
-                state = (int)(j % 2 == 0);
-                //state = j > (num_micro_triangles / 2) ? OPTIX_OPACITY_MICROMAP_STATE_OPAQUE : OPTIX_OPACITY_MICROMAP_STATE_TRANSPARENT;
 
                 int32_t index = i * num_elems_per_face + (j / num_states_per_elem);
                 omm_opacity_data[index] |= state << (j % num_states_per_elem * input.format);
@@ -72,31 +69,31 @@ namespace prayground {
 
         // Copy opacity buffer to device
         CUdeviceptr d_omm_opacity_data = 0;
-        size_t omm_opacity_data_size_bytes = sizeof(uint16_t) * input.num_faces * num_elems_per_face;
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_omm_opacity_data), omm_opacity_data_size_bytes));
-        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_omm_opacity_data), omm_opacity_data, omm_opacity_data_size_bytes, cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_omm_opacity_data), omm_opacity_data.size() * sizeof(uint16_t)));
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_omm_opacity_data), omm_opacity_data.data(), omm_opacity_data.size() * sizeof(uint16_t), cudaMemcpyHostToDevice));
 
         // Build OMM
-        OptixOpacityMicromapHistogramEntry histogram{};
-        histogram.count = input.num_faces;
-        histogram.format = input.format;
-        histogram.subdivisionLevel = input.subdivision_level;
+        OptixOpacityMicromapHistogramEntry histogram = {
+            .count = input.num_faces,
+            .subdivisionLevel = input.subdivision_level,
+            .format = input.format
+        };
 
         // Currently, only single histogram entry is allowed
-        OptixOpacityMicromapArrayBuildInput build_input{};
+        OptixOpacityMicromapArrayBuildInput build_input = {};
         build_input.flags = build_flags;
         build_input.inputBuffer = d_omm_opacity_data;
         build_input.numMicromapHistogramEntries = 1;
         build_input.micromapHistogramEntries = &histogram;
 
         // Calculate memory usage for OMM
-        OptixMicromapBufferSizes buffer_sizes{};
+        OptixMicromapBufferSizes buffer_sizes = {};
         OPTIX_CHECK(optixOpacityMicromapArrayComputeMemoryUsage(static_cast<OptixDeviceContext>(ctx), &build_input, &buffer_sizes));
 
         // Setup descriptor
         std::vector<OptixOpacityMicromapDesc> omm_descs(input.num_faces);
         uint32_t offset = 0;
-        for (auto & desc : omm_descs)
+        for (auto& desc : omm_descs)
         {
             desc = {
                 .byteOffset = offset,
@@ -128,6 +125,7 @@ namespace prayground {
         d_omm_descs.free();
     }
 
+    // ------------------------------------------------------------------
     void OpacityMicromap::build(const Context& ctx, CUstream stream, const std::vector<Input>& inputs, uint32_t build_flags)
     {
         // Clean up usage counts
@@ -253,6 +251,7 @@ namespace prayground {
         d_omm_descs.free();
     }
 
+    // ------------------------------------------------------------------
     OptixBuildInputOpacityMicromap OpacityMicromap::getBuildInputForGAS() const
     {
         // Check if OMM has already been builded
@@ -283,6 +282,7 @@ namespace prayground {
         return omm_input;
     }
 
+    // ------------------------------------------------------------------
     template <typename U>
     int OpacityMicromap::evaluateOpacitymapFromBitmap(
         OptixOpacityMicromapFormat format,
@@ -314,5 +314,13 @@ namespace prayground {
             else // Treat micro triangle as opaque when the state is controlled with 1 bit (0 or 1)
                 return OPTIX_OPACITY_MICROMAP_STATE_OPAQUE;
         }
+    }
+
+    // ------------------------------------------------------------------
+    OpacityMicromap::MicroBarycentrics OpacityMicromap::indexToBarycentrics(uint32_t index, uint32_t subdivision_level)
+    {
+        float2 bary0, bary1, bary2;
+        optixMicromapIndexToBaseBarycentrics(index, subdivision_level, bary0, bary1, bary2);
+        return MicroBarycentrics{ bary0, bary1, bary2 };
     }
 } // namespace prayground

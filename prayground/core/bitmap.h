@@ -77,7 +77,7 @@ namespace prayground {
         PixelVariant at(int32_t x, int32_t y) const;
 
         PixelT* data() const { return m_data.get(); }
-        PixelT* devicePtr() const { return d_data; }
+        PixelT* deviceData() const { return d_data; }
 
         OptixImage2D toOptixImage2D() const;
 

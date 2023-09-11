@@ -41,6 +41,8 @@
     #define HOST __host__
     #define DEVICE __device__
     #define GLOBAL __global__
+
+    #define PG_ALIGN __align__
 #else
     #define CALLABLE_FUNC
     #define INLINE inline
@@ -48,6 +50,8 @@
     #define HOST 
     #define DEVICE 
     #define GLOBAL
+
+    #define PG_ALIGN alignas
 #endif
 
 #define RG_FUNC(name) __raygen__ ## name
@@ -81,9 +85,10 @@
             ss << "ERROR: " << res << ", ";                                     \
             ss << "Optix call '" << #call << "' failed: " __FILE__ ":"          \
                << __LINE__ << ")\n";                                            \
-               throw std::runtime_error(ss.str());                              \
-            }                                                                   \
-        } while (0)
+            std::cout << ss.str() << std::endl;                                 \
+            throw std::runtime_error(ss.str());                                 \
+        }                                                                       \
+    } while (0)
 
 #define OPTIX_CHECK_LOG( call )                                                \
     do                                                                         \

@@ -5,6 +5,20 @@
 
 using namespace std;
 
+using RaygenRecord = Record<RaygenData>;
+using MissRecord = Record<MissData>;
+using HitgroupRecord = Record<HitgroupData>;
+using EmptyRecord = Record<EmptyData>;
+
+using SBT = ShaderBindingTable<
+    RaygenRecord,
+    MissRecord,
+    HitgroupRecord,
+    EmptyRecord,
+    EmptyRecord, 
+    1
+>;
+
 class App : public BaseApp 
 {
 public:
@@ -31,10 +45,13 @@ private:
     LaunchParams params;
     CUDABuffer<LaunchParams> d_params;
 
+    SBT sbt;
+    InstanceAccel ias;
+
     Bitmap result_bmp;
     FloatBitmap accum_bmp;
 
-    pgDefaultSBT<Camera, 1> sbt;
+    EnvironmentEmitter env;
 
     Camera camera;
     bool is_camera_updated;

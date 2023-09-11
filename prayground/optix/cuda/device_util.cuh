@@ -9,16 +9,14 @@
 #include <prayground/math/vec.h>
 
 #if OPTIX_VERSION >= 70400
-#define PG_MAX_NUM_ATTRIBUTES 32
 #define PG_MAX_NUM_PAYLOADS 32
-#define PG_MAX_NUM_ATTRIBUTES_STR "32"
 #define PG_MAX_NUM_PAYLOADS_STR "32"
 #else
-#define PG_MAX_NUM_ATTRIBUTES 8
 #define PG_MAX_NUM_PAYLOADS 8
-#define PG_MAX_NUM_ATTRIBUTES_STR "8"
 #define PG_MAX_NUM_PAYLOADS_STR "8"
 #endif
+#define PG_MAX_NUM_ATTRIBUTES 8
+#define PG_MAX_NUM_ATTRIBUTES_STR "8"
 
 #ifdef __CUDACC__
 
@@ -53,32 +51,6 @@ namespace prayground {
         if constexpr (i == 5) return optixGetAttribute_5();
         if constexpr (i == 6) return optixGetAttribute_6();
         if constexpr (i == 7) return optixGetAttribute_7();
-#if OPTIX_VERSION >= 70400
-        if constexpr (i == 8) return optixGetAttribute_8();
-        if constexpr (i == 9) return optixGetAttribute_9();
-        if constexpr (i == 10) return optixGetAttribute_10();
-        if constexpr (i == 11) return optixGetAttribute_11();
-        if constexpr (i == 12) return optixGetAttribute_12();
-        if constexpr (i == 13) return optixGetAttribute_13();
-        if constexpr (i == 14) return optixGetAttribute_14();
-        if constexpr (i == 15) return optixGetAttribute_15();
-        if constexpr (i == 16) return optixGetAttribute_16();
-        if constexpr (i == 17) return optixGetAttribute_17();
-        if constexpr (i == 18) return optixGetAttribute_18();
-        if constexpr (i == 19) return optixGetAttribute_19();
-        if constexpr (i == 20) return optixGetAttribute_20();
-        if constexpr (i == 21) return optixGetAttribute_21();
-        if constexpr (i == 22) return optixGetAttribute_22();
-        if constexpr (i == 23) return optixGetAttribute_23();
-        if constexpr (i == 24) return optixGetAttribute_24();
-        if constexpr (i == 25) return optixGetAttribute_25();
-        if constexpr (i == 26) return optixGetAttribute_26();
-        if constexpr (i == 27) return optixGetAttribute_27();
-        if constexpr (i == 28) return optixGetAttribute_28();
-        if constexpr (i == 29) return optixGetAttribute_29();
-        if constexpr (i == 30) return optixGetAttribute_30();
-        if constexpr (i == 31) return optixGetAttribute_31();
-#endif
     }
 
     template <uint32_t i>
@@ -196,47 +168,6 @@ namespace prayground {
         const uint32_t u0 = getPayload<Base + 0>();
         const uint32_t u1 = getPayload<Base + 1>();
         return reinterpret_cast<ReturnT*>(unpackPointer(u0, u1));
-    }
-
-    template <uint32_t i>
-    INLINE DEVICE void setAttribute(uint32_t attribute)
-    {
-        static_assert(i < PG_MAX_NUM_ATTRIBUTES,
-            "Index to get attribute exceeds the maximum number of attributes (" PG_MAX_NUM_ATTRIBUTES_STR ")");
-        if constexpr (i == 0) return optixSetAttribute_0(attribute);
-        if constexpr (i == 1) return optixSetAttribute_1(attribute);
-        if constexpr (i == 2) return optixSetAttribute_2(attribute);
-        if constexpr (i == 3) return optixSetAttribute_3(attribute);
-        if constexpr (i == 4) return optixSetAttribute_4(attribute);
-        if constexpr (i == 5) return optixSetAttribute_5(attribute);
-        if constexpr (i == 6) return optixSetAttribute_6(attribute);
-        if constexpr (i == 7) return optixSetAttribute_7(attribute);
-#if OPTIX_VERSION >= 70400
-        if constexpr (i == 8) return optixSetAttribute_8(attribute);
-        if constexpr (i == 9) return optixSetAttribute_9(attribute);
-        if constexpr (i == 10) return optixSetAttribute_10(attribute);
-        if constexpr (i == 11) return optixSetAttribute_11(attribute);
-        if constexpr (i == 12) return optixSetAttribute_12(attribute);
-        if constexpr (i == 13) return optixSetAttribute_13(attribute);
-        if constexpr (i == 14) return optixSetAttribute_14(attribute);
-        if constexpr (i == 15) return optixSetAttribute_15(attribute);
-        if constexpr (i == 16) return optixSetAttribute_16(attribute);
-        if constexpr (i == 17) return optixSetAttribute_17(attribute);
-        if constexpr (i == 18) return optixSetAttribute_18(attribute);
-        if constexpr (i == 19) return optixSetAttribute_19(attribute);
-        if constexpr (i == 20) return optixSetAttribute_20(attribute);
-        if constexpr (i == 21) return optixSetAttribute_21(attribute);
-        if constexpr (i == 22) return optixSetAttribute_22(attribute);
-        if constexpr (i == 23) return optixSetAttribute_23(attribute);
-        if constexpr (i == 24) return optixSetAttribute_24(attribute);
-        if constexpr (i == 25) return optixSetAttribute_25(attribute);
-        if constexpr (i == 26) return optixSetAttribute_26(attribute);
-        if constexpr (i == 27) return optixSetAttribute_27(attribute);
-        if constexpr (i == 28) return optixSetAttribute_28(attribute);
-        if constexpr (i == 29) return optixSetAttribute_29(attribute);
-        if constexpr (i == 30) return optixSetAttribute_30(attribute);
-        if constexpr (i == 31) return optixSetAttribute_31(attribute);
-#endif
     }
 
     template <uint32_t i>

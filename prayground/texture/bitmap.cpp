@@ -1,4 +1,4 @@
-﻿#include "bitmap.h"
+#include "bitmap.h"
 
 #include <prayground/core/file_util.h>
 
@@ -63,8 +63,8 @@ namespace prayground {
     template <typename PixelT>
     BitmapTexture_<PixelT>::ColorType BitmapTexture_<PixelT>::eval(const Vec2f& texcoord) const
     {
-        int32_t x = texcoord.x() * Bitmap_<PixelT>::width();
-        int32_t y = texcoord.y() * Bitmap_<PixelT>::height();
+        int32_t x = clamp(texcoord.x(), 0.0f, 0.999f) * Bitmap_<PixelT>::width();
+        int32_t y = clamp(texcoord.y(), 0.0f, 0.999f) * Bitmap_<PixelT>::height();
         ColorType pixel = std::get<ColorType>(Bitmap_<PixelT>::at(x, y));
         return pixel;
     }

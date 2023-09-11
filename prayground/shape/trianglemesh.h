@@ -151,6 +151,7 @@ namespace prayground {
 
 #if OPTIX_VERSION >= 70600
         bool m_use_opacitymap{ false };
+        std::variant<std::shared_ptr<BitmapTexture>, std::shared_ptr<FloatBitmapTexture>> m_opacity_texture;
         OpacityMicromap m_opacitymap;
 #elif OPTIX_VERSION >= 70700
 #endif

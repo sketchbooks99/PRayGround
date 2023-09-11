@@ -1,6 +1,6 @@
 #include "app.h"
 
-#define INTERACTIVE 0
+#define INTERACTIVE 1
 
 static void streamProgress(int frame, int max_frame, float elapsed_time, int bar_length)
 {
@@ -28,8 +28,8 @@ void App::initResultBufferOnDevice()
     result_bitmap.allocateDevicePtr();
     accum_bitmap.allocateDevicePtr();
 
-    params.result_buffer = reinterpret_cast<Vec4u*>(result_bitmap.devicePtr());
-    params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bitmap.devicePtr());
+    params.result_buffer = reinterpret_cast<Vec4u*>(result_bitmap.deviceData());
+    params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bitmap.deviceData());
 
     CUDA_SYNC_CHECK();
 }
@@ -65,7 +65,7 @@ void App::setup()
     context.create();
 
     // Initialize instance acceleration structure
-    scene_ias = InstanceAccel{InstanceAccel::Type::Instances};
+    scene_ias = InstanceAccel{ InstanceAccel::Type::Instances };
 
     // Pipeline settings
     pipeline.setLaunchVariableName("params");
@@ -149,13 +149,13 @@ void App::setup()
     SurfaceCallableID dielectric_id = { dielectric_sample_bsdf_prg_id, dielectric_sample_bsdf_prg_id, dielectric_pdf_prg_id };
     SurfaceCallableID disney_id = { disney_sample_bsdf_prg_id, disney_sample_bsdf_prg_id, disney_pdf_prg_id };
     SurfaceCallableID area_emitter_id = { area_emitter_prg_id, area_emitter_prg_id, area_emitter_prg_id };
-    
+
     // Callable program for direct sampling of area emitter
     uint32_t plane_sample_pdf_prg_id = setupCallable(hitgroups_module, DC_FUNC_TEXT("rnd_sample_plane"), CC_FUNC_TEXT("pdf_plane"));
 
     textures.emplace("env", new FloatBitmapTexture("resources/image/christmas_photo_studio_01_4k.exr", bitmap_prg_id));
 
-    env = EnvironmentEmitter{textures.at("env")};
+    env = EnvironmentEmitter{ textures.at("env") };
     env.copyToDevice();
 
     // Miss program
@@ -196,7 +196,7 @@ void App::setup()
         shape->setSbtIndex(sbt_idx);
         if (is_mat)
             std::get<shared_ptr<Material>>(surface)->copyToDevice();
-        else 
+        else
             std::get<shared_ptr<AreaEmitter>>(surface)->copyToDevice();
 
         // Register data to shader binding table
@@ -218,10 +218,10 @@ void App::setup()
         sbt_idx++;
     };
 
-    auto createGAS = [&](shared_ptr<Shape> shape, const Matrix4f& transform, uint32_t num_sbt=1)
+    auto createGAS = [&](shared_ptr<Shape> shape, const Matrix4f& transform, uint32_t num_sbt = 1)
     {
         // Build GAS and add it to IAS
-        ShapeInstance instance{shape->type(), shape, transform};
+        ShapeInstance instance{ shape->type(), shape, transform };
         instance.allowCompaction();
         instance.buildAccel(context, stream);
         instance.setSBTOffset(sbt_offset);
@@ -246,18 +246,18 @@ void App::setup()
         shared_ptr<AreaEmitter> area, Matrix4f transform,
         uint32_t sample_pdf_id,
         shared_ptr<Texture> alpha_texture = nullptr
-    )
-    {        
+        )
+    {
         ASSERT(dynamic_pointer_cast<Plane>(shape) || dynamic_pointer_cast<Sphere>(shape), "The shape of area emitter must be a plane or sphere.");
 
         addHitgroupRecord(prg, shape, area, alpha_texture);
         createGAS(shape, transform);
 
-        AreaEmitterInfo area_emitter_info = 
+        AreaEmitterInfo area_emitter_info =
         {
             .shape_data = shape->devicePtr(),
             .objToWorld = transform,
-            .worldToObj = transform.inverse(), 
+            .worldToObj = transform.inverse(),
             .sample_id = sample_pdf_id,
             .pdf_id = sample_pdf_id
         };
@@ -305,9 +305,9 @@ void App::setup()
     wooden_disney->setMetallic(0.9f);
     wooden_disney->setRoughness(0.02f);
     materials.emplace("wooden_disney", wooden_disney);
-    
-    lights.emplace("logo1", new AreaEmitter( area_emitter_id, textures.at("orange"), 150.0f, true ));
-    lights.emplace("logo2", new AreaEmitter( area_emitter_id, textures.at("white"),  300.0f, true ));
+
+    lights.emplace("logo1", new AreaEmitter(area_emitter_id, textures.at("orange"), 150.0f, true));
+    lights.emplace("logo2", new AreaEmitter(area_emitter_id, textures.at("white"), 300.0f, true));
 
     shapes.emplace("plane", new Plane(make_float2(-0.5f), make_float2(0.5f)));
     shapes.emplace("sphere", new Sphere(make_float3(0.0f), 1.0f));
@@ -322,7 +322,7 @@ void App::setup()
     shared_ptr<TriangleMesh> mitsuba(new TriangleMesh());
     vector<Attributes> mitsuba_mat_attribs;
     mitsuba->loadWithMtl("resources/model/mitsuba-sphere.obj", mitsuba_mat_attribs);
-    
+
     dragon->calculateNormalSmooth();
     bunny->calculateNormalSmooth();
     buddha->calculateNormalSmooth();
@@ -339,26 +339,26 @@ void App::setup()
     float x = -logo_aspect * 10 / 2 + 10;
 
     // Ground plane
-    setupObject(plane_prg, shapes.at("plane"), materials.at("floor"), Matrix4f::translate(0, -5, 0)* Matrix4f::scale(500));
+    setupObject(plane_prg, shapes.at("plane"), materials.at("floor"), Matrix4f::translate(0, -5, 0) * Matrix4f::scale(500));
 
     // Dragon
     setupObject(mesh_prg, shapes.at("dragon"), materials.at("glass"),
-        Matrix4f::translate(-logo_aspect * 10 / 2 + 10, -0.75, 15)* Matrix4f::rotate(math::pi / 2, {0, 1, 0})* Matrix4f::scale(15));
-    
+        Matrix4f::translate(-logo_aspect * 10 / 2 + 10, -0.75, 15) * Matrix4f::rotate(math::pi / 2, { 0, 1, 0 }) * Matrix4f::scale(15));
+
     // Bunny
-    setupObject(mesh_prg, shapes.at("bunny"), materials.at("white_diffuse"), Matrix4f::translate(0, -7.5, 15)* Matrix4f::scale(75));
+    setupObject(mesh_prg, shapes.at("bunny"), materials.at("white_diffuse"), Matrix4f::translate(0, -7.5, 15) * Matrix4f::scale(75));
 
     // Buddha
-    setupObject(mesh_prg, shapes.at("buddha"), materials.at("gold"), 
-        Matrix4f::translate(logo_aspect * 10 / 2 - 10, -10, 15)* Matrix4f::scale(100));
+    setupObject(mesh_prg, shapes.at("buddha"), materials.at("gold"),
+        Matrix4f::translate(logo_aspect * 10 / 2 - 10, -10, 15) * Matrix4f::scale(100));
 
     // Teapot
-    setupObject(mesh_prg, shapes.at("teapot"), materials.at("orange"), 
-        Matrix4f::translate(-logo_aspect * 10 / 2 + 10, -5, 30)* Matrix4f::scale(3));
+    setupObject(mesh_prg, shapes.at("teapot"), materials.at("orange"),
+        Matrix4f::translate(-logo_aspect * 10 / 2 + 10, -5, 30) * Matrix4f::scale(3));
 
     // Armadillo
     setupObject(mesh_prg, shapes.at("armadillo"), materials.at("green"),
-        Matrix4f::translate(logo_aspect * 10 / 2 - 10, 0.5, 30)* Matrix4f::rotate(math::pi, {0, 1, 0})* Matrix4f::scale(0.1));
+        Matrix4f::translate(logo_aspect * 10 / 2 - 10, 0.5, 30) * Matrix4f::rotate(math::pi, { 0, 1, 0 }) * Matrix4f::scale(0.1));
 
     // Mitsuba
     for (auto& attrib : mitsuba_mat_attribs)
@@ -383,9 +383,9 @@ void App::setup()
 
     // Sphere1
     setupObject(sphere_prg, shapes.at("sphere"), materials.at("brick"), Matrix4f::translate(x, 0, 0) * Matrix4f::scale(5));
-    
+
     // Sphere2
-    setupObject(sphere_alpha_discard_prg, shapes.at("sphere"), materials.at("black_diffuse"), 
+    setupObject(sphere_alpha_discard_prg, shapes.at("sphere"), materials.at("black_diffuse"),
         Matrix4f::translate(0, 0, 0) * Matrix4f::scale(5), textures.at("alpha_checker"));
 
     // Sphere3
@@ -396,14 +396,14 @@ void App::setup()
 
     // Box
     setupObject(box_prg, shapes.at("box"), materials.at("wooden_disney"),
-        Matrix4f::translate(0, -0.9f, -15) * Matrix4f::rotate(math::pi / 6, {0, 1, 0}) * Matrix4f::scale(8));
+        Matrix4f::translate(0, -0.9f, -15) * Matrix4f::rotate(math::pi / 6, { 0, 1, 0 }) * Matrix4f::scale(8));
 
     // Plane
-    setupObject(plane_prg, shapes.at("plane"), materials.at("image_diffuse"), 
-        Matrix4f::translate(-x, 1, -15) * Matrix4f::rotate(math::pi / 2, {1,0,0}) * Matrix4f::rotate(-math::pi / 12, {0, 1, 0}) * Matrix4f::scale(10));
+    setupObject(plane_prg, shapes.at("plane"), materials.at("image_diffuse"),
+        Matrix4f::translate(-x, 1, -15) * Matrix4f::rotate(math::pi / 2, { 1,0,0 }) * Matrix4f::rotate(-math::pi / 12, { 0, 1, 0 }) * Matrix4f::scale(10));
 
-    setupAreaEmitter(plane_alpha_discard_prg, shapes.at("plane"), lights.at("logo1"), 
-        Matrix4f::translate(0, 12.5f, -20) * Matrix4f::rotate(math::pi * 2 / 3, { 1.0f, 0.0f, 0.0f })* Matrix4f::scale(make_float3(logo_aspect * 10, 1, 10)), 
+    setupAreaEmitter(plane_alpha_discard_prg, shapes.at("plane"), lights.at("logo1"),
+        Matrix4f::translate(0, 12.5f, -20) * Matrix4f::rotate(math::pi * 2 / 3, { 1.0f, 0.0f, 0.0f }) * Matrix4f::scale(make_float3(logo_aspect * 10, 1, 10)),
         plane_sample_pdf_prg_id, textures.at("logo_alpha"));
 
     setupAreaEmitter(plane_alpha_discard_prg, shapes.at("plane"), lights.at("logo2"),
@@ -441,13 +441,13 @@ void App::setup()
         d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);
 
         OPTIX_CHECK(optixLaunch(
-            static_cast<OptixPipeline>(pipeline), 
-            stream, 
-            d_params.devicePtr(), 
-            sizeof(LaunchParams), 
-            &sbt.sbt(), 
-            params.width, 
-            params.height, 
+            static_cast<OptixPipeline>(pipeline),
+            stream,
+            d_params.devicePtr(),
+            sizeof(LaunchParams),
+            &sbt.sbt(),
+            params.width,
+            params.height,
             1
         ));
 

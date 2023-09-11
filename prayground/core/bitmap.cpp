@@ -153,6 +153,7 @@ namespace prayground {
         // Load image from file
         uint8_t* raw_data;
         raw_data = stbi_load(filepath.value().string().c_str(), &m_width, &m_height, &m_channels, static_cast<int>(m_format));
+        PG_LOG("width:", m_width, "height:", m_height, "channels:", m_channels);
         if (m_format == PixelFormat::NONE) 
             m_format = static_cast<PixelFormat>(m_channels);
         m_channels = static_cast<int>(m_format);
@@ -288,7 +289,7 @@ namespace prayground {
         float* data = new float[m_width * m_height * m_channels];
         memcpy(data, m_data.get(), m_width * m_height * m_channels * sizeof(float));
 
-        // PNG/JPG/BMP の場合は float [0, 1] -> uint8_t [0, 255] に変換する
+        // Convert 32bit float pixel to 8bit without gamma correction
         if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" || ext == ".bmp" || ext == ".BMP" || ext == ".tga" || ext == ".TGA")
         {
             uint8_t* uc_data = new uint8_t[m_width * m_height * m_channels];
@@ -465,10 +466,8 @@ namespace prayground {
     template <typename PixelT>
     void Bitmap_<PixelT>::copyToDevice() 
     {
-        // CPU側のデータが準備されているかチェック
         ASSERT(m_data.get(), "Image data in the host side has been not allocated yet.");
 
-        // GPU上に画像データを準備
         CUDABuffer<PixelT> d_buffer;
         d_buffer.copyToDevice(m_data.get(), m_width * m_height * m_channels*sizeof(PixelT));
         d_data = d_buffer.deviceData();
@@ -491,6 +490,8 @@ namespace prayground {
     template<typename PixelT>
     typename Bitmap_<PixelT>::PixelVariant Bitmap_<PixelT>::at(int32_t x, int32_t y) const
     {
+        ASSERT(x >= 0 && x < m_width && y >= 0 && y < m_height, "Index out of range");
+            
         int32_t base_idx = (y * m_width + x) * m_channels;
 
         switch (m_format)
@@ -502,7 +503,7 @@ namespace prayground {
         case PixelFormat::RGB:
             return Bitmap_<PixelT>::V3{m_data[base_idx], m_data[base_idx + 1], m_data[base_idx + 2]};
         case PixelFormat::RGBA:
-            return Bitmap_<PixelT>::V4{m_data[base_idx], m_data[base_idx + 1], m_data[base_idx + 3], m_data[base_idx + 4]};
+            return Bitmap_<PixelT>::V4{m_data[base_idx], m_data[base_idx + 1], m_data[base_idx + 2], m_data[base_idx + 3]};
         case PixelFormat::NONE:
         default:
             return Bitmap_<PixelT>::V1{m_data[base_idx]};

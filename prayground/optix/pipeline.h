@@ -86,6 +86,10 @@ public:
     void setDirectCallableDepth(const uint32_t depth);
     uint32_t directCallableDepth() const;
 
+    /** Depth of traversable graphs */
+    void setMaxTraversableGraphDepth(const uint32_t depth);
+    uint32_t maxTraversableGraphDepth() const;
+
 private:
     void _initCompileOptions();
     void _initLinkOptions();
@@ -101,7 +105,14 @@ private:
     OptixPipelineCompileOptions m_compile_options {};
     OptixPipelineLinkOptions m_link_options {};
     OptixPipeline m_pipeline { nullptr };
+
+    /* The number of recursive trace in a kernel execution */
     uint32_t m_trace_depth { 5 }; 
+
+    /* Must be larger than 2 if you'd like to use multi-level instancing */
+    uint32_t m_max_traversable_graph_depth { 1 };
+    
+    /* Depth of callable programs in a kernel execution */
     uint32_t m_cc_depth { 0 }; 
     uint32_t m_dc_depth { 0 };
 };

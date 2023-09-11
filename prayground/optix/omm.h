@@ -42,11 +42,11 @@ namespace prayground {
 
         OptixBuildInputOpacityMicromap getBuildInputForGAS() const;
 
+        static MicroBarycentrics indexToBarycentrics(uint32_t index, uint32_t subdivision_level);
+
     private:
         template <typename U>
         int evaluateOpacitymapFromBitmap(OptixOpacityMicromapFormat format, const std::shared_ptr<U>& bitmap, const MicroBarycentrics& bc, const Vec2f& uv0, const Vec2f& uv1, const Vec2f& uv2);
-        /*void buildFromOpacitymap(const Context& ctx, uint16_t* opacity_map, const Input& input, uint32_t build_flags);
-        void constructOpacitymap(uint16_t* out_opacity_map, const Input& input);*/
 
         OptixMicromapBuffers m_buffers{};
         std::vector<OptixOpacityMicromapUsageCount> m_usage_counts;

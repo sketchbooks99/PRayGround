@@ -318,7 +318,7 @@ extern "C" __device__ Vec3f __continuation_callable__bsdf_glass(SurfaceInteracti
 {
     const Dielectric::Data* dielectric = reinterpret_cast<Dielectric::Data*>(data);
     const Vec3f albedo = optixDirectCall<Vec3f, const Vec2f&, void*>(dielectric->texture.prg_id, si->shading.uv, dielectric->texture.data);
-    si->albedo = Vec3f(1.0f);
+    si->albedo = albedo;
     si->emission = Vec3f(0.0f);
     return albedo;
 }

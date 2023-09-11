@@ -153,7 +153,6 @@ namespace prayground {
         // Load image from file
         uint8_t* raw_data;
         raw_data = stbi_load(filepath.value().string().c_str(), &m_width, &m_height, &m_channels, static_cast<int>(m_format));
-        PG_LOG("width:", m_width, "height:", m_height, "channels:", m_channels);
         if (m_format == PixelFormat::NONE) 
             m_format = static_cast<PixelFormat>(m_channels);
         m_channels = static_cast<int>(m_format);

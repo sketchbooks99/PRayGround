@@ -5,7 +5,7 @@
 static void streamProgress(int frame, int max_frame, float elapsed_time, int bar_length)
 {
     cout << "\rRendering: [";
-    int progress = static_cast<int>( ( (float)(frame) / max_frame) * bar_length );
+    int progress = static_cast<int>(((float)(frame) / max_frame) * bar_length);
     for (int i = 0; i < progress; i++)
         cout << "+";
     for (int i = progress; i < bar_length; i++)

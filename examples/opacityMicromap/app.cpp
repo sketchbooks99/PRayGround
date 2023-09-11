@@ -43,14 +43,17 @@ void App::setup()
     context.disableValidation();
     context.create();
 
+    // Initialize instance acceleration structure
+    ias = InstanceAccel{ InstanceAccel::Type::Instances };
+
     pipeline.setLaunchVariableName("params");
-    pipeline.setDirectCallableDepth(0);
-    pipeline.setContinuationCallableDepth(0);
+    pipeline.setDirectCallableDepth(2);
+    pipeline.setContinuationCallableDepth(2);
     pipeline.setNumPayloads(5);
-    pipeline.setNumAttributes(5);
+    pipeline.setNumAttributes(6);
     // Must be called
-    pipeline.enableOpacityMap();
-    pipeline.setTraversableGraphFlags(OPTIX_TRAVERSABLE_GRAPH_FLAG_ALLOW_SINGLE_GAS);
+    //pipeline.enableOpacityMap();
+    //pipeline.setTraversableGraphFlags(OPTIX_TRAVERSABLE_GRAPH_FLAG_ALLOW_SINGLE_GAS);
 
     // Create module
     Module module;
@@ -75,7 +78,7 @@ void App::setup()
     initResultBufferOnDevice();
 
     // Camera settings
-    camera.setOrigin(0, 30, 0);
+    camera.setOrigin(0, 10, 10);
     camera.setLookat(0, 0, 0);
     camera.setUp(0, 1, 0);
     camera.setFov(40);
@@ -145,25 +148,54 @@ void App::setup()
         shape->copyToDevice();
         shape->setSbtIndex(sbt_idx);
         if (is_mat)
-            get<shared_ptr<Material>>(surface)->copyToDevice();
+            std::get<shared_ptr<Material>>(surface)->copyToDevice();
         else
-            get<shared_ptr<AreaEmitter>>(surface)->copyToDevice();
+            std::get<shared_ptr<AreaEmitter>>(surface)->copyToDevice();
 
         // Register data to shader binding table
         HitgroupRecord record;
         prg.recordPackHeader(&record);
-        record.data = {
+        record.data =
+        {
             .shape_data = shape->devicePtr(),
-            .surface_info = {
-                .data = is_mat ? get<shared_ptr<Material>>(surface)->devicePtr() : get<shared_ptr<AreaEmitter>>(surface)->devicePtr(),
-                .callable_id = is_mat ? get<shared_ptr<Material>>(surface)->surfaceCallableID() : get<shared_ptr<AreaEmitter>>(surface)->surfaceCallableID(),
-                .type = is_mat ? get<shared_ptr<Material>>(surface)->surfaceType() : SurfaceType::AreaEmitter
+            .surface_info =
+            {
+                .data = is_mat ? std::get<shared_ptr<Material>>(surface)->devicePtr() : std::get<shared_ptr<AreaEmitter>>(surface)->devicePtr(),
+                .callable_id = is_mat ? std::get<shared_ptr<Material>>(surface)->surfaceCallableID() : std::get<shared_ptr<AreaEmitter>>(surface)->surfaceCallableID(),
+                .type = is_mat ? std::get<shared_ptr<Material>>(surface)->surfaceType() : SurfaceType::AreaEmitter,
             },
-            .opacity_texture = opacity_texture ? opacity_texture->getData() : Texture::Data{nullptr, bitmap_prg_id}
+            .opacity_texture = opacity_texture ? opacity_texture->getData() : Texture::Data{ nullptr, bitmap_prg_id }
         };
 
         sbt.addHitgroupRecord({ record });
         sbt_idx++;
+    };
+
+    auto createGAS = [&](shared_ptr<Shape> shape, const Matrix4f& transform, uint32_t num_sbt = 1)
+    {
+        // Build GAS and add it to IAS
+        ShapeInstance instance{ shape->type(), shape, transform };
+        instance.allowCompaction();
+        instance.buildAccel(context, stream);
+        instance.setSBTOffset(sbt_offset);
+        instance.setId(instance_id);
+
+        ias.addInstance(instance);
+
+        instance_id++;
+        sbt_offset += SBT::NRay * num_sbt;
+    };
+
+    auto setupObject = [&](ProgramGroup& prg, shared_ptr<Shape> shape, shared_ptr<Material> material, const Matrix4f& transform, shared_ptr<Texture> opacity_texture = nullptr) -> void
+    {
+        addHitgroupRecord(prg, shape, material, opacity_texture);
+        createGAS(shape, transform);
+    };
+
+    auto setupAreaEmitter = [&](ProgramGroup& prg, shared_ptr<Shape> shape, shared_ptr<AreaEmitter> area, Matrix4f transform, uint32_t sample_pdf_id, shared_ptr<Texture> opacity_texture = nullptr) -> void
+    {
+        addHitgroupRecord(prg, shape, area, opacity_texture);
+        createGAS(shape, transform);
     };
 
     // function to determine opacity states according to texture coordinates on micro triangles
@@ -186,41 +218,24 @@ void App::setup()
 
     // Load bitmap texture to determine opacity micro map
     auto opacity_bmp = make_shared<BitmapTexture>("resources/image/PRayGround_black.png", bitmap_prg_id);
-    opacity_bmp->copyToDevice();
 
     // Create mesh with the size of opacity bitmap
     Vec2f mesh_size((float)opacity_bmp->width() / opacity_bmp->height(), 1.0f);
-    auto mesh = make_shared<PlaneMesh>(mesh_size, Vec2ui(1,1), Axis::Z);
-    mesh->setSbtIndex(0);
+    //auto mesh = make_shared<PlaneMesh>(mesh_size, Vec2ui(1,1), Axis::Y);
+    auto mesh = make_shared<TriangleMesh>("resources/model/bunny.obj");
+    mesh->calculateNormalSmooth();
     // Set up opacity bitmap 
-    mesh->setupOpacitymap(context, stream, 8, OPTIX_OPACITY_MICROMAP_FORMAT_2_STATE, opacity_bmp, OPTIX_OPACITY_MICROMAP_FLAG_NONE);
-    mesh->copyToDevice();
+    //mesh->setupOpacitymap(context, stream, 4, OPTIX_OPACITY_MICROMAP_FORMAT_2_STATE, omm_function, OPTIX_OPACITY_MICROMAP_FLAG_NONE);
 
-    auto diffuse = make_shared<Diffuse>(diffuse_id, opacity_bmp);
-    diffuse->copyToDevice();
+    //auto diffuse = make_shared<Diffuse>(diffuse_id, opacity_bmp);
+    auto diffuse = make_shared<Diffuse>(diffuse_id, make_shared<ConstantTexture>(Vec4f(0.05f, 0.8f, 0.05f, 1.0f), constant_prg_id));
 
-    HitgroupRecord hitgroup_record;
-    mesh_prg.recordPackHeader(&hitgroup_record);
-    hitgroup_record.data = {
-        .shape_data = mesh->devicePtr(),
-        .surface_info = {
-            .data = diffuse->devicePtr(),
-            .callable_id = diffuse->surfaceCallableID(),
-            .type = diffuse->surfaceType()
-        },
-        .opacity_texture = { .data = opacity_bmp->devicePtr(), .prg_id = bitmap_prg_id }
-    };
-
-    sbt.addHitgroupRecord({ hitgroup_record });
-
-    GeometryAccel gas{ ShapeType::Mesh };
-    gas.addShape(mesh);
-    gas.allowCompaction();
-    gas.build(context, stream);
+    setupObject(mesh_opaque_prg, mesh, diffuse, Matrix4f::scale(30));
 
     CUDA_CHECK(cudaStreamCreate(&stream));
+    ias.build(context, stream);
     sbt.createOnDevice();
-    params.handle = gas.handle();
+    params.handle = ias.handle();
     pipeline.create(context);
     d_params.allocate(sizeof(LaunchParams));
 }

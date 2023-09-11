@@ -383,13 +383,12 @@ namespace prayground {
         const Vec2f texcoord0 = mesh->texcoords[face.texcoord_id.x()];
         const Vec2f texcoord1 = mesh->texcoords[face.texcoord_id.y()];
         const Vec2f texcoord2 = mesh->texcoords[face.texcoord_id.z()];
-        //shading.uv = (1 - bc.x() - bc.y()) * texcoord0 + bc.x() * texcoord1 + bc.y() * texcoord2;
         shading.uv = barycentricInterop(texcoord0, texcoord1, texcoord2, bc);
 
         const Vec3f n0 = mesh->normals[face.normal_id.x()];
         const Vec3f n1 = mesh->normals[face.normal_id.y()];
         const Vec3f n2 = mesh->normals[face.normal_id.z()];
-        shading.n = (1.0f - bc.x() - bc.y()) * n0 + bc.x() * n1 + bc.y() * n2;
+        shading.n = barycentricInterop(n0, n1, n2, bc);
 
         const Vec2f duv02 = texcoord0 - texcoord2, duv12 = texcoord1 - texcoord2;
         const Vec3f dp02 = p0 - p2, dp12 = p1 - p2;

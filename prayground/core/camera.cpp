@@ -135,7 +135,7 @@ namespace prayground {
         U = normalize(cross(W, m_up));
         V = normalize(cross(W, U));
 
-        float vlen = wlen * tanf(math::radians(m_fov) / 2.0f);
+        float vlen = wlen * tanf(math::radians(m_fov) * 0.5f);
         V *= vlen;
         float ulen = vlen * m_aspect;
         U *= ulen;

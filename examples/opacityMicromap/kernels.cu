@@ -64,10 +64,10 @@ extern "C" GLOBAL void __raygen__pinhole()
             packPointer(&si, u0, u1);
             optixTrace(
                 params.handle, ro, rd,
-                0.01f, 1e10f, 0,
+                0.01f, 1e16f, 0.0f,
                 OptixVisibilityMask(1), OPTIX_RAY_FLAG_NONE,
                 0, 1, 0,
-                u0, u1, u2
+                u0, u1
             );
 
             if (si.trace_terminate) {
@@ -81,7 +81,6 @@ extern "C" GLOBAL void __raygen__pinhole()
             Vec4f bsdf = optixDirectCall<Vec4f, SurfaceInteraction*, void*>(si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
             // Evaluate PDF
             float pdf = optixDirectCall<float, SurfaceInteraction*, void*>(si.surface_info.callable_id.pdf, &si, si.surface_info.data);
-            pdf = fmaxf(1e-5f, pdf);
 
             throughput *= bsdf / pdf;
             
@@ -146,9 +145,9 @@ extern "C" GLOBAL void __closesthit__mesh()
     const uint32_t prim_idx = optixGetPrimitiveIndex();
     Shading shading = pgGetMeshShading(mesh, bc, prim_idx);
 
-    shading.n = optixTransformNormalFromObjectToWorldSpace(shading.n);
-    shading.dpdu = optixTransformVectorFromObjectToWorldSpace(shading.dpdu);
-    shading.dpdv = optixTransformVectorFromObjectToWorldSpace(shading.dpdv);
+    shading.n = normalize(optixTransformNormalFromObjectToWorldSpace(shading.n));
+    shading.dpdu = normalize(optixTransformVectorFromObjectToWorldSpace(shading.dpdu));
+    shading.dpdv = normalize(optixTransformVectorFromObjectToWorldSpace(shading.dpdv));
 
     auto* si = getPtrFromTwoPayloads<SurfaceInteraction, 0>();
     si->p = ray.at(ray.tmax);
@@ -212,14 +211,15 @@ extern "C" DEVICE Vec4f __direct_callable__bsdf_diffuse(SurfaceInteraction* si, 
 {
     const Diffuse::Data* diffuse = reinterpret_cast<Diffuse::Data*>(data);
     const Vec4f albedo = optixDirectCall<Vec4f, const Vec2f&, void*>(diffuse->texture.prg_id, si->shading.uv, diffuse->texture.data);
-    si->albedo = albedo;
+    //si->albedo = albedo;
+    si->albedo = si->shading.n;
     si->emission = Vec4f(0.0f);
-    return albedo * pgGetDiffuseBRDF(si->wi, si->shading.n);
+    return si->albedo * pgGetDiffuseBRDF(si->wi, si->shading.n) * math::inv_pi;
 }
 
 extern "C" DEVICE float __direct_callable__pdf_diffuse(SurfaceInteraction* si, void* data)
 {
-    return pgGetDiffusePDF(si->wi, si->shading.n);
+    return pgGetDiffusePDF(si->wi, si->shading.n) * math::inv_pi;
 }
 
 extern "C" DEVICE Vec4f __direct_callable__area_emitter(SurfaceInteraction * si, void* data)

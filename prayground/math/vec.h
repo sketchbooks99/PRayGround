@@ -163,7 +163,7 @@ namespace prayground {
     };
 
     template <typename T>
-    class PG_ALIGN(sizeof(T) * 4) Vec3 {
+    class Vec3 {
     public:
         using CUVec = typename CUVec3<T>::Type;
         using Type = T;

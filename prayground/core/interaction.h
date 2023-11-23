@@ -27,7 +27,7 @@ namespace prayground {
         Delta = Reflection | Refraction,
 
         // Rough surface
-        Rough = RoughReflection | RoughRefraction,
+        Rough = RoughReflection | RoughRefraction | Diffuse,
 
         // Material
         Material        = Diffuse | Reflection | Refraction | RoughReflection | RoughRefraction,

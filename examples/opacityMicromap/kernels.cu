@@ -5,22 +5,6 @@ extern "C" { __constant__ LaunchParams params; }
 
 using SurfaceInteraction = SurfaceInteraction_<Vec4f>;
 
-static INLINE DEVICE void trace(
-    OptixTraversableHandle handle, const Vec3f& ro, const Vec3f& rd,
-    float tmin, float tmax, uint32_t ray_type, SurfaceInteraction* si
-)
-{
-    uint32_t u0, u1;
-    packPointer(si, u0, u1);
-    optixTrace(
-        handle, ro, rd,
-        tmin, tmax, 0,
-        OptixVisibilityMask(1), OPTIX_RAY_FLAG_NONE,
-        ray_type, 1, ray_type,
-        u0, u1
-    );
-}
-
 // raygen
 extern "C" GLOBAL void __raygen__pinhole()
 {
@@ -29,7 +13,7 @@ extern "C" GLOBAL void __raygen__pinhole()
     const int frame = params.frame;
 
     const Vec3ui idx(optixGetLaunchIndex());
-    uint32_t seed = tea<4>(idx.y() * params.width + idx.x(), seed);
+    uint32_t seed = tea<4>(idx.y() * params.width + idx.x(), frame);
 
     Vec3f result(0.0f);
     Vec3f normal(0.0f);
@@ -59,15 +43,14 @@ extern "C" GLOBAL void __raygen__pinhole()
             if (depth >= params.max_depth)
                 break;
 
-            //trace(params.handle, ro, rd, 0.01f, 1e10f, 0, &si);
-            uint32_t u0, u1, u2 = 0;
+            uint32_t u0 = 0, u1 = 0, u2 = 0;
             packPointer(&si, u0, u1);
             optixTrace(
                 params.handle, ro, rd,
                 0.01f, 1e16f, 0.0f,
                 OptixVisibilityMask(1), OPTIX_RAY_FLAG_NONE,
                 0, 1, 0,
-                u0, u1
+                u0, u1, u2
             );
 
             if (si.trace_terminate) {
@@ -75,14 +58,28 @@ extern "C" GLOBAL void __raygen__pinhole()
                 break;
             }
 
-            // Sample next direction
-            optixDirectCall<void, SurfaceInteraction*, void*>(si.surface_info.callable_id.sample, &si, si.surface_info.data);
-            // Evaluate BSDF 
-            Vec4f bsdf = optixDirectCall<Vec4f, SurfaceInteraction*, void*>(si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
-            // Evaluate PDF
-            float pdf = optixDirectCall<float, SurfaceInteraction*, void*>(si.surface_info.callable_id.pdf, &si, si.surface_info.data);
+            // Get emission from area emitter
+            if (si.surface_info.type == SurfaceType::AreaEmitter)
+            {
+                // Evaluating emission from emitter
+                Vec3f emission = optixDirectCall<Vec4f, SurfaceInteraction*, void*>(
+                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
 
-            throughput *= bsdf / pdf;
+                result += emission * throughput;
+                if (si.trace_terminate)
+                    break;
+            }
+            else if (+(si.surface_info.type & SurfaceType::Rough))
+            {
+                // Sample next direction
+                optixDirectCall<void, SurfaceInteraction*, void*>(si.surface_info.callable_id.sample, &si, si.surface_info.data);
+                // Evaluate BSDF 
+                Vec4f bsdf = optixDirectCall<Vec4f, SurfaceInteraction*, void*>(si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
+                // Evaluate PDF
+                float pdf = optixDirectCall<float, SurfaceInteraction*, void*>(si.surface_info.callable_id.pdf, &si, si.surface_info.data);
+
+                throughput *= bsdf / pdf;
+            }
             
             // Generate next path
             ro = si.p;
@@ -133,6 +130,47 @@ extern "C" DEVICE void __miss__envmap()
         env->texture.prg_id, si->shading.uv, env->texture.data);
 }
 
+// Hitgroups 
+extern "C" __device__ void __intersection__box()
+{
+    pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
+    auto* box = reinterpret_cast<Box::Data*>(data->shape_data);
+    Ray ray = getLocalRay();
+    pgReportIntersectionBox(box, ray);
+}
+
+extern "C" __device__ void __intersection__plane()
+{
+    pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
+    auto* plane = reinterpret_cast<Plane::Data*>(data->shape_data);
+    Ray ray = getLocalRay();
+    pgReportIntersectionPlane(plane, ray);
+}
+
+extern "C" __device__ void __closesthit__custom()
+{
+    pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
+
+    Ray ray = getWorldRay();
+
+    // If you use `reportIntersection*` function for intersection test, 
+    // you can fetch the shading on a surface from two attributes
+    Shading* shading = getPtrFromTwoAttributes<Shading, 0>();
+
+    // Transform shading frame to world space
+    shading->n = optixTransformNormalFromObjectToWorldSpace(shading->n);
+    shading->dpdu = optixTransformVectorFromObjectToWorldSpace(shading->dpdu);
+    shading->dpdv = optixTransformVectorFromObjectToWorldSpace(shading->dpdv);
+
+    auto* si = getPtrFromTwoPayloads<SurfaceInteraction, 0>();
+
+    si->p = ray.at(ray.tmax);
+    si->shading = *shading;
+    si->t = ray.tmax;
+    si->wo = ray.d;
+    si->surface_info = data->surface_info;
+}
+
 // Mesh
 extern "C" GLOBAL void __closesthit__mesh()
 {
@@ -160,6 +198,8 @@ extern "C" GLOBAL void __closesthit__mesh()
 extern "C" GLOBAL void __anyhit__opacity()
 {
     HitgroupData* data = (HitgroupData*)optixGetSbtDataPointer();
+    if (!data->opacity_texture.data) return;
+
     const TriangleMesh::Data* mesh = reinterpret_cast<TriangleMesh::Data*>(data->shape_data);
 
     // Notify execution of anyhit shader
@@ -179,8 +219,9 @@ extern "C" GLOBAL void __anyhit__opacity()
     const Vec2f texcoord = barycentricInterop(texcoord0, texcoord1, texcoord2, bc);
 
     const Vec4f opacity = optixDirectCall<Vec4f, const Vec2f&, void*>(data->opacity_texture.prg_id, texcoord, data->opacity_texture.data);
-    if (opacity.w() == 0)
-        optixIgnoreIntersection();
+    //if (opacity.w() == 0) {
+    //    optixIgnoreIntersection();
+    //}
 }
 
 // Textures
@@ -211,8 +252,7 @@ extern "C" DEVICE Vec4f __direct_callable__bsdf_diffuse(SurfaceInteraction* si, 
 {
     const Diffuse::Data* diffuse = reinterpret_cast<Diffuse::Data*>(data);
     const Vec4f albedo = optixDirectCall<Vec4f, const Vec2f&, void*>(diffuse->texture.prg_id, si->shading.uv, diffuse->texture.data);
-    //si->albedo = albedo;
-    si->albedo = si->shading.n;
+    si->albedo = albedo;
     si->emission = Vec4f(0.0f);
     return si->albedo * pgGetDiffuseBRDF(si->wi, si->shading.n) * math::inv_pi;
 }

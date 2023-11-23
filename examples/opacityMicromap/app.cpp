@@ -52,8 +52,8 @@ void App::setup()
     pipeline.setNumPayloads(5);
     pipeline.setNumAttributes(6);
     // Must be called
-    //pipeline.enableOpacityMap();
-    //pipeline.setTraversableGraphFlags(OPTIX_TRAVERSABLE_GRAPH_FLAG_ALLOW_SINGLE_GAS);
+    pipeline.enableOpacityMap();
+    pipeline.setTraversableGraphFlags(OPTIX_TRAVERSABLE_GRAPH_FLAG_ALLOW_SINGLE_GAS);
 
     // Create module
     Module module;
@@ -116,9 +116,12 @@ void App::setup()
 
     // Area emitter
     uint32_t area_emitter_prg_id = setupCallable(module, "__direct_callable__area_emitter", "");
+    SurfaceCallableID area_emitter_id = { area_emitter_prg_id, area_emitter_prg_id, area_emitter_prg_id };
 
     // Setup environment emitter
-    auto env_texture = make_shared<ConstantTexture>(Vec3f(0.5f), constant_prg_id);
+    //auto env_texture = make_shared<ConstantTexture>(Vec3f(0.5f), constant_prg_id);
+    //env_texture->copyToDevice();
+    auto env_texture = make_shared<FloatBitmapTexture>("resources/image/drackenstein_quarry_4k.exr", bitmap_prg_id);
     env_texture->copyToDevice();
     env = EnvironmentEmitter{ env_texture };
     env.copyToDevice();
@@ -133,6 +136,9 @@ void App::setup()
     // Hitgroup program
     ProgramGroup mesh_prg = pipeline.createHitgroupProgram(context, module, "__closesthit__mesh", "", "__anyhit__opacity");
     ProgramGroup mesh_opaque_prg = pipeline.createHitgroupProgram(context, module, "__closesthit__mesh");
+
+    ProgramGroup plane_prg = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", "__intersection__plane");
+    ProgramGroup box_prg = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", "__intersection__box");
 
     uint32_t sbt_idx = 0;
     uint32_t sbt_offset = 0;
@@ -192,7 +198,7 @@ void App::setup()
         createGAS(shape, transform);
     };
 
-    auto setupAreaEmitter = [&](ProgramGroup& prg, shared_ptr<Shape> shape, shared_ptr<AreaEmitter> area, Matrix4f transform, uint32_t sample_pdf_id, shared_ptr<Texture> opacity_texture = nullptr) -> void
+    auto setupAreaEmitter = [&](ProgramGroup& prg, shared_ptr<Shape> shape, shared_ptr<AreaEmitter> area, Matrix4f transform, shared_ptr<Texture> opacity_texture = nullptr) -> void
     {
         addHitgroupRecord(prg, shape, area, opacity_texture);
         createGAS(shape, transform);
@@ -220,17 +226,22 @@ void App::setup()
     auto opacity_bmp = make_shared<BitmapTexture>("resources/image/PRayGround_black.png", bitmap_prg_id);
 
     // Create mesh with the size of opacity bitmap
-    Vec2f mesh_size((float)opacity_bmp->width() / opacity_bmp->height(), 1.0f);
-    //auto mesh = make_shared<PlaneMesh>(mesh_size, Vec2ui(1,1), Axis::Y);
-    auto mesh = make_shared<TriangleMesh>("resources/model/bunny.obj");
-    mesh->calculateNormalSmooth();
+    //Vec2f mesh_size((float)opacity_bmp->width() / opacity_bmp->height(), 1.0f);
+    Vec2f mesh_size(2, 2);
+    auto mesh = make_shared<PlaneMesh>(mesh_size, Vec2ui(1,1), Axis::Y);
     // Set up opacity bitmap 
-    //mesh->setupOpacitymap(context, stream, 4, OPTIX_OPACITY_MICROMAP_FORMAT_2_STATE, omm_function, OPTIX_OPACITY_MICROMAP_FLAG_NONE);
+    //mesh->setupOpacitymap(context, stream, 4, OPTIX_OPACITY_MICROMAP_FORMAT_4_STATE, opacity_bmp, OPTIX_OPACITY_MICROMAP_FLAG_NONE);
+    mesh->setupOpacitymap(context, stream, 8, OPTIX_OPACITY_MICROMAP_FORMAT_2_STATE, opacity_bmp, OPTIX_OPACITY_MICROMAP_FLAG_NONE);
 
-    //auto diffuse = make_shared<Diffuse>(diffuse_id, opacity_bmp);
-    auto diffuse = make_shared<Diffuse>(diffuse_id, make_shared<ConstantTexture>(Vec4f(0.05f, 0.8f, 0.05f, 1.0f), constant_prg_id));
+    auto diffuse = make_shared<Diffuse>(diffuse_id, opacity_bmp);
+    //auto diffuse = make_shared<Diffuse>(diffuse_id, make_shared<ConstantTexture>(Vec4f(0.05f, 0.8f, 0.05f, 1.0f), constant_prg_id));
 
-    setupObject(mesh_opaque_prg, mesh, diffuse, Matrix4f::scale(30));
+    setupObject(mesh_prg, mesh, diffuse, Matrix4f::scale(30), opacity_bmp);
+
+    // Ceiling light
+    auto light_plane = make_shared<Plane>(Vec2f(-10), Vec2f(10));
+    auto light = make_shared<AreaEmitter>(area_emitter_id, make_shared<ConstantTexture>(Vec3f(1.0f), constant_prg_id), 10.0f);
+    setupAreaEmitter(plane_prg, light_plane, light, Matrix4f::translate(0.0f, 99.9f, 0.0f));
 
     CUDA_CHECK(cudaStreamCreate(&stream));
     ias.build(context, stream);

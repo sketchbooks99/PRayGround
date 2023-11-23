@@ -10,8 +10,8 @@ void App::initResultBufferOnDevice()
 
     result_bmp.allocateDevicePtr();
     accum_bmp.allocateDevicePtr();
-    params.result_buffer = reinterpret_cast<Vec4u*>(result_bmp.devicePtr());
-    params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bmp.devicePtr());
+    params.result_buffer = reinterpret_cast<Vec4u*>(result_bmp.deviceData());
+    params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bmp.deviceData());
 
     CUDA_SYNC_CHECK();
 }
@@ -62,8 +62,8 @@ void App::setup()
     params.samples_per_launch = 1;
     params.frame = 0;
     params.max_depth = 5;
-    params.result_buffer = reinterpret_cast<Vec4u*>(result_bmp.devicePtr());
-    params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bmp.devicePtr());
+    params.result_buffer = reinterpret_cast<Vec4u*>(result_bmp.deviceData());
+    params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bmp.deviceData());
 
     // Camera settings
     std::shared_ptr<Camera> camera(new Camera);

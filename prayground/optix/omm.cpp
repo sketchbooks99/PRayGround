@@ -167,10 +167,8 @@ namespace prayground {
 
                 for (int32_t u_tri = 0; u_tri < num_micro_triangles; u_tri++)
                 {
-                    float2 bary0, bary1, bary2;
-                    optixMicromapIndexToBaseBarycentrics(u_tri, input.subdivision_level, bary0, bary1, bary2);
+                    auto barycentrics = OpacityMicromap::indexToBarycentrics(u_tri, input.subdivision_level);
 
-                    auto barycentrics = OpacityMicromap::MicroBarycentrics{ bary0, bary1, bary2 };
                     int state = OPTIX_OPACITY_MICROMAP_STATE_OPAQUE;
                     if (is_bitmap)
                         state = evaluateOpacitymapFromBitmap(input.format, std::get<std::shared_ptr<BitmapTexture>>(input.opacity_bitmap_or_function), barycentrics, uv0, uv1, uv2);
@@ -298,6 +296,8 @@ namespace prayground {
         const Vec2f bary0 = barycentricInterop(uv0, uv1, uv2, bc.uv0);
         const Vec2f bary1 = barycentricInterop(uv0, uv1, uv2, bc.uv1);
         const Vec2f bary2 = barycentricInterop(uv0, uv1, uv2, bc.uv2);
+
+        /// TODO: Rasterize micro-triangle to evaluate transparency 
 
         Pixel pixel0 = bitmap->eval(bary0);
         Pixel pixel1 = bitmap->eval(bary1);

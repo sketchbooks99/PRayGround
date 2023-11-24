@@ -15,6 +15,7 @@ public:
 
 #ifndef __CUDACC__
     using ColorType = std::conditional_t<std::is_same_v<PixelT, float>, float4, uchar4>;
+    using ElemType = PixelT;
 
     BitmapTexture_() = default;
     BitmapTexture_(const std::filesystem::path& filename, int prg_id);
@@ -23,6 +24,7 @@ public:
     constexpr TextureType type() override;
 
     ColorType eval(const Vec2f& texcoord) const;
+    ColorType eval(const Vec2i& pixel) const;
 
     void copyToDevice() override;
     void free() override;
@@ -30,6 +32,7 @@ public:
     void setTextureDesc(const cudaTextureDesc& desc);
     cudaTextureDesc textureDesc() const;
 
+    cudaTextureObject_t cudaTextureObject() const;
 private:
     cudaTextureDesc m_tex_desc {};
     cudaTextureObject_t d_texture{};

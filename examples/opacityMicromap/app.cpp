@@ -231,7 +231,7 @@ void App::setup()
     auto mesh = make_shared<PlaneMesh>(mesh_size, Vec2ui(1,1), Axis::Y);
     // Set up opacity bitmap 
     //mesh->setupOpacitymap(context, stream, 4, OPTIX_OPACITY_MICROMAP_FORMAT_4_STATE, opacity_bmp, OPTIX_OPACITY_MICROMAP_FLAG_NONE);
-    mesh->setupOpacitymap(context, stream, 8, OPTIX_OPACITY_MICROMAP_FORMAT_2_STATE, opacity_bmp, OPTIX_OPACITY_MICROMAP_FLAG_NONE);
+    mesh->setupOpacitymap(context, stream, 8, OPTIX_OPACITY_MICROMAP_FORMAT_4_STATE, opacity_bmp, OPTIX_OPACITY_MICROMAP_FLAG_NONE);
 
     auto diffuse = make_shared<Diffuse>(diffuse_id, opacity_bmp);
     //auto diffuse = make_shared<Diffuse>(diffuse_id, make_shared<ConstantTexture>(Vec4f(0.05f, 0.8f, 0.05f, 1.0f), constant_prg_id));

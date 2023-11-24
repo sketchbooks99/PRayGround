@@ -385,6 +385,12 @@ namespace prayground {
     {
         return out << v.x() << ' ' << v.y();
     }
+
+    template <>
+    INLINE std::ostream& operator<<(std::ostream& out, const Vec2<uint8_t>& v)
+    {
+        return out << (int)v.x() << ' ' << (int)v.y();
+    }
 #endif
 
     template <typename T> 
@@ -510,6 +516,12 @@ namespace prayground {
     {
         return out << v.x() << ' ' << v.y() << ' ' << v.z();
     }
+
+    template <>
+    INLINE std::ostream& operator<<(std::ostream& out, const Vec3<uint8_t>& v)
+    {
+        return out << (int)v.x() << ' ' << (int)v.y() << ' ' << (int)v.z();
+    }
 #endif
 
     template <typename T>
@@ -632,6 +644,12 @@ namespace prayground {
     INLINE std::ostream& operator<<(std::ostream& out, const Vec4<T>& v)
     {
         return out << v.x() << ' ' << v.y() << ' ' << v.z() << ' ' << v.w();
+    }
+
+    template <>
+    INLINE std::ostream& operator<<(std::ostream& out, const Vec4<uint8_t>& v)
+    {
+        return out << (int)v.x() << ' ' << (int)v.y() << ' ' << (int)v.z() << ' ' << (int)v.w();
     }
 #endif
 

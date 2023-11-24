@@ -21,12 +21,10 @@ namespace prayground {
             else 
                 magenta = Vec4f(1.0f, 0.0f, 1.0f, 1.0f);
             std::vector<ColorType> pixels(width * height, magenta);
-            //m_bitmap = Bitmap_<PixelT>(PixelFormat::RGBA, width, height, reinterpret_cast<Bitmap_<PixelT>::Type*>(pixels.data()));
             Bitmap_<PixelT>::allocate(PixelFormat::RGBA, width, height, reinterpret_cast<PixelT*>(pixels.data()));
         }
         else
         {
-            //m_bitmap = Bitmap_<PixelT>(filepath.value(), PixelFormat::RGBA);
             Bitmap_<PixelT>::load(filepath.value(), PixelFormat::RGBA);
         }
 
@@ -67,6 +65,13 @@ namespace prayground {
         int32_t y = clamp(texcoord.y(), 0.0f, 0.999f) * Bitmap_<PixelT>::height();
         ColorType pixel = std::get<ColorType>(Bitmap_<PixelT>::at(x, y));
         return pixel;
+    }
+
+    template <typename PixelT>
+    BitmapTexture_<PixelT>::ColorType BitmapTexture_<PixelT>::eval(const Vec2i& pixel) const
+    {
+        ColorType color = std::get<ColorType>(Bitmap_<PixelT>::at(pixel.x(), pixel.y()));
+        return color;
     }
 
     // ---------------------------------------------------------------------
@@ -126,6 +131,12 @@ namespace prayground {
     cudaTextureDesc BitmapTexture_<PixelT>::textureDesc() const
     {
         return m_tex_desc;
+    }
+
+    template<typename PixelT>
+    cudaTextureObject_t BitmapTexture_<PixelT>::cudaTextureObject() const
+    {
+        return d_texture;
     }
 
     template class BitmapTexture_<float>;

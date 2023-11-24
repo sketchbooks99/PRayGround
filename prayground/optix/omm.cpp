@@ -22,7 +22,7 @@ namespace prayground {
         const int num_micro_triangles = 1 << (input.subdivision_level * 2);
 
         size_t num_states_per_elem = 16 / input.format;
-        size_t num_elems_per_face = (num_micro_triangles / 16 * input.format);
+        size_t num_elems_per_face = (num_micro_triangles / 16 * input.format) + 1;
 
         std::vector<uint16_t> omm_opacity_data(input.num_faces * num_elems_per_face);
 
@@ -297,23 +297,58 @@ namespace prayground {
         const Vec2f bary1 = barycentricInterop(uv0, uv1, uv2, bc.uv1);
         const Vec2f bary2 = barycentricInterop(uv0, uv1, uv2, bc.uv2);
 
-        /// TODO: Rasterize micro-triangle to evaluate transparency 
+        int32_t w = bitmap->width();
+        int32_t h = bitmap->height();
 
-        Pixel pixel0 = bitmap->eval(bary0);
-        Pixel pixel1 = bitmap->eval(bary1);
-        Pixel pixel2 = bitmap->eval(bary2);
+        /// TODO: Rasterize micro-triangle to evaluate transparency
+        Vec2i p0 = Vec2i{ static_cast<int>(clamp(bary0.x(), 0.0f, 0.999f) * w), static_cast<int>(clamp(bary0.y(), 0.0f, 0.999f) * h) };
+        Vec2i p1 = Vec2i{ static_cast<int>(clamp(bary1.x(), 0.0f, 0.999f) * w), static_cast<int>(clamp(bary1.y(), 0.0f, 0.999f) * h) };
+        Vec2i p2 = Vec2i{ static_cast<int>(clamp(bary2.x(), 0.0f, 0.999f) * w), static_cast<int>(clamp(bary2.y(), 0.0f, 0.999f) * h) };
 
-        if (pixel0.w() == 0 && pixel1.w() == 0 && pixel2.w() == 0)
-            return OPTIX_OPACITY_MICROMAP_STATE_TRANSPARENT;
-        if (pixel0.w() != 0 && pixel1.w() != 0 && pixel2.w() != 0)
-            return OPTIX_OPACITY_MICROMAP_STATE_OPAQUE;
-        else
-        {
-            if (format == OPTIX_OPACITY_MICROMAP_FORMAT_4_STATE)
-                return OPTIX_OPACITY_MICROMAP_STATE_UNKNOWN_OPAQUE;
-            else // Treat micro triangle as opaque when the state is controlled with 1 bit (0 or 1)
-                return OPTIX_OPACITY_MICROMAP_STATE_OPAQUE;
+        Vec2i corner_min = Vec2i{ min(min(p0.x(), p1.x()), p2.x()), min(min(p0.y(), p1.y()), p2.y()) };
+        Vec2i corner_max = Vec2i{ max(max(p0.x(), p1.x()), p2.x()), max(max(p0.y(), p1.y()), p2.y())};
+
+        auto calcArea = [](const Vec2i& a, const Vec2i& b, const Vec2i& c) -> int {
+            return cross(b - a, c - a);
+        };
+
+        // Accmulate transparency inside micro-triangle by scanning all pixels inside bounding box that just covers the triangle
+        //typename U::ElemType transparency = 0;
+        //Pixel pixel_accum = 0;
+        float transparency = 0.0f;
+        for (int32_t x = corner_min.x(); x <= corner_max.x(); x++) {
+            for (int32_t y = corner_min.y(); y <= corner_max.y(); y++) {
+                Vec2i p(x, y);
+                // The pixel on/inside the micro triangle
+                if (calcArea(p, p0, p1) >= 0 && calcArea(p, p1, p2) >= 0 && calcArea(p, p2, p0) >= 0) {
+                    Pixel color = bitmap->eval(p);
+                    transparency += (float)color.w();
+                }
+                else {
+                    continue;
+                }
+            }
         }
+
+        //Pixel pixel0 = bitmap->eval(bary0);
+        //Pixel pixel1 = bitmap->eval(bary1);
+        //Pixel pixel2 = bitmap->eval(bary2);
+
+        //if (pixel0.w() == 0 && pixel1.w() == 0 && pixel2.w() == 0)
+        //    return OPTIX_OPACITY_MICROMAP_STATE_TRANSPARENT;
+        //if (pixel0.w() != 0 && pixel1.w() != 0 && pixel2.w() != 0)
+        //    return OPTIX_OPACITY_MICROMAP_STATE_OPAQUE;
+        if (transparency == 0)
+            return OPTIX_OPACITY_MICROMAP_STATE_TRANSPARENT;
+        else
+            return OPTIX_OPACITY_MICROMAP_STATE_OPAQUE;
+        //else
+        //{
+        //    if (format == OPTIX_OPACITY_MICROMAP_FORMAT_4_STATE)
+        //        return OPTIX_OPACITY_MICROMAP_STATE_UNKNOWN_OPAQUE;
+        //    else // Treat micro triangle as opaque when the state is controlled with 1 bit (0 or 1)
+        //        return OPTIX_OPACITY_MICROMAP_STATE_OPAQUE;
+        //}
     }
 
     // ------------------------------------------------------------------

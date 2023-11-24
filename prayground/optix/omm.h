@@ -19,6 +19,7 @@ namespace prayground {
             Vec2f uv2;
         };
 
+#ifndef __CUDACC__
         using OpacityFunction = std::function<int(const MicroBarycentrics&, const Vec2f& uv0, const Vec2f& uv1, const Vec2f& uv2)>;
 
         struct Input {
@@ -50,6 +51,16 @@ namespace prayground {
 
         OptixMicromapBuffers m_buffers{};
         std::vector<OptixOpacityMicromapUsageCount> m_usage_counts;
+#endif
     };
+
+    extern "C" HOST void evaluateSingleOpacityTexture(
+        uint16_t* out_omm_data,
+        int32_t subdivision_level,
+        OptixOpacityMicromapFormat format,
+        Vec2i tex_size,
+        Vec2f uv0, Vec2f uv1, Vec2f uv2,
+        cudaTextureObject_t texture
+    );
 
 } // namespace prayground

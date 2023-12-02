@@ -85,6 +85,7 @@ set(sources
   optix/transform.cpp
   optix/sbt.h 
   optix/cuda/device_util.cuh
+  optix/cuda/omm.cu
 
   # Shapes ==========
   shape/box.h

@@ -226,15 +226,14 @@ void App::setup()
     auto opacity_bmp = make_shared<BitmapTexture>("resources/image/PRayGround_black.png", bitmap_prg_id);
 
     // Create mesh with the size of opacity bitmap
-    //Vec2f mesh_size((float)opacity_bmp->width() / opacity_bmp->height(), 1.0f);
-    Vec2f mesh_size(2, 2);
-    auto mesh = make_shared<PlaneMesh>(mesh_size, Vec2ui(1,1), Axis::Y);
+    Vec2f mesh_size((float)opacity_bmp->width() / opacity_bmp->height(), 1.0f);
+    //auto mesh = make_shared<PlaneMesh>(mesh_size, Vec2ui(1,1), Axis::Y);
+    auto mesh = make_shared<TriangleMesh>("resources/model/uv_bunny.obj");
+    mesh->calculateNormalSmooth();
     // Set up opacity bitmap 
-    //mesh->setupOpacitymap(context, stream, 4, OPTIX_OPACITY_MICROMAP_FORMAT_4_STATE, opacity_bmp, OPTIX_OPACITY_MICROMAP_FLAG_NONE);
-    mesh->setupOpacitymap(context, stream, 8, OPTIX_OPACITY_MICROMAP_FORMAT_4_STATE, opacity_bmp, OPTIX_OPACITY_MICROMAP_FLAG_NONE);
+    mesh->setupOpacitymap(context, stream, 6, OPTIX_OPACITY_MICROMAP_FORMAT_4_STATE, opacity_bmp, OPTIX_OPACITY_MICROMAP_FLAG_NONE);
 
     auto diffuse = make_shared<Diffuse>(diffuse_id, opacity_bmp);
-    //auto diffuse = make_shared<Diffuse>(diffuse_id, make_shared<ConstantTexture>(Vec4f(0.05f, 0.8f, 0.05f, 1.0f), constant_prg_id));
 
     setupObject(mesh_prg, mesh, diffuse, Matrix4f::scale(30), opacity_bmp);
 

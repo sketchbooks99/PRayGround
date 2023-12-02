@@ -219,9 +219,9 @@ extern "C" GLOBAL void __anyhit__opacity()
     const Vec2f texcoord = barycentricInterop(texcoord0, texcoord1, texcoord2, bc);
 
     const Vec4f opacity = optixDirectCall<Vec4f, const Vec2f&, void*>(data->opacity_texture.prg_id, texcoord, data->opacity_texture.data);
-    //if (opacity.w() == 0) {
-    //    optixIgnoreIntersection();
-    //}
+    if (opacity.w() == 0) {
+        optixIgnoreIntersection();
+    }
 }
 
 // Textures

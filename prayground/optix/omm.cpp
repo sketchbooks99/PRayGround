@@ -305,7 +305,7 @@ namespace prayground {
         Vec2i p1 = Vec2i{ static_cast<int>(clamp(bary1.x(), 0.0f, 0.999f) * w), static_cast<int>(clamp(bary1.y(), 0.0f, 0.999f) * h) };
         Vec2i p2 = Vec2i{ static_cast<int>(clamp(bary2.x(), 0.0f, 0.999f) * w), static_cast<int>(clamp(bary2.y(), 0.0f, 0.999f) * h) };
 
-        Vec2i corner_min = Vec2i{ min(min(p0.x(), p1.x()), p2.x()), min(min(p0.y(), p1.y()), p2.y()) };
+        Vec2i corner_min = Vec2i{ min(min(p0.x(), p1.x()), p2.x()), min(min(p0.y(), p1.y()), p2.y())};
         Vec2i corner_max = Vec2i{ max(max(p0.x(), p1.x()), p2.x()), max(max(p0.y(), p1.y()), p2.y())};
 
         auto calcArea = [](const Vec2i& a, const Vec2i& b, const Vec2i& c) -> int {
@@ -315,14 +315,20 @@ namespace prayground {
         // Accmulate transparency inside micro-triangle by scanning all pixels inside bounding box that just covers the triangle
         //typename U::ElemType transparency = 0;
         //Pixel pixel_accum = 0;
-        float transparency = 0.0f;
+        int32_t num_pixels_in_triangle = 0;
+        int32_t num_transparent_pixels = 0;
         for (int32_t x = corner_min.x(); x <= corner_max.x(); x++) {
             for (int32_t y = corner_min.y(); y <= corner_max.y(); y++) {
                 Vec2i p(x, y);
                 // The pixel on/inside the micro triangle
-                if (calcArea(p, p0, p1) >= 0 && calcArea(p, p1, p2) >= 0 && calcArea(p, p2, p0) >= 0) {
+                auto area01 = calcArea(p, p0, p1);
+                auto area12 = calcArea(p, p1, p2);
+                auto area20 = calcArea(p, p2, p0);
+                if ((area01 >= 0 && area12 >= 0 && area20 >= 0) || (area01 <= 0 && area12 <= 0 && area20 <= 0)) {
                     Pixel color = bitmap->eval(p);
-                    transparency += (float)color.w();
+                    num_pixels_in_triangle++;
+                    if (color.w() == 0)
+                        num_transparent_pixels++;
                 }
                 else {
                     continue;
@@ -330,25 +336,17 @@ namespace prayground {
             }
         }
 
-        //Pixel pixel0 = bitmap->eval(bary0);
-        //Pixel pixel1 = bitmap->eval(bary1);
-        //Pixel pixel2 = bitmap->eval(bary2);
-
-        //if (pixel0.w() == 0 && pixel1.w() == 0 && pixel2.w() == 0)
-        //    return OPTIX_OPACITY_MICROMAP_STATE_TRANSPARENT;
-        //if (pixel0.w() != 0 && pixel1.w() != 0 && pixel2.w() != 0)
-        //    return OPTIX_OPACITY_MICROMAP_STATE_OPAQUE;
-        if (transparency == 0)
+        if (num_transparent_pixels == num_pixels_in_triangle)
             return OPTIX_OPACITY_MICROMAP_STATE_TRANSPARENT;
-        else
+        else if (num_transparent_pixels == 0)
             return OPTIX_OPACITY_MICROMAP_STATE_OPAQUE;
-        //else
-        //{
-        //    if (format == OPTIX_OPACITY_MICROMAP_FORMAT_4_STATE)
-        //        return OPTIX_OPACITY_MICROMAP_STATE_UNKNOWN_OPAQUE;
-        //    else // Treat micro triangle as opaque when the state is controlled with 1 bit (0 or 1)
-        //        return OPTIX_OPACITY_MICROMAP_STATE_OPAQUE;
-        //}
+        else
+        {
+            if (format == OPTIX_OPACITY_MICROMAP_FORMAT_4_STATE)
+                return OPTIX_OPACITY_MICROMAP_STATE_UNKNOWN_OPAQUE;
+            else // Treat micro triangle as opaque when the state is controlled with 1 bit (0 or 1)
+                return OPTIX_OPACITY_MICROMAP_STATE_OPAQUE;
+        }
     }
 
     // ------------------------------------------------------------------

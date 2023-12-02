@@ -88,7 +88,7 @@ namespace prayground {
 
         // Cast from other type vector
         template <typename U>
-        HOSTDEVICE operator Vec2<U>() { return Vec2<U>(e[0], e[1]); }
+        HOSTDEVICE operator Vec2<U>() { return Vec2<U>((U)e[0], (U)e[1]); }
 
         // Implicit cast operator to CUDA vector i.e. float2
         HOSTDEVICE operator CUVec() const { return CUVec{ e[0], e[1] }; }
@@ -187,7 +187,7 @@ namespace prayground {
 
         // Cast from other type vector
         template <typename U>
-        HOSTDEVICE operator Vec3<U>() { return Vec3<U>(e[0], e[1], e[2]); }
+        HOSTDEVICE operator Vec3<U>() { return Vec3<U>((U)e[0], (U)e[1], (U)e[2]); }
 
         // Implicit cast operator to CUDA vector i.e. float3
         HOSTDEVICE operator CUVec() const { return CUVec{ e[0], e[1], e[2] }; }
@@ -294,7 +294,7 @@ namespace prayground {
 
         // Cast from other type vector
         template <typename U>
-        HOSTDEVICE operator Vec4<U>() { return Vec4<U>(e[0], e[1], e[2], e[3]); }
+        HOSTDEVICE operator Vec4<U>() { return Vec4<U>((U)e[0], (U)e[1], (U)e[2], (U)e[3]); }
 
         // Implicit cast operator to CUDA vector i.e. float4
         HOSTDEVICE operator CUVec() const { return CUVec{ e[0], e[1], e[2], e[3] }; }

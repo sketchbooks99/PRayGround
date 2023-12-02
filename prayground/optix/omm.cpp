@@ -32,14 +32,12 @@ namespace prayground {
 
         ASSERT(is_bitmap || is_fbitmap || is_lambda, "Invalid bitmap or function to construct opacity micromap");
 
-        for (size_t i = 0; i < input.num_faces; i++)
-        {
+        for (size_t i = 0; i < input.num_faces; i++) {
             const Vec2f uv0 = input.texcoords[input.faces[i].x()];
             const Vec2f uv1 = input.texcoords[input.faces[i].y()];
             const Vec2f uv2 = input.texcoords[input.faces[i].z()];
 
-            for (uint32_t j = 0; j < num_micro_triangles; j++)
-            {
+            for (uint32_t j = 0; j < num_micro_triangles; j++) {
                 // Get barycentric coordinates of micro triangle in opacity map
                 auto barycentrics = OpacityMicromap::indexToBarycentrics(j, input.subdivision_level);
 
@@ -313,8 +311,6 @@ namespace prayground {
         };
 
         // Accmulate transparency inside micro-triangle by scanning all pixels inside bounding box that just covers the triangle
-        //typename U::ElemType transparency = 0;
-        //Pixel pixel_accum = 0;
         int32_t num_pixels_in_triangle = 0;
         int32_t num_transparent_pixels = 0;
         for (int32_t x = corner_min.x(); x <= corner_max.x(); x++) {
@@ -324,14 +320,12 @@ namespace prayground {
                 auto area01 = calcArea(p, p0, p1);
                 auto area12 = calcArea(p, p1, p2);
                 auto area20 = calcArea(p, p2, p0);
+                // Accumerate the number of transparent pixels inside the micro triangle
                 if ((area01 >= 0 && area12 >= 0 && area20 >= 0) || (area01 <= 0 && area12 <= 0 && area20 <= 0)) {
                     Pixel color = bitmap->eval(p);
                     num_pixels_in_triangle++;
                     if (color.w() == 0)
                         num_transparent_pixels++;
-                }
-                else {
-                    continue;
                 }
             }
         }

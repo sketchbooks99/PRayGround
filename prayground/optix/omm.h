@@ -57,6 +57,7 @@ namespace prayground {
     extern "C" HOST void evaluateSingleOpacityTexture(
         uint16_t* out_omm_data,
         int32_t subdivision_level,
+        int32_t num_faces,
         OptixOpacityMicromapFormat format,
         Vec2i tex_size,
         Vec2f uv0, Vec2f uv1, Vec2f uv2,

@@ -8,7 +8,7 @@
 #include <prayground/optix/omm.h>
 
 namespace prayground {
-    INLINE signedTriangleArea(Vec2f a, Vec2f b, Vec2f c) {
+    INLINE float signedTriangleArea(Vec2f a, Vec2f b, Vec2f c) {
         return cross(b - a, c - a) / 2.0f;
     }
 
@@ -41,7 +41,7 @@ namespace prayground {
                 if ((area01 >= 0 && area12 >= 0 && area20 >= 0) || (area01 <= 0 && area12 <= 0 && area20 <= 0)) {
                     num_pixels_in_triangle++;
                     float4 color = tex2D<float4>(texture, uv.x(), uv.y());
-                    if (color.w() == 0.0f) {
+                    if (color.w == 0.0f) {
                         num_transparent_pixels++;
                     }
                 }
@@ -64,16 +64,17 @@ namespace prayground {
         uint16_t* d_out_omm_data, 
         int32_t subdivision_level, OptixOpacityMicromapFormat format,
         Vec2i tex_size, 
-        const Vec2f* d_texcoords, const Face* d_faces,
+        const Vec2f* d_texcoords, const Vec3i* d_faces,
         cudaTextureObject_t texture) 
     {
+        /// TODO: Atomic operation
         const int num_micro_triangles = 1 << (subdivision_level * 2);
 
         int face_idx = blockIdx.x;
         int micro_tri_idx = threadIdx.x;
 
         int num_states_per_elem = 16 / format;
-        int num_elems_per_face = (num_micro_triangles / 16 * input.format) + 1;
+        int num_elems_per_face = (num_micro_triangles / 16 * format) + 1;
 
         const Vec2f uv0 = d_texcoords[d_faces[face_idx].x()];
         const Vec2f uv1 = d_texcoords[d_faces[face_idx].y()];
@@ -95,7 +96,7 @@ namespace prayground {
         int32_t num_faces,
         OptixOpacityMicromapFormat format,
         Vec2i tex_size, 
-        const Vec2f* d_texcoords, const Face* d_faces,
+        const Vec2f* d_texcoords, const Vec3i* d_faces,
         cudaTextureObject_t texture
     ) {
         const int num_micro_triangles = 1 << (subdivision_level * 2);

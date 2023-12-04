@@ -28,9 +28,10 @@ namespace prayground {
             OptixOpacityMicromapFormat format;
 
             // Texture coordinate and faces of triangle input
+            const uint32_t num_texcoords;
             const Vec2f* texcoords;
+            const uint32_t num_faces;
             const Vec3i* faces;
-            uint32_t num_faces;
 
             // Bitmap texture or lambda function to determine opacity map
             std::variant <std::shared_ptr<BitmapTexture>, std::shared_ptr<FloatBitmapTexture>, OpacityFunction> opacity_bitmap_or_function;
@@ -55,12 +56,12 @@ namespace prayground {
     };
 
     extern "C" HOST void evaluateSingleOpacityTexture(
-        uint16_t* out_omm_data,
+        uint16_t* d_out_omm_data, // GPU pointer to the output opacity map
         int32_t subdivision_level,
         int32_t num_faces,
         OptixOpacityMicromapFormat format,
         Vec2i tex_size,
-        Vec2f uv0, Vec2f uv1, Vec2f uv2,
+        const Vec2f * d_texcoords, const Vec3i * d_faces,
         cudaTextureObject_t texture
     );
 

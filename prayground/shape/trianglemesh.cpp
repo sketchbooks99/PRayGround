@@ -170,9 +170,10 @@ namespace prayground {
         OpacityMicromap::Input input = {
             .subdivision_level = subdivision_level,
             .format = format,
+            .num_texcoords = static_cast<uint32_t>(m_texcoords.size()),
             .texcoords = m_texcoords.data(),
-            .faces = faces.data(),
             .num_faces = static_cast<uint32_t>(faces.size()),
+            .faces = faces.data(),
             .opacity_bitmap_or_function = function
         };
 
@@ -193,9 +194,10 @@ namespace prayground {
         OpacityMicromap::Input input = {
             .subdivision_level = subdivision_level, 
             .format = format, 
+            .num_texcoords = static_cast<uint32_t>(m_texcoords.size()),
             .texcoords = m_texcoords.data(),
-            .faces = faces.data(),
             .num_faces = static_cast<uint32_t>(faces.size()),
+            .faces = faces.data(),
             .opacity_bitmap_or_function = bitmap
         };
 
@@ -216,9 +218,10 @@ namespace prayground {
         OpacityMicromap::Input input = {
             .subdivision_level = subdivision_level,
             .format = format,
+            .num_texcoords = static_cast<uint32_t>(m_texcoords.size()),
             .texcoords = m_texcoords.data(),
-            .faces = faces.data(),
             .num_faces = static_cast<uint32_t>(faces.size()),
+            .faces = faces.data(),
             .opacity_bitmap_or_function = float_bitmap
         };
 

@@ -24,7 +24,11 @@ namespace prayground {
         size_t num_states_per_elem = 16 / input.format;
         size_t num_elems_per_face = (num_micro_triangles / 16 * input.format) + 1;
 
-        std::vector<uint16_t> omm_opacity_data(input.num_faces * num_elems_per_face);
+        //std::vector<uint16_t> omm_opacity_data(input.num_faces * num_elems_per_face);
+        uint32_t num_elems = input.num_faces * num_elems_per_face;
+        uint16_t* omm_opacity_data = new uint16_t[num_elems];
+
+        CUdeviceptr d_omm_opacity_data = 0;
 
         bool is_bitmap = std::holds_alternative<std::shared_ptr<BitmapTexture>>(input.opacity_bitmap_or_function);
         bool is_fbitmap = std::holds_alternative<std::shared_ptr<FloatBitmapTexture>>(input.opacity_bitmap_or_function);
@@ -32,26 +36,69 @@ namespace prayground {
 
         ASSERT(is_bitmap || is_fbitmap || is_lambda, "Invalid bitmap or function to construct opacity micromap");
 
-        for (size_t i = 0; i < input.num_faces; i++) {
-            const Vec2f uv0 = input.texcoords[input.faces[i].x()];
-            const Vec2f uv1 = input.texcoords[input.faces[i].y()];
-            const Vec2f uv2 = input.texcoords[input.faces[i].z()];
+        if (is_bitmap || is_fbitmap) {
+            CUDABuffer<uint16_t> d_omm_opacity_buffer;
+            d_omm_opacity_buffer.copyToDevice(omm_opacity_data, num_elems * sizeof(uint16_t));
 
-            for (uint32_t j = 0; j < num_micro_triangles; j++) {
-                // Get barycentric coordinates of micro triangle in opacity map
-                auto barycentrics = OpacityMicromap::indexToBarycentrics(j, input.subdivision_level);
+            CUDABuffer<Vec2f> d_texcoords;
+            d_texcoords.copyToDevice(input.texcoords, input.num_texcoords * sizeof(Vec2f));
 
-                int state = 0;
-                if (is_bitmap)
-                    state = evaluateOpacitymapFromBitmap(input.format, std::get<std::shared_ptr<BitmapTexture>>(input.opacity_bitmap_or_function), barycentrics, uv0, uv1, uv2);
-                else if (is_fbitmap)
-                    state = evaluateOpacitymapFromBitmap(input.format, std::get<std::shared_ptr<FloatBitmapTexture>>(input.opacity_bitmap_or_function), barycentrics, uv0, uv1, uv2);
-                else if (is_lambda)
+            CUDABuffer<Vec3i> d_faces;
+            d_faces.copyToDevice(input.faces, input.num_faces * sizeof(Vec3i));
+
+            Vec2i tex_size;
+            cudaTextureObject_t texture{};
+            if (is_bitmap) {
+                auto bitmap = std::get<std::shared_ptr<BitmapTexture>>(input.opacity_bitmap_or_function);
+                tex_size = { bitmap->width(), bitmap->height() };
+                texture = bitmap->cudaTextureObject();
+            } else {
+                auto fbitmap = std::get<std::shared_ptr<FloatBitmapTexture>>(input.opacity_bitmap_or_function);
+                tex_size = { fbitmap->width(), fbitmap->height() };
+                texture = fbitmap->cudaTextureObject();
+            }
+
+            evaluateSingleOpacityTexture(
+                d_omm_opacity_buffer.deviceData(),
+                input.subdivision_level,
+                input.num_faces,
+                input.format,
+                tex_size,
+                d_texcoords.deviceData(),
+                d_faces.deviceData(),
+                texture
+            );
+
+            CUDA_SYNC_CHECK();
+
+            //omm_opacity_data = d_omm_opacity_data.copyFromDevice();
+            d_omm_opacity_data = d_omm_opacity_buffer.devicePtr();
+        }
+        else {
+            for (size_t i = 0; i < input.num_faces; i++) {
+                const Vec2f uv0 = input.texcoords[input.faces[i].x()];
+                const Vec2f uv1 = input.texcoords[input.faces[i].y()];
+                const Vec2f uv2 = input.texcoords[input.faces[i].z()];
+
+                for (uint32_t j = 0; j < num_micro_triangles; j++) {
+                    // Get barycentric coordinates of micro triangle in opacity map
+                    auto barycentrics = OpacityMicromap::indexToBarycentrics(j, input.subdivision_level);
+
+                    int state = 0;
+                    //if (is_bitmap)
+                    //    state = evaluateOpacitymapFromBitmap(input.format, std::get<std::shared_ptr<BitmapTexture>>(input.opacity_bitmap_or_function), barycentrics, uv0, uv1, uv2);
+                    //else if (is_fbitmap)
+                    //    state = evaluateOpacitymapFromBitmap(input.format, std::get<std::shared_ptr<FloatBitmapTexture>>(input.opacity_bitmap_or_function), barycentrics, uv0, uv1, uv2);
+                    //if (is_lambda)
                     state = std::get<OpacityMicromap::OpacityFunction>(input.opacity_bitmap_or_function)(barycentrics, uv0, uv1, uv2);
 
-                int32_t index = i * num_elems_per_face + (j / num_states_per_elem);
-                omm_opacity_data[index] |= state << (j % num_states_per_elem * input.format);
+                    int32_t index = i * num_elems_per_face + (j / num_states_per_elem);
+                    omm_opacity_data[index] |= state << (j % num_states_per_elem * input.format);
+                }
             }
+
+            CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_omm_opacity_data), num_elems * sizeof(uint16_t)));
+            CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_omm_opacity_data), omm_opacity_data, num_elems * sizeof(uint16_t), cudaMemcpyHostToDevice));
         }
 
         // Reset usage counts
@@ -64,11 +111,6 @@ namespace prayground {
             .format = input.format
         };
         m_usage_counts.push_back(usage_count);
-
-        // Copy opacity buffer to device
-        CUdeviceptr d_omm_opacity_data = 0;
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_omm_opacity_data), omm_opacity_data.size() * sizeof(uint16_t)));
-        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_omm_opacity_data), omm_opacity_data.data(), omm_opacity_data.size() * sizeof(uint16_t), cudaMemcpyHostToDevice));
 
         // Build OMM
         OptixOpacityMicromapHistogramEntry histogram = {

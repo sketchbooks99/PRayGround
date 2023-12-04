@@ -82,7 +82,7 @@
 
 # This enforces a particular version of CMake that we require to process the script files
 # properly.  We rely on CXX_STANDARD, which was added in CMake 3.1.
-cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 
 project(PRayGround VERSION 0.0.1)
 
@@ -150,8 +150,8 @@ endif()
 # CUDA 8 is broken for generating dependencies during configure
 option(CUDA_GENERATE_DEPENDENCIES_DURING_CONFIGURE "Generate dependencies during configure time instead of only during build time." OFF)
 
-# Find at least a 5.0 version of CUDA.
-find_package(CUDA 5.0 REQUIRED)
+# Find at least a 11.0 version of CUDA.
+find_package(CUDA 11.0 REQUIRED)
 
 # Present the CUDA_64_BIT_DEVICE_CODE on the default set of options.
 mark_as_advanced(CLEAR CUDA_64_BIT_DEVICE_CODE)
@@ -383,6 +383,7 @@ add_subdirectory(prayground)
 # Example apps 
 # 
 # Please uncomment the target you'd like to build
+
 # TODO: Allow standalone build of applications
 ################################################################
 add_subdirectory(examples/single_gas)
@@ -402,7 +403,7 @@ add_subdirectory(examples/opacityMicromap)
 ################################################################
 # Applications
 # 
-# Please add your custom applications to build :-)
+# Please add your custom applications to build here
 ################################################################
 # add_subdirectory(apps/empty_app)
 

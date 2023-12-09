@@ -1,8 +1,9 @@
-#pragma once
-
 #include <optix.h>
 #include <optix_micromap.h>
 #include <vector_types.h>
+#include <cuda_runtime.h>
+#include <stdio.h>
+#include <iostream>
 #include <prayground/math/vec.h>
 #include <prayground/optix/util.h>
 #include <prayground/optix/omm.h>
@@ -87,7 +88,9 @@ namespace prayground {
 
         uint8_t state = evaluateTransparencyInSingleMicroTriangle(format, uv0, uv1, uv2, bc, tex_size, texture);
         int index = face_idx * num_elems_per_face + micro_tri_idx / num_states_per_elem;
-        d_out_omm_data[index] |= state << (micro_tri_idx % num_states_per_elem * format);
+        //d_out_omm_data[index] |= state << (micro_tri_idx % num_states_per_elem * format);
+        unsigned short* address = &d_out_omm_data[index];
+        atomicOr(address, state << (micro_tri_idx % num_states_per_elem * format));
     }
 
     extern "C" HOST void evaluateSingleOpacityTexture(
@@ -101,6 +104,8 @@ namespace prayground {
     ) {
         const int num_micro_triangles = 1 << (subdivision_level * 2);
         dim3 threads_per_block(num_micro_triangles, 1);
+
+        std::cout << "Num micro-triangles: " << num_micro_triangles << ", Threads / block: " << threads_per_block.x << ' ' << threads_per_block.y << ' ' << threads_per_block.z << std::endl;
         generateOpacityMap<<<num_faces, threads_per_block>>>(d_out_omm_data, subdivision_level, format, tex_size, d_texcoords, d_faces, texture);
     }
 }

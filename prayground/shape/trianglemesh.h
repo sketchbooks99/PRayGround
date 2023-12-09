@@ -124,11 +124,11 @@ namespace prayground {
         const std::vector<Vec2f>& texcoords() const { return m_texcoords; }
         const std::vector<uint32_t>& sbtIndices() const { return m_sbt_indices; }
 
-        const uint32_t& numVertices() const { return static_cast<uint32_t>(m_vertices.size()); }
-        const uint32_t& numFaces() const { return static_cast<uint32_t>(m_faces.size()); }
-        const uint32_t& numNormals() const { return static_cast<uint32_t>(m_normals.size()); }
-        const uint32_t& numTexcoords() const { return static_cast<uint32_t>(m_texcoords.size()); }
-        const uint32_t& numSbtIndices() const { return static_cast<uint32_t>(m_sbt_indices.size()); }
+        uint32_t numVertices() const { return static_cast<uint32_t>(m_vertices.size()); }
+        uint32_t numFaces() const { return static_cast<uint32_t>(m_faces.size()); }
+        uint32_t numNormals() const { return static_cast<uint32_t>(m_normals.size()); }
+        uint32_t numTexcoords() const { return static_cast<uint32_t>(m_texcoords.size()); }
+        uint32_t numSbtIndices() const { return static_cast<uint32_t>(m_sbt_indices.size()); }
 
         CUdeviceptr deviceVertices() const { return d_vertices; }
         CUdeviceptr deviceFaces() const { return d_faces; }

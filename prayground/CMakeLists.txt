@@ -148,9 +148,10 @@ set(sources
 )
 
 set(pg_target "prayground")
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${sources})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${sources}) 
 
 # TODO: Link CUDA libraries to the prayground target
+CUDA_GET_SOURCES_AND_OPTIONS(${sources} cmake_options options)
 set_source_files_properties(optix/cuda/omm.cu PROPERTIES CUDA_SOURCE_PROPERTY_FORMAT OBJ)
 if (CUDA_NVRTC_ENABLED)
   set(cu_obj_source_files)
@@ -161,10 +162,12 @@ if (CUDA_NVRTC_ENABLED)
     endif()
   endforeach()
 
-  CUDA_WRAP_SRCS(${pg_target} OBJ generated_files ${cu_obj_source_files} ${cmake_options} OPTIONS ${options})
+  CUDA_WRAP_SRCS(${pg_target} OBJ generated_files ${cu_obj_source_files} STATIC)
 endif()
 
-add_library(${pg_target} STATIC ${sources})
+add_library(${pg_target} STATIC ${sources} ${generated_files})
+# target_link_libraries(${pg_target} PRIVATE ${generated_files})
+
 if (WIN32)
   target_compile_definitions(${pg_target} PUBLIC GLAD_GLAPI_EXPORT)
 endif()
@@ -195,5 +198,3 @@ if (WIN32)
 endif()
 
 target_compile_definitions(${pg_target} PRIVATE PRAYGROUND_DIR="${PRAYGROUND_DIR}")
-
-set(prayground_sources ${sources} PARENT_SCOPE)

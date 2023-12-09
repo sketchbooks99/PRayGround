@@ -4,10 +4,12 @@
 #pragma once
 
 #include <optix.h>
+#ifndef __CUDACC__
 #include <functional>
 #include <prayground/optix/context.h>
 #include <prayground/optix/macros.h>
 #include <prayground/texture/bitmap.h>
+#endif
 
 namespace prayground {
 

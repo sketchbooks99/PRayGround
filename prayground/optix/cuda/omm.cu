@@ -8,7 +8,7 @@
 #include <prayground/optix/omm.h>
 
 namespace prayground {
-    INLINE float signedTriangleArea(Vec2f a, Vec2f b, Vec2f c) {
+    INLINE DEVICE float signedTriangleArea(Vec2f a, Vec2f b, Vec2f c) {
         return cross(b - a, c - a) / 2.0f;
     }
 
@@ -60,7 +60,7 @@ namespace prayground {
         }
     }
 
-    GLOBAL void generateOpacityMap(
+    extern "C" GLOBAL void generateOpacityMap(
         uint16_t* d_out_omm_data, 
         int32_t subdivision_level, OptixOpacityMicromapFormat format,
         Vec2i tex_size, 
@@ -92,15 +92,15 @@ namespace prayground {
 
     extern "C" HOST void generateOpacityMapByTexture(
         uint16_t* d_out_omm_data, // GPU pointer to the output opacity map
-        int32_t subdivision_level, 
+        int32_t subdivision_level,
         int32_t num_faces,
         OptixOpacityMicromapFormat format,
-        Vec2i tex_size, 
+        Vec2i tex_size,
         const Vec2f* d_texcoords, const Vec3i* d_faces,
         cudaTextureObject_t texture
     ) {
         const int num_micro_triangles = 1 << (subdivision_level * 2);
         dim3 threads_per_block(num_micro_triangles, 1);
-        generateOpacityMap<<<num_faces, threads_per_block>>>(d_out_omm_data, tex_size, uv0, uv1, uv2, texture);
+        generateOpacityMap<<<num_faces, threads_per_block>>>(d_out_omm_data, subdivision_level, format, tex_size, d_texcoords, d_faces, texture);
     }
 }

@@ -82,9 +82,10 @@
 
 # This enforces a particular version of CMake that we require to process the script files
 # properly.  We rely on CXX_STANDARD, which was added in CMake 3.1.
-cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
 
-project(PRayGround VERSION 0.0.1)
+set(PROJECT_NAME "PRayGround")
+project(${PROJECT_NAME} VERSION 0.0.1)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
@@ -299,6 +300,7 @@ function(PRAYGROUND_add_executalbe target_name_base target_name_var)
   set( target_name ${target_name_base} )
   set( ${target_name_var} ${target_name} PARENT_SCOPE )
 
+
   # These calls will group PTX and CUDA files into their own directories in the Visual
   # Studio projects.
   if (NOT CUDA_NVRTC_ENABLED)
@@ -340,9 +342,6 @@ function(PRAYGROUND_add_executalbe target_name_base target_name_var)
     ${generated_files}
     ${cmake_options}
   )
-
-  # Most of the samples link against the sutil library and the optix library.  Here is the
-  # rule that specifies this linkage.
 
   target_link_libraries( ${target_name}
     ${GLFW_LIB_NAME}

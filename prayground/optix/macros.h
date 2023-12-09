@@ -134,6 +134,7 @@
             ss << "CUDA error on synchronize with error '"                     \
                << cudaGetErrorString( error )                                  \
                << "' (" __FILE__ << ":" << __LINE__ << ")\n";                  \
+            std::cout << ss.str() << std::endl;                                \
             throw std::runtime_error(ss.str());                                \
         }                                                                      \
     } while( 0 )

@@ -58,7 +58,7 @@ namespace prayground {
     };
 
     extern "C" HOST void evaluateSingleOpacityTexture(
-        uint16_t* d_out_omm_data, // GPU pointer to the output opacity map
+        uint32_t* d_out_omm_data, // GPU pointer to the output opacity map
         int32_t subdivision_level,
         int32_t num_faces,
         OptixOpacityMicromapFormat format,

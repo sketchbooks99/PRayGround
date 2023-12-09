@@ -21,12 +21,10 @@ namespace prayground {
 
         const int num_micro_triangles = 1 << (input.subdivision_level * 2);
 
-        size_t num_states_per_elem = 16 / input.format;
-        size_t num_elems_per_face = (num_micro_triangles / 16 * input.format) + 1;
+        size_t num_states_per_elem = 32 / input.format;
+        size_t num_elems_per_face = max((num_micro_triangles / 32 * input.format), 1);
 
-        //std::vector<uint16_t> omm_opacity_data(input.num_faces * num_elems_per_face);
-        uint32_t num_elems = input.num_faces * num_elems_per_face;
-        uint16_t* omm_opacity_data = new uint16_t[num_elems];
+        std::vector<uint32_t> omm_opacity_data(num_elems_per_face * input.num_faces);
 
         CUdeviceptr d_omm_opacity_data = 0;
 
@@ -37,8 +35,8 @@ namespace prayground {
         ASSERT(is_bitmap || is_fbitmap || is_lambda, "Invalid bitmap or function to construct opacity micromap");
 
         if (is_bitmap || is_fbitmap) {
-            CUDABuffer<uint16_t> d_omm_opacity_buffer;
-            d_omm_opacity_buffer.copyToDevice(omm_opacity_data, num_elems * sizeof(uint16_t));
+            CUDABuffer<uint32_t> d_omm_opacity_buffer;
+            d_omm_opacity_buffer.copyToDevice(omm_opacity_data);
 
             CUDABuffer<Vec2f> d_texcoords;
             d_texcoords.copyToDevice(input.texcoords, input.num_texcoords * sizeof(Vec2f));
@@ -50,10 +48,14 @@ namespace prayground {
             cudaTextureObject_t texture{};
             if (is_bitmap) {
                 auto bitmap = std::get<std::shared_ptr<BitmapTexture>>(input.opacity_bitmap_or_function);
+                if (!bitmap->devicePtr())
+                    bitmap->copyToDevice();
                 tex_size = { bitmap->width(), bitmap->height() };
                 texture = bitmap->cudaTextureObject();
             } else {
                 auto fbitmap = std::get<std::shared_ptr<FloatBitmapTexture>>(input.opacity_bitmap_or_function);
+                if (!fbitmap->devicePtr())
+                    fbitmap->copyToDevice();
                 tex_size = { fbitmap->width(), fbitmap->height() };
                 texture = fbitmap->cudaTextureObject();
             }
@@ -71,7 +73,6 @@ namespace prayground {
 
             CUDA_SYNC_CHECK();
 
-            //omm_opacity_data = d_omm_opacity_data.copyFromDevice();
             d_omm_opacity_data = d_omm_opacity_buffer.devicePtr();
         }
         else {
@@ -97,8 +98,8 @@ namespace prayground {
                 }
             }
 
-            CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_omm_opacity_data), num_elems * sizeof(uint16_t)));
-            CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_omm_opacity_data), omm_opacity_data, num_elems * sizeof(uint16_t), cudaMemcpyHostToDevice));
+            CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_omm_opacity_data), omm_opacity_data.size() * sizeof(uint32_t)));
+            CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_omm_opacity_data), omm_opacity_data.data(), omm_opacity_data.size() * sizeof(uint32_t), cudaMemcpyHostToDevice));
         }
 
         // Reset usage counts
@@ -140,7 +141,7 @@ namespace prayground {
                 .subdivisionLevel = static_cast<uint16_t>(input.subdivision_level),
                 .format = static_cast<uint16_t>(input.format)
             };
-            offset += num_elems_per_face * sizeof(uint16_t);
+            offset += num_elems_per_face * sizeof(uint32_t);
         }
 
         // Copy descriptors to the device

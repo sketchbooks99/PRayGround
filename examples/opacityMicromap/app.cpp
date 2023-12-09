@@ -230,7 +230,7 @@ void App::setup()
     auto mesh = make_shared<PlaneMesh>(mesh_size, Vec2ui(1,1), Axis::Y);
     //auto mesh = make_shared<TriangleMesh>("resources/model/uv_bunny.obj");
     // Set up opacity bitmap 
-    mesh->setupOpacitymap(context, stream, 6, OPTIX_OPACITY_MICROMAP_FORMAT_4_STATE, opacity_bmp, OPTIX_OPACITY_MICROMAP_FLAG_NONE);
+    mesh->setupOpacitymap(context, stream, 4, OPTIX_OPACITY_MICROMAP_FORMAT_4_STATE, opacity_bmp, OPTIX_OPACITY_MICROMAP_FLAG_NONE);
 
     auto diffuse = make_shared<Diffuse>(diffuse_id, opacity_bmp);
 

@@ -90,7 +90,7 @@ namespace prayground {
         d_out_omm_data[index] |= state << (micro_tri_idx % num_states_per_elem * format);
     }
 
-    extern "C" HOST void generateOpacityMapByTexture(
+    extern "C" HOST void evaluateSingleOpacityTexture(
         uint16_t* d_out_omm_data, // GPU pointer to the output opacity map
         int32_t subdivision_level,
         int32_t num_faces,

@@ -162,11 +162,10 @@ if (CUDA_NVRTC_ENABLED)
     endif()
   endforeach()
 
-  CUDA_WRAP_SRCS(${pg_target} OBJ generated_files ${cu_obj_source_files} STATIC)
+  CUDA_WRAP_SRCS(${pg_target} OBJ generated_files ${cu_obj_source_files})
 endif()
 
 add_library(${pg_target} STATIC ${sources} ${generated_files})
-# target_link_libraries(${pg_target} PRIVATE ${generated_files})
 
 if (WIN32)
   target_compile_definitions(${pg_target} PUBLIC GLAD_GLAPI_EXPORT)

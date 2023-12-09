@@ -10,10 +10,10 @@ void App::initResultBufferOnDevice()
     normal_bitmap.allocateDevicePtr();
     albedo_bitmap.allocateDevicePtr();
 
-    params.result_buffer = reinterpret_cast<float4*>(result_bitmap.devicePtr());
-    params.accum_buffer = reinterpret_cast<float4*>(accum_bitmap.devicePtr());
-    params.normal_buffer = reinterpret_cast<float4*>(normal_bitmap.devicePtr());
-    params.albedo_buffer = reinterpret_cast<float4*>(albedo_bitmap.devicePtr());
+    params.result_buffer = reinterpret_cast<float4*>(result_bitmap.deviceData());
+    params.accum_buffer = reinterpret_cast<float4*>(accum_bitmap.deviceData());
+    params.normal_buffer = reinterpret_cast<float4*>(normal_bitmap.deviceData());
+    params.albedo_buffer = reinterpret_cast<float4*>(albedo_bitmap.deviceData());
 
     CUDA_SYNC_CHECK();
 }
@@ -331,9 +331,9 @@ void App::setup()
     denoise_data.width = result_bitmap.width();
     denoise_data.height = result_bitmap.height();
     denoise_data.outputs.push_back(new float[denoise_data.width * denoise_data.height * 4]);
-    denoise_data.color = result_bitmap.devicePtr();
-    denoise_data.albedo = albedo_bitmap.devicePtr();
-    denoise_data.normal = normal_bitmap.devicePtr();
+    denoise_data.color = result_bitmap.deviceData();
+    denoise_data.albedo = albedo_bitmap.deviceData();
+    denoise_data.normal = normal_bitmap.deviceData();
     denoiser.init(context, denoise_data, 0, 0, false, false);
 
     // Prepare rendering
@@ -384,9 +384,9 @@ void App::update()
     normal_bitmap.copyFromDevice();
     albedo_bitmap.copyFromDevice();
 
-    denoise_data.color = result_bitmap.devicePtr();
-    denoise_data.albedo = albedo_bitmap.devicePtr();
-    denoise_data.normal = normal_bitmap.devicePtr();
+    denoise_data.color = result_bitmap.deviceData();
+    denoise_data.albedo = albedo_bitmap.deviceData();
+    denoise_data.normal = normal_bitmap.deviceData();
 
     denoiser.update(denoise_data);
 

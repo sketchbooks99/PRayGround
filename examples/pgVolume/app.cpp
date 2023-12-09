@@ -7,8 +7,8 @@ void App::initResultBufferOnDevice()
     result_bmp.allocateDevicePtr();
     accum_bmp.allocateDevicePtr();
 
-    params.result_buffer = reinterpret_cast<Vec4u*>(result_bmp.devicePtr());
-    params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bmp.devicePtr());
+    params.result_buffer = reinterpret_cast<Vec4u*>(result_bmp.deviceData());
+    params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bmp.deviceData());
 }
 
 void App::handleCameraUpdate()

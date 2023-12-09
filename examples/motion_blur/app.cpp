@@ -12,8 +12,8 @@ void App::initResultBufferOnDevice()
     result_bitmap.allocateDevicePtr();
     accum_bitmap.allocateDevicePtr();
 
-    params.result_buffer = reinterpret_cast<Vec4u*>(result_bitmap.devicePtr());
-    params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bitmap.devicePtr());
+    params.result_buffer = reinterpret_cast<Vec4u*>(result_bitmap.deviceData());
+    params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bitmap.deviceData());
 
     CUDA_SYNC_CHECK();
 }
@@ -66,8 +66,8 @@ void App::setup()
         .color = Vec3f(1.0f), 
         .intensity = 5.0f
     };
-    params.result_buffer = reinterpret_cast<Vec4u*>(result_bitmap.devicePtr());
-    params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bitmap.devicePtr());
+    params.result_buffer = reinterpret_cast<Vec4u*>(result_bitmap.deviceData());
+    params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bitmap.deviceData());
 
     // カメラの設定
     camera.setOrigin(Vec3f(0.0f, 0.0f, 40.0f));

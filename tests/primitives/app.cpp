@@ -6,7 +6,7 @@ void App::initResultBufferOnDevice()
     params.frame = 0;
 
     result_bitmap.allocateDevicePtr();
-    params.result_buffer = reinterpret_cast<Vec4u*>(result_bitmap.devicePtr());
+    params.result_buffer = reinterpret_cast<Vec4u*>(result_bitmap.deviceData());
 
     CUDA_SYNC_CHECK();
 }
@@ -54,7 +54,7 @@ void App::setup()
     params.width = result_bitmap.width();
     params.height = result_bitmap.height();
     params.frame = 0;
-    params.result_buffer = reinterpret_cast<Vec4u*>(result_bitmap.devicePtr());
+    params.result_buffer = reinterpret_cast<Vec4u*>(result_bitmap.deviceData());
 
     // Camera settings
     std::shared_ptr<Camera> camera(new Camera);

@@ -10,11 +10,11 @@ void App::initResultBufferOnDevice()
     albedo_bitmap.allocateDevicePtr();
     depth_bitmap.allocateDevicePtr();
 
-    params.result_buffer = reinterpret_cast<Vec4u*>(result_bitmap.devicePtr());
-    params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bitmap.devicePtr());
-    params.normal_buffer = reinterpret_cast<Vec3f*>(normal_bitmap.devicePtr());
-    params.albedo_buffer = reinterpret_cast<Vec3f*>(albedo_bitmap.devicePtr());
-    params.depth_buffer = reinterpret_cast<float*>(depth_bitmap.devicePtr());
+    params.result_buffer = reinterpret_cast<Vec4u*>(result_bitmap.deviceData());
+    params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bitmap.deviceData());
+    params.normal_buffer = reinterpret_cast<Vec3f*>(normal_bitmap.deviceData());
+    params.albedo_buffer = reinterpret_cast<Vec3f*>(albedo_bitmap.deviceData());
+    params.depth_buffer = reinterpret_cast<float*>(depth_bitmap.deviceData());
 
     CUDA_SYNC_CHECK();
 }

@@ -29,7 +29,7 @@ void App::setup()
     params.samples_per_launch = 1;
     params.max_depth = 10;
     params.frame = 0;
-    params.result_buffer = reinterpret_cast<Vec4u*>(result_bitmap.devicePtr());
+    params.result_buffer = reinterpret_cast<Vec4u*>(result_bitmap.deviceData());
 
     camera.setOrigin(0.0f, 0.0f, 0.75f);
     camera.setLookat(0.0f, 0.0f, 0.0f);

@@ -25,6 +25,7 @@ namespace prayground {
         size_t num_elems_per_face = max((num_micro_triangles / 32 * input.format), 1);
 
         std::vector<uint32_t> omm_opacity_data(num_elems_per_face * input.num_faces);
+        PG_LOG(omm_opacity_data.size());
 
         CUdeviceptr d_omm_opacity_data = 0;
 
@@ -35,6 +36,7 @@ namespace prayground {
         ASSERT(is_bitmap || is_fbitmap || is_lambda, "Invalid bitmap or function to construct opacity micromap");
 
         if (is_bitmap || is_fbitmap) {
+            // Upload necessary buffers to compute opacity map on the CUDA device
             CUDABuffer<uint32_t> d_omm_opacity_buffer;
             d_omm_opacity_buffer.copyToDevice(omm_opacity_data);
 
@@ -44,6 +46,7 @@ namespace prayground {
             CUDABuffer<Vec3i> d_faces;
             d_faces.copyToDevice(input.faces, input.num_faces * sizeof(Vec3i));
 
+            // Fetch texture object from bitmap texture
             Vec2i tex_size;
             cudaTextureObject_t texture{};
             if (is_bitmap) {
@@ -60,6 +63,7 @@ namespace prayground {
                 texture = fbitmap->cudaTextureObject();
             }
 
+            // Execute CUDA kernel to compute opacity map
             evaluateSingleOpacityTexture(
                 d_omm_opacity_buffer.deviceData(),
                 input.subdivision_level,
@@ -85,13 +89,8 @@ namespace prayground {
                     // Get barycentric coordinates of micro triangle in opacity map
                     auto barycentrics = OpacityMicromap::indexToBarycentrics(j, input.subdivision_level);
 
-                    int state = 0;
-                    //if (is_bitmap)
-                    //    state = evaluateOpacitymapFromBitmap(input.format, std::get<std::shared_ptr<BitmapTexture>>(input.opacity_bitmap_or_function), barycentrics, uv0, uv1, uv2);
-                    //else if (is_fbitmap)
-                    //    state = evaluateOpacitymapFromBitmap(input.format, std::get<std::shared_ptr<FloatBitmapTexture>>(input.opacity_bitmap_or_function), barycentrics, uv0, uv1, uv2);
-                    //if (is_lambda)
-                    state = std::get<OpacityMicromap::OpacityFunction>(input.opacity_bitmap_or_function)(barycentrics, uv0, uv1, uv2);
+                    // Get opacity state from lambda function
+                    int state = std::get<OpacityMicromap::OpacityFunction>(input.opacity_bitmap_or_function)(barycentrics, uv0, uv1, uv2);
 
                     int32_t index = i * num_elems_per_face + (j / num_states_per_elem);
                     omm_opacity_data[index] |= state << (j % num_states_per_elem * input.format);

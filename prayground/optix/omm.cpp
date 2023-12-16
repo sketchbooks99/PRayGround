@@ -166,128 +166,129 @@ namespace prayground {
     }
 
     // ------------------------------------------------------------------
-    void OpacityMicromap::build(const Context& ctx, CUstream stream, const std::vector<Input>& inputs, uint32_t build_flags)
-    {
-        // Clean up usage counts
-        if (!m_usage_counts.empty()) 
-            m_usage_counts.clear();
+    /// TODO: Multiple inputs with different configurations
+    //void OpacityMicromap::build(const Context& ctx, CUstream stream, const std::vector<Input>& inputs, uint32_t build_flags)
+    //{
+    //    // Clean up usage counts
+    //    if (!m_usage_counts.empty()) 
+    //        m_usage_counts.clear();
 
-        // Accumurate the number of triangle faces
-        size_t all_num_faces = 0;
-        std::for_each(inputs.begin(), inputs.end(), [&all_num_faces](const Input& input) {
-            all_num_faces += input.num_faces;
-        });
+    //    // Accumurate the number of triangle faces
+    //    size_t all_num_faces = 0;
+    //    std::for_each(inputs.begin(), inputs.end(), [&all_num_faces](const Input& input) {
+    //        all_num_faces += input.num_faces;
+    //    });
 
-        uint16_t** omm_opacity_data = new uint16_t* [all_num_faces];
+    //    uint16_t** omm_opacity_data = new uint16_t* [all_num_faces] {};
 
-        std::vector<OptixOpacityMicromapHistogramEntry> histograms;
-        std::vector<OptixOpacityMicromapDesc> omm_descs(all_num_faces);
+    //    std::vector<OptixOpacityMicromapHistogramEntry> histograms;
+    //    std::vector<OptixOpacityMicromapDesc> omm_descs(all_num_faces);
 
-        uint32_t base_idx = 0;
-        uint32_t desc_offset = 0;
+    //    uint32_t base_idx = 0;
+    //    uint32_t desc_offset = 0;
 
-        for (const auto& input : inputs)
-        {
-            const int32_t num_micro_triangles = 1 << (input.subdivision_level * 2);
-            const size_t num_states_per_elem = 16 / input.format;
+    //    for (const auto& input : inputs)
+    //    {
+    //        const int32_t num_micro_triangles = 1 << (input.subdivision_level * 2);
+    //        const size_t num_states_per_elem = 16 / input.format;
 
-            // Check if 
-            const bool is_bitmap = std::holds_alternative<std::shared_ptr<BitmapTexture>>(input.opacity_bitmap_or_function);
-            const bool is_fbitmap = std::holds_alternative<std::shared_ptr<FloatBitmapTexture>>(input.opacity_bitmap_or_function);
-            const bool is_lambda = std::holds_alternative<OpacityMicromap::OpacityFunction>(input.opacity_bitmap_or_function);
-            ASSERT(is_bitmap || is_fbitmap || is_lambda, "Invalid format to construct opacity map");
+    //        // Check if 
+    //        const bool is_bitmap = std::holds_alternative<std::shared_ptr<BitmapTexture>>(input.opacity_bitmap_or_function);
+    //        const bool is_fbitmap = std::holds_alternative<std::shared_ptr<FloatBitmapTexture>>(input.opacity_bitmap_or_function);
+    //        const bool is_lambda = std::holds_alternative<OpacityMicromap::OpacityFunction>(input.opacity_bitmap_or_function);
+    //        ASSERT(is_bitmap || is_fbitmap || is_lambda, "Invalid format to construct opacity map");
 
-            for (uint32_t i = base_idx; i < base_idx + input.num_faces; i++) 
-            {
-                omm_opacity_data[i] = new uint16_t[num_micro_triangles / num_states_per_elem];
+    //        for (uint32_t i = base_idx; i < base_idx + input.num_faces; i++) 
+    //        {
+    //            omm_opacity_data[i] = new uint16_t[num_micro_triangles / num_states_per_elem]{};
 
-                const Vec2f uv0 = input.texcoords[input.faces[i - base_idx].x()];
-                const Vec2f uv1 = input.texcoords[input.faces[i - base_idx].y()];
-                const Vec2f uv2 = input.texcoords[input.faces[i - base_idx].z()];
+    //            const Vec2f uv0 = input.texcoords[input.faces[i - base_idx].x()];
+    //            const Vec2f uv1 = input.texcoords[input.faces[i - base_idx].y()];
+    //            const Vec2f uv2 = input.texcoords[input.faces[i - base_idx].z()];
 
-                for (int32_t u_tri = 0; u_tri < num_micro_triangles; u_tri++)
-                {
-                    auto barycentrics = OpacityMicromap::indexToBarycentrics(u_tri, input.subdivision_level);
+    //            for (int32_t u_tri = 0; u_tri < num_micro_triangles; u_tri++)
+    //            {
+    //                auto barycentrics = OpacityMicromap::indexToBarycentrics(u_tri, input.subdivision_level);
 
-                    int state = OPTIX_OPACITY_MICROMAP_STATE_OPAQUE;
-                    if (is_bitmap)
-                        state = evaluateOpacitymapFromBitmap(input.format, std::get<std::shared_ptr<BitmapTexture>>(input.opacity_bitmap_or_function), barycentrics, uv0, uv1, uv2);
-                    else if (is_fbitmap)
-                        state = evaluateOpacitymapFromBitmap(input.format, std::get<std::shared_ptr<FloatBitmapTexture>>(input.opacity_bitmap_or_function), barycentrics, uv0, uv1, uv2);
-                    else
-                        state = state = std::get<OpacityMicromap::OpacityFunction>(input.opacity_bitmap_or_function)(barycentrics, uv0, uv1, uv2);
+    //                int state = OPTIX_OPACITY_MICROMAP_STATE_OPAQUE;
+    //                if (is_bitmap)
+    //                    state = evaluateOpacitymapFromBitmap(input.format, std::get<std::shared_ptr<BitmapTexture>>(input.opacity_bitmap_or_function), barycentrics, uv0, uv1, uv2);
+    //                else if (is_fbitmap)
+    //                    state = evaluateOpacitymapFromBitmap(input.format, std::get<std::shared_ptr<FloatBitmapTexture>>(input.opacity_bitmap_or_function), barycentrics, uv0, uv1, uv2);
+    //                else
+    //                    state = state = std::get<OpacityMicromap::OpacityFunction>(input.opacity_bitmap_or_function)(barycentrics, uv0, uv1, uv2);
 
-                    omm_opacity_data[i][u_tri / num_states_per_elem] |= state << (u_tri % num_states_per_elem * input.format);
-                }
+    //                omm_opacity_data[i][u_tri / num_states_per_elem] |= state << (u_tri % num_states_per_elem * input.format);
+    //            }
 
-                // Setup descriptor for all triangles
-                OptixOpacityMicromapDesc omm_desc = {
-                    .byteOffset = desc_offset,
-                    .subdivisionLevel = static_cast<uint16_t>(input.subdivision_level),
-                    .format = static_cast<uint16_t>(input.format)
-                };
-                desc_offset += sizeof(uint16_t) * (num_micro_triangles / num_states_per_elem);
-                omm_descs[i] = omm_desc;
-            }
-            base_idx += input.num_faces;
+    //            // Setup descriptor for all triangles
+    //            OptixOpacityMicromapDesc omm_desc = {
+    //                .byteOffset = desc_offset,
+    //                .subdivisionLevel = static_cast<uint16_t>(input.subdivision_level),
+    //                .format = static_cast<uint16_t>(input.format)
+    //            };
+    //            desc_offset += sizeof(uint16_t) * (num_micro_triangles / num_states_per_elem);
+    //            omm_descs[i] = omm_desc;
+    //        }
+    //        base_idx += input.num_faces;
 
-            // Prepare usage counts for each input
-            OptixOpacityMicromapUsageCount usage_count = {
-                .count = input.num_faces, 
-                .subdivisionLevel = input.subdivision_level,
-                .format = input.format
-            };
-            m_usage_counts.emplace_back(usage_count);
+    //        // Prepare usage counts for each input
+    //        OptixOpacityMicromapUsageCount usage_count = {
+    //            .count = input.num_faces, 
+    //            .subdivisionLevel = input.subdivision_level,
+    //            .format = input.format
+    //        };
+    //        m_usage_counts.emplace_back(usage_count);
 
-            // Add histogram
-            OptixOpacityMicromapHistogramEntry histogram = {
-                .count = input.num_faces,
-                .subdivisionLevel = input.subdivision_level, 
-                .format = input.format
-            };
-            histograms.emplace_back(histogram);
-        }
+    //        // Add histogram
+    //        OptixOpacityMicromapHistogramEntry histogram = {
+    //            .count = input.num_faces,
+    //            .subdivisionLevel = input.subdivision_level, 
+    //            .format = input.format
+    //        };
+    //        histograms.emplace_back(histogram);
+    //    }
 
-        // Copy opacity buffer to device
-        CUdeviceptr d_omm_opacity_data = 0;
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_omm_opacity_data), sizeof(omm_opacity_data)));
-        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_omm_opacity_data), omm_opacity_data, sizeof(omm_opacity_data), cudaMemcpyHostToDevice));
+    //    // Copy opacity buffer to device
+    //    CUdeviceptr d_omm_opacity_data = 0;
+    //    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_omm_opacity_data), sizeof(omm_opacity_data)));
+    //    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_omm_opacity_data), omm_opacity_data, sizeof(omm_opacity_data), cudaMemcpyHostToDevice));
 
-        // Prepare build input
-        OptixOpacityMicromapArrayBuildInput build_input = {
-            .flags = build_flags,
-            .inputBuffer = d_omm_opacity_data,
-            .numMicromapHistogramEntries = static_cast<uint32_t>(histograms.size()),
-            .micromapHistogramEntries = histograms.data()
-        };
+    //    // Prepare build input
+    //    OptixOpacityMicromapArrayBuildInput build_input = {
+    //        .flags = build_flags,
+    //        .inputBuffer = d_omm_opacity_data,
+    //        .numMicromapHistogramEntries = static_cast<uint32_t>(histograms.size()),
+    //        .micromapHistogramEntries = histograms.data()
+    //    };
 
-        // Calculate memory usage for OMM
-        OptixMicromapBufferSizes buffer_sizes{};
-        OPTIX_CHECK(optixOpacityMicromapArrayComputeMemoryUsage(static_cast<OptixDeviceContext>(ctx), &build_input, &buffer_sizes));
-        
-        // Copy descriptors to the device
-        CUDABuffer<OptixOpacityMicromapDesc> d_omm_descs;
-        d_omm_descs.copyToDevice(omm_descs);
+    //    // Calculate memory usage for OMM
+    //    OptixMicromapBufferSizes buffer_sizes{};
+    //    OPTIX_CHECK(optixOpacityMicromapArrayComputeMemoryUsage(static_cast<OptixDeviceContext>(ctx), &build_input, &buffer_sizes));
+    //    
+    //    // Copy descriptors to the device
+    //    CUDABuffer<OptixOpacityMicromapDesc> d_omm_descs;
+    //    d_omm_descs.copyToDevice(omm_descs);
 
-        build_input.perMicromapDescBuffer = d_omm_descs.devicePtr();
-        build_input.perMicromapDescStrideInBytes = 0;
+    //    build_input.perMicromapDescBuffer = d_omm_descs.devicePtr();
+    //    build_input.perMicromapDescStrideInBytes = 0;
 
-        // Allocate buffers to create micromap
-        CUdeviceptr d_temp_buffer = 0;
-        
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_temp_buffer), buffer_sizes.tempSizeInBytes));
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&m_buffers.output), buffer_sizes.outputSizeInBytes));
+    //    // Allocate buffers to create micromap
+    //    CUdeviceptr d_temp_buffer = 0;
+    //    
+    //    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_temp_buffer), buffer_sizes.tempSizeInBytes));
+    //    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&m_buffers.output), buffer_sizes.outputSizeInBytes));
 
-        m_buffers.outputSizeInBytes = buffer_sizes.outputSizeInBytes;
-        m_buffers.temp = d_temp_buffer;
-        m_buffers.tempSizeInBytes = buffer_sizes.tempSizeInBytes;
+    //    m_buffers.outputSizeInBytes = buffer_sizes.outputSizeInBytes;
+    //    m_buffers.temp = d_temp_buffer;
+    //    m_buffers.tempSizeInBytes = buffer_sizes.tempSizeInBytes;
 
-        OPTIX_CHECK(optixOpacityMicromapArrayBuild(static_cast<OptixDeviceContext>(ctx), stream, &build_input, &m_buffers));
+    //    OPTIX_CHECK(optixOpacityMicromapArrayBuild(static_cast<OptixDeviceContext>(ctx), stream, &build_input, &m_buffers));
 
-        // Clean up temporaly buffers
-        cuda_frees(d_omm_opacity_data, d_temp_buffer);
-        d_omm_descs.free();
-    }
+    //    // Clean up temporaly buffers
+    //    cuda_frees(d_omm_opacity_data, d_temp_buffer);
+    //    d_omm_descs.free();
+    //}
 
     // ------------------------------------------------------------------
     OptixBuildInputOpacityMicromap OpacityMicromap::getBuildInputForGAS() const

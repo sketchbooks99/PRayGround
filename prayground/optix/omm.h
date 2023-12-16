@@ -42,7 +42,9 @@ namespace prayground {
         OpacityMicromap();
 
         void build(const Context& ctx, CUstream stream, const Input& input, uint32_t build_flags);
-        void build(const Context& ctx, CUstream stream, const std::vector<Input>& input, uint32_t build_flags);
+
+        /// TODO: Multiple inputs with different configurations
+        //void build(const Context& ctx, CUstream stream, const std::vector<Input>& input, uint32_t build_flags);
 
         OptixBuildInputOpacityMicromap getBuildInputForGAS() const;
 

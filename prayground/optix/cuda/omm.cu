@@ -97,7 +97,7 @@ namespace prayground {
         //int global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
         int64_t x_idx = blockIdx.x * blockDim.x + threadIdx.x;
         int64_t y_idx = blockIdx.y * blockDim.y + threadIdx.y;
-        int64_t global_thread_id = x_idx + (gridDim.x * gridDim.y * y_idx);
+        int64_t global_thread_id = x_idx + (gridDim.x * blockDim.x * y_idx);
         if (global_thread_id >= num_micro_triangles * num_faces)
             return;
 
@@ -127,7 +127,7 @@ namespace prayground {
         int32_t num_faces,
         OptixOpacityMicromapFormat format,
         Vec2i tex_size,
-        const Vec2f * d_texcoords, const Vec3i * d_faces,
+        const Vec2f* d_texcoords, const Vec3i* d_faces,
         cudaTextureObject_t texture
     ) {
         constexpr int NUM_MAX_THREADS = 1024;

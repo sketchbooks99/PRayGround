@@ -78,7 +78,7 @@ void App::setup()
     initResultBufferOnDevice();
 
     // Camera settings
-    camera.setOrigin(0, 10, 10);
+    camera.setOrigin(0, 12, 4);
     camera.setLookat(0, 0, 0);
     camera.setUp(0, 1, 0);
     camera.setFov(40);
@@ -119,33 +119,36 @@ void App::setup()
     SurfaceCallableID area_emitter_id = { area_emitter_prg_id, area_emitter_prg_id, area_emitter_prg_id };
 
     // Setup environment emitter
-    //auto env_texture = make_shared<ConstantTexture>(Vec3f(0.5f), constant_prg_id);
-    //env_texture->copyToDevice();
-    auto env_texture = make_shared<FloatBitmapTexture>("resources/image/drackenstein_quarry_4k.exr", bitmap_prg_id);
+    auto env_texture = make_shared<ConstantTexture>(Vec3f(0.0f), constant_prg_id);
     env_texture->copyToDevice();
     env = EnvironmentEmitter{ env_texture };
     env.copyToDevice();
 
     // Miss program
     ProgramGroup miss_prg = pipeline.createMissProgram(context, module, "__miss__envmap");
-    MissRecord miss_record;
+    ProgramGroup miss_shadow_prg = pipeline.createMissProgram(context, module, "__miss__shadow");
+    MissRecord miss_record, miss_shadow_record;
     miss_prg.recordPackHeader(&miss_record);
     miss_record.data.env_data = env.devicePtr();
-    sbt.setMissRecord({ miss_record });
+    miss_shadow_prg.recordPackHeader(&miss_shadow_record);
+    sbt.setMissRecord({ miss_record, miss_shadow_record });
 
     // Hitgroup program
     ProgramGroup mesh_prg = pipeline.createHitgroupProgram(context, module, "__closesthit__mesh", "", "__anyhit__opacity");
     ProgramGroup mesh_opaque_prg = pipeline.createHitgroupProgram(context, module, "__closesthit__mesh");
+    ProgramGroup mesh_shadow_prg = pipeline.createHitgroupProgram(context, module, "__closesthit__shadow", "", "__anyhit__opacity");
+    ProgramGroup mesh_opaque_shadow_prg = pipeline.createHitgroupProgram(context, module, "__closesthit__shadow");
 
     ProgramGroup plane_prg = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", "__intersection__plane");
-    ProgramGroup box_prg = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", "__intersection__box");
+    ProgramGroup plane_shadow_prg = pipeline.createHitgroupProgram(context, module, "__closesthit__shadow", "__intersection__plane");
+    
 
     uint32_t sbt_idx = 0;
     uint32_t sbt_offset = 0;
     uint32_t instance_id = 0;
 
     using SurfaceP = variant<shared_ptr<Material>, shared_ptr<AreaEmitter>>;
-    auto addHitgroupRecord = [&](ProgramGroup& prg, shared_ptr<Shape> shape, SurfaceP surface, shared_ptr<Texture> opacity_texture = nullptr) -> void
+    auto addHitgroupRecord = [&](ProgramGroup& prg, ProgramGroup& shadow_prg, shared_ptr<Shape> shape, SurfaceP surface, shared_ptr<Texture> opacity_texture = nullptr) -> void
     {
         const bool is_mat = holds_alternative<shared_ptr<Material>>(surface);
         if (opacity_texture) opacity_texture->copyToDevice();
@@ -173,8 +176,14 @@ void App::setup()
             .opacity_texture = opacity_texture ? opacity_texture->getData() : Texture::Data{ nullptr, bitmap_prg_id }
         };
 
-        sbt.addHitgroupRecord({ record });
-        sbt_idx++;
+        // Register data for shadow ray
+        HitgroupRecord shadow_record;
+        shadow_prg.recordPackHeader(&shadow_record);
+        shadow_record.data = record.data;
+
+        sbt.addHitgroupRecord({ record, shadow_record });
+
+        sbt_idx += SBT::NRay;
     };
 
     auto createGAS = [&](shared_ptr<Shape> shape, const Matrix4f& transform, uint32_t num_sbt = 1)
@@ -192,16 +201,24 @@ void App::setup()
         sbt_offset += SBT::NRay * num_sbt;
     };
 
-    auto setupObject = [&](ProgramGroup& prg, shared_ptr<Shape> shape, shared_ptr<Material> material, const Matrix4f& transform, shared_ptr<Texture> opacity_texture = nullptr) -> void
+    auto setupObject = [&](ProgramGroup& prg, ProgramGroup& shadow_prg, shared_ptr<Shape> shape, shared_ptr<Material> material, const Matrix4f& transform, shared_ptr<Texture> opacity_texture = nullptr) -> void
     {
-        addHitgroupRecord(prg, shape, material, opacity_texture);
+        addHitgroupRecord(prg, shadow_prg, shape, material, opacity_texture);
         createGAS(shape, transform);
     };
 
-    auto setupAreaEmitter = [&](ProgramGroup& prg, shared_ptr<Shape> shape, shared_ptr<AreaEmitter> area, Matrix4f transform, shared_ptr<Texture> opacity_texture = nullptr) -> void
+    std::vector<AreaEmitterInfo> area_emitters;
+    auto setupAreaEmitter = [&](ProgramGroup& prg, ProgramGroup& shadow_prg, shared_ptr<Shape> shape, shared_ptr<AreaEmitter> area, Matrix4f transform, shared_ptr<Texture> opacity_texture = nullptr) -> void
     {
-        addHitgroupRecord(prg, shape, area, opacity_texture);
+        addHitgroupRecord(prg, shadow_prg, shape, area, opacity_texture);
         createGAS(shape, transform);
+        AreaEmitterInfo area_emitter = {
+            .shape = shape->devicePtr(),
+            .surface_info = area->surfaceInfo(),
+            .objToWorld = transform, 
+            .worldToObj = transform.inverse()
+        };
+        area_emitters.push_back(area_emitter);
     };
 
     // function to determine opacity states according to texture coordinates on micro triangles
@@ -212,35 +229,52 @@ void App::setup()
         const Vec2f micro_uv1 = barycentricInterop(uv0, uv1, uv2, bc.uv1);
         const Vec2f micro_uv2 = barycentricInterop(uv0, uv1, uv2, bc.uv1);
 
-        const bool in_circle0 = (length(micro_uv0 - 0.5f)) < 0.25f;
-        const bool in_circle1 = (length(micro_uv1 - 0.5f)) < 0.25f;
-        const bool in_circle2 = (length(micro_uv2 - 0.5f)) < 0.25f;
+        float scale = 20.0f;
 
-        if (in_circle0 && in_circle1 && in_circle2)
+        const bool is_transparent0 = sinf(micro_uv0.x() * math::pi * scale) * sinf(micro_uv0.y() * math::pi * scale) < 0.0f;
+        const bool is_transparent1 = sinf(micro_uv1.x() * math::pi * scale) * sinf(micro_uv1.y() * math::pi * scale) < 0.0f;
+        const bool is_transparent2 = sinf(micro_uv2.x() * math::pi * scale) * sinf(micro_uv2.y() * math::pi * scale) < 0.0f;
+            
+        if (is_transparent0 && is_transparent1 && is_transparent2)
             return OPTIX_OPACITY_MICROMAP_STATE_TRANSPARENT;
         else
             return OPTIX_OPACITY_MICROMAP_STATE_OPAQUE;
     };
 
+    static constexpr int SUBDIVISION_LEVEL = 6;
+
     // Load bitmap texture to determine opacity micro map
-    auto opacity_bmp = make_shared<BitmapTexture>("resources/image/PRayGround_black.png", bitmap_prg_id);
+    auto opacity_bmp = make_shared<BitmapTexture>("PRayGround_black.png", bitmap_prg_id);
 
     // Create mesh with the size of opacity bitmap
     Vec2f mesh_size((float)opacity_bmp->width() / opacity_bmp->height(), 1.0f);
-    //auto mesh = make_shared<PlaneMesh>(mesh_size, Vec2ui(50,50), Axis::Z);
-    auto mesh = make_shared<TriangleMesh>("resources/model/uv_bunny.obj");
-    // Set up opacity bitmap 
-    //mesh->setupOpacitymap(context, stream, 4, OPTIX_OPACITY_MICROMAP_FORMAT_4_STATE, omm_function, OPTIX_OPACITY_MICROMAP_FLAG_NONE);
-    mesh->setupOpacitymap(context, stream, 4, OPTIX_OPACITY_MICROMAP_FORMAT_4_STATE, opacity_bmp, OPTIX_OPACITY_MICROMAP_FLAG_NONE);
+    auto logo_mesh = make_shared<PlaneMesh>(mesh_size, Vec2ui(1,1), Axis::Y);
+    // Set up opacity bitmap
+    logo_mesh->setupOpacitymap(context, stream, SUBDIVISION_LEVEL, OPTIX_OPACITY_MICROMAP_FORMAT_4_STATE, opacity_bmp, OPTIX_OPACITY_MICROMAP_FLAG_NONE);
+    auto logo_material = make_shared<Diffuse>(diffuse_id, opacity_bmp);
+    setupObject(mesh_prg, mesh_shadow_prg, logo_mesh, logo_material, Matrix4f::translate(0.0f, 0.0f, 1.5f) * Matrix4f::scale(2), opacity_bmp);
 
-    auto diffuse = make_shared<Diffuse>(diffuse_id, opacity_bmp);
+    // Create mesh with the size of opacity bitmap
+    auto logo_mesh_wo_anyhit = make_shared<PlaneMesh>(mesh_size, Vec2ui(1,1), Axis::Y);
+    // Set up opacity bitmap
+    logo_mesh_wo_anyhit->setupOpacitymap(context, stream, SUBDIVISION_LEVEL, OPTIX_OPACITY_MICROMAP_FORMAT_4_STATE, opacity_bmp, OPTIX_OPACITY_MICROMAP_FLAG_NONE);
+    setupObject(mesh_opaque_prg, mesh_opaque_shadow_prg, logo_mesh_wo_anyhit, logo_material, Matrix4f::translate(0.0f, 0.0f, -1.5f) * Matrix4f::scale(2));
 
-    setupObject(mesh_prg, mesh, diffuse, Matrix4f::scale(30), opacity_bmp);
+    // Floor
+    auto floor = make_shared<Plane>(Vec2f(-1000), Vec2f(1000));
+    auto floor_material = make_shared<Diffuse>(diffuse_id, make_shared<ConstantTexture>(Vec3f(0.5f), constant_prg_id));
+    setupObject(plane_prg, plane_shadow_prg, floor, floor_material, Matrix4f::translate(0.0f, -1.0f, 0.0f));
 
     // Ceiling light
     auto light_plane = make_shared<Plane>(Vec2f(-10), Vec2f(10));
     auto light = make_shared<AreaEmitter>(area_emitter_id, make_shared<ConstantTexture>(Vec3f(1.0f), constant_prg_id), 10.0f);
-    setupAreaEmitter(plane_prg, light_plane, light, Matrix4f::translate(0.0f, 99.9f, 0.0f));
+    setupAreaEmitter(plane_prg, plane_shadow_prg, light_plane, light, Matrix4f::translate(0.0f, 50.0f, 0.0f));
+
+    // Copy area emitter data to the device
+    CUDABuffer<AreaEmitterInfo> d_area_emitters;
+    d_area_emitters.copyToDevice(area_emitters);
+    params.lights = d_area_emitters.deviceData();
+    params.num_lights = static_cast<int32_t>(area_emitters.size());
 
     CUDA_CHECK(cudaStreamCreate(&stream));
     ias.build(context, stream);
@@ -248,6 +282,16 @@ void App::setup()
     params.handle = ias.handle();
     pipeline.create(context);
     d_params.allocate(sizeof(LaunchParams));
+
+    // GUI setting
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+    const char* glsl_version = "#version 330";
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(pgGetCurrentWindow()->windowPtr(), true);
+    ImGui_ImplOpenGL3_Init(glsl_version);
 }
 
 // ------------------------------------------------------------------
@@ -278,7 +322,20 @@ void App::update()
 // ------------------------------------------------------------------
 void App::draw()
 {
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    ImGui::Begin("Opacity micromap");
+    ImGui::Text("Frame rate: %.3f ms/frame (%.2f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+    ImGui::Text("Subframe index: %d", params.frame);
+    ImGui::End();
+
+    ImGui::Render();
+
     result_bmp.draw();
+
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
 // ------------------------------------------------------------------
@@ -314,7 +371,8 @@ void App::mouseScrolled(float x, float y)
 // ------------------------------------------------------------------
 void App::keyPressed(int key)
 {
-
+    if (key == Key::S)
+        result_bmp.write(pgPathJoin(pgAppDir(), "opacityMicromap.png"));
 }
 
 // ------------------------------------------------------------------

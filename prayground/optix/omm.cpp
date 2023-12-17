@@ -25,7 +25,6 @@ namespace prayground {
         size_t num_elems_per_face = max((num_micro_triangles / 32 * input.format), 1);
 
         std::vector<uint32_t> omm_opacity_data(num_elems_per_face * input.num_faces);
-        PG_LOG(omm_opacity_data.size());
 
         CUdeviceptr d_omm_opacity_data = 0;
 
@@ -64,6 +63,7 @@ namespace prayground {
             }
 
             // Execute CUDA kernel to compute opacity map
+            pgLog("Calculating opacity micromap on CUDA...");
             evaluateSingleOpacityTexture(
                 d_omm_opacity_buffer.deviceData(),
                 input.subdivision_level,

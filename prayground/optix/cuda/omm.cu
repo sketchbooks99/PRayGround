@@ -143,8 +143,6 @@ namespace prayground {
         int block_size_y = max(total_blocks / NUM_MAX_BLOCK, 1);
         dim3 block_dim(block_size_x, block_size_y, 1);
 
-        printf("NumFaces: %d NumMicroTriangles: %d, BlockSize: %d %d %d, GridSize: %d %d %d\n", num_faces, num_micro_triangles, threads_per_block.x, threads_per_block.y, threads_per_block.z, block_dim.x, block_dim.y, block_dim.z);
-
         generateOpacityMap<<<block_dim, threads_per_block>>>(d_out_omm_data, subdivision_level, num_faces, format, tex_size, d_texcoords, d_faces, texture);
     }
 }

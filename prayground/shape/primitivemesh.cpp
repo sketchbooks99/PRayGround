@@ -491,6 +491,7 @@ namespace prayground {
     {
         const float u_min = -m_size.x() / 2.0f;
         const float v_max = m_size.y() / 2.0f;
+        const float v_min = -v_max;
         const float u_step = m_size.x() / (float)m_resolution.x();
         const float v_step = m_size.y() / (float)m_resolution.y();
 
@@ -505,8 +506,7 @@ namespace prayground {
             {
                 Vec3f vertex(0.0f);
                 vertex[u_axis] = u_min + (float)u * u_step;
-                vertex[v_axis] = v_max - (float)v * v_step;
-                vertex[(int)m_axis] = 0.0f;
+                vertex[v_axis] = m_axis == Axis::Y ? v_min + (float)v * v_step : v_max - (float)v * v_step;
                 addTexcoord(Vec2f((float)u / m_resolution.x(), (float)v / m_resolution.y()));
                 addVertex(vertex);
 

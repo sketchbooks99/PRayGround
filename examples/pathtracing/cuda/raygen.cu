@@ -77,74 +77,19 @@ extern "C" __device__ void __raygen__pinhole()
                 throughput *= bsdf_val;
             }
             // Rough surface sampling with applying MIS
-            else if (+(si.surface_info.type & (SurfaceType::Rough | SurfaceType::Diffuse)))
+            else if (+(si.surface_info.type & (SurfaceType::Rough)))
             {
-                int light_id = rndInt(si.seed, 0, params.num_lights - 1);
-                AreaEmitterInfo light = params.lights[light_id];
-
-                // Explicit light sampling
-                LightInteraction li = optixDirectCall<LightInteraction, const AreaEmitterInfo&, SurfaceInteraction*>
-                    (light.sample_id, light, &si);
-
-                const float dist_to_light = length(li.p - si.p);
-                const float NdotL = dot(si.shading.n, li.wi);    // Cosine between surface normal and light vector
-
-                float LNdotL = -dot(li.n, li.wi);                // Cosine between light normal and light vector
-                if (light.twosided)
-                {
-                    li.n = faceforward(li.n, li.wi, li.n);
-                    LNdotL = dot(li.n, li.wi);
-                }
-
-                bool is_contributed = false;
-                // Obtain contribution from selected area light
-                if (NdotL > 0.0f && LNdotL > 0.0f && li.pdf > 0.0f)
-                {
-                    const bool occluded = traceShadow(params.handle, si.p, li.wi, 0.001f, dist_to_light - 0.001f);
-                    if (!occluded)
-                    {
-                        SurfaceInteraction light_si;
-                        light_si.p = li.p;
-                        light_si.shading.n = li.n;
-                        light_si.shading.uv = li.uv;
-                        light_si.wo = si.wo;
-                        light_si.wi = li.wi;
-
-                        // Get emittance from sampled area emitter
-                        optixDirectCall<void, SurfaceInteraction*, void*>(
-                            light.surface_info.callable_id.bsdf, &light_si, light.surface_info.data);
-
-                        Vec3f contrib_from_light = light_si.emission * NdotL * LNdotL;
-
-                        si.wi = li.wi;
-
-                        // Evaluate BSDF
-                        Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
-                            si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
-
-                        result += contrib_from_light * bsdf_val * throughput / (li.pdf * (params.num_lights + 1));
-
-                        is_contributed = true;
-                    }
-                }
-
                 // Importance sampling according to the BSDF
                 optixDirectCall<void, SurfaceInteraction*, void*>(
                     si.surface_info.callable_id.sample, &si, si.surface_info.data);
 
-                {
-                    // Evaluate BSDF
-                    Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
-                        si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
+                // Evaluate BSDF
+                Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
+                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
 
-                    float pdf_val = optixDirectCall<float, SurfaceInteraction*, void*>(
-                        si.surface_info.callable_id.pdf, &si, si.surface_info.data);
-
-                    if (pdf_val <= 0.0f)
-                        si.trace_terminate = true;
-                    else
-                        throughput *= bsdf_val / (pdf_val * (params.num_lights + 1));
-                }
+                float pdf_val = optixDirectCall<float, SurfaceInteraction*, void*>(
+                    si.surface_info.callable_id.pdf, &si, si.surface_info.data);
+                throughput *= bsdf_val / pdf_val;
             }
 
             result += si.emission * throughput;

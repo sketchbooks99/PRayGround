@@ -114,15 +114,65 @@ add_subdirectory(apps/<your-app-name>) # Add this line
 > **Warning**  
 > The 3D models and textures used in the examples are not contained in this repository.
 
-| [Single GAS](examples/single_gas/) | [Path tracing](examples/pathtracing/) | [Obj scene](examples/objscene/) |
-|-|-|-|
-| ![](examples/single_gas/single_gas.gif) | <img src=examples/pathtracing/screenshot.png width=320> | <img src=examples/objscene/objscene.jpg width=320/> |
-|[Ray Tracing: The Next Weekend](examples/rayTracingNextWeek/) | [Ray Tracing: The Rest Of Your Life](examples/rayTracingRestOfYourLife/) | [Dynamic update](examples/dynamic_update/) |
-| <img src=examples/rayTracingNextWeek/rtNextWeek.jpg width=320> | <img src=examples/rayTracingRestOfYourLife/rtRestOfYourLife.jpg width=320> | ![](examples/dynamic_update/dynamic_update.gif) | 
-| [Motion blur](examples/motion_blur/) | [Denoiser](examples/denoiser/) (:warning: Support with OptiX 7.3~) | [Spectrum](examples/spectrum/) | 
-| <img src=examples/motion_blur/motion_blur.png width=320> | <img src=examples/denoiser/denoiser.png width=320> | <img src=examples/spectrum/spectrum.jpg width=320> |
-| [Volume](examples/pgVolume/) | [Curves](examples/curves/) | | 
-| <img src=examples/pgVolume/pgVolume.png width=320> | <img src=examples/curves/curves.jpg width=320>| |
+## [Single GAS](examples/single_gas/)
+Scene with single geometry acceleration structure
+
+![](examples/single_gas/single_gas.gif)
+
+## [Path tracing](examples/pathtracing)
+Scene rendered by path tracinig. This example also visualizes depth, normal, and albedo buffers.
+
+![](image.png)
+
+## [Obj scene](examples/objscene/)
+Example to load .obj file.
+
+![](examples/objscene/objscene.jpg)
+
+## Ray Tracing in One Weekend Series
+Examples to reproduce [Ray Tracing in One Weekend Series](https://raytracing.github.io/) by PRayGround
+
+|[The Next Weekend](examples/rayTracingNextWeek/) | [The Rest Of Your Life](examples/rayTracingRestOfYourLife/) |
+| - | - |
+| <img src=examples/rayTracingNextWeek/rtNextWeek.jpg> | <img src=examples/rayTracingRestOfYourLife/rtRestOfYourLife.jpg>
+
+## [Dynamic scene update](examples/dynamic_update/)
+Example to dynamically update the acceleration structure.
+
+![](examples/dynamic_update/dynamic_update.gif)
+
+## [Motion blur](examples/motion_blur)
+
+![](examples/motion_blur/motion_blur.png)
+
+## [Denoiser](examples/denoiser/)
+> :warning: This example supported after OptiX 7.3
+
+Optix denoiser example using normal and albedo buffers
+
+![](examples/denoiser/denoiser.png)
+
+## [Spectrum](examples/spectrum/)
+Spectrum rendering
+
+![](examples/spectrum/spectrum.jpg)
+
+## [Volume](examples/pgVolume/)
+Volume rendering with NanoVDB
+
+![](examples/pgVolume/pgVolume.png)
+
+## [Curves](examples/curves)
+Scene rendered with curved mesh
+
+![](examples/curves/curves.jpg)
+
+## [Opacity micromap](examples/opacityMicromap/)
+> :warning: This feature is supported after OptiX 7.6
+
+Example to build opacity micromap from texture with alpha value
+
+![](examples/opacityMicromap/opacityMicromap.png)
 
 # External libraries
 - [glad](https://github.com/Dav1dde/glad) (MIT license) ... For OpenGL features

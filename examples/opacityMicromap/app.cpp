@@ -222,6 +222,8 @@ void App::setup()
     };
 
     // function to determine opacity states according to texture coordinates on micro triangles
+    // This is not used in this example, but you can use your arbitrary lambda function in setupOpacitymap
+    // instead of opacity bitmap
     auto omm_function = [](const OpacityMicromap::MicroBarycentrics& bc, const Vec2f& uv0, const Vec2f& uv1, const Vec2f& uv2) -> int
     {
         // Calculate texcoords for each micro triangles in opacity micromap

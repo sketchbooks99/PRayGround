@@ -109,6 +109,15 @@ add_subdirectory(apps/<your-app-name>) # Add this line
 4. Enjoy coding!
 5. Build your application using CMake.
 
+# External libraries
+- [glad](https://github.com/Dav1dde/glad) (MIT license) ... For OpenGL features
+- [GLFW](https://github.com/glfw/glfw) (Zlib license) ... For OpenGL
+- [hapPLY](https://github.com/nmwsharp/happly) (MIT license) ... For loading PLY mesh
+- [Dear ImGui](https://github.com/ocornut/imgui) (MIT license)... For easy GUI usage
+- [stb](https://github.com/nothings/stb) (MIT license)... To read/write image of PNG, JPG format
+- [tinyexr](https://github.com/syoyo/tinyexr/) ... To read/write image of OpenEXR format
+- [tinyobjloader](https://github.com/tinyobjloader/tinyobjloader) (MIT and ISC license) ... For loading OBJ mesh
+
 # :art: Examples
 
 > **Warning**  
@@ -122,7 +131,7 @@ Scene with single geometry acceleration structure
 ## [Path tracing](examples/pathtracing)
 Scene rendered by path tracinig. This example also visualizes depth, normal, and albedo buffers.
 
-![](image.png)
+![](examples/pathtracing/screenshot.png)
 
 ## [Obj scene](examples/objscene/)
 Example to load .obj file.
@@ -173,12 +182,3 @@ Scene rendered with curved mesh
 Example to build opacity micromap from texture with alpha value
 
 ![](examples/opacityMicromap/opacityMicromap.png)
-
-# External libraries
-- [glad](https://github.com/Dav1dde/glad) (MIT license) ... For OpenGL features
-- [GLFW](https://github.com/glfw/glfw) (Zlib license) ... For OpenGL
-- [hapPLY](https://github.com/nmwsharp/happly) (MIT license) ... For loading PLY mesh
-- [Dear ImGui](https://github.com/ocornut/imgui) (MIT license)... For easy GUI usage
-- [stb](https://github.com/nothings/stb) (MIT license)... To read/write image of PNG, JPG format
-- [tinyexr](https://github.com/syoyo/tinyexr/) ... To read/write image of OpenEXR format
-- [tinyobjloader](https://github.com/tinyobjloader/tinyobjloader) (MIT and ISC license) ... For loading OBJ mesh

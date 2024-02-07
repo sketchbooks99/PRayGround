@@ -304,7 +304,7 @@ namespace prayground {
                 CUDA_CHECK(cudaFree(reinterpret_cast<void*>(m_sbt.exceptionRecord)));
             m_sbt = {};
             m_raygen_record = {};
-            m_miss_records.clear();
+            m_miss_records = {};
             m_hitgroup_records.clear();
             m_callables_records.clear();
             m_exception_record = {};
@@ -359,4 +359,4 @@ namespace prayground {
 
 #endif // __CUDACC__
 
-} // ::prayground
+} // namespace prayground

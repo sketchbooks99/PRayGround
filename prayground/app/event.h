@@ -23,4 +23,4 @@ namespace prayground {
         std::vector<std::function<ReturnType(Args...)>> m_functions;
     };
 
-} // ::prayground
+} // namespace prayground

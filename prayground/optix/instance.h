@@ -94,7 +94,7 @@ namespace prayground {
         void buildAccel(const Context& ctx, CUstream stream);
         void updateAccel(const Context& ctx, CUstream stream);
 
-        void destroy();
+        void free();
 
         OptixInstance* rawInstancePtr() const;
     private:

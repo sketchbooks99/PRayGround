@@ -41,4 +41,4 @@ namespace prayground {
 
     };
 
-} // ::prayground
+} // namespace prayground

@@ -8,34 +8,34 @@
 
 namespace prayground {
 
-class Plane final : public Shape {
-public:
-    struct Data {
-        Vec2f min; 
-        Vec2f max;
-    };
+    class Plane final : public Shape {
+    public:
+        struct Data {
+            Vec2f min; 
+            Vec2f max;
+        };
 
 #ifndef __CUDACC__
-    Plane();
-    Plane(const Vec2f& min, const Vec2f& max);
+        Plane();
+        Plane(const Vec2f& min, const Vec2f& max);
 
-    constexpr ShapeType type() override;
+        constexpr ShapeType type() override;
 
-    OptixBuildInput createBuildInput() override;
+        OptixBuildInput createBuildInput() override;
 
-    uint32_t numPrimitives() const override;
+        uint32_t numPrimitives() const override;
 
-    void copyToDevice() override;
-    void free() override;
+        void copyToDevice() override;
+        void free() override;
 
-    AABB bound() const override;
+        AABB bound() const override;
 
-    Data getData() const;
-private:
-    Vec2f m_min, m_max;
-    CUdeviceptr d_aabb_buffer{ 0 };
+        Data getData() const;
+    private:
+        Vec2f m_min, m_max;
+        CUdeviceptr d_aabb_buffer{ 0 };
 
 #endif
-};
+    };
 
-} // ::prayground
+} // namespace prayground

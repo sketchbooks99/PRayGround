@@ -2,8 +2,7 @@
 
 namespace prayground {
 
-    class BaseApp
-    {
+    class BaseApp {
     public:
         BaseApp();
         ~BaseApp();
@@ -23,4 +22,4 @@ namespace prayground {
         virtual void keyReleased(int key);
     };
 
-}
+} // namespace prayground

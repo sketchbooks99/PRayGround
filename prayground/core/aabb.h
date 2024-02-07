@@ -55,4 +55,4 @@ namespace prayground {
 
 #endif
 
-}
+} // namespace prayground

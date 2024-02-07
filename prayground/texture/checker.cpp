@@ -69,4 +69,4 @@ void CheckerTexture::copyToDevice()
     ));
 }
 
-} // ::prayground
+} // namespace prayground

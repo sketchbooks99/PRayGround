@@ -52,7 +52,10 @@ uint32_t Plane::numPrimitives() const
 void Plane::free()
 {
     Shape::free();
-    cuda_free(d_aabb_buffer);
+    if (d_aabb_buffer) {
+        cuda_free(d_aabb_buffer);
+    }
+    d_aabb_buffer = 0;
 }
 
 // ------------------------------------------------------------------
@@ -68,4 +71,4 @@ Plane::Data Plane::getData() const
     return { m_min, m_max };
 }
 
-} // ::prayground
+} // namespace prayground

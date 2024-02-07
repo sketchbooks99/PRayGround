@@ -176,4 +176,4 @@ namespace prayground {
     constexpr int  operator& (int k1, Key k2) { return                   k1 & static_cast<int>(k2); }
     constexpr int  operator~ (Key k1)         { return ~static_cast<int>(k1); }
     constexpr int  operator+ (Key k1)         { return static_cast<int>(k1); }
-} // ::prayground
+} // namespace prayground

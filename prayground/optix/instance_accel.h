@@ -59,4 +59,4 @@ namespace prayground {
         size_t d_buffer_size{ 0 };
     };
 
-} // ::prayground
+} // namespace prayground

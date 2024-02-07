@@ -56,6 +56,7 @@ namespace prayground {
 
         Data getData();
 
+        // For opacity micromap
         void setupOpacitymap(const Context& ctx,
             CUstream stream,
             uint32_t subdivision_level, 
@@ -74,6 +75,9 @@ namespace prayground {
             OptixOpacityMicromapFormat format, 
             const std::shared_ptr<FloatBitmapTexture>& float_bitmap, 
             uint32_t build_flags = OPTIX_OPACITY_MICROMAP_FLAG_NONE);
+
+        // For displaced micromesh
+
 
         /**
          * @note

@@ -27,4 +27,4 @@ void Isotropic::copyToDevice()
     ));
 }
 
-} // ::prayground
+} // namespace prayground

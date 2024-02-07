@@ -3,7 +3,7 @@
 #include "baseapp.h"
 #include "window.h"
 
-    namespace prayground { 
+namespace prayground { 
 
     float   pgGetMouseX();
     float   pgGetMouseY();
@@ -41,4 +41,4 @@
         std::shared_ptr<Window> m_window;
     };
 
-}
+} // namespace prayground

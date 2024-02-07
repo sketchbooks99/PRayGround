@@ -64,4 +64,4 @@ SphereMedium::Data SphereMedium::getData() const
     return { m_center, m_radius, m_density };
 }
 
-} // ::prayground
+} // namespace prayground

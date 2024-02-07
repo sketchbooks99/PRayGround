@@ -34,10 +34,6 @@
 #include <prayground/optix/macros.h>
 #include <map>
 
-namespace prayground {
-
-namespace fs = std::filesystem;
-
 #define STRINGIFY( x ) STRINGIFY2( x )
 #define STRINGIFY2( x ) #x
 
@@ -50,242 +46,246 @@ namespace fs = std::filesystem;
             throw std::runtime_error( "ERROR: " __FILE__ "(" STRINGIFY(__LINE__) "): " + std::string( nvrtcGetErrorString( code ) ) );   \
     } while (0)
 
-namespace {
-    struct PtxSourceCache
-    {
-        std::map<std::string, std::string*> map;
-        ~PtxSourceCache()
+namespace prayground {
+
+    namespace fs = std::filesystem;
+
+    namespace {
+        struct PtxSourceCache
         {
-            for (std::map<std::string, std::string*>::const_iterator it = map.begin(); it != map.end(); ++it)
-                delete it->second;
-        }
-    };
-    PtxSourceCache g_ptxSourceCache;
+            std::map<std::string, std::string*> map;
+            ~PtxSourceCache()
+            {
+                for (std::map<std::string, std::string*>::const_iterator it = map.begin(); it != map.end(); ++it)
+                    delete it->second;
+            }
+        };
+        PtxSourceCache g_ptxSourceCache;
 
-#if CUDA_NVRTC_ENABLED
-    std::string g_nvrtcLog;
+    #if CUDA_NVRTC_ENABLED
+        std::string g_nvrtcLog;
 
-    void getPtxFromCuString(std::string& ptx, const char* cu_source, const char* name, const char** log_string)
-    {
-        nvrtcProgram prog = 0;
-        NVRTC_CHECK(nvrtcCreateProgram(&prog, cu_source, name, 0, nullptr, nullptr));
-
-        std::vector<const char*> options;
-
-        std::string app_dir;
-        if (pgAppDir().string() != "") {
-            app_dir = std::string("-I") + pgAppDir().string();
-            options.push_back(app_dir.c_str());
-        }
-
-        std::string file_dir;
-        if (name)
+        void getPtxFromCuString(std::string& ptx, const char* cu_source, const char* name, const char** log_string)
         {
-            file_dir = std::string("-I") + fs::path(name).parent_path().string();
-            options.push_back( file_dir.c_str() );
+            nvrtcProgram prog = 0;
+            NVRTC_CHECK(nvrtcCreateProgram(&prog, cu_source, name, 0, nullptr, nullptr));
+
+            std::vector<const char*> options;
+
+            std::string app_dir;
+            if (pgAppDir().string() != "") {
+                app_dir = std::string("-I") + pgAppDir().string();
+                options.push_back(app_dir.c_str());
+            }
+
+            std::string file_dir;
+            if (name)
+            {
+                file_dir = std::string("-I") + fs::path(name).parent_path().string();
+                options.push_back( file_dir.c_str() );
+            }
+
+            // Collect include dirs
+            std::vector<std::string> include_dirs;
+            const char* abs_dirs[] = { PRAYGROUND_ABSOLUTE_INCLUDE_DIRS };
+            const char* rel_dirs[] = { PRAYGROUND_RELATIVE_INCLUDE_DIRS };
+
+            for (const char* dir : abs_dirs)
+                include_dirs.push_back(std::string("-I") + dir);
+            for (const char* dir : rel_dirs)
+                include_dirs.push_back(std::string("-I") + dir);
+            for (const std::string& dir : include_dirs)
+                options.push_back(dir.c_str());
+
+            // Collect NVRTC options
+            const char* compiler_options[] = { CUDA_NVRTC_OPTIONS };
+            std::copy(std::begin(compiler_options), std::end(compiler_options), std::back_inserter(options));
+
+            // JIT compile CU to PTX
+            const nvrtcResult compileRes = nvrtcCompileProgram(prog, (int)options.size(), options.data());
+
+            // Retrieve log output
+            size_t log_size = 0;
+            NVRTC_CHECK(nvrtcGetProgramLogSize(prog, &log_size));
+            g_nvrtcLog.resize(log_size);
+            if (log_size > 1)
+            {
+                NVRTC_CHECK(nvrtcGetProgramLog(prog, &g_nvrtcLog[0]));
+                if (log_string)
+                    *log_string = g_nvrtcLog.c_str();
+            }
+            if (compileRes != NVRTC_SUCCESS)
+                throw std::runtime_error("NVRTC Compilation failed.\n" + g_nvrtcLog);
+
+            // Retrieve PTX code
+            size_t ptx_size = 0;
+            NVRTC_CHECK(nvrtcGetPTXSize(prog, &ptx_size));
+            ptx.resize(ptx_size);
+            NVRTC_CHECK(nvrtcGetPTX(prog, &ptx[0]));
+
+            // Cleanup
+            NVRTC_CHECK(nvrtcDestroyProgram(&prog));
         }
+    #endif // CUDA_NVRTC_ENABLED
 
-        // Collect include dirs
-        std::vector<std::string> include_dirs;
-        const char* abs_dirs[] = { PRAYGROUND_ABSOLUTE_INCLUDE_DIRS };
-        const char* rel_dirs[] = { PRAYGROUND_RELATIVE_INCLUDE_DIRS };
+    } // nonamed namespace
 
-        for (const char* dir : abs_dirs)
-            include_dirs.push_back(std::string("-I") + dir);
-        for (const char* dir : rel_dirs)
-            include_dirs.push_back(std::string("-I") + dir);
-        for (const std::string& dir : include_dirs)
-            options.push_back(dir.c_str());
+    // ------------------------------------------------------------------
+    Module::Module()
+    {
+        m_options.maxRegisterCount = OPTIX_COMPILE_DEFAULT_MAX_REGISTER_COUNT;
+        m_options.optLevel = OPTIX_COMPILE_OPTIMIZATION_DEFAULT;
+    #if OPTIX_VERSION < 70400
+        m_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_LINEINFO;
+    #else 
+        m_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_MINIMAL;
+    #endif
+    }
 
-        // Collect NVRTC options
-        const char* compiler_options[] = { CUDA_NVRTC_OPTIONS };
-        std::copy(std::begin(compiler_options), std::end(compiler_options), std::back_inserter(options));
+    Module::Module(const OptixModuleCompileOptions& options)
+    : m_options(options)
+    {
 
-        // JIT compile CU to PTX
-        const nvrtcResult compileRes = nvrtcCompileProgram(prog, (int)options.size(), options.data());
+    }
 
-        // Retrieve log output
-        size_t log_size = 0;
-        NVRTC_CHECK(nvrtcGetProgramLogSize(prog, &log_size));
-        g_nvrtcLog.resize(log_size);
-        if (log_size > 1)
+    // ------------------------------------------------------------------
+    void Module::createFromCudaFile(const Context& ctx, const fs::path& filename, OptixPipelineCompileOptions pipeline_options)
+    {
+    #if !(CUDA_NVRTC_ENABLED)
+        static_assert(false);
+    #endif
+
+        auto filepath = pgFindDataPath(filename);
+        ASSERT(filepath, "The CUDA file to create module of '" + filename.string() + "' is not found.");
+
+        const char** log = nullptr;
+        std::string key = filepath.value().string();
+        std::map<std::string, std::string*>::iterator elem = g_ptxSourceCache.map.find(key);
+        
+        // Load cuda source from file
+        std::string cu_source = pgGetTextFromFile(filepath.value());
+        std::string* ptx;
+        if (elem == g_ptxSourceCache.map.end())
         {
-            NVRTC_CHECK(nvrtcGetProgramLog(prog, &g_nvrtcLog[0]));
-            if (log_string)
-                *log_string = g_nvrtcLog.c_str();
+            ptx = new std::string;
+            getPtxFromCuString(*ptx, cu_source.c_str(), filepath.value().string().c_str(), log);
+            g_ptxSourceCache.map[key] = ptx;
         }
-        if (compileRes != NVRTC_SUCCESS)
-            throw std::runtime_error("NVRTC Compilation failed.\n" + g_nvrtcLog);
-
-        // Retrieve PTX code
-        size_t ptx_size = 0;
-        NVRTC_CHECK(nvrtcGetPTXSize(prog, &ptx_size));
-        ptx.resize(ptx_size);
-        NVRTC_CHECK(nvrtcGetPTX(prog, &ptx[0]));
-
-        // Cleanup
-        NVRTC_CHECK(nvrtcDestroyProgram(&prog));
+        else
+        {
+            ptx = elem->second;
+        }
+        createFromPtxSource(ctx, *ptx, pipeline_options);
     }
-#endif // CUDA_NVRTC_ENABLED
 
-} // nonamed namespace
-
-// ------------------------------------------------------------------
-Module::Module()
-{
-    m_options.maxRegisterCount = OPTIX_COMPILE_DEFAULT_MAX_REGISTER_COUNT;
-    m_options.optLevel = OPTIX_COMPILE_OPTIMIZATION_DEFAULT;
-#if OPTIX_VERSION < 70400
-    m_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_LINEINFO;
-#else 
-    m_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_MINIMAL;
-#endif
-}
-
-Module::Module(const OptixModuleCompileOptions& options)
-: m_options(options)
-{
-
-}
-
-// ------------------------------------------------------------------
-void Module::createFromCudaFile(const Context& ctx, const fs::path& filename, OptixPipelineCompileOptions pipeline_options)
-{
-#if !(CUDA_NVRTC_ENABLED)
-    static_assert(false);
-#endif
-
-    auto filepath = pgFindDataPath(filename);
-    ASSERT(filepath, "The CUDA file to create module of '" + filename.string() + "' is not found.");
-
-    const char** log = nullptr;
-    std::string key = filepath.value().string();
-    std::map<std::string, std::string*>::iterator elem = g_ptxSourceCache.map.find(key);
-    
-    // Load cuda source from file
-    std::string cu_source = pgGetTextFromFile(filepath.value());
-    std::string* ptx;
-    if (elem == g_ptxSourceCache.map.end())
+    void Module::createFromCudaSource(const Context& ctx, const std::string& source, OptixPipelineCompileOptions pipeline_options)
     {
-        ptx = new std::string;
-        getPtxFromCuString(*ptx, cu_source.c_str(), filepath.value().string().c_str(), log);
-        g_ptxSourceCache.map[key] = ptx;
+    #if !(CUDA_NVRTC_ENABLED)
+        static_assert(false);
+    #endif
+        const char** log = nullptr;
+        std::string* ptx = new std::string;
+        getPtxFromCuString(*ptx, source.c_str(), "", log);
+        createFromPtxSource(ctx, *ptx, pipeline_options);
     }
-    else
+
+    void Module::createFromPtxFile(const Context& ctx, const fs::path& filename, OptixPipelineCompileOptions pipeline_options)
     {
-        ptx = elem->second;
+        auto filepath = pgFindDataPath(filename);
+        ASSERT(filepath, "The PTX file to create module of '" + filename.string() + "' is not found.");
+
+        std::string key = filepath.value().string();
+        std::map<std::string, std::string*>::iterator elem = g_ptxSourceCache.map.find(key);
+        std::string* ptx = new std::string;
+
+        if (elem == g_ptxSourceCache.map.end())
+        {
+            *ptx = pgGetTextFromFile(filepath.value());
+            g_ptxSourceCache.map[key] = ptx;
+        }
+        else
+        {
+            ptx = elem->second;
+        }
+
+        createFromPtxSource(ctx, *ptx, pipeline_options);
     }
-    createFromPtxSource(ctx, *ptx, pipeline_options);
-}
 
-void Module::createFromCudaSource(const Context& ctx, const std::string& source, OptixPipelineCompileOptions pipeline_options)
-{
-#if !(CUDA_NVRTC_ENABLED)
-    static_assert(false);
-#endif
-    const char** log = nullptr;
-    std::string* ptx = new std::string;
-    getPtxFromCuString(*ptx, source.c_str(), "", log);
-    createFromPtxSource(ctx, *ptx, pipeline_options);
-}
-
-void Module::createFromPtxFile(const Context& ctx, const fs::path& filename, OptixPipelineCompileOptions pipeline_options)
-{
-    auto filepath = pgFindDataPath(filename);
-    ASSERT(filepath, "The PTX file to create module of '" + filename.string() + "' is not found.");
-
-    std::string key = filepath.value().string();
-    std::map<std::string, std::string*>::iterator elem = g_ptxSourceCache.map.find(key);
-    std::string* ptx = new std::string;
-
-    if (elem == g_ptxSourceCache.map.end())
+    void Module::createFromPtxSource(const Context& ctx, const std::string& source, OptixPipelineCompileOptions pipeline_options)
     {
-        *ptx = pgGetTextFromFile(filepath.value());
-        g_ptxSourceCache.map[key] = ptx;
+        char log[2048];
+        size_t sizeof_log = sizeof(log);
+
+    #if OPTIX_VERSION < 70700
+        OPTIX_CHECK_LOG(optixModuleCreateFromPTX(
+            static_cast<OptixDeviceContext>(ctx),
+            &m_options,
+            &pipeline_options,
+            source.c_str(),
+            source.size(),
+            log,
+            &sizeof_log,
+            &m_module
+        ));
+    #else
+        OPTIX_CHECK_LOG(optixModuleCreate(
+            static_cast<OptixDeviceContext>(ctx),
+            &m_options,
+            &pipeline_options,
+            source.c_str(),
+            source.size(),
+            log,
+            &sizeof_log,
+            &m_module
+        ));
+    #endif
     }
-    else
+
+    void Module::destroy()
     {
-        ptx = elem->second;
+        OPTIX_CHECK(optixModuleDestroy(m_module));
     }
 
-    createFromPtxSource(ctx, *ptx, pipeline_options);
-}
+    // ------------------------------------------------------------------
+    void Module::setOptimizationLevel(OptixCompileOptimizationLevel optLevel)
+    {
+        m_options.optLevel = optLevel;
+    }
 
-void Module::createFromPtxSource(const Context& ctx, const std::string& source, OptixPipelineCompileOptions pipeline_options)
-{
-    char log[2048];
-    size_t sizeof_log = sizeof(log);
+    void Module::setDebugLevel(OptixCompileDebugLevel debugLevel)
+    {
+        m_options.debugLevel = debugLevel;
+    }
 
-#if OPTIX_VERSION < 70700
-    OPTIX_CHECK_LOG(optixModuleCreateFromPTX(
-        static_cast<OptixDeviceContext>(ctx),
-        &m_options,
-        &pipeline_options,
-        source.c_str(),
-        source.size(),
-        log,
-        &sizeof_log,
-        &m_module
-    ));
-#else
-    OPTIX_CHECK_LOG(optixModuleCreate(
-        static_cast<OptixDeviceContext>(ctx),
-        &m_options,
-        &pipeline_options,
-        source.c_str(),
-        source.size(),
-        log,
-        &sizeof_log,
-        &m_module
-    ));
-#endif
-}
+    // ------------------------------------------------------------------
+    void Module::setBoundValues(size_t offset_in_bytes, size_t size_in_bytes, void* bound_value_ptr, const char* annotation)
+    {
+        OptixModuleCompileBoundValueEntry* bound_values = new OptixModuleCompileBoundValueEntry();
+        bound_values->pipelineParamOffsetInBytes = offset_in_bytes;
+        bound_values->sizeInBytes = size_in_bytes;
+        bound_values->boundValuePtr = bound_value_ptr;
+        bound_values->annotation = annotation;
+        m_options.boundValues = bound_values;
+    }
 
-void Module::destroy()
-{
-    OPTIX_CHECK(optixModuleDestroy(m_module));
-}
+    void Module::setBoundValues(OptixModuleCompileBoundValueEntry* bound_values)
+    {
+        m_options.boundValues = bound_values;
+    }
 
-// ------------------------------------------------------------------
-void Module::setOptimizationLevel(OptixCompileOptimizationLevel optLevel)
-{
-    m_options.optLevel = optLevel;
-}
+    void Module::setNumBounds(unsigned int num_bound)
+    {
+        m_options.numBoundValues = num_bound;
+    }
 
-void Module::setDebugLevel(OptixCompileDebugLevel debugLevel)
-{
-    m_options.debugLevel = debugLevel;
-}
+    const OptixModuleCompileOptions& Module::compileOptions() const 
+    { 
+        return m_options; 
+    }
 
-// ------------------------------------------------------------------
-void Module::setBoundValues(size_t offset_in_bytes, size_t size_in_bytes, void* bound_value_ptr, const char* annotation)
-{
-    OptixModuleCompileBoundValueEntry* bound_values = new OptixModuleCompileBoundValueEntry();
-    bound_values->pipelineParamOffsetInBytes = offset_in_bytes;
-    bound_values->sizeInBytes = size_in_bytes;
-    bound_values->boundValuePtr = bound_value_ptr;
-    bound_values->annotation = annotation;
-    m_options.boundValues = bound_values;
-}
+    OptixModuleCompileOptions& Module::compileOptions()
+    {
+        return m_options;
+    }
 
-void Module::setBoundValues(OptixModuleCompileBoundValueEntry* bound_values)
-{
-    m_options.boundValues = bound_values;
-}
-
-void Module::setNumBounds(unsigned int num_bound)
-{
-    m_options.numBoundValues = num_bound;
-}
-
-const OptixModuleCompileOptions& Module::compileOptions() const 
-{ 
-    return m_options; 
-}
-
-OptixModuleCompileOptions& Module::compileOptions()
-{
-    return m_options;
-}
-
-} // ::prayground
+} // namespace prayground

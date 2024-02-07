@@ -280,4 +280,4 @@ namespace prayground {
         glViewport(0, 0, width, height);
     }
 
-}
+} // namespace prayground

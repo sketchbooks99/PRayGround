@@ -553,4 +553,4 @@ namespace prayground {
         return Matrix<T, N>(data);
     }
 
-} // ::prayground
+} // namespace prayground

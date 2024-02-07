@@ -223,4 +223,4 @@ namespace prayground {
         return (bool)d_buffer;
     }
 
-} // ::prayground
+} // namespace prayground

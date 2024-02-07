@@ -335,6 +335,11 @@ void ShapeInstance::updateAccel(const Context& ctx, CUstream stream)
     m_instance.setTraversableHandle(m_gas.handle());
 }
 
+void ShapeInstance::free()
+{
+    m_gas.free();
+}
+
 // ------------------------------------------------------------------
 OptixInstance* ShapeInstance::rawInstancePtr() const
 {

@@ -1141,7 +1141,7 @@ namespace prayground {
         // Update hitgroup data on device
         if (+(record_type & SBTRecordType::Hitgroup))
         {
-            std::vector<pgHitgroupData> hitgroup_datas;
+            std::vector<pgHitgroupData> hitgroup_data(m_sbt.numHitgroupRecords());
             auto collectObjectSBTData = [&](auto& objects)
             {
                 for (auto& object : objects)
@@ -1151,13 +1151,16 @@ namespace prayground {
 
                     shape->copyToDevice();
 
+                    uint32_t ID = object.ID;
+
                     // Set hitgroup data to records
                     for (auto& m : materials) {
                         m->copyToDevice();
                         pgHitgroupData hg_data;
                         hg_data = { shape->devicePtr(), m->surfaceInfo() };
                         for (uint32_t i = 0; i < _NRay; i++)
-                            hitgroup_datas.emplace_back(hg_data);
+                            hitgroup_data[ID + i] = hg_data;
+                        ID += _NRay;
                     }
                 }
             };
@@ -1169,7 +1172,9 @@ namespace prayground {
                     auto shape = light.value.shape;
                     auto& emitters = light.value.emitters;
 
-                     shape->copyToDevice();
+                    shape->copyToDevice();
+
+                    uint32_t ID = light.ID;
 
                     // Set hitgroup data to records
                     for (auto& e : emitters) {
@@ -1177,7 +1182,8 @@ namespace prayground {
                         pgHitgroupData hg_data;
                         hg_data = { shape->devicePtr(), e->surfaceInfo() };
                         for (uint32_t i = 0; i < _NRay; i++)
-                            hitgroup_datas.emplace_back(hg_data);
+                            hitgroup_data[ID + i] = hg_data;
+                        ID += _NRay;
                     }
                 }
             };
@@ -1196,8 +1202,8 @@ namespace prayground {
              *                            ^ "+ OPTIX_SBT_RECORD_HEADER_SIZE" makes 'dst' start here */
             CUDA_CHECK(cudaMemcpy2D(
                 /* dst = */ reinterpret_cast<void*>(m_sbt.deviceHitgroupRecordPtr() + OPTIX_SBT_RECORD_HEADER_SIZE), /* dpitch = */ sizeof(pgHitgroupRecord),
-                /* src = */ hitgroup_datas.data(), /* spitch = */ sizeof(pgHitgroupData),
-                /* width = */ sizeof(pgHitgroupData), /* height = */ hitgroup_datas.size(), 
+                /* src = */ hitgroup_data.data(), /* spitch = */ sizeof(pgHitgroupData),
+                /* width = */ sizeof(pgHitgroupData), /* height = */ hitgroup_data.size(), 
                 /* kind = */ cudaMemcpyHostToDevice
             ));
         }

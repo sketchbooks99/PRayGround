@@ -77,7 +77,9 @@ namespace prayground {
 
         explicit operator OptixShaderBindingTable() const { return m_sbt; }
 
-        /* Raygen */
+        // ------------------------------------------------------------------
+        // Raygen
+        // ------------------------------------------------------------------
         void setRaygenRecord(const RaygenRecord& rg_record) 
         {
             m_raygen_record = rg_record;
@@ -101,7 +103,9 @@ namespace prayground {
             }
         }
 
-        /* Miss */
+        // ------------------------------------------------------------------
+        // Raygen
+        // ------------------------------------------------------------------
         void setMissRecord(const std::array<MissRecord, N>& miss_records)
         {
             m_miss_records = miss_records;
@@ -142,7 +146,9 @@ namespace prayground {
 
         }
 
-        /* Hitgroup */
+        // ------------------------------------------------------------------
+        // Hitgroup
+        // ------------------------------------------------------------------
         void addHitgroupRecord(const std::array<HitgroupRecord, N>& hitgroup_records)
         {
             for (uint32_t i = 0; i < N; i++)
@@ -179,6 +185,11 @@ namespace prayground {
             m_sbt.hitgroupRecordStrideInBytes = static_cast<uint32_t>(sizeof(HitgroupRecord));
         }
 
+        uint32_t numHitgroupRecords() const 
+        {
+            return static_cast<uint32_t>(m_hitgroup_records.size());
+        }
+
         HitgroupRecord& hitgroupRecord(const int idx) 
         {
             ASSERT(idx < (int)m_hitgroup_records.size(), "The index out of range.");
@@ -200,7 +211,9 @@ namespace prayground {
             }
         }
 
-        /* Callables */
+        // ------------------------------------------------------------------
+        // Callables
+        // ------------------------------------------------------------------
         template <class... CallablesRecordArgs>
         void addCallablesRecord(const CallablesRecordArgs&... args) {
             static_assert(std::conjunction<std::is_same<CallablesRecord, CallablesRecordArgs>...>::value, 
@@ -246,7 +259,9 @@ namespace prayground {
             }
         }
 
-        /* Exception */
+        // ------------------------------------------------------------------
+        // Exception
+        // ------------------------------------------------------------------
         void setExceptionRecord(const ExceptionRecord& ex_record) {
             m_exception_record = ex_record;
         }
@@ -269,6 +284,9 @@ namespace prayground {
             }
         }
 
+        // ------------------------------------------------------------------
+        // Utility
+        // ------------------------------------------------------------------
         void createOnDevice() {
             d_raygen_record.copyToDevice(&m_raygen_record, sizeof(RaygenRecord));
             d_miss_records.copyToDevice(m_miss_records.data(), N * sizeof(MissRecord));

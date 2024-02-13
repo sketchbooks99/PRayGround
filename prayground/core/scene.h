@@ -595,6 +595,7 @@ namespace prayground {
             m_sbt.addHitgroupRecord(hitgroup_records);
         }
         m_current_sbt_id += _NRay * (uint32_t)emitters.size();
+        m_num_lights += shape->numPrimitives();
     }
 
     template<DerivedFromCamera _CamT, uint32_t _NRay>

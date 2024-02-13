@@ -24,11 +24,16 @@ namespace prayground {
             const Vec3f* vertices;
             const Vec3i* vertex_indices;
             const uint32_t num_triangles;
-
         };
 
         DisplacedMicromesh();
+
+        void build(const Context& ctx, CUstream stream, const Input& input, uint32_t build_flags);
+
+        OptixBuildInputDisplacementMicromap getBuildInputForGAS() const;
     private:
+        OptixMicromapBuffers m_buffers{};
+
     };
 
 } // namespace prayground

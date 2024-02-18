@@ -67,13 +67,13 @@ void App::setup()
     initResultBufferOnDevice();
 
     // Camera settings
-    camera.setOrigin(-0.5, 0.842760, 2.73f);
-    camera.setLookat(0.0f, -0.3f, 0.0f);
+    camera.setOrigin(-0.327f, 0.777f, 2.22f);
+    camera.setLookat(0.22f, 0.0f, 0.0f);
     camera.setUp(0.0f, 1.0f, 0.0f);
     camera.setFarClip(5000);
     camera.setFov(40.0f);
     camera.setAperture(0.04f);
-    camera.setAspect(1.0f);
+    camera.setAspect((float)params.width / params.height);
     camera.setFocusDistance(2.5f);
     camera.enableTracking(pgGetCurrentWindow());
 
@@ -339,7 +339,7 @@ void App::setup()
         auto mesh = make_shared<TriangleMesh>("resources/model/dragon.obj");
         mesh->calculateNormalSmooth();
         auto diffuse = make_shared<Diffuse>(diffuse_id, tex_yellow);
-        auto transform = Matrix4f::translate(0.5f, 0.13f, 0.7f) * Matrix4f::rotate(math::pi/3, {0,1,0}) * Matrix4f::scale(0.4f);
+        auto transform = Matrix4f::translate(0.5f, 0.11f, 0.7f) * Matrix4f::rotate(math::pi/3, {0,1,0}) * Matrix4f::scale(0.4f);
         Primitive p{ mesh, diffuse, diffuse_prg_id };
         setupPrimitive(mesh_prg, p, transform);
     }
@@ -400,6 +400,8 @@ void App::update()
     CUDA_CHECK(cudaStreamSynchronize(stream));
     CUDA_SYNC_CHECK();
 
+    
+
     // レンダリング結果をデバイスから取ってくる
     result_bitmap.copyFromDevice();
 }
@@ -450,7 +452,7 @@ void App::draw()
 
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-    if (params.frame == 4096) {
+    if (params.frame == 20000) {
         result_bitmap.write(pgPathJoin(pgAppDir(), "spectrum.jpg"));
         pgExit();
     }

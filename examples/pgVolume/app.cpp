@@ -294,7 +294,7 @@ void App::draw()
 
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-    if (params.frame == 4096)
+    if (params.frame == 20000)
         result_bmp.write(pgPathJoin(pgAppDir(), "pgVolume.png"));
 }
 

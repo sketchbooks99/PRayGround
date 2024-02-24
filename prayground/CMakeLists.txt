@@ -96,6 +96,8 @@ set(sources
   shape/cylinder.cpp
   shape/gltfmesh.h 
   shape/gltfmesh.cpp
+  shape/pcd.h
+  shape/pcd.cpp
   shape/plane.h 
   shape/plane.cpp 
   shape/primitivemesh.h 

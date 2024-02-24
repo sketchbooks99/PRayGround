@@ -131,7 +131,7 @@ namespace prayground {
         cudaTextureObject_t texture
     ) {
         constexpr int NUM_MAX_THREADS = 1024;
-        constexpr int NUM_MAX_BLOCK = 65536;
+        constexpr int NUM_MAX_BLOCKS = 65536;
 
         const int num_micro_triangles = 1 << (subdivision_level * 2);
         // Count the number of opacity states packed in single uint32_t element
@@ -139,8 +139,8 @@ namespace prayground {
         dim3 threads_per_block(num_thread, 1);
         
         const int total_blocks = (num_micro_triangles / num_thread + 1) * num_faces;
-        int block_size_x = min(total_blocks, NUM_MAX_BLOCK);
-        int block_size_y = max(total_blocks / NUM_MAX_BLOCK, 1);
+        int block_size_x = min(total_blocks, NUM_MAX_BLOCKS);
+        int block_size_y = max(total_blocks / NUM_MAX_BLOCKS, 1);
         dim3 block_dim(block_size_x, block_size_y, 1);
 
         generateOpacityMap<<<block_dim, threads_per_block>>>(d_out_omm_data, subdivision_level, num_faces, format, tex_size, d_texcoords, d_faces, texture);

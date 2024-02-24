@@ -61,7 +61,7 @@ void App::setup()
     params.height = result_bmp.height();
     params.samples_per_launch = 1;
     params.frame = 0;
-    params.max_depth = 5;
+    params.max_depth = 8;
     params.result_buffer = reinterpret_cast<Vec4u*>(result_bmp.deviceData());
     params.accum_buffer = reinterpret_cast<Vec4f*>(accum_bmp.deviceData());
 

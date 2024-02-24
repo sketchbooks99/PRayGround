@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <optix.h>
 #include <vector_types.h>
@@ -563,16 +563,14 @@ namespace prayground {
         if (l <= lambda[0]) return v[0];
         if (l >= lambda[n - 1]) return v[n - 1];
         int offset = 0;
-        for (int i = 0; i < n - 1; i++)
-        {
+        for (int i = 0; i < n - 1; i++) {
             /// @note Assumption: all lambda values are different
-            if (lambda[i] <= l && lambda[i + 1] > l)
-            {
+            if (lambda[i] <= l && lambda[i + 1] > l) {
                 offset = i;
                 break;
             }
         }
-        const float t = (l - lambda[offset]) / (lambda[offset + 1] - lambda[offset]);
+        const float t = fminf((l - lambda[offset]) / (lambda[offset + 1] - lambda[offset]), 1.0f);
         return lerp(v[offset], v[offset + 1], t);
     }
 

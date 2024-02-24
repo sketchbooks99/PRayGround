@@ -67,8 +67,7 @@ extern "C" __global__ void __raygen__spectrum()
     // Uniform sampling of lambda
     float lambda = lerp(float(constants::min_lambda), float(constants::max_lambda), rnd(seed));
 
-    do 
-    {
+    do {
         const Vec2f subpixel_jitter = Vec2f(rnd(seed) - 0.5f, rnd(seed) - 0.5f);
         const Vec2f d = 2.0f * Vec2f(
             (static_cast<float>(idx.x()) + subpixel_jitter.x()) / static_cast<float>(params.width), 
@@ -87,22 +86,19 @@ extern "C" __global__ void __raygen__spectrum()
         si.trace_terminate = false;
 
         int depth = 0;
-        for (;;)
-        {
+        for (;;) {
             if (depth >= params.max_depth)
                 break;
 
             traceSpectrum(params.handle, ro, rd, 0.01f, 1e16f, 0, &si, lambda);
 
-            if (si.trace_terminate)
-            {
+            if (si.trace_terminate) {
                 radiance += si.emission.getSpectrumFromWavelength(lambda) * throughput;
                 break;
             }
 
             // Get emission from area emitter
-            if (si.surface_info.type == SurfaceType::AreaEmitter)
-            {
+            if (si.surface_info.type == SurfaceType::AreaEmitter) {
                 // Evaluating emission from emitter
                 optixDirectCall<void, SurfaceInteraction*, void*>(
                     si.surface_info.callable_id.bsdf,
@@ -114,8 +110,7 @@ extern "C" __global__ void __raygen__spectrum()
                     break;
             }
             // Sample scattering direction and evaluate bsdf
-            else if (+(si.surface_info.type & SurfaceType::Material))
-            {
+            else if (+(si.surface_info.type & SurfaceType::Material)) {
                 float pdf;
                 float bsdf = optixDirectCall<float, const float&, SurfaceInteraction*, void*, float&>(
                     si.surface_info.callable_id.bsdf, lambda, &si, si.surface_info.data, pdf);
@@ -136,12 +131,14 @@ extern "C" __global__ void __raygen__spectrum()
         radiance * CIE_Y(lambda) / constants::CIE_Y_integral / uniformSpectrumPDF(),
         radiance * CIE_Z(lambda) / constants::CIE_Y_integral / uniformSpectrumPDF());
 
+    if (!xyz_result.isValid())
+        xyz_result = 0.0f;
+
     Vec3f color = XYZToSRGB(xyz_result);
 
     Vec3f accum_color = color / static_cast<float>(params.samples_per_launch);
 
-    if (frame > 0)
-    {
+    if (frame > 0) {
         const float a = 1.0f / static_cast<float>(frame + 1);
         const Vec3f accum_color_prev = Vec3f(params.accum_buffer[image_idx]);
         accum_color = lerp(accum_color_prev, accum_color, a);
@@ -197,13 +194,19 @@ static __forceinline__ __device__ float bk7Index(const float& lambda)
     // Convert unit of wavelength: nm -> μm
     const float l = lambda * 0.001f;
     const float l2 = l * l;
-    return sqrtf(1.0f + ((1.03961212f * l2) / (l2 - 0.00600069867f)) + ((0.231792344f * l2) / (l2 - 0.0200179144f)) + ((1.01046945 * l2) / (l2 - 103.560653f)));
+    float ret = sqrtf(1.0f + ((1.03961212f * l2) / (l2 - 0.00600069867f)) + ((0.231792344f * l2) / (l2 - 0.0200179144f)) + ((1.01046945 * l2) / (l2 - 103.560653f)));
+    if (ret != ret)
+        ret = 1.5f;
+    return ret;
 }
 
 static __forceinline__ __device__ float diamondIndex(const float& lambda)
 {
     const float l2 = lambda * lambda;
-    return sqrtf(1.0f + ((0.3306f * l2) / (l2 - 175.0f * 175.0f)) + ((4.3346f * l2) / (l2 - 106.0f * 106.0f)));
+    float ret = sqrtf(1.0f + ((0.3306f * l2) / (l2 - 175.0f * 175.0f)) + ((4.3346f * l2) / (l2 - 106.0f * 106.0f)));
+    if (ret != ret)
+        ret = 2.42f;
+    return ret;
 }
 
 extern "C" __device__ float __direct_callable__sample_dielectric(const float& lambda, SurfaceInteraction* si, void* mat_data, float& pdf)
@@ -215,8 +218,7 @@ extern "C" __device__ float __direct_callable__sample_dielectric(const float& la
     float nt = 1.5f;
     if (dielectric->sellmeier == Sellmeier::None)
         nt = dielectric->ior;
-    else
-    {
+    else {
         if (dielectric->sellmeier == Sellmeier::Diamond)
             nt = diamondIndex(lambda);
         else if (dielectric->sellmeier == Sellmeier::BK7)

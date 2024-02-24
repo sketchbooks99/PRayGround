@@ -279,9 +279,9 @@ namespace prayground {
 
         // Initialize instance acceleration structure
         m_accel = InstanceAccel{ InstanceAccel::Type::Instances };
-        if (scene.allow_accel_compaction)
+        if (m_settings.allow_accel_compaction)
             m_accel.allowCompaction();
-        if (scene.allow_accel_update)
+        if (m_settings.allow_accel_update)
             m_accel.allowUpdate();
 
         // Initialize raygen and miss record

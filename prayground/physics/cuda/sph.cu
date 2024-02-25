@@ -39,64 +39,87 @@ namespace prayground {
         return norm_factor * cubicSplineDerivative(q);
     }
 
-    extern "C" GLOBAL void reconstructRho(
-        SPHParticle* particles, uint32_t num_particles, float kernel_size) 
+    extern "C" GLOBAL void computeDensity(SPHParticle* particles, uint32_t num_particles, SPHConfig config) 
     {
         // Global thread ID equals particle index i
         const int idx = blockIdx.x * blockDim.x + threadIdx.x;
         if (idx >= num_particles) return;
 
-        auto pi = particles[idx];
+        SPHParticle& pi = particles[idx];
 
         for (auto j = 0; j < num_particles; j++) {
             if (j == idx) continue;
 
-            // Reconstruct rho from mass and kernel
+            // Reconstruct density from mass and kernel
             auto pj = particles[j];
             float r = length(pi.position - pj.position);
 
             // Ignore particles outside of kernel size
             if (r > kernel_size) continue;
 
-            pi.rho += pj.mass * particleKernel(r, kernel_size);
+            pi.density += pj.mass * particleKernel(r, kernel_size);
         }
     }
 
-    extern "C" GLOBAL void computeViscosity(
-        SPHParticle* particles, uint32_t num_particles, float kernel_size, float time_step)
+    extern "C" GLOBAL void computePressure(SPHParticle* particles, uint32_t num_particles, SPHConfig config)
     {
         // Global thread ID equals particle index i
         const int idx = blockIdx.x * blockDim.x + threadIdx.x;
         if (idx >= num_particles) return;
 
-        auto pi = particles[idx];
+        SPHParticle& pi = particles[idx];
+        pi.pressure = config.stiffness * (pi.density - config.rest_density);
+    }
+
+    extern "C" GLOBAL void computeForce(SPHParticle* particles, uint32_t num_particles, SPHConfig config)
+    {
+        // Global thread ID equals particle index i
+        const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+        if (idx >= num_particles) return;
+
+        SPHParticle& pi = particles[idx];
+
+        Vec3f pressure_force(0.0f);
+        Vec3f viscosity_force(0.0f);
 
         for (auto j = 0; j < num_particles; j++) {
             if (j == idx) continue;
 
             auto pj = particles[j];
 
-            // Second-derivatives of vectorial field
-            float dd_field = 0.0f;
-            for (auto k = 0; k < num_particles; k++) {
-                if (k == idx) continue;
+            Vec3f pi2pj = pj.position - pi.position;
+            float r = length(pi2pj);
+            if (r > kernel_size) continue;
 
-                auto pj = particles[j];
-                float r = length(pi.position - pj.position);
+            viscosity_force += (pj.mass * (pi.velocity - pi.velocity) * 2.0f * particleKernelDerivative(r, kernel_size)) / (pj.density * r);
 
-                dd_field += (pi.mass / pj.rho) * ((2.0f * particleKernelDerivative(r, kernel_size)) / r);
-            }
-            dd_field *= -1.0f;
-
-            // Compute viscosity force
-            auto viscosity_force = pi.mass * pi.velocity * dd_field;
-
-            // Update particle velocity
-            pi.velocity += (time_step / pi.mass) * (viscosity_force /* + external_force */);
+            pressure_force += -pi2pj * pj.mass * (pi.pressure / pow2(pi.density) + (pj.pressure / pow2(pj.density))) * particleKernelDerivative(r, kernel_size);
         }
+        // Compute viscosity force
+        viscosity_force *= -1.0f * pi.mass * pi.velocity;
+
+        // Compute pressure force
+        pressure_force *= -1.0f;
+
+        pi.force = pressure_force + viscosity_force + config.external_force;
     }
 
-    extern "C" HOST void solveSPH(SPHParticle* d_particles, uint32_t num_particles, float kernel_size, float time_step) 
+    extern "C" GLOBAL void updateParticle(SPHParticle* particles, uint32_t num_particles, SPHConfig config)
+    {
+        // Global thread ID equals particle index i
+        const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+        if (idx >= num_particles) return;
+
+        SPHParticle& pi = particles[idx];
+
+        // Update velocity
+        pi.velocity += config.time_step * pi.force / pi.mass;
+
+        // Update position
+        pi.position += config.time_step * pi.velocity;
+    }
+
+    extern "C" HOST void solveSPH(SPHParticle* d_particles, uint32_t num_particles, SPHConfig config) 
     {
         constexpr int NUM_MAX_THREADS = 1024;
         constexpr int NUM_MAX_BLOCKS = 65536;
@@ -109,7 +132,10 @@ namespace prayground {
         const int num_blocks = num_particles / num_threads + 1;
         dim3 block_dim(num_blocks, 1);
 
-        reconstructRho<<<block_dim, threads_per_block>>>(d_particles, num_particles, kernel_size, time_step);
+        computeDensity<<<block_dim, threads_per_block>>>(d_particles, num_particles, config);
+        computePressure<<<block_dim, threads_per_block>>>(d_particles, num_particles, config);
+        computeForce<<<block_dim, threads_per_block>>>(d_particles, num_particles, config);
+        updateParticle<<<block_dim, threads_per_block>>>(d_particles, num_particles, config);
     }
 
 } // namespace prayground

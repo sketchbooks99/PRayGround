@@ -398,6 +398,7 @@ add_subdirectory(examples/spectrum)
 add_subdirectory(examples/pgVolume)
 add_subdirectory(examples/curves)
 add_subdirectory(examples/opacityMicromap)
+add_subdirectory(examples/fluidSimulation)
 
 ################################################################
 # Applications

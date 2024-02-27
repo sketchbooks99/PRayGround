@@ -107,8 +107,7 @@ namespace prayground {
 
     void TriangleMesh::setSbtIndex(const uint32_t sbt_idx)
     {
-        if (m_sbt_indices.size() > 1)
-        {
+        if (m_sbt_indices.size() > 1) {
             PG_LOG_WARN("Two or more number of indices have been already set.");
             return;
         }

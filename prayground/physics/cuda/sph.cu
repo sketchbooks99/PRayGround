@@ -5,7 +5,7 @@
 
 namespace prayground {
 
-    DEVIVE float cubicSpline(float q)
+    DEVICE float cubicSpline(float q)
     {
         if (0.0f <= q <= 0.5f)
             return 6.0f * (pow3(q) - pow2(q)) + 1.0f;
@@ -47,6 +47,8 @@ namespace prayground {
 
         SPHParticle& pi = particles[idx];
 
+        const float h = config.kernel_size;
+
         for (auto j = 0; j < num_particles; j++) {
             if (j == idx) continue;
 
@@ -55,9 +57,9 @@ namespace prayground {
             float r = length(pi.position - pj.position);
 
             // Ignore particles outside of kernel size
-            if (r > kernel_size) continue;
+            if (r > h) continue;
 
-            pi.density += pj.mass * particleKernel(r, kernel_size);
+            pi.density += pj.mass * particleKernel(r, h);
         }
     }
 
@@ -82,6 +84,8 @@ namespace prayground {
         Vec3f pressure_force(0.0f);
         Vec3f viscosity_force(0.0f);
 
+        const float h = config.kernel_size;
+
         for (auto j = 0; j < num_particles; j++) {
             if (j == idx) continue;
 
@@ -89,11 +93,11 @@ namespace prayground {
 
             Vec3f pi2pj = pj.position - pi.position;
             float r = length(pi2pj);
-            if (r > kernel_size) continue;
+            if (r > h) continue;
 
-            viscosity_force += (pj.mass * (pi.velocity - pi.velocity) * 2.0f * particleKernelDerivative(r, kernel_size)) / (pj.density * r);
+            viscosity_force += (pj.mass * (pi.velocity - pi.velocity) * 2.0f * particleKernelDerivative(r, h)) / (pj.density * r);
 
-            pressure_force += -pi2pj * pj.mass * (pi.pressure / pow2(pi.density) + (pj.pressure / pow2(pj.density))) * particleKernelDerivative(r, kernel_size);
+            pressure_force += -pi2pj * pj.mass * (pi.pressure / pow2(pi.density) + (pj.pressure / pow2(pj.density))) * particleKernelDerivative(r, h);
         }
         // Compute viscosity force
         viscosity_force *= -1.0f * pi.mass * pi.velocity;
@@ -125,7 +129,7 @@ namespace prayground {
         constexpr int NUM_MAX_BLOCKS = 65536;
 
         // Determine thread size
-        const int num_threads = min(num_particles, NUM_MAX_THREADS);
+        const int num_threads = min((int)num_particles, NUM_MAX_THREADS);
         dim3 threads_per_block(num_threads, 1);
 
         // Determine block size

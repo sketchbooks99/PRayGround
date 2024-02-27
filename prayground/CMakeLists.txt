@@ -29,7 +29,6 @@ set(sources
   core/util.h
   core/shaders/bitmap.vert
   core/shaders/bitmap.frag
-  # core/cuda/spectrum.cu
 
   # Math libraries ==========
   math/matrix.h
@@ -143,9 +142,13 @@ set(sources
   emitter/area.cpp 
   emitter/envmap.h
   emitter/envmap.cpp
-  emitter/point.h 
+  emitter/point.h
   emitter/point.cpp
-  
+
+  # Physics ==========
+  physics/sph.h
+  physics/cuda/sph.cu
+
   prayground.h
 )
 
@@ -154,7 +157,8 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${sources})
 
 # TODO: Link CUDA libraries to the prayground target
 CUDA_GET_SOURCES_AND_OPTIONS(${sources} cmake_options options)
-set_source_files_properties(optix/cuda/omm.cu PROPERTIES CUDA_SOURCE_PROPERTY_FORMAT OBJ)
+set(cuda_sources optix/cuda/omm.cu physics/cuda/sph.cu)
+set_source_files_properties(${cuda_sources} PROPERTIES CUDA_SOURCE_PROPERTY_FORMAT OBJ)
 if (CUDA_NVRTC_ENABLED)
   set(cu_obj_source_files)
   foreach(file ${sources})

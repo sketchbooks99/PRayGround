@@ -29,7 +29,7 @@ namespace prayground {
 
         Data getData() const;
 
-        void updatePoints(const Vec3f* points);
+        void updatePoints(const Vec3f* points, uint32_t num_points);
 
         /* Getter of host-side pointer for points */
         const Vec3f* points();

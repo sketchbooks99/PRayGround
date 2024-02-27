@@ -36,7 +36,34 @@ namespace prayground {
     // ------------------------------------------------------------------
     OptixBuildInput PointCloud::createBuildInput()
     {
-        return OptixBuildInput();
+        OptixBuildInput build_input = {};
+
+        // Copy SBT indices to device
+        CUDABuffer<uint32_t> d_sbt_indices;
+        uint32_t* sbt_indices = new uint32_t[1];
+        sbt_indices[0] = m_sbt_index;
+        d_sbt_indices.copyToDevice(sbt_indices, sizeof(uint32_t));
+
+        // Initialize input flags
+        std::vector<uint32_t> input_flags(m_num_points, OPTIX_GEOMETRY_FLAG_NONE);
+
+        // Create AABB buffer
+        std::vector<OptixAabb> aabbs(m_num_points);
+        for (int i = 0; i < m_num_points; i++) 
+            aabbs[i] = static_cast<OptixAabb>(AABB(m_points[i] - Vec3f(m_radius), m_points[i] + Vec3f(m_radius)));
+        CUDABuffer<OptixAabb> d_aabbs;
+        d_aabbs.copyToDevice(aabbs);
+
+        build_input.type = static_cast<OptixBuildInputType>(this->type());
+        build_input.customPrimitiveArray.aabbBuffers = &d_aabbs.devicePtr();
+        build_input.customPrimitiveArray.numPrimitives = m_num_points;
+        build_input.customPrimitiveArray.flags = input_flags.data();
+        build_input.customPrimitiveArray.numSbtRecords = 1;
+        build_input.customPrimitiveArray.sbtIndexOffsetBuffer = d_sbt_indices.devicePtr();
+        build_input.customPrimitiveArray.sbtIndexOffsetSizeInBytes = sizeof(uint32_t);
+        build_input.customPrimitiveArray.sbtIndexOffsetStrideInBytes = sizeof(uint32_t);
+
+        return build_input;
     }
 
     // ------------------------------------------------------------------
@@ -48,6 +75,11 @@ namespace prayground {
     // ------------------------------------------------------------------
     void PointCloud::copyToDevice()
     {
+        Data data = this->getData();
+
+        if (!d_data)
+            CUDA_CHECK(cudaMalloc(&d_data, sizeof(Data)));
+        CUDA_CHECK(cudaMemcpy(d_data, &data, sizeof(Data), cudaMemcpyHostToDevice));
     }
 
     // ------------------------------------------------------------------
@@ -60,12 +92,18 @@ namespace prayground {
     // ------------------------------------------------------------------
     PointCloud::Data PointCloud::getData() const
     {
-        return Data();
+        CUDABuffer<Vec3f> d_points;
+        d_points.copyToDevice(m_points.get(), m_num_points);
+        Data data = { d_points.deviceData(), m_num_points, m_radius };
+
+        return data;
     }
 
     // ------------------------------------------------------------------
-    void PointCloud::updatePoints(const Vec3f* points)
+    void PointCloud::updatePoints(Vec3f* points, uint32_t num_points)
     {
+        m_points.reset(points);
+        m_num_points = num_points;
     }
 
     // ------------------------------------------------------------------

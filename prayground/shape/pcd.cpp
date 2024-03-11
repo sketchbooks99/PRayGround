@@ -50,12 +50,13 @@ namespace prayground {
         // Create AABB buffer
         std::vector<OptixAabb> aabbs(m_num_points);
         for (int i = 0; i < m_num_points; i++) 
-            aabbs[i] = static_cast<OptixAabb>(AABB(m_points[i] - Vec3f(m_radius), m_points[i] + Vec3f(m_radius)));
+            aabbs[i] = static_cast<OptixAabb>(AABB(m_points.get()[i] - Vec3f(m_radius), m_points.get()[i] + Vec3f(m_radius)));
         CUDABuffer<OptixAabb> d_aabbs;
         d_aabbs.copyToDevice(aabbs);
+        d_aabb_buffer = d_aabbs.devicePtr();
 
         build_input.type = static_cast<OptixBuildInputType>(this->type());
-        build_input.customPrimitiveArray.aabbBuffers = &d_aabbs.devicePtr();
+        build_input.customPrimitiveArray.aabbBuffers = &d_aabb_buffer;
         build_input.customPrimitiveArray.numPrimitives = m_num_points;
         build_input.customPrimitiveArray.flags = input_flags.data();
         build_input.customPrimitiveArray.numSbtRecords = 1;

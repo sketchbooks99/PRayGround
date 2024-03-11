@@ -91,18 +91,89 @@ void App::setup()
     // Hitgroup program
     ProgramGroup mesh_prg = pipeline.createHitgroupProgram(context, module, "__closesthit__mesh");
     ProgramGroup sphere_prg = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", "__intersection__sphere");
+    ProgramGroup particle_prg = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", "__intersection__particle");
+
+    // Surface programs
+    SurfaceCallableID diffuse_id = {
+        .sample = setupCallable("__direct_callable__diffuse_sample", ""),
+        .bsdf = setupCallable("__direct_callable__diffuse_bsdf", ""),
+        .pdf = setupCallable("__direct_callable__diffuse_pdf", "")
+    };
+    SurfaceCallableID dielectric_id = {
+        .sample = setupCallable("__direct_callable__dielectric_sample", ""),
+        .bsdf = setupCallable("__direct_callable__dielectric_bsdf", ""),
+        .pdf = setupCallable("__direct_callable__dielectric_pdf", "")
+    };
+    auto area_emitter_callable_id = setupCallable("__direct_callable__area_emitter", "");
+    SurfaceCallableID area_emitter_id = {
+        .sample = area_emitter_callable_id,
+        .bsdf = area_emitter_callable_id,
+        .pdf = area_emitter_callable_id
+    };
+
+    // Create surfaces
+    auto floor = make_shared<Diffuse>(make_shared<CheckerTexture>(Vec3f(0.2f), Vec3f(0.8f), 10, checker_id), diffuse_id);
+    auto particle = make_shared<Diffuse>(make_shared<ConstantTexture>(Vec3f(0.3f, 0.3f, 0.9f), constant_id), diffuse_id);
+
+    // Initialize fluid particles
+    float radius = 1.0f;
+    particles = make_shared<ShapeGroup<SPHParticle, Shape::Custom>>();
+    for (int x = 0; x < 50; x++) {
+        for (int y = 0; y < 50; y++) {
+            for (int z = 0; z < 50; z++) {
+                Vec3f position = Vec3f(x, y, z) * 2.0f;
+                Vec3f velocity = Vec3f(0);
+                float mass = 1.0f;
+                auto p = SPHParticle(position, velocity, mass, radius);
+                particles->addShape(p);
+            }
+        }
+    }
+
+    // Fluid particle
+    scene.addObject("particles", particles, particle, particle_prg, Matrix4f::identity());
+
+    // Floor
+    scene.addObject("floor", make_shared<Plane>(Vec2f(-100), Vec2f(100)), floor, mesh_prg, Matrix4f::identity());
+
+    CUDA_CHECK(cudaStreamCreate(&stream));
+    scene.copyToDevice(stream);
+    scene.buildAccel(stream);
+    scene.buildSBT();
+    pipeline.create(context);
+
+    params.handle = scene.accelHandle();
+
+    // Configuration of SPH parameter
+    sph_config = {
+        .kernel_size = radius, 
+        .rest_density = 1.0f,
+        .external_force = Vec3f(0, -9.8f, 0),
+        .time_step = 0.01f,
+        .stiffness = 1000.0f
+    };
+
+    params.sph_config = sph_config;
 }
 
 // ------------------------------------------------------------------
 void App::update()
 {
+    handleCameraUpdate();
 
+    scene.launchRay(context, pipeline, params, stream, result_bmp.width(), result_bmp.height(), 1);
+    CUDA_CHECK(cudaStreamSynchronize(stream));
+    CUDA_SYNC_CHECK();
+
+    params.frame++;
+
+    result_bmp.copyFromDevice();
 }
 
 // ------------------------------------------------------------------
 void App::draw()
 {
-
+    result_bmp.draw(0, 0);
 }
 
 // ------------------------------------------------------------------
@@ -114,7 +185,7 @@ void App::mousePressed(float x, float y, int button)
 // ------------------------------------------------------------------
 void App::mouseDragged(float x, float y, int button)
 {
-    
+    if (button == MouseButton::Middle) is_camera_updated = true;
 }
 
 // ------------------------------------------------------------------
@@ -132,7 +203,7 @@ void App::mouseMoved(float x, float y)
 // ------------------------------------------------------------------
 void App::mouseScrolled(float x, float y)
 {
-    
+    is_camera_udpated = true;
 }
 
 // ------------------------------------------------------------------

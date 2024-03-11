@@ -64,6 +64,7 @@
 #include "shape/box.h"
 #include "shape/curves.h"
 #include "shape/cylinder.h"
+#include "shape/pcd.h"
 #include "shape/plane.h"
 #include "shape/primitivemesh.h"
 #include "shape/sphere.h"
@@ -91,6 +92,9 @@
 #include "medium/atmosphere.h"
 #include "medium/gridmedium.h"
 #include "medium/vdbgrid.h"
+
+// Physics include
+#include "physics/sph.h"
 
 #ifdef __CUDACC__ // GPU only
 #include "optix/cuda/device_util.cuh"

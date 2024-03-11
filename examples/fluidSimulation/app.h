@@ -37,4 +37,7 @@ private:
     Scene<Camera, NRay> scene;
 
     bool is_camera_updated;
+
+    SPHconfig sph_config;
+    shared_ptr<ShapeGroup<SPHParticle, Shape::Custom>> particles;
 };

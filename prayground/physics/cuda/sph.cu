@@ -1,6 +1,6 @@
 // Smoothed Particle Hydrodynamics 
 
-#include <prayground/physics/sph.h>
+#include <prayground/physics/cuda/sph.cuh>
 #include <prayground/math/util.h>
 
 namespace prayground {
@@ -39,13 +39,13 @@ namespace prayground {
         return norm_factor * cubicSplineDerivative(q);
     }
 
-    extern "C" GLOBAL void computeDensity(SPHParticle* particles, uint32_t num_particles, SPHConfig config) 
+    extern "C" GLOBAL void computeDensity(SPHParticle::Data* particles, uint32_t num_particles, SPHConfig config) 
     {
         // Global thread ID equals particle index i
         const int idx = blockIdx.x * blockDim.x + threadIdx.x;
         if (idx >= num_particles) return;
 
-        SPHParticle& pi = particles[idx];
+        SPHParticle::Data& pi = particles[idx];
 
         const float h = config.kernel_size;
 
@@ -63,28 +63,31 @@ namespace prayground {
         }
     }
 
-    extern "C" GLOBAL void computePressure(SPHParticle* particles, uint32_t num_particles, SPHConfig config)
+    extern "C" GLOBAL void computePressure(SPHParticle::Data* particles, uint32_t num_particles, SPHConfig config)
     {
         // Global thread ID equals particle index i
         const int idx = blockIdx.x * blockDim.x + threadIdx.x;
         if (idx >= num_particles) return;
 
-        SPHParticle& pi = particles[idx];
+        SPHParticle::Data& pi = particles[idx];
         pi.pressure = config.stiffness * (pi.density - config.rest_density);
     }
 
-    extern "C" GLOBAL void computeForce(SPHParticle* particles, uint32_t num_particles, SPHConfig config)
+    extern "C" GLOBAL void computeForce(SPHParticle::Data* particles, uint32_t num_particles, SPHConfig config)
     {
         // Global thread ID equals particle index i
         const int idx = blockIdx.x * blockDim.x + threadIdx.x;
         if (idx >= num_particles) return;
 
-        SPHParticle& pi = particles[idx];
+        SPHParticle::Data& pi = particles[idx];
 
         Vec3f pressure_force(0.0f);
         Vec3f viscosity_force(0.0f);
 
         const float h = config.kernel_size;
+
+
+
 
         for (auto j = 0; j < num_particles; j++) {
             if (j == idx) continue;
@@ -108,13 +111,13 @@ namespace prayground {
         pi.force = pressure_force + viscosity_force + config.external_force;
     }
 
-    extern "C" GLOBAL void updateParticle(SPHParticle* particles, uint32_t num_particles, SPHConfig config)
+    extern "C" GLOBAL void updateParticle(SPHParticle::Data* particles, uint32_t num_particles, SPHConfig config)
     {
         // Global thread ID equals particle index i
         const int idx = blockIdx.x * blockDim.x + threadIdx.x;
         if (idx >= num_particles) return;
 
-        SPHParticle& pi = particles[idx];
+        SPHParticle::Data& pi = particles[idx];
 
         // Update velocity
         pi.velocity += config.time_step * pi.force / pi.mass;
@@ -123,7 +126,7 @@ namespace prayground {
         pi.position += config.time_step * pi.velocity;
     }
 
-    extern "C" HOST void solveSPH(SPHParticle* d_particles, uint32_t num_particles, SPHConfig config) 
+    extern "C" HOST void solveSPH(SPHParticle::Data* d_particles, uint32_t num_particles, SPHConfig config) 
     {
         constexpr int NUM_MAX_THREADS = 1024;
         constexpr int NUM_MAX_BLOCKS = 65536;

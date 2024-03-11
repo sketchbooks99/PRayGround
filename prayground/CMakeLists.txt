@@ -147,7 +147,9 @@ set(sources
 
   # Physics ==========
   physics/sph.h
+  physics/sph.cpp
   physics/cuda/sph.cu
+  physics/cuda/sph.cuh
 
   prayground.h
 )

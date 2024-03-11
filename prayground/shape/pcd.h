@@ -29,14 +29,13 @@ namespace prayground {
 
         Data getData() const;
 
-        void updatePoints(const Vec3f* points, uint32_t num_points);
+        void updatePoints(Vec3f* points, uint32_t num_points);
 
         /* Getter of host-side pointer for points */
         const Vec3f* points();
 
         /* Getter of device-side pointer for points */
         Vec3f* devicePoints();
-#endif
     private:
         std::unique_ptr<Vec3f> m_points;
         CUdeviceptr d_points{ 0 };
@@ -44,6 +43,9 @@ namespace prayground {
         uint32_t m_num_points;
 
         float m_radius;
+
+        CUdeviceptr d_aabb_buffer{ 0 };
+#endif
     };
 
 } // namespace prayground

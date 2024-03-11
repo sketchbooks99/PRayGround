@@ -1,21 +1,57 @@
 #pragma once 
 
+#ifndef __CUDACC__
+#include <prayground/core/cudabuffer.h>
+#endif
+
 #include <prayground/math/vec.h>
 #include <prayground/optix/macros.h>
+#include <prayground/core/shape.h>
 
 namespace prayground {
 
-    struct SPHParticle {
-        Vec3f position;
-        Vec3f velocity;
-        float mass;
-        float pressure;
+    class SPHParticle : public Shape {
+    public:
+        struct Data {
+            Vec3f position;
+            Vec3f velocity;
+            float mass;
+            float radius;
 
-        /* Reconstructed from position and kernel function */
-        float density;
+            /* Calculated by kernel function */
+            float pressure;
 
-        /* F_pressure + F_viscosity + F_external */
-        Vec3f force;
+            /* Reconstructed from position and kernel function */
+            float density;
+
+            /* F_pressure + F_viscosity + F_external */
+            Vec3f force;
+        };
+#ifndef __CUDACC__
+
+        SPHParticle();
+        SPHParticle(Vec3f position, Vec3f velocity, float mass, float radius);
+
+        constexpr ShapeType type() override;
+
+        OptixBuildInput createBuildInput() override;
+
+        uint32_t numPrimitives() const override;
+
+        void copyToDevice() override;
+        void free() override;
+
+        AABB bound() const override;
+
+        Data getData() const;
+
+    private:
+        Vec3f m_position;
+        Vec3f m_velocity;
+        float m_mass;
+        float m_radius;
+        CUdeviceptr d_aabb_buffer{ 0 };
+#endif
     };
 
     struct SPHConfig {
@@ -25,12 +61,5 @@ namespace prayground {
         float time_step;        // dt
         float stiffness;        // k 
     };
-
-    // Entry point for SPH simulation on CUDA
-    extern "C" HOST void solveSPH(
-        SPHParticle* d_particles,   // Device pointer to particles
-        uint32_t num_particles, 
-        SPHConfig config
-    );
 
 } // namespace prayground

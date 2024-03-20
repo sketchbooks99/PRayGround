@@ -13,8 +13,7 @@ namespace prayground {
                 bitangent[0] = -normal[1];
                 bitangent[1] = normal[0];
                 bitangent[2] = 0.0f;
-            }
-            else {
+            } else {
                 bitangent[0] = 0.0f;
                 bitangent[1] = -normal[2];
                 bitangent[2] = normal[1];

@@ -142,29 +142,25 @@ namespace prayground {
         Onb onb(shading.n);
 
         // Importance sampling on cosine direction
-        if (rnd(seed) < diffuse_ratio)
-        {
+        if (rnd(seed) < diffuse_ratio) {
             Vec3f wi = cosineSampleHemisphere(u[0], u[1]);
             onb.inverseTransform(wi);
             return normalize(wi);
         }
         // Importance sampling with GGX formula
-        else
-        {
+        else {
             float gtr2_ratio = 1.0f / (1.0f + disney->clearcoat);
             Vec3f h;
             const float alpha = fmaxf(0.001f, disney->roughness);
             const float alpha_cc = lerp(0.1f, 0.001f, disney->clearcoat_gloss);
             // Switch sampling function of microfacet normal
-            if (rnd(seed) < gtr2_ratio)
-            {
+            if (rnd(seed) < gtr2_ratio) {
                 const float aspect = sqrtf(1.0f - disney->anisotropic * 0.9f);
                 const float ax = fmaxf(0.001f, pow2(alpha) / aspect);
                 const float ay = fmaxf(0.001f, pow2(alpha) * aspect);
                 h = sampleGGXAniso(ax, ay, u[0], u[1]);
             }
-            else
-            {
+            else {
                 h = sampleGTR1(u[0], u[1], alpha_cc);
             }
             onb.inverseTransform(h);

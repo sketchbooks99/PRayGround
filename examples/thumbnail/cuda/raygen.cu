@@ -70,8 +70,7 @@ extern "C" __device__ void __raygen__pinhole()
             }
 
             // Get emission from area emitter
-            if ( si.surface_info.type == SurfaceType::AreaEmitter )
-            {
+            if ( si.surface_info.type == SurfaceType::AreaEmitter ) {
                 // Evaluating emission from emitter
                 optixDirectCall<void, SurfaceInteraction*, void*>(
                     si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
@@ -81,8 +80,7 @@ extern "C" __device__ void __raygen__pinhole()
                     break;
             }
             // Specular sampling
-            else if (+(si.surface_info.type & SurfaceType::Delta))
-            {
+            else if (+(si.surface_info.type & SurfaceType::Delta)) {
                 // Sampling scattered direction
                 optixDirectCall<void, SurfaceInteraction*, void*>(
                     si.surface_info.callable_id.sample , &si, si.surface_info.data);
@@ -93,8 +91,7 @@ extern "C" __device__ void __raygen__pinhole()
                 throughput *= bsdf_val;
             }
             // Rough surface sampling with applying MIS
-            else if ( +(si.surface_info.type & (SurfaceType::Rough | SurfaceType::Diffuse)) )
-            {
+            else if ( +(si.surface_info.type & (SurfaceType::Rough | SurfaceType::Diffuse)) ) {
                 // Importance sampling according to the BSDF
                 optixDirectCall<void, SurfaceInteraction*, void*>(
                     si.surface_info.callable_id.sample, &si, si.surface_info.data);

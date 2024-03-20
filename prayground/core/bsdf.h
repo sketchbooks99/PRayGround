@@ -94,16 +94,16 @@ namespace prayground {
 
     HOSTDEVICE INLINE Vec3f sampleGGXAniso(const float ax, const float ay, const float u0, const float u1)
     {
-        float phi = atanf((ax / ay) * tanf(2.0f * math::pi * u0));
-        if (u0 > 0.75f)
+        float phi = atanf(tanf(2.0f * math::pi * u0) * ay / ax);
+        if (u0 >= 0.75f)
             phi += math::two_pi;
-        else if (u1 > 0.25f)
+        else if (u0 > 0.25f)
             phi += math::pi;
 
         const float cosPhi = cosf(phi);
         const float sinPhi = sinf(phi);
-        const float A = pow2(cosPhi / ax) + pow2(sinPhi / ax);
-        const float theta = sqrtf(u1 / ((1.0f - u1) * A));
+        const float A = pow2(cosPhi / ax) + pow2(sinPhi / ay);
+        const float theta = atanf(sqrtf(u1 / ((1.0f - u1) * A)));
 
         return Vec3f(cosf(phi) * sinf(theta), sinf(phi) * sinf(theta), cosf(theta));
     }

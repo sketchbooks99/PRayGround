@@ -9,16 +9,10 @@ namespace prayground {
         {
             normal = n;
 
-            if (fabs(normal.x()) > fabs(normal.z())) {
-                bitangent[0] = -normal[1];
-                bitangent[1] = normal[0];
-                bitangent[2] = 0.0f;
-            } else {
-                bitangent[0] = 0.0f;
-                bitangent[1] = -normal[2];
-                bitangent[2] = normal[1];
-            }
+            if (n.x() > 0.9f) bitangent = Vec3f(0.0f, 1.0f, 0.0f);
+            else bitangent = Vec3f(1.0f, 0.0f, 0.0f);
 
+            bitangent -= n * dot(bitangent, n);
             bitangent = normalize(bitangent);
             tangent = cross(bitangent, normal);
         }

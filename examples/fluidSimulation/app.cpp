@@ -13,7 +13,7 @@ void App::initResultBufferOnDevice()
 void App::handleCameraUpdate() {
     if (!is_camera_updated)
         return;
-    is_camera_udpate = true;
+    is_camera_updated = true;
 
     scene.updateSBT(+(SBTRecordType::Raygen));
 
@@ -36,7 +36,7 @@ void App::setup()
     pipeline.setDirectCallableDepth(5);
     pipeline.setContinuationCallableDepth(5);
     pipeline.setNumPayloads(5);
-    pipeline.setAttributes(5);
+    pipeline.setNumAttributes(5);
 
     // Create module
     Module module = pipeline.createModuleFromCudaFile(context, "kernels.cu");
@@ -45,7 +45,7 @@ void App::setup()
     const int height = pgGetHeight();
     result_bmp.allocate(PixelFormat::RGBA, width, height);
     result_bmp.allocateDevicePtr();
-    accum_bmp.allocate(PixelFormat::RGBA32F, width, height);
+    accum_bmp.allocate(PixelFormat::RGBA, width, height);
     accum_bmp.allocateDevicePtr();
 
     // Configuration of launch parameters
@@ -68,11 +68,18 @@ void App::setup()
     scene.setCamera(camera);
 
     // Raygen program
-    ProgramGroup raygen = pipeline.createRaygenProgramGroup(context, module, "__raygen__pinhole");
-    pipeline.setRaygen(raygen);
+    ProgramGroup raygen = pipeline.createRaygenProgram(context, module, "__raygen__pinhole");
+    scene.bindRaygenProgram(raygen);
+
+    struct Callable {
+        Callable(const std::pair<ProgramGroup, uint32_t>& callable)
+            : program(callable.first), ID(callable.second) {}
+        ProgramGroup program;
+        uint32_t ID;
+    };
 
     auto setupCallable = [&](const string& dc_name, const string& cc_name) {
-        Callable callable = pipeline.createCallableProgram(context, module, dc_name, cc_name);
+        Callable callable = pipeline.createCallablesProgram(context, module, dc_name, cc_name);
         scene.bindCallablesProgram(callable.program);
         return callable.ID;
     };
@@ -83,26 +90,20 @@ void App::setup()
     auto constant_id = setupCallable("__direct_callable__constant", "");
 
     // Miss program
-    ProgramGroup miss = pipeline.createMissProgramGroup(context, module, "__miss__envmap");
+    ProgramGroup miss = pipeline.createMissProgram(context, module, "__miss__envmap");
     scene.bindMissPrograms({miss});
     auto envmap_texture = make_shared<FloatBitmapTexture>("resources/image/drackenstein_quarry_4k.exr", bitmap_id);
     scene.setEnvmap(envmap_texture);
 
     // Hitgroup program
     ProgramGroup mesh_prg = pipeline.createHitgroupProgram(context, module, "__closesthit__mesh");
-    ProgramGroup sphere_prg = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", "__intersection__sphere");
     ProgramGroup particle_prg = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", "__intersection__particle");
 
     // Surface programs
     SurfaceCallableID diffuse_id = {
-        .sample = setupCallable("__direct_callable__diffuse_sample", ""),
-        .bsdf = setupCallable("__direct_callable__diffuse_bsdf", ""),
-        .pdf = setupCallable("__direct_callable__diffuse_pdf", "")
-    };
-    SurfaceCallableID dielectric_id = {
-        .sample = setupCallable("__direct_callable__dielectric_sample", ""),
-        .bsdf = setupCallable("__direct_callable__dielectric_bsdf", ""),
-        .pdf = setupCallable("__direct_callable__dielectric_pdf", "")
+        .sample = setupCallable("__direct_callable__sample_diffuse", ""),
+        .bsdf = setupCallable("__direct_callable__bsdf_diffuse", ""),
+        .pdf = setupCallable("__direct_callable__pdf_diffuse", "")
     };
     auto area_emitter_callable_id = setupCallable("__direct_callable__area_emitter", "");
     SurfaceCallableID area_emitter_id = {
@@ -112,12 +113,12 @@ void App::setup()
     };
 
     // Create surfaces
-    auto floor = make_shared<Diffuse>(make_shared<CheckerTexture>(Vec3f(0.2f), Vec3f(0.8f), 10, checker_id), diffuse_id);
-    auto particle = make_shared<Diffuse>(make_shared<ConstantTexture>(Vec3f(0.3f, 0.3f, 0.9f), constant_id), diffuse_id);
+    auto floor = make_shared<Diffuse>(diffuse_id, make_shared<CheckerTexture>(Vec3f(0.2f), Vec3f(0.8f), 10, checker_id));
+    auto particle = make_shared<Diffuse>(diffuse_id, make_shared<ConstantTexture>(Vec3f(0.3f, 0.3f, 0.9f), constant_id));
 
     // Initialize fluid particles
     float radius = 1.0f;
-    particles = make_shared<ShapeGroup<SPHParticle, Shape::Custom>>();
+    particles = make_shared<ShapeGroup<SPHParticle, ShapeType::Custom>>();
     for (int x = 0; x < 50; x++) {
         for (int y = 0; y < 50; y++) {
             for (int z = 0; z < 50; z++) {
@@ -131,14 +132,14 @@ void App::setup()
     }
 
     // Fluid particle
-    scene.addObject("particles", particles, particle, particle_prg, Matrix4f::identity());
+    scene.addObject("particles", particles, particle, { particle_prg }, Matrix4f::identity());
 
     // Floor
-    scene.addObject("floor", make_shared<Plane>(Vec2f(-100), Vec2f(100)), floor, mesh_prg, Matrix4f::identity());
+    scene.addObject("floor", make_shared<Plane>(Vec2f(-100), Vec2f(100)), floor, { mesh_prg }, Matrix4f::identity());
 
     CUDA_CHECK(cudaStreamCreate(&stream));
-    scene.copyToDevice(stream);
-    scene.buildAccel(stream);
+    scene.copyDataToDevice();
+    scene.buildAccel(context, stream);
     scene.buildSBT();
     pipeline.create(context);
 
@@ -203,7 +204,7 @@ void App::mouseMoved(float x, float y)
 // ------------------------------------------------------------------
 void App::mouseScrolled(float x, float y)
 {
-    is_camera_udpated = true;
+    is_camera_updated = true;
 }
 
 // ------------------------------------------------------------------

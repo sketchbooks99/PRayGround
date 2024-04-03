@@ -1,6 +1,6 @@
 #include "app.h"
 
-#define INTERACTIVE 1
+#define INTERACTIVE 0
 
 static void streamProgress(int frame, int max_frame, float elapsed_time, int bar_length)
 {
@@ -107,7 +107,7 @@ void App::setup()
     camera.enableTracking(pgGetCurrentWindow());
 
     // Raygen program
-    ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, raygen_module, "__raygen__pinhole");
+    ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, raygen_module, "__raygen__lens");
     // Shader binding table data for raygen program
     RaygenRecord raygen_record;
     raygen_prg.recordPackHeader(&raygen_record);

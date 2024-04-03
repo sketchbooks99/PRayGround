@@ -29,7 +29,6 @@ extern "C" __device__ void __raygen__pinhole() {
         ) / Vec2f(params.width, params.height) - 1.0f;
 
         Vec3f ro, rd;
-
         getCameraRay(raygen->camera, d.x(), d.y(), ro, rd);
 
         Vec3f throughput(1.0f);
@@ -48,7 +47,7 @@ extern "C" __device__ void __raygen__pinhole() {
             uint32_t u0, u1;
             packPointer(&si, u0, u1);
             optixTrace(params.handle, ro, rd, 1e-3f, 1e16f, 0.0f, 
-                OptixVisibilityMask(255), 
+                OptixVisibilityMask(1), 
                 OPTIX_RAY_FLAG_NONE, 0, 1, 0, 
                 u0, u1);
 
@@ -76,7 +75,7 @@ extern "C" __device__ void __raygen__pinhole() {
                 throughput *= bsdf;
             }
             // Rough surface sampling
-            else {
+            else if (+(si.surface_info.type & SurfaceType::Rough)){
                 // Sampling scattered direction
                 optixDirectCall<void, SurfaceInteraction*, void*>(si.surface_info.callable_id.sample, &si, si.surface_info.data);
 
@@ -107,7 +106,7 @@ extern "C" __device__ void __raygen__pinhole() {
     }
     params.accum_buffer[image_idx] = Vec4f(accum_color, 1.0f);
     Vec3u color = make_color(accum_color);
-    params.result_buffer[image_idx] = color;
+    params.result_buffer[image_idx] = Vec4u(color, 255);
 }
 
 // ------------------------------------------------------------------
@@ -128,7 +127,7 @@ extern "C" __device__ void __miss__envmap() {
     si->shading.uv = shading.uv;
     si->trace_terminate = true;
     si->surface_info.type = SurfaceType::None;
-    si->emission = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(env->texture.prg_id, si, env->texture.data);
+    si->emission = optixDirectCall<Vec3f, const Vec2f&, void*>(env->texture.prg_id, si->shading.uv, env->texture.data);
 }
 
 // ------------------------------------------------------------------
@@ -155,8 +154,8 @@ extern "C" __device__ void __closesthit__custom() {
 
     // Transform shading frame to world space
     shading->n = normalize(optixTransformNormalFromObjectToWorldSpace(shading->n));
-    shading->dpdu = normalize(optixTransformNormalFromObjectToWorldSpace(shading->dpdu));
-    shading->dpdv = normalize(optixTransformNormalFromObjectToWorldSpace(shading->dpdv));
+    shading->dpdu = normalize(optixTransformVectorFromObjectToWorldSpace(shading->dpdu));
+    shading->dpdv = normalize(optixTransformVectorFromObjectToWorldSpace(shading->dpdv));
 
     auto* si = getPtrFromTwoPayloads<SurfaceInteraction, 0>();
 

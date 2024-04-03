@@ -59,7 +59,7 @@ void App::setup()
 
     // Camera settings
     std::shared_ptr<Camera> camera = make_shared<Camera>();
-    camera->setOrigin(0, 0, -100);
+    camera->setOrigin(300, 300, 300);
     camera->setLookat(0, 0, 0);
     camera->setUp(0, 1, 0);
     camera->setFov(40);
@@ -122,7 +122,7 @@ void App::setup()
     for (int x = 0; x < 50; x++) {
         for (int y = 0; y < 50; y++) {
             for (int z = 0; z < 50; z++) {
-                Vec3f position = Vec3f(x, y, z) * 2.0f;
+                Vec3f position = Vec3f(x, y, z) * 3.0f - 75.0f;
                 Vec3f velocity = Vec3f(0);
                 float mass = 1.0f;
                 auto p = SPHParticle(position, velocity, mass, radius);

@@ -14,6 +14,7 @@ extern "C" __device__ void __raygen__pinhole() {
     const int frame = params.frame;
 
     const Vec3ui idx(optixGetLaunchIndex());
+
     const int image_idx = idx.y() * params.width + idx.x();
     uint32_t seed = tea<4>(image_idx, frame);
 
@@ -121,7 +122,7 @@ extern "C" __device__ void __miss__envmap() {
 
     Shading shading;
     float t;
-    const Sphere::Data env_sphere{Vec3f(0.0f), 1e16f};
+    const Sphere::Data env_sphere{Vec3f(0.0f), 1e8f};
     pgIntersectionSphere(&env_sphere, ray, &shading, &t);
 
     si->shading.uv = shading.uv;
@@ -137,12 +138,22 @@ extern "C" __device__ void __miss__envmap() {
 extern "C" __device__ void __intersection__particle() {
     const pgHitgroupData* data = (pgHitgroupData*)optixGetSbtDataPointer();
     const int prim_idx = optixGetPrimitiveIndex();
-    const SPHParticle::Data particle = reinterpret_cast<SPHParticle::Data*>(data->shape_data)[prim_idx];
+    const SPHParticles::Data particle = reinterpret_cast<SPHParticles::Data*>(data->shape_data)[prim_idx];
 
     Ray ray = getLocalRay();
     Sphere::Data sphere{particle.position, particle.radius};
 
     pgReportIntersectionSphere(&sphere, ray);
+}
+
+// Plane
+extern "C" __device__ void __intersection__plane() {
+    const pgHitgroupData* data = (pgHitgroupData*)optixGetSbtDataPointer();
+    const Plane::Data* plane = reinterpret_cast<Plane::Data*>(data->shape_data);
+
+    Ray ray = getLocalRay();
+
+    pgReportIntersectionPlane(plane, ray);
 }
 
 extern "C" __device__ void __closesthit__custom() {
@@ -214,6 +225,28 @@ extern "C" __device__ float __direct_callable__pdf_diffuse(SurfaceInteraction* s
     return pgGetDiffusePDF(si->wi, si->shading.n);
 }
 
+// Dielectric
+extern "C" __device__ void __direct_callable__sample_dielectric(SurfaceInteraction * si, void* data)
+{
+    const Dielectric::Data* dielectric = reinterpret_cast<Dielectric::Data*>(data);
+    si->wi = pgSamplingSmoothDielectric(dielectric, si->wo, si->shading, si->seed);
+    si->trace_terminate = false;
+}
+
+extern "C" __device__ Vec3f __direct_callable__bsdf_dielectric(SurfaceInteraction * si, void* data)
+{
+    const Dielectric::Data* dielectric = reinterpret_cast<Dielectric::Data*>(data);
+    const Vec3f albedo = optixDirectCall<Vec3f, const Vec2f&, void*>(dielectric->texture.prg_id, si->shading.uv, dielectric->texture.data);
+    si->albedo = albedo;
+    si->emission = Vec3f(0.0f);
+    return albedo;
+}
+
+extern "C" __device__ float __direct_callable__pdf_dielectric(SurfaceInteraction * /* si */, void* /* data */) {
+    return 1.0f;
+}
+
+// Area emitter
 extern "C" __device__ Vec3f __direct_callable__area_emitter(SurfaceInteraction* si, void* data)
 {
     const auto* area = reinterpret_cast<AreaEmitter::Data*>(data);

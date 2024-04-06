@@ -39,6 +39,9 @@
 #include "app/input.h"
 
 #include "gl/shader.h"
+
+#include "physics/cuda/sph.cuh"
+
 #endif // __CUDACC__
 
 #include <optix.h>

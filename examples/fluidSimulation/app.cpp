@@ -13,7 +13,7 @@ void App::initResultBufferOnDevice()
 void App::handleCameraUpdate() {
     if (!is_camera_updated)
         return;
-    is_camera_updated = true;
+    is_camera_updated = false;
 
     scene.updateSBT(+(SBTRecordType::Raygen));
 
@@ -53,7 +53,7 @@ void App::setup()
     params.height = height;
     params.samples_per_launch = 1;
     params.frame = 0;
-    params.max_depth = 5;
+    params.max_depth = 12;
     params.result_buffer = (Vec4u*)result_bmp.deviceData();
     params.accum_buffer = (Vec4f*)accum_bmp.deviceData();
 
@@ -89,6 +89,8 @@ void App::setup()
     auto checker_id = setupCallable("__direct_callable__checker", "");
     auto constant_id = setupCallable("__direct_callable__constant", "");
 
+    pgLog(bitmap_id, checker_id, constant_id);
+
     // Miss program
     ProgramGroup miss = pipeline.createMissProgram(context, module, "__miss__envmap");
     scene.bindMissPrograms({miss});
@@ -97,6 +99,7 @@ void App::setup()
 
     // Hitgroup program
     ProgramGroup mesh_prg = pipeline.createHitgroupProgram(context, module, "__closesthit__mesh");
+    ProgramGroup plane_prg = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", "__intersection__plane");
     ProgramGroup particle_prg = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", "__intersection__particle");
 
     // Surface programs
@@ -104,6 +107,11 @@ void App::setup()
         .sample = setupCallable("__direct_callable__sample_diffuse", ""),
         .bsdf = setupCallable("__direct_callable__bsdf_diffuse", ""),
         .pdf = setupCallable("__direct_callable__pdf_diffuse", "")
+    };
+    SurfaceCallableID dielectric_id = {
+        .sample = setupCallable("__direct_callable__sample_dielectric", ""),
+        .bsdf = setupCallable("__direct_callable__bsdf_dielectric", ""),
+        .pdf = setupCallable("__direct_callable__pdf_dielectric", "")
     };
     auto area_emitter_callable_id = setupCallable("__direct_callable__area_emitter", "");
     SurfaceCallableID area_emitter_id = {
@@ -113,29 +121,30 @@ void App::setup()
     };
 
     // Create surfaces
-    auto floor = make_shared<Diffuse>(diffuse_id, make_shared<CheckerTexture>(Vec3f(0.2f), Vec3f(0.8f), 10, checker_id));
-    auto particle = make_shared<Diffuse>(diffuse_id, make_shared<ConstantTexture>(Vec3f(0.3f, 0.3f, 0.9f), constant_id));
+    auto floor_bsdf = make_shared<Diffuse>(diffuse_id, make_shared<CheckerTexture>(Vec3f(0.2f), Vec3f(0.8f), 10, checker_id));
+    auto particle_bsdf = make_shared<Dielectric>(dielectric_id, make_shared<ConstantTexture>(Vec3f(0.8f), constant_id), 1.5f);
 
     // Initialize fluid particles
     float radius = 1.0f;
-    particles = make_shared<ShapeGroup<SPHParticle, ShapeType::Custom>>();
+    std::vector<SPHParticles::Data> particle_data;
     for (int x = 0; x < 50; x++) {
         for (int y = 0; y < 50; y++) {
             for (int z = 0; z < 50; z++) {
                 Vec3f position = Vec3f(x, y, z) * 3.0f - 75.0f;
                 Vec3f velocity = Vec3f(0);
                 float mass = 1.0f;
-                auto p = SPHParticle(position, velocity, mass, radius);
-                particles->addShape(p);
+                auto p = SPHParticles::Data{ position, velocity, mass, radius, 0.0f, 0.0f, Vec3f(0.0f)};
+                particle_data.push_back(p);
             }
         }
     }
+    particles = make_shared<SPHParticles>(particle_data);
 
     // Fluid particle
-    scene.addObject("particles", particles, particle, { particle_prg }, Matrix4f::identity());
+    scene.addObject("particles", particles, particle_bsdf, { particle_prg }, Matrix4f::identity(), {true, true});
 
     // Floor
-    scene.addObject("floor", make_shared<Plane>(Vec2f(-100), Vec2f(100)), floor, { mesh_prg }, Matrix4f::identity());
+    scene.addObject("floor", make_shared<Plane>(Vec2f(-100), Vec2f(100)), floor_bsdf, { plane_prg }, Matrix4f::translate(0, -100, 0));
 
     CUDA_CHECK(cudaStreamCreate(&stream));
     scene.copyDataToDevice();
@@ -166,9 +175,14 @@ void App::update()
     CUDA_CHECK(cudaStreamSynchronize(stream));
     CUDA_SYNC_CHECK();
 
+    result_bmp.copyFromDevice();
+
     params.frame++;
 
-    result_bmp.copyFromDevice();
+    solveSPH((SPHParticles::Data*)particles->devicePtr(), particles->numPrimitives(), params.sph_config);
+
+    scene.updateObjectGAS("particles", context, stream);
+    scene.updateAccel(context, stream);
 }
 
 // ------------------------------------------------------------------

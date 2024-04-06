@@ -10,7 +10,7 @@
 
 namespace prayground {
 
-    class SPHParticle : public Shape {
+    class SPHParticles : public Shape {
     public:
         struct Data {
             Vec3f position;
@@ -27,10 +27,12 @@ namespace prayground {
             /* F_pressure + F_viscosity + F_external */
             Vec3f force;
         };
+
 #ifndef __CUDACC__
 
-        SPHParticle();
-        SPHParticle(Vec3f position, Vec3f velocity, float mass, float radius);
+        SPHParticles();
+        SPHParticles(const std::vector<Data>& particles);
+        SPHParticles(Data* particles, uint32_t num_particles);
 
         constexpr ShapeType type() override;
 
@@ -43,15 +45,12 @@ namespace prayground {
 
         AABB bound() const override;
 
-        Data getData() const;
-
     private:
-        Vec3f m_position;
-        Vec3f m_velocity;
-        float m_mass;
-        float m_radius;
+        std::unique_ptr<Data[]> m_particles;
+        uint32_t m_num_particles{ 0 };
+
         CUdeviceptr d_aabb_buffer{ 0 };
-#endif
+#endif // __CUDACC__
     };
 
     struct SPHConfig {

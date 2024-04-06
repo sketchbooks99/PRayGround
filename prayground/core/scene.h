@@ -96,6 +96,11 @@ namespace prayground {
         using CamT = _CamT;
         using SBT = pgDefaultSBT<CamT, NRay>;
 
+        struct AccelSettings {
+            bool allow_accel_compaction;
+            bool allow_accel_update;
+        };
+
         struct Settings {
             bool allow_motion;
 
@@ -107,7 +112,7 @@ namespace prayground {
         Scene();
 
         void setup();
-        void setup(const Settings& settings);
+        void setup(const AccelSettings& settings);
         // Finalize all objects in the scene
         void destroy();
 
@@ -132,17 +137,23 @@ namespace prayground {
         /// @note Should create/deletion functions for object return boolean value?
         // Object
         void addObject(const std::string& name, std::shared_ptr<Shape> shape, std::shared_ptr<Material> material,
-            std::array<ProgramGroup, _NRay>& hitgroup_prgs, const Matrix4f& transform = Matrix4f::identity());
+            std::array<ProgramGroup, _NRay>& hitgroup_prgs, const Matrix4f& transform = Matrix4f::identity(), 
+            const AccelSettings& gas_settings = {true, false});
         void addObject(const std::string& name, std::shared_ptr<Shape> shape, std::shared_ptr<Material> material,
-            std::initializer_list<ProgramGroup> hitgroup_prgs, const Matrix4f& transform = Matrix4f::identity());
+            std::initializer_list<ProgramGroup> hitgroup_prgs, const Matrix4f& transform = Matrix4f::identity(), 
+            const AccelSettings& gas_settings = { true, false });
         void addObject(const std::string& name, std::shared_ptr<Shape> shape, const std::vector<std::shared_ptr<Material>>& materials,
-            std::array<ProgramGroup, _NRay>& hitgroup_prgs, const Matrix4f& transform = Matrix4f::identity());
+            std::array<ProgramGroup, _NRay>& hitgroup_prgs, const Matrix4f& transform = Matrix4f::identity(), 
+            const AccelSettings& gas_settings = { true, false });
         void addObject(const std::string& name, std::shared_ptr<Shape> shape, const std::vector<std::shared_ptr<Material>>& materials,
-            std::initializer_list<ProgramGroup> hitgroup_prgs, const Matrix4f& transform = Matrix4f::identity());
+            std::initializer_list<ProgramGroup> hitgroup_prgs, const Matrix4f& transform = Matrix4f::identity(), 
+            const AccelSettings& gas_settings = { true, false });
 
         void duplicateObject(const std::string& orig_name, const std::string& name, const Matrix4f& transform = Matrix4f::identity());
         void updateObjectTransform(const std::string& name, const Matrix4f& transform);
         bool deleteObject(const std::string& name);
+
+        void updateObjectGAS(const std::string& name, const Context& ctx, CUstream stream);
 
         // Light object
         void addLight(const std::string& name, std::shared_ptr<Shape> shape, std::shared_ptr<AreaEmitter> emitter,
@@ -227,7 +238,7 @@ namespace prayground {
             }
         }
 
-        Settings m_settings;
+        AccelSettings m_ias_settings;
 
         SBT                         m_sbt;          // Shader binding table
         uint32_t                    m_current_sbt_id;
@@ -265,23 +276,22 @@ namespace prayground {
     template <DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, _NRay>::setup()
     {
-        Settings settings;
-        settings.allow_motion           = false;
+        AccelSettings settings;
         settings.allow_accel_compaction = true;
         settings.allow_accel_update     = false;
         this->setup(settings);
     }
 
     template <DerivedFromCamera _CamT, uint32_t _NRay>
-    inline void Scene<_CamT, _NRay>::setup(const Scene::Settings& settings)
+    inline void Scene<_CamT, _NRay>::setup(const Scene::AccelSettings& settings)
     {
-        m_settings = settings;
+        m_ias_settings = settings;
 
         // Initialize instance acceleration structure
         m_accel = InstanceAccel{ InstanceAccel::Type::Instances };
-        if (m_settings.allow_accel_compaction)
+        if (m_ias_settings.allow_accel_compaction)
             m_accel.allowCompaction();
-        if (m_settings.allow_accel_update)
+        if (m_ias_settings.allow_accel_update)
             m_accel.allowUpdate();
 
         // Initialize raygen and miss record
@@ -295,7 +305,7 @@ namespace prayground {
     template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, _NRay>::destroy()
     {
-        m_settings = {};
+        m_ias_settings = {};
 
         m_envmap->free();
 
@@ -432,25 +442,34 @@ namespace prayground {
     // -------------------------------------------------------------------------------
     template <DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, _NRay>::addObject(const std::string& name, std::shared_ptr<Shape> shape, std::shared_ptr<Material> material, 
-        std::array<ProgramGroup, _NRay>& hitgroup_prgs, const Matrix4f& transform)
+        std::array<ProgramGroup, _NRay>& hitgroup_prgs, const Matrix4f& transform, 
+        const AccelSettings& gas_settings)
     {
         std::vector<std::shared_ptr<Material>> materials(1, material);
-        addObject(name, shape, materials, hitgroup_prgs, transform);
+        addObject(name, shape, materials, hitgroup_prgs, transform, gas_settings);
     }
 
     template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, _NRay>::addObject(const std::string& name, std::shared_ptr<Shape> shape, std::shared_ptr<Material> material,
-        std::initializer_list<ProgramGroup> hitgroup_prgs, const Matrix4f& transform)
+        std::initializer_list<ProgramGroup> hitgroup_prgs, const Matrix4f& transform, 
+        const AccelSettings& gas_settings)
     {
         std::vector<std::shared_ptr<Material>> materials(1, material);
-        addObject(name, shape, materials, hitgroup_prgs, transform);
+        addObject(name, shape, materials, hitgroup_prgs, transform, gas_settings);
     }
 
     template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, _NRay>::addObject(const std::string& name, std::shared_ptr<Shape> shape, const std::vector<std::shared_ptr<Material>>& materials, 
-        std::array<ProgramGroup, _NRay>& hitgroup_prgs, const Matrix4f& transform)
+        std::array<ProgramGroup, _NRay>& hitgroup_prgs, const Matrix4f& transform, 
+        const AccelSettings& gas_settings)
     {
         ShapeInstance instance{ shape->type(), shape, transform };
+
+        if (gas_settings.allow_accel_compaction)
+            instance.allowCompaction();
+        if (gas_settings.allow_accel_update)
+            instance.allowUpdate();
+
         m_objects.emplace_back(Item<Object>{ name, m_current_sbt_id, Object{ shape, materials, instance } });
 
         // Add hitgroup record data
@@ -465,11 +484,19 @@ namespace prayground {
 
     template<DerivedFromCamera _CamT, uint32_t _NRay>
     inline void Scene<_CamT, _NRay>::addObject(const std::string& name, std::shared_ptr<Shape> shape, const std::vector<std::shared_ptr<Material>>& materials,
-        std::initializer_list<ProgramGroup> hitgroup_prgs, const Matrix4f& transform)
+        std::initializer_list<ProgramGroup> hitgroup_prgs, const Matrix4f& transform, 
+        const AccelSettings& gas_settings)
     {
         ASSERT(hitgroup_prgs.size() == _NRay, "The number of hitgroup programs must be same with the number of ray types.");
 
         ShapeInstance instance{ shape->type(), shape, transform };
+
+        if (gas_settings.allow_accel_compaction)
+            instance.allowCompaction();
+        if (gas_settings.allow_accel_update) {
+            instance.allowUpdate();
+        }
+
         m_objects.emplace_back(Item<Object>{name, m_current_sbt_id, Object{ shape, materials, instance }});
 
         // Add hitgroup record data
@@ -540,6 +567,20 @@ namespace prayground {
          */ 
 
         return true;
+    }
+
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
+    inline void Scene<_CamT, _NRay>::updateObjectGAS(const std::string& name, const Context& ctx, CUstream stream)
+    {
+        auto obj = findItem(m_objects, name);
+        if (!obj) {
+            pgLogFatal("The object named with", name, "is not found.");
+            return;
+        }
+
+        auto& obj_val = obj.value();
+
+        obj_val.value.instance.updateAccel(ctx, stream);
     }
 
     // -------------------------------------------------------------------------------

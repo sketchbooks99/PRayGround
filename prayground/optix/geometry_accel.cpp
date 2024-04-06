@@ -43,7 +43,7 @@ namespace prayground {
             m_count = 0;
         }
 
-        std::vector<OptixBuildInput> m_build_inputs(m_shapes.size());
+        m_build_inputs.resize(m_shapes.size());
         m_options.operation = OPTIX_BUILD_OPERATION_BUILD;
 
         bool all_type_equal = true;
@@ -131,6 +131,23 @@ namespace prayground {
         ASSERT((m_options.buildFlags & OPTIX_BUILD_FLAG_ALLOW_UPDATE) != 0, "allowUpdate() must be called before an update operation.");
 
         m_options.operation = OPTIX_BUILD_OPERATION_UPDATE;
+
+        if (m_build_inputs.size() != m_shapes.size())
+            m_build_inputs.resize(m_shapes.size());
+        m_options.operation = OPTIX_BUILD_OPERATION_BUILD;
+
+        bool all_type_equal = true;
+        for (size_t i = 0; i < m_shapes.size(); i++) {
+            all_type_equal &= (m_shape_type == m_shapes[i]->type());
+            if (!all_type_equal) {
+                m_build_inputs.clear();
+                THROW("All build input types of shapes must be same as type of GeometryAccel.");
+            }
+            m_build_inputs[i] = m_shapes[i]->createBuildInput();
+        }
+
+        if (m_shapes[0]->type() == ShapeType::Curves)
+            m_options.buildFlags |= OPTIX_BUILD_FLAG_ALLOW_RANDOM_VERTEX_ACCESS;
 
         /**
         * @note

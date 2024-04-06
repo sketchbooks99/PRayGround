@@ -39,5 +39,5 @@ private:
     bool is_camera_updated;
 
     SPHConfig sph_config;
-    shared_ptr<ShapeGroup<SPHParticle, ShapeType::Custom>> particles;
+    shared_ptr<SPHParticles> particles;
 };

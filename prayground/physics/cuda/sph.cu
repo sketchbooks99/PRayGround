@@ -122,6 +122,8 @@ namespace prayground {
 
         // Update position
         pi.position += config.time_step * pi.velocity;
+
+        if (idx == 0) printf("pi.position: %f %f %f\n", pi.position.x(), pi.position.y(), pi.position.z());
     }
 
     extern "C" HOST void solveSPH(SPHParticles::Data* d_particles, uint32_t num_particles, SPHConfig config) 
@@ -159,6 +161,8 @@ namespace prayground {
             p.position.y() + p.radius,
             p.position.z() + p.radius,
         };
+
+        if (idx == 0) printf("AABB[0] = %f %f %f %f %f %f\n", out_aabbs[idx].minX, out_aabbs[idx].minY, out_aabbs[idx].minZ, out_aabbs[idx].minX, out_aabbs[idx].maxY, out_aabbs[idx].maxZ);
     }
 
     extern "C" HOST void updateParticleAABB(const SPHParticles::Data * particles, uint32_t num_particles, OptixAabb * out_aabbs)

@@ -53,9 +53,11 @@ void App::setup()
     params.height = height;
     params.samples_per_launch = 1;
     params.frame = 0;
-    params.max_depth = 12;
+    params.max_depth = 5;
     params.result_buffer = (Vec4u*)result_bmp.deviceData();
     params.accum_buffer = (Vec4f*)accum_bmp.deviceData();
+
+    scene.setup({ true, true });
 
     // Camera settings
     std::shared_ptr<Camera> camera = make_shared<Camera>();
@@ -159,7 +161,7 @@ void App::setup()
         .kernel_size = radius, 
         .rest_density = 1.0f,
         .external_force = Vec3f(0, -9.8f, 0),
-        .time_step = 0.01f,
+        .time_step = 0.1f,
         .stiffness = 1000.0f
     };
 
@@ -170,6 +172,7 @@ void App::setup()
 void App::update()
 {
     handleCameraUpdate();
+    initResultBufferOnDevice();
 
     scene.launchRay(context, pipeline, params, stream, result_bmp.width(), result_bmp.height(), 1);
     CUDA_CHECK(cudaStreamSynchronize(stream));

@@ -40,6 +40,9 @@ extern "C" __device__ void __raygen__pinhole() {
         si.albedo = 0.0f;
         si.trace_terminate = false;
 
+        // For dummy lighting 
+        Vec3f light_dir = normalize(Vec3f(-1.0, -1.0, 0.0));
+
         int depth = 0;
         for (;;) {
             if (depth >= params.max_depth)
@@ -68,6 +71,9 @@ extern "C" __device__ void __raygen__pinhole() {
             }
             // Specular sampling
             else if (+(si.surface_info.type & SurfaceType::Delta)) {
+                result = dot(si.shading.n, light_dir);
+                break;
+
                 // Sampling scattered direction
                 optixDirectCall<void, SurfaceInteraction*, void*>(si.surface_info.callable_id.sample, &si, si.surface_info.data);
 

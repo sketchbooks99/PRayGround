@@ -134,7 +134,6 @@ namespace prayground {
 
         if (m_build_inputs.size() != m_shapes.size())
             m_build_inputs.resize(m_shapes.size());
-        m_options.operation = OPTIX_BUILD_OPERATION_BUILD;
 
         bool all_type_equal = true;
         for (size_t i = 0; i < m_shapes.size(); i++) {

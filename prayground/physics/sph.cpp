@@ -46,22 +46,14 @@ namespace prayground {
         CUDABuffer<uint32_t> d_sbt_indices;
         d_sbt_indices.copyToDevice(sbt_indices);
 
-        //OptixAabb aabb = static_cast<OptixAabb>(this->bound());
-        //std::vector<OptixAabb> aabbs;
-        //for (int i = 0; i < m_num_particles; i++) {
-        //    auto p = m_particles.get()[i];
-        //    aabbs.push_back(static_cast<OptixAabb>(AABB(p.position - Vec3f(p.radius), p.position + Vec3f(p.radius))));
-        //}
-        //CUDABuffer<OptixAabb> d_aabb;
-        //d_aabb.copyToDevice(aabbs);
-        //d_aabb_buffer = d_aabb.devicePtr();
-
         std::vector<OptixAabb> aabbs(m_num_particles);
         CUDABuffer<OptixAabb> d_aabb;
         d_aabb.copyToDevice(aabbs);
 
-        // Copy particle buffer to device
-        this->copyToDevice();
+        // Copy particle buffer to device at the first time. 
+        // The device buffer will be updated by the kernel function of SPH. 
+        if (!d_data)
+            this->copyToDevice();
         updateParticleAABB((SPHParticles::Data*)d_data, m_num_particles, d_aabb.deviceData());
         CUDA_SYNC_CHECK();
 

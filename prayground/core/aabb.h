@@ -13,8 +13,8 @@ namespace prayground {
     public:
         AABB() : m_min(Vec3f(0.f)), m_max(Vec3f(0.f)) {}
         AABB(Vec3f min, Vec3f max) : m_min(min), m_max(max) {}
-        const Vec3f& min() const { return m_min; }
-        const Vec3f& max() const { return m_max; }
+        HOSTDEVICE const Vec3f& min() const { return m_min; }
+        HOSTDEVICE const Vec3f& max() const { return m_max; }
 
         explicit operator OptixAabb() { return {m_min[0], m_min[1], m_min[2], m_max[0], m_max[1], m_max[2]}; }
 

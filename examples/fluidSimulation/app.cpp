@@ -61,7 +61,7 @@ void App::setup()
 
     // Camera settings
     std::shared_ptr<Camera> camera = make_shared<Camera>();
-    camera->setOrigin(300, 300, 300);
+    camera->setOrigin(150, 100, 150);
     camera->setLookat(0, 0, 0);
     camera->setUp(0, 1, 0);
     camera->setFov(40);
@@ -90,8 +90,6 @@ void App::setup()
     auto bitmap_id = setupCallable("__direct_callable__bitmap", "");
     auto checker_id = setupCallable("__direct_callable__checker", "");
     auto constant_id = setupCallable("__direct_callable__constant", "");
-
-    pgLog(bitmap_id, checker_id, constant_id);
 
     // Miss program
     ProgramGroup miss = pipeline.createMissProgram(context, module, "__miss__envmap");
@@ -128,13 +126,17 @@ void App::setup()
 
     // Initialize fluid particles
     float radius = 1.0f;
+    uint32_t seed = tea<4>(0, 0);
     std::vector<SPHParticles::Data> particle_data;
-    for (int x = 0; x < 50; x++) {
-        for (int y = 0; y < 50; y++) {
-            for (int z = 0; z < 50; z++) {
+    constexpr int NUM_GRID = 25;
+    for (int x = 0; x < NUM_GRID; x++) {
+        for (int y = 0; y < NUM_GRID; y++) {
+            for (int z = 0; z < NUM_GRID; z++) {
                 Vec3f position = Vec3f(x, y, z) * 3.0f - 75.0f;
                 Vec3f velocity = Vec3f(0);
                 float mass = 1.0f;
+                Vec3f perturbation = UniformSampler::get3D(seed) - 0.5f;
+                position += perturbation;
                 auto p = SPHParticles::Data{ position, velocity, mass, radius, 0.0f, 0.0f, Vec3f(0.0f)};
                 particle_data.push_back(p);
             }
@@ -146,7 +148,7 @@ void App::setup()
     scene.addObject("particles", particles, particle_bsdf, { particle_prg }, Matrix4f::identity(), {true, true});
 
     // Floor
-    scene.addObject("floor", make_shared<Plane>(Vec2f(-100), Vec2f(100)), floor_bsdf, { plane_prg }, Matrix4f::translate(0, -100, 0));
+    scene.addObject("floor", make_shared<Plane>(Vec2f(-200), Vec2f(200)), floor_bsdf, { plane_prg }, Matrix4f::translate(0, -100, 0));
 
     CUDA_CHECK(cudaStreamCreate(&stream));
     scene.copyDataToDevice();
@@ -158,14 +160,16 @@ void App::setup()
 
     // Configuration of SPH parameter
     sph_config = {
-        .kernel_size = radius, 
+        .kernel_size = 10.0f, 
         .rest_density = 1.0f,
         .external_force = Vec3f(0, -9.8f, 0),
-        .time_step = 0.1f,
-        .stiffness = 1000.0f
+        .time_step = 0.01f,
+        .stiffness = 0.1f
     };
 
     params.sph_config = sph_config;
+
+    wall = AABB(Vec3f(-200, -100, -200), Vec3f(200, 500, 200));
 }
 
 // ------------------------------------------------------------------
@@ -182,7 +186,7 @@ void App::update()
 
     params.frame++;
 
-    solveSPH((SPHParticles::Data*)particles->devicePtr(), particles->numPrimitives(), params.sph_config);
+    solveSPH((SPHParticles::Data*)particles->devicePtr(), particles->numPrimitives(), params.sph_config, wall);
 
     scene.updateObjectGAS("particles", context, stream);
     scene.updateAccel(context, stream);

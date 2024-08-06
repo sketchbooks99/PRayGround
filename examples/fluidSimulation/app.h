@@ -40,4 +40,5 @@ private:
 
     SPHConfig sph_config;
     shared_ptr<SPHParticles> particles;
+    AABB wall;
 };

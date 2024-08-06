@@ -22,8 +22,9 @@ namespace prayground {
             return 6.0f * (3.0f * pow2(q) - 2.0f * q);
         else if (0.5f < q <= 1.0f)
             return -6.0f * pow2(1.0f - q);
-        else
+        else {
             return 0.0f;
+        }
     }
 
     DEVICE float particleKernel(float r, float kernel_size)
@@ -94,22 +95,34 @@ namespace prayground {
 
             Vec3f pi2pj = pj.position - pi.position;
             float r = length(pi2pj);
-            if (r > h) continue;
+            if (r > h || r < pi.radius) continue;
 
-            viscosity_force += (pj.mass * (pi.velocity - pi.velocity) * 2.0f * particleKernelDerivative(r, h)) / (pj.density * r);
+            viscosity_force += (pj.mass * (pj.velocity - pi.velocity) * 2.0f * particleKernelDerivative(r, h)) / (pj.density * r);
 
             pressure_force += -pi2pj * pj.mass * (pi.pressure / pow2(pi.density) + (pj.pressure / pow2(pj.density))) * particleKernelDerivative(r, h);
         }
-        // Compute viscosity force
-        viscosity_force *= -1.0f * pi.mass * pi.velocity;
+        //viscosity_force *= -1.0f * pi.mass * pi.velocity;
 
-        // Compute pressure force
-        pressure_force *= -1.0f;
+        //pressure_force *= -1.0f;
 
         pi.force = pressure_force + viscosity_force + config.external_force;
     }
 
-    extern "C" GLOBAL void updateParticle(SPHParticles::Data * particles, uint32_t num_particles, SPHConfig config)
+    extern "C" DEVICE void particleCollision(SPHParticles::Data * particles, uint32_t num_particles, SPHConfig config) 
+    {
+        const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+        if (idx >= num_particles) return;
+
+        SPHParticles::Data& pi = particles[idx];
+
+        for (auto j = 0; j < num_particles; j++) {
+            if (j == idx) continue;
+
+            auto pj = particles[j];
+        }
+    }
+
+    extern "C" GLOBAL void updateParticle(SPHParticles::Data * particles, uint32_t num_particles, SPHConfig config, AABB wall)
     {
         // Global thread ID equals particle index i
         const int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -120,13 +133,18 @@ namespace prayground {
         // Update velocity
         pi.velocity += config.time_step * pi.force / pi.mass;
 
+        if (pi.position.x() + pi.velocity.x() > wall.max().x() || pi.position.x() + pi.velocity.x() < wall.min().x())
+            pi.velocity.x() *= -0.5f;
+        if (pi.position.y() + pi.velocity.y() > wall.max().y() || pi.position.y() + pi.velocity.y() < wall.min().y())
+            pi.velocity.y() *= -0.5f;
+        if (pi.position.z() + pi.velocity.z() > wall.max().z() || pi.position.z() + pi.velocity.z() < wall.min().z())
+            pi.velocity.z() *= -0.5f;
+
         // Update position
         pi.position += config.time_step * pi.velocity;
-
-        if (idx == 0) printf("pi.position: %f %f %f\n", pi.position.x(), pi.position.y(), pi.position.z());
     }
 
-    extern "C" HOST void solveSPH(SPHParticles::Data* d_particles, uint32_t num_particles, SPHConfig config) 
+    extern "C" HOST void solveSPH(SPHParticles::Data* d_particles, uint32_t num_particles, SPHConfig config, AABB wall) 
     {
         constexpr int NUM_MAX_THREADS = 1024;
         constexpr int NUM_MAX_BLOCKS = 65536;
@@ -142,7 +160,7 @@ namespace prayground {
         computeDensity<<<block_dim, threads_per_block>>>(d_particles, num_particles, config);
         computePressure<<<block_dim, threads_per_block>>>(d_particles, num_particles, config);
         computeForce<<<block_dim, threads_per_block>>>(d_particles, num_particles, config);
-        updateParticle<<<block_dim, threads_per_block>>>(d_particles, num_particles, config);
+        updateParticle<<<block_dim, threads_per_block>>>(d_particles, num_particles, config, wall);
     }
 
     // Update particle's AABB buffers on device
@@ -161,8 +179,6 @@ namespace prayground {
             p.position.y() + p.radius,
             p.position.z() + p.radius,
         };
-
-        if (idx == 0) printf("AABB[0] = %f %f %f %f %f %f\n", out_aabbs[idx].minX, out_aabbs[idx].minY, out_aabbs[idx].minZ, out_aabbs[idx].minX, out_aabbs[idx].maxY, out_aabbs[idx].maxZ);
     }
 
     extern "C" HOST void updateParticleAABB(const SPHParticles::Data * particles, uint32_t num_particles, OptixAabb * out_aabbs)

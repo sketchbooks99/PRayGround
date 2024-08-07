@@ -1,4 +1,4 @@
-PRAYGROUND_add_executalbe(opacityMicromap target_name
+PRAYGROUND_add_executable(opacityMicromap target_name
     main.cpp 
     app.cpp 
     app.h

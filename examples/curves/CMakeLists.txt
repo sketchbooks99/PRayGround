@@ -1,4 +1,4 @@
-PRAYGROUND_add_executalbe(curves target_name
+PRAYGROUND_add_executable(curves target_name
     main.cpp 
     app.cpp 
     app.h

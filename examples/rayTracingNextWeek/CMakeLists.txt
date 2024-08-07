@@ -1,4 +1,4 @@
-PRAYGROUND_add_executalbe(rayTracingNextWeek target_name
+PRAYGROUND_add_executable(rayTracingNextWeek target_name
     main.cpp 
     app.cpp 
     app.h

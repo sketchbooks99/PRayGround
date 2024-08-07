@@ -1,4 +1,4 @@
-PRAYGROUND_add_executalbe(spectrum target_name
+PRAYGROUND_add_executable(spectrum target_name
     main.cpp 
     app.cpp 
     app.h

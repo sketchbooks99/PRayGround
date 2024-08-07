@@ -1,4 +1,4 @@
-PRAYGROUND_add_executalbe(pgVolume target_name
+PRAYGROUND_add_executable(pgVolume target_name
     main.cpp 
     app.cpp 
     app.h

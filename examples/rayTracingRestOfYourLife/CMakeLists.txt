@@ -1,4 +1,4 @@
-PRAYGROUND_add_executalbe(rayTracingRestOfYourLife target_name
+PRAYGROUND_add_executable(rayTracingRestOfYourLife target_name
     main.cpp 
     app.cpp 
     app.h

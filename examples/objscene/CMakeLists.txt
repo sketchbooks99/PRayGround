@@ -1,4 +1,4 @@
-PRAYGROUND_add_executalbe(objscene target_name
+PRAYGROUND_add_executable(objscene target_name
     main.cpp
     app.cpp
     app.h

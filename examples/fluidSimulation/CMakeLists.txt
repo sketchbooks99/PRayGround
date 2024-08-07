@@ -1,4 +1,4 @@
-PRAYGROUND_add_executalbe(fluidSimulation target_name
+PRAYGROUND_add_executable(fluidSimulation target_name
     main.cpp 
     app.cpp 
     app.h

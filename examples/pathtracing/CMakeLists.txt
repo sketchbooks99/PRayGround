@@ -1,4 +1,4 @@
-PRAYGROUND_add_executalbe(pathtracing target_name
+PRAYGROUND_add_executable(pathtracing target_name
     main.cpp 
     app.cpp 
     app.h

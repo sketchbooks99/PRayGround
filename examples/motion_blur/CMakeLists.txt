@@ -1,4 +1,4 @@
-PRAYGROUND_add_executalbe(motion_blur target_name
+PRAYGROUND_add_executable(motion_blur target_name
     main.cpp 
     app.cpp 
     app.h

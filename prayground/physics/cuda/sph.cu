@@ -97,13 +97,15 @@ namespace prayground {
             float r = length(pi2pj);
             if (r > h || r < pi.radius) continue;
 
-            viscosity_force += (pj.mass * (pj.velocity - pi.velocity) * 2.0f * particleKernelDerivative(r, h)) / (pj.density * r);
+            viscosity_force += (pj.mass * (pj.velocity - pi.velocity) * 2.0f * particleKernelDerivative(r, h)) / pj.density;
 
-            pressure_force += -pi2pj * pj.mass * (pi.pressure / pow2(pi.density) + (pj.pressure / pow2(pj.density))) * particleKernelDerivative(r, h);
+            //pressure_force += pi2pj * pj.mass * (pi.pressure / pow2(pi.density) + (pj.pressure / pow2(pj.density))) * particleKernelDerivative(r, h);
+            pressure_force += (pj.mass * (pj.pressure - pi.pressure) / (2 * pj.density)) * particleKernelDerivative(r, h);
         }
         //viscosity_force *= -1.0f * pi.mass * pi.velocity;
+        //viscosity_force *= 0.5f;
 
-        //pressure_force *= -1.0f;
+        pressure_force *= -1.0f / pi.density;
 
         pi.force = pressure_force + viscosity_force + config.external_force;
     }

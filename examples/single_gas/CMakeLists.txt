@@ -1,4 +1,4 @@
-PRAYGROUND_add_executalbe(single_gas target_name
+PRAYGROUND_add_executable(single_gas target_name
     main.cpp 
     app.cpp 
     app.h

@@ -1,4 +1,4 @@
-PRAYGROUND_add_executalbe(denoiser target_name
+PRAYGROUND_add_executable(denoiser target_name
     main.cpp 
     app.cpp 
     app.h

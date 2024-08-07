@@ -1,4 +1,4 @@
-PRAYGROUND_add_executalbe(thumbnail target_name
+PRAYGROUND_add_executable(thumbnail target_name
     main.cpp 
     app.cpp 
     app.h

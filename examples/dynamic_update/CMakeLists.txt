@@ -1,4 +1,4 @@
-PRAYGROUND_add_executalbe(dynamic_update target_name
+PRAYGROUND_add_executable(dynamic_update target_name
     main.cpp 
     app.cpp 
     app.h

@@ -34,6 +34,9 @@ namespace prayground {
         SPHParticles(const std::vector<Data>& particles);
         SPHParticles(Data* particles, uint32_t num_particles);
 
+        void setParticles(std::vector<Data> particles);
+        void setParticles(const Data* particles, uint32_t num_particles);
+
         constexpr ShapeType type() override;
 
         OptixBuildInput createBuildInput() override;
@@ -59,6 +62,7 @@ namespace prayground {
         Vec3f external_force;   // f_ext
         float time_step;        // dt
         float stiffness;        // k 
+        float viscosity;        // mu
     };
 
 } // namespace prayground

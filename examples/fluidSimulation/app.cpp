@@ -20,6 +20,28 @@ void App::handleCameraUpdate() {
     initResultBufferOnDevice();
 }
 
+void App::initParticles() {
+    float radius = 1.0f;
+    uint32_t seed = tea<4>(0, 0);
+    std::vector<SPHParticles::Data> particle_data;
+    constexpr int NUM_GRID = 25;
+    for (int x = 0; x < NUM_GRID; x++) {
+        for (int y = 0; y < NUM_GRID; y++) {
+            for (int z = 0; z < NUM_GRID; z++) {
+                Vec3f position = Vec3f(x, y, z) * 3.0f - 37.5f;
+                Vec3f velocity = Vec3f(0.0f);
+                float mass = 1.0f;
+                Vec3f perturbation = UniformSampler::get3D(seed) - 0.5f;
+                position += perturbation;
+                auto p = SPHParticles::Data{ position, velocity, mass, radius, 0.0f, 0.0f, Vec3f(0.0f) };
+                particle_data.push_back(p);
+            }
+        }
+    }
+    particles->setParticles(particle_data);
+    particles->copyToDevice();
+}
+
 // ------------------------------------------------------------------
 void App::setup()
 {
@@ -51,9 +73,9 @@ void App::setup()
     // Configuration of launch parameters
     params.width = width;
     params.height = height;
-    params.samples_per_launch = 1;
+    params.samples_per_launch = 8;
     params.frame = 0;
-    params.max_depth = 5;
+    params.max_depth = 4;
     params.result_buffer = (Vec4u*)result_bmp.deviceData();
     params.accum_buffer = (Vec4f*)accum_bmp.deviceData();
 
@@ -122,27 +144,11 @@ void App::setup()
 
     // Create surfaces
     auto floor_bsdf = make_shared<Diffuse>(diffuse_id, make_shared<CheckerTexture>(Vec3f(0.2f), Vec3f(0.8f), 10, checker_id));
-    auto particle_bsdf = make_shared<Dielectric>(dielectric_id, make_shared<ConstantTexture>(Vec3f(0.8f), constant_id), 1.5f);
+    auto particle_bsdf = make_shared<Diffuse>(diffuse_id, make_shared<ConstantTexture>(Vec3f(0.1f, 0.5f, 0.8f), constant_id));
 
     // Initialize fluid particles
-    float radius = 1.0f;
-    uint32_t seed = tea<4>(0, 0);
-    std::vector<SPHParticles::Data> particle_data;
-    constexpr int NUM_GRID = 25;
-    for (int x = 0; x < NUM_GRID; x++) {
-        for (int y = 0; y < NUM_GRID; y++) {
-            for (int z = 0; z < NUM_GRID; z++) {
-                Vec3f position = Vec3f(x, y, z) * 3.0f - 75.0f;
-                Vec3f velocity = Vec3f(0);
-                float mass = 1.0f;
-                Vec3f perturbation = UniformSampler::get3D(seed) - 0.5f;
-                position += perturbation;
-                auto p = SPHParticles::Data{ position, velocity, mass, radius, 0.0f, 0.0f, Vec3f(0.0f)};
-                particle_data.push_back(p);
-            }
-        }
-    }
-    particles = make_shared<SPHParticles>(particle_data);
+    particles = make_shared<SPHParticles>();
+    initParticles();
 
     // Fluid particle
     scene.addObject("particles", particles, particle_bsdf, { particle_prg }, Matrix4f::identity(), {true, true});
@@ -160,16 +166,27 @@ void App::setup()
 
     // Configuration of SPH parameter
     sph_config = {
-        .kernel_size = 10.0f, 
+        .kernel_size = 2.0f, 
         .rest_density = 1.0f,
-        .external_force = Vec3f(0, -9.8f, 0),
-        .time_step = 0.01f,
-        .stiffness = 0.1f
+        .external_force = Vec3f(0, -19.6f, 0),
+        .time_step = 0.05f,
+        .stiffness = 0.8f,
+        .viscosity = 0.8f
     };
 
     params.sph_config = sph_config;
 
     wall = AABB(Vec3f(-200, -100, -200), Vec3f(200, 500, 200));
+
+    // GUI setting
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+    const char* glsl_version = "#version 150";
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(pgGetCurrentWindow()->windowPtr(), true);
+    ImGui_ImplOpenGL3_Init(glsl_version);
 }
 
 // ------------------------------------------------------------------
@@ -195,7 +212,29 @@ void App::update()
 // ------------------------------------------------------------------
 void App::draw()
 {
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    ImGui::Begin("Fluid Simulation");
+
+    ImGui::SliderFloat("Kernel Size", &sph_config.kernel_size, 1.0f, 50.0f);
+    ImGui::SliderFloat("Rest Density", &sph_config.rest_density, 0.1f, 10.0f);
+    ImGui::SliderFloat("Time Step", &sph_config.time_step, 0.001f, 0.1f);
+    ImGui::SliderFloat("Stiffness", &sph_config.stiffness, 0.0f, 1.0f);
+    ImGui::SliderFloat("Viscosity", &sph_config.viscosity, 0.0f, 1.0f);
+    params.sph_config = sph_config;
+
+    if (ImGui::Button("Reset")) {
+        initParticles();
+    }
+
+    ImGui::End();
+    ImGui::Render();
+
     result_bmp.draw(0, 0);
+
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
 // ------------------------------------------------------------------

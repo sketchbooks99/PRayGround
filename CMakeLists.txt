@@ -118,15 +118,11 @@ function(PRAYGROUND_add_executable target_name_base target_name_var)
     "${OptiX_INCLUDE}")
   
   target_link_libraries(${target_name}
-    ${GLFW_LIB_NAME}
+    # ${GLFW_LIB_NAME}
     imgui
     nanovdb
     prayground
   )
-
-  # set_target_properties( ${target_name} PROPERTIES
-  #   COMPILE_DEFINITIONS
-  #   "OPTIX_SAMPLE_NAME_DEFINE=${target_name};OPTIX_SAMPLE_DIR_DEFINE=${target_name}" )
 
   if (WIN32)
     target_compile_options(${target_name} PUBLIC "/source-charset:utf-8")

@@ -25,6 +25,25 @@ namespace prayground {
 
 
     // ------------------------------------------------------------------
+    void SPHParticles::setParticles(std::vector<SPHParticles::Data> particles)
+    {
+        if (m_particles)
+            m_particles.reset();
+        m_particles = std::make_unique<Data[]>(particles.size());
+        memcpy(m_particles.get(), particles.data(), sizeof(Data) * particles.size());
+        m_num_particles = static_cast<uint32_t>(particles.size());
+    }
+
+    void SPHParticles::setParticles(const SPHParticles::Data* particles, uint32_t num_particles)
+    {
+        if (m_particles)
+            m_particles.reset();
+        m_particles = std::make_unique<Data[]>(num_particles);
+        memcpy(m_particles.get(), particles, sizeof(Data) * num_particles);
+        m_num_particles = num_particles;
+    }
+
+    // ------------------------------------------------------------------
     constexpr ShapeType SPHParticles::type()
     {
         return ShapeType::Custom;

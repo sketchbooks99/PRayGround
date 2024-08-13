@@ -59,9 +59,9 @@ namespace prayground {
             float r = length(pi.position - pj.position);
 
             // Ignore particles outside of kernel size
-            if (r > h) continue;
-
-            pi.density += pj.mass * particleKernel(r, h);
+            if (r < h) {
+                pi.density += pj.mass * particleKernel(r, h);
+            }
         }
     }
 
@@ -94,16 +94,15 @@ namespace prayground {
             auto pj = particles[j];
 
             Vec3f pi2pj = pj.position - pi.position;
+            auto dir = normalize(pi2pj);
             float r = length(pi2pj);
-            if (r > h || r < pi.radius) continue;
+            if (r < h) {
+                viscosity_force += config.viscosity * (pj.mass * (pj.velocity - pi.velocity) * 2.0f * particleKernelDerivative(r, h)) / pj.density;
 
-            viscosity_force += (pj.mass * (pj.velocity - pi.velocity) * 2.0f * particleKernelDerivative(r, h)) / pj.density;
-
-            //pressure_force += pi2pj * pj.mass * (pi.pressure / pow2(pi.density) + (pj.pressure / pow2(pj.density))) * particleKernelDerivative(r, h);
-            pressure_force += (pj.mass * (pj.pressure - pi.pressure) / (2 * pj.density)) * particleKernelDerivative(r, h);
+                pressure_force += -dir * (pj.mass * (pj.pressure + pi.pressure)) * particleKernelDerivative(r, h) / (2.0f * pj.density);
+            }
         }
-        //viscosity_force *= -1.0f * pi.mass * pi.velocity;
-        //viscosity_force *= 0.5f;
+        //viscosity_force *= config.viscosity;
 
         pressure_force *= -1.0f / pi.density;
 

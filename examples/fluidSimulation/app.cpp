@@ -30,7 +30,7 @@ void App::initParticles() {
             for (int z = 0; z < NUM_GRID; z++) {
                 Vec3f position = Vec3f(x, y, z) * 3.0f - 37.5f;
                 Vec3f velocity = Vec3f(0.0f);
-                float mass = 1.0f;
+                float mass = 0.5f;
                 Vec3f perturbation = UniformSampler::get3D(seed) - 0.5f;
                 position += perturbation;
                 auto p = SPHParticles::Data{ position, velocity, mass, radius, 0.0f, 0.0f, Vec3f(0.0f) };
@@ -83,7 +83,7 @@ void App::setup()
 
     // Camera settings
     std::shared_ptr<Camera> camera = make_shared<Camera>();
-    camera->setOrigin(150, 100, 150);
+    camera->setOrigin(300, 200, 300);
     camera->setLookat(0, 0, 0);
     camera->setUp(0, 1, 0);
     camera->setFov(40);
@@ -166,12 +166,14 @@ void App::setup()
 
     // Configuration of SPH parameter
     sph_config = {
-        .kernel_size = 2.0f, 
-        .rest_density = 1.0f,
-        .external_force = Vec3f(0, -19.6f, 0),
-        .time_step = 0.05f,
-        .stiffness = 0.8f,
-        .viscosity = 0.8f
+        .kernel_size = 7.0f, 
+        .rest_density = 50.0f,
+        .external_force = Vec3f(0, -9.8f, 0),
+        .time_step = 0.01f,
+        .stiffness = 0.1f,
+        .viscosity = 0.1f,
+        .ks = 20.0f,
+        .kd = 20.0f
     };
 
     params.sph_config = sph_config;
@@ -218,11 +220,13 @@ void App::draw()
 
     ImGui::Begin("Fluid Simulation");
 
-    ImGui::SliderFloat("Kernel Size", &sph_config.kernel_size, 1.0f, 50.0f);
-    ImGui::SliderFloat("Rest Density", &sph_config.rest_density, 0.1f, 10.0f);
+    ImGui::SliderFloat("Kernel Size", &sph_config.kernel_size, 1.0f, 100.0f);
+    ImGui::SliderFloat("Rest Density", &sph_config.rest_density, 0.1f, 100.0f);
     ImGui::SliderFloat("Time Step", &sph_config.time_step, 0.001f, 0.1f);
     ImGui::SliderFloat("Stiffness", &sph_config.stiffness, 0.0f, 1.0f);
     ImGui::SliderFloat("Viscosity", &sph_config.viscosity, 0.0f, 1.0f);
+    ImGui::SliderFloat("Ks", &sph_config.ks, 1.0f, 50.0f);
+    ImGui::SliderFloat("Kd", &sph_config.kd, 1.0f, 50.0f);
     params.sph_config = sph_config;
 
     if (ImGui::Button("Reset")) {

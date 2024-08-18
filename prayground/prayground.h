@@ -62,6 +62,7 @@
 #include "math/random.h"
 #include "math/noise.h"
 #include "math/vec.h"
+#include "math/interop.h"
 
 // shape include
 #include "shape/box.h"

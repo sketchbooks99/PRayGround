@@ -63,6 +63,10 @@ namespace prayground {
         float time_step;        // dt
         float stiffness;        // k 
         float viscosity;        // mu
+        
+        /* Parameters at wall collision penalty */
+        float ks;               
+        float kd;
     };
 
 } // namespace prayground

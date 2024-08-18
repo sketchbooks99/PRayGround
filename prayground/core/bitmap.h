@@ -32,6 +32,7 @@ namespace prayground {
         RGBA        = 4
     };
 
+    // TODO: Pixel format must be specified in the template parameter
     template <typename PixelT>
     class Bitmap_ {
     private:

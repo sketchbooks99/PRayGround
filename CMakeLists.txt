@@ -118,7 +118,6 @@ function(PRAYGROUND_add_executable target_name_base target_name_var)
     "${OptiX_INCLUDE}")
   
   target_link_libraries(${target_name}
-    # ${GLFW_LIB_NAME}
     imgui
     nanovdb
     prayground
@@ -170,6 +169,7 @@ add_subdirectory(examples/fluidSimulation)
 # Please add your custom applications to build here
 ################################################################
 # add_subdirectory(apps/empty_app)
+add_subdirectory(apps/rtcamp10)
 
 ################################################################
 # Unit test

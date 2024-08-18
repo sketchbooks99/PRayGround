@@ -41,4 +41,10 @@ namespace prayground {
         return accum;
     }
 
+    template <typename T>
+    INLINE HOSTDEVICE T barycentricInterop(T v0, T v1, T v2, Vec2f uv)
+    {
+        return v0 * (1.0f - uv.x() - uv.y()) + v1 * uv.x() + v2 * uv.y();
+    }
+
 } // namespace prayground

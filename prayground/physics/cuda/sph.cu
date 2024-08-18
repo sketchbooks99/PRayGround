@@ -131,18 +131,45 @@ namespace prayground {
 
         SPHParticles::Data& pi = particles[idx];
 
+        float kd = 20.0f;
+        float ks = 20.0f;
+        Vec3f pos_offset(0.0f);
+        if (pi.position.x() + pi.velocity.x() * config.time_step > wall.max().x() - 2.0f * pi.radius) {
+            const float dist = abs(pi.position.x() - wall.max().x());
+            pi.force += Vec3f(-1.0f, 0.0f, 0.0f) * (ks * dist + kd * dot(pi.velocity, Vec3f(1.0f, 0.0f, 0.0f)));
+        }
+        
+        if (pi.position.x() + pi.velocity.x() * config.time_step < wall.min().x() + 2.0f * pi.radius) {
+            const float dist = abs(pi.position.x() - wall.min().x());
+            pi.force += Vec3f(1.0f, 0.0f, 0.0f) * (ks * dist + kd * dot(pi.velocity, Vec3f(-1.0f, 0.0f, 0.0)));
+        }
+        
+        if (pi.position.y() + pi.velocity.y() * config.time_step > wall.max().y() - 2.0f * pi.radius) {
+            const float dist = abs(pi.position.y() - wall.max().y());
+            pi.force += Vec3f(0.0f, -1.0f, 0.0f) * (ks * dist + kd * dot(pi.velocity, Vec3f(0.0f, 1.0f, 0.0f)));
+        }
+        
+        if (pi.position.y() + pi.velocity.y() * config.time_step < wall.min().y() + 2.0f * pi.radius) {
+            const float dist = abs(pi.position.y() - wall.min().y());
+            pi.force += Vec3f(0.0f, 1.0f, 0.0f) * (ks * dist + kd * dot(pi.velocity, Vec3f(0.0f, -1.0f, 0.0f)));
+        }
+
+        if (pi.position.z() + pi.velocity.z() * config.time_step > wall.max().z() - 2.0f * pi.radius) {
+            const float dist = abs(pi.position.z() - wall.max().z());
+            pi.force += Vec3f(0.0f, 0.0f, -1.0f) * (ks * dist + kd * dot(pi.velocity, Vec3f(0.0f, 0.0f, 1.0f)));
+        }
+
+        if (pi.position.z() + pi.velocity.z() * config.time_step < wall.min().z() + 2.0f * pi.radius) {
+            const float dist = abs(pi.position.z() - wall.min().z());
+            pi.force += Vec3f(0.0f, 0.0f, 1.0f) * (ks * dist + kd * dot(pi.velocity, Vec3f(0.0f, 0.0f, -1.0f)));
+        }
+
+
         // Update velocity
         pi.velocity += config.time_step * pi.force / pi.mass;
 
-        if (pi.position.x() + pi.velocity.x() > wall.max().x() || pi.position.x() + pi.velocity.x() < wall.min().x())
-            pi.velocity.x() *= -0.5f;
-        if (pi.position.y() + pi.velocity.y() > wall.max().y() || pi.position.y() + pi.velocity.y() < wall.min().y())
-            pi.velocity.y() *= -0.5f;
-        if (pi.position.z() + pi.velocity.z() > wall.max().z() || pi.position.z() + pi.velocity.z() < wall.min().z())
-            pi.velocity.z() *= -0.5f;
-
         // Update position
-        pi.position += config.time_step * pi.velocity;
+        pi.position += config.time_step * pi.velocity + pos_offset;
     }
 
     extern "C" HOST void solveSPH(SPHParticles::Data* d_particles, uint32_t num_particles, SPHConfig config, AABB wall) 

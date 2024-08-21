@@ -20,6 +20,8 @@ set(sources
   core/material.h 
   core/onb.h 
   core/ray.h 
+  core/sampling.h
+  core/sampling.cpp
   core/sampler.h
   core/shape.h 
   core/shape.cpp

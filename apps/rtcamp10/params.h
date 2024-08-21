@@ -49,7 +49,7 @@ struct LaunchParams
 
     OptixTraversableHandle handle;
 
-    AreaEmitterInfo* lights;
+    LightInfo* lights;
     int num_lights;
 
     float white;

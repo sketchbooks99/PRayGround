@@ -3,6 +3,7 @@
 #include <cuda_runtime.h>
 #include <prayground/core/interaction.h>
 #include <prayground/optix/macros.h>
+#include <prayground/core/texture.h>
 
 #ifndef __CUDACC__
     #include <map>
@@ -16,7 +17,7 @@ namespace prayground {
 #ifndef __CUDACC__
     public:
         Material(const SurfaceCallableID& surface_callable_id)
-            : m_surface_callable_id(surface_callable_id) {}
+            : m_surface_callable_id(surface_callable_id), m_bumpmap(nullptr) {}
         virtual ~Material() {}
 
         virtual SurfaceType surfaceType() const = 0;
@@ -25,6 +26,9 @@ namespace prayground {
     
         virtual void copyToDevice() = 0;
 
+        virtual void setTexture(const std::shared_ptr<Texture>& texture) = 0;
+        virtual std::shared_ptr<Texture> texture() const = 0;
+
         virtual void free()
         {
             if (d_data)
@@ -32,6 +36,11 @@ namespace prayground {
                 CUDA_CHECK(cudaFree(d_data));
                 d_data = nullptr;
             }
+        }
+
+
+        void setBumpmap(const std::shared_ptr<Texture>& bumpmap) {
+            m_bumpmap = bumpmap;
         }
 
         const SurfaceCallableID& surfaceCallableID() const
@@ -43,6 +52,8 @@ namespace prayground {
     protected:
         SurfaceCallableID m_surface_callable_id;
         void* d_data { nullptr };
+
+        std::shared_ptr<Texture> m_bumpmap;
 #endif // __CUDACC__
     };
 

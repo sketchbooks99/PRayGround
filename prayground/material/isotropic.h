@@ -41,6 +41,10 @@ public:
         CUDA_CHECK(cudaMemcpy(d_data, &data, sizeof(Data), cudaMemcpyHostToDevice));
     }
 
+    // Dummy override
+    void setTexture(const std::shared_ptr<Texture>& texture) override {}
+    std::shared_ptr<Texture> texture() const override { return nullptr; }
+
     Data getData() const { return { m_albedo }; }
 private:
     Vec3f m_albedo;

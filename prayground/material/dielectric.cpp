@@ -3,8 +3,17 @@
 namespace prayground {
 
     // ------------------------------------------------------------------
-    Dielectric::Dielectric(const SurfaceCallableID& surface_callable_id, const std::shared_ptr<Texture>& texture, float ior, float absorb_coeff, Sellmeier sellmeier)
-        : Material(surface_callable_id), m_texture(texture), m_ior(ior), m_absorb_coeff(absorb_coeff), m_sellmeier(sellmeier)
+    Dielectric::Dielectric(
+        const SurfaceCallableID& surface_callable_id, 
+        const std::shared_ptr<Texture>& texture, 
+        float ior, 
+        float absorb_coeff, 
+        Sellmeier sellmeier, 
+        float tf_thickness,
+        float tf_ior, 
+        Vec3f extinction
+    )
+        : Material(surface_callable_id), m_texture(texture), m_ior(ior), m_absorb_coeff(absorb_coeff), m_sellmeier(sellmeier), m_tf_thickness(tf_thickness), m_tf_ior(tf_ior), m_extinction(extinction)
     {
 
     }
@@ -80,6 +89,42 @@ namespace prayground {
         m_sellmeier = sellmeier;
     }
 
+    Sellmeier Dielectric::sellmeierType() const
+    {
+        return m_sellmeier;
+    }
+
+    void Dielectric::setThinfilmThickness(const float tf_thickness)
+    {
+        m_tf_thickness = tf_thickness;
+    }
+
+    float Dielectric::thinfilmThickness() const
+    {
+        return m_tf_thickness;
+    }
+
+    void Dielectric::setThinfilmIOR(const float tf_ior)
+    {
+        m_tf_ior = tf_ior;
+    }
+
+    float Dielectric::thinfilmIOR() const
+    {
+        return m_tf_ior;
+    }
+
+    void Dielectric::setExtinction(const Vec3f& extinction)
+    {
+        m_extinction = extinction;
+    }
+
+    Vec3f Dielectric::extinction() const
+    {
+        return m_extinction;
+    }
+
+
     // ------------------------------------------------------------------
     void Dielectric::setTexture(const std::shared_ptr<Texture>& texture)
     {
@@ -97,7 +142,10 @@ namespace prayground {
             .texture = m_texture->getData(),
             .ior = m_ior,
             .absorb_coeff = m_absorb_coeff,
-            .sellmeier = m_sellmeier
+            .sellmeier = m_sellmeier, 
+            .tf_thickness = m_tf_thickness,
+            .tf_ior = m_tf_ior,
+            .extinction = m_extinction
         };
     }
 

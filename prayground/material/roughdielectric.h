@@ -35,8 +35,8 @@ namespace prayground {
 
         void free() override;
 
-        void setTexture(const std::shared_ptr<Texture>& texture);
-        std::shared_ptr<Texture> texture() const;
+        void setTexture(const std::shared_ptr<Texture>& texture) override;
+        std::shared_ptr<Texture> texture() const override;
 
         void setRoughness(const float roughness);
         const float& roughness() const;

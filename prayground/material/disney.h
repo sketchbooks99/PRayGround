@@ -40,8 +40,8 @@ namespace prayground {
         void copyToDevice() override;
         void free() override;
 
-        void setBaseTexture(const std::shared_ptr<Texture>& base);
-        std::shared_ptr<Texture> base() const;
+        void setTexture(const std::shared_ptr<Texture>& base) override;
+        std::shared_ptr<Texture> texture() const override;
 
         void setSubsurface(float subsurface);
         float subsurface() const;

@@ -31,6 +31,16 @@ namespace prayground {
         };
     }
 
+    void Diffuse::setTexture(const std::shared_ptr<Texture>& texture)
+    {
+        m_texture = texture;
+    }
+
+    std::shared_ptr<Texture> Diffuse::texture() const
+    {
+        return m_texture;
+    }
+
     // ------------------------------------------------------------------
     void Diffuse::copyToDevice()
     {

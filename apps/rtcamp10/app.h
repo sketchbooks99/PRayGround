@@ -3,6 +3,13 @@
 #include <prayground/prayground.h>
 #include "params.h"
 
+// GUI
+#include <prayground/ext/imgui/imgui.h>
+#include <prayground/ext/imgui/imgui_impl_glfw.h>
+#include <prayground/ext/imgui/imgui_impl_opengl3.h>
+
+using namespace std;
+
 class App : public BaseApp 
 {
 public:
@@ -21,7 +28,6 @@ public:
 private:
     void initResultBufferOnDevice();
     void handleCameraUpdate();
-    void initParticles();
 
     Context ctx;
     CUstream stream;

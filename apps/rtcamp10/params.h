@@ -18,8 +18,6 @@ struct Triangle {
     Vec3f n;
 };
 
-
-
 struct LightInfo
 {
     void* shape_data;

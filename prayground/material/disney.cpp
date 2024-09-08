@@ -69,11 +69,11 @@ namespace prayground {
     }
 
     // ------------------------------------------------------------------
-    void Disney::setBaseTexture(const std::shared_ptr<Texture>& base)
+    void Disney::setTexture(const std::shared_ptr<Texture>& base)
     {
         m_base = base;
     }
-    std::shared_ptr<Texture> Disney::base() const 
+    std::shared_ptr<Texture> Disney::texture() const 
     {
         return m_base;
     }

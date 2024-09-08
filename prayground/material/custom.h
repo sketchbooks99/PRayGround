@@ -55,6 +55,10 @@ namespace prayground {
     DataT data() const { 
       return m_data; 
     }
+    
+    // Dummy override
+    void setTexture(const std::shared_ptr<Texture>& texture) override {}
+    std::shared_ptr<Texture> texture() const override { return nullptr; }
 
   private:
     SurfaceType m_surface_type;

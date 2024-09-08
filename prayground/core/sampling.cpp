@@ -3,6 +3,27 @@
 
 namespace prayground {
 
+    // Distribution1D
+    Distribution1D::Distribution1D(float* data, uint32_t size) {
+        func = new float[size];
+        memcpy(func, data, size * sizeof(float));
+
+        cdf = new float[size + 1]; cdf[0] = 0.0f;
+        for (int i = 1; i < size + 1; ++i)
+            cdf[i] = cdf[i - 1] + func[i - 1] / size;
+
+        func_int = cdf[size];
+        if (func_int == 0.0f) {
+            for (int i = 1; i < size + 1; ++i)
+                cdf[i] = float(i) / float(size);
+        }
+        else {
+            for (int i = 1; i < size + 1; ++i)
+                cdf[i] /= func_int;
+        }
+    }
+
+    // Distribution2D
     Distribution2D::Distribution2D(float* data, uint32_t width, uint32_t height) {
         init(data, width, height);
     }

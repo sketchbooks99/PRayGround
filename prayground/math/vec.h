@@ -631,6 +631,47 @@ namespace prayground {
     }
 
     template <typename T>
+    INLINE HOSTDEVICE Vec3<T> clamp(const Vec3<T>& v, const Vec3<T>& a, const Vec3<T>& b)
+    {
+        return Vec3<T>{clamp(v[0], a[0], b[0]), clamp(v[1], a[1], b[1]), clamp(v[2], a[2], b[2])};
+    }
+
+    template <typename T>
+    INLINE HOSTDEVICE Vec3<T> sqrt(const Vec3<T>& v) {
+        return Vec3<T>{sqrtf((float)v[0]), sqrtf((float)v[1]), sqrtf((float)v[2])};
+    }
+
+    template <>
+    INLINE HOSTDEVICE Vec3<float> sqrt(const Vec3<float>& v)
+    {
+        return Vec3<float>{sqrtf(v[0]), sqrtf(v[1]), sqrtf(v[2])};
+    }
+
+    template <typename T>
+    INLINE HOSTDEVICE Vec3<T> max(const Vec3<T>& v, const T t)
+    {
+        return Vec3<T>{max(v[0], t), max(v[1], t), max(v[2], t)};
+    }
+
+    template <typename T>
+    INLINE HOSTDEVICE Vec3<T> max(const Vec3<T>& a, const Vec3<T>& b)
+    {
+        return Vec3<T>{max(a[0], b[0]), max(a[1], b[1]), max(a[2], b[2])};
+    }
+
+    template <typename T>
+    INLINE HOSTDEVICE Vec3<T> min(const Vec3<T>& v, const T t)
+    {
+        return Vec3<T>{min(v[0], t), min(v[1], t), min(v[2], t)};
+    }
+
+    template <typename T>
+    INLINE HOSTDEVICE Vec3<T> min(const Vec3<T>& a, const Vec3<T>& b)
+    {
+        return Vec3<T>{min(a[0], b[0]), min(a[1], b[1]), min(a[2], b[2])};
+    }
+
+    template <typename T>
     INLINE HOSTDEVICE Vec3<T> faceforward(const Vec3<T>& n, const Vec3<T>& i, const Vec3<T>& nref)
     {
         return n * copysignf(1.0f, dot(i, nref));

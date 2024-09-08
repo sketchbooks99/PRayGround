@@ -19,13 +19,24 @@ namespace prayground {
             float ior;
             float absorb_coeff; 
             Sellmeier sellmeier;
+
+            // Thin film
+            float tf_thickness;
+            float tf_ior;
+            Vec3f extinction;
         };
 
 #ifndef __CUDACC__
         Dielectric(
             const SurfaceCallableID& surface_callable_id, 
-            const std::shared_ptr<Texture>& texture, float ior, 
-            float absorb_coeff = 0.0f, Sellmeier sellmeier = Sellmeier::None);
+            const std::shared_ptr<Texture>& texture, 
+            float ior, 
+            float absorb_coeff = 0.0f, 
+            Sellmeier sellmeier = Sellmeier::None, 
+            float tf_thickness = 0.0f, 
+            float tf_ior = 0.0f, 
+            Vec3f extinction = Vec3f(0.0f)
+        );
         ~Dielectric();
 
         SurfaceType surfaceType() const override;
@@ -42,6 +53,16 @@ namespace prayground {
         float absorbCoeff() const;
 
         void setSellmeierType(Sellmeier ior_func);
+        Sellmeier sellmeierType() const;
+        
+        void setThinfilmThickness(const float tf_thickness);
+        float thinfilmThickness() const;
+
+        void setThinfilmIOR(const float tf_ior);
+        float thinfilmIOR() const;
+
+        void setExtinction(const Vec3f& extinction);
+        Vec3f extinction() const;
 
         void setTexture(const std::shared_ptr<Texture>& texture);
         std::shared_ptr<Texture> texture() const;
@@ -63,6 +84,10 @@ namespace prayground {
         */
         Sellmeier m_sellmeier;
 
+        // Thin film
+        float m_tf_thickness;
+        float m_tf_ior;
+        Vec3f m_extinction;
 #endif
     };
 

@@ -264,6 +264,7 @@ extern "C" __device__ Vec3f __direct_callable__area_emitter(SurfaceInteraction* 
     const Vec3f base = optixDirectCall<Vec3f, const Vec2f&, void*>(area->texture.prg_id, si->shading.uv, area->texture.data);
     si->albedo = base;
     si->emission = base * area->intensity * is_emitted;
+    return si->emission;
 }
 
 // Textures

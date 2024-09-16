@@ -8,7 +8,7 @@ namespace prayground {
         const std::shared_ptr<Texture>& texture, 
         bool twosided, 
         Vec3f ior,
-        float tf_thickness, 
+        const std::shared_ptr<Texture>& tf_thickness, 
         float tf_ior, 
         Vec3f extinction
     )
@@ -44,6 +44,8 @@ namespace prayground {
     {
         if (!m_texture->devicePtr())
             m_texture->copyToDevice();
+        if (m_tf_thickness != nullptr && !m_tf_thickness->devicePtr())
+            m_tf_thickness->copyToDevice();
 
         Data data = this->getData();
 
@@ -93,11 +95,11 @@ namespace prayground {
         return m_ior;
     }
 
-    void Conductor::setThinfilmThickness(float tf_thickness)
+    void Conductor::setThinfilmThickness(const std::shared_ptr<Texture>& tf_thickness)
     {
         m_tf_thickness = tf_thickness;
     }
-    float Conductor::thinfilmThickness() const 
+    std::shared_ptr<Texture> Conductor::thinfilmThickness() const
     {
         return m_tf_thickness;
     }
@@ -127,7 +129,7 @@ namespace prayground {
             .texture = m_texture->getData(),
             .twosided = m_twosided,
             .ior = m_ior,
-            .tf_thickness = m_tf_thickness,
+            .tf_thickness = m_tf_thickness->getData(),
             .tf_ior = m_tf_ior,
             .extinction = m_extinction
         };

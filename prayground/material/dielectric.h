@@ -15,13 +15,17 @@ namespace prayground {
     class Dielectric final : public Material {
     public:
         struct Data {
+            // Base material data
+            Material::Data base;
+
+            // Dielectric data
             Texture::Data texture;
             float ior;
             float absorb_coeff; 
             Sellmeier sellmeier;
 
             // Thin film
-            float tf_thickness;
+            Texture::Data tf_thickness;
             float tf_ior;
             Vec3f extinction;
         };
@@ -33,7 +37,7 @@ namespace prayground {
             float ior, 
             float absorb_coeff = 0.0f, 
             Sellmeier sellmeier = Sellmeier::None, 
-            float tf_thickness = 0.0f, 
+            const std::shared_ptr<Texture>& thickness = nullptr, 
             float tf_ior = 0.0f, 
             Vec3f extinction = Vec3f(0.0f)
         );
@@ -55,8 +59,8 @@ namespace prayground {
         void setSellmeierType(Sellmeier ior_func);
         Sellmeier sellmeierType() const;
         
-        void setThinfilmThickness(const float tf_thickness);
-        float thinfilmThickness() const;
+        void setThinfilmThickness(const std::shared_ptr<Texture>& tf_thickness);
+        std::shared_ptr<Texture> thinfilmThickness() const;
 
         void setThinfilmIOR(const float tf_ior);
         float thinfilmIOR() const;
@@ -85,7 +89,7 @@ namespace prayground {
         Sellmeier m_sellmeier;
 
         // Thin film
-        float m_tf_thickness;
+        std::shared_ptr<Texture> m_tf_thickness;
         float m_tf_ior;
         Vec3f m_extinction;
 #endif

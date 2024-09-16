@@ -13,11 +13,18 @@ namespace prayground {
 
     // Abstract class to compute scattering properties.
     class Material {
+
+    public:
+        struct Data {
+            cudaTextureObject_t bumpmap { 0 };
+            int bumpmap_id { -1 };
+        };
+
     /// @note Make this class be dummy class on device kernels
 #ifndef __CUDACC__
     public:
-        Material(const SurfaceCallableID& surface_callable_id)
-            : m_surface_callable_id(surface_callable_id), m_bumpmap(nullptr) {}
+        Material(const SurfaceCallableID& surface_callable_id, const std::shared_ptr<Texture>& bumpmap = nullptr, int bumpmap_id = -1)
+            : m_surface_callable_id(surface_callable_id), m_bumpmap(bumpmap), m_bumpmap_id(bumpmap_id) {}
         virtual ~Material() {}
 
         virtual SurfaceType surfaceType() const = 0;
@@ -54,6 +61,9 @@ namespace prayground {
         void* d_data { nullptr };
 
         std::shared_ptr<Texture> m_bumpmap;
+        int m_bumpmap_id { -1 };
+
+        // TODO: Displacement map
 #endif // __CUDACC__
     };
 

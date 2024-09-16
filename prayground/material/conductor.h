@@ -12,6 +12,8 @@ namespace prayground {
     class Conductor final : public Material {
     public:
         struct Data {
+            Material::Data base;
+
             Texture::Data texture;
             bool twosided;
 
@@ -19,7 +21,7 @@ namespace prayground {
             Vec3f ior;
 
             // Thin film
-            float tf_thickness;
+            Texture::Data tf_thickness;
             float tf_ior;
             Vec3f extinction;
         };
@@ -30,7 +32,7 @@ namespace prayground {
             const std::shared_ptr<Texture>& texture, 
             bool twosided=true, 
             Vec3f ior = Vec3f(1.0f),
-            float tf_thickness=0.0f,
+            const std::shared_ptr<Texture>& tf_thickness = nullptr,
             float tf_ior=0.0f, 
             Vec3f extinction = Vec3f(0.0f)
         );
@@ -52,8 +54,8 @@ namespace prayground {
         void setIOR(const Vec3f& ior);
         Vec3f ior() const;
 
-        void setThinfilmThickness(float tf_thickness);
-        float thinfilmThickness() const;
+        void setThinfilmThickness(const std::shared_ptr<Texture>& tf_thickness);
+        std::shared_ptr<Texture> thinfilmThickness() const;
 
         void setThinfilmIOR(float tf_ior);
         float thinfilmIOR() const;
@@ -70,7 +72,7 @@ namespace prayground {
         Vec3f m_ior;
 
         // Thin film
-        float m_tf_thickness;
+        std::shared_ptr<Texture> m_tf_thickness;
         float m_tf_ior;
         Vec3f m_extinction;
 #endif

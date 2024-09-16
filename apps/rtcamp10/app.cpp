@@ -130,15 +130,22 @@ void App::setup()
         /* ior = */ 1.33f,
         /* absorb_coeff = */ 0.0f,
         /* sellmeier = */ Sellmeier::None, 
-        /* tf_thickness = */ 550.0f, 
+        /* tf_thickness = */ make_shared<ConstantTexture>(Vec3f(550.0f), constant_id),
         /* tf_ior = */ 1.7f, 
         /* extinction = */ Vec3f(1.0f));
     auto bunny_mat = make_shared<Conductor>(conductor_id, 
         /* texture = */ make_shared<ConstantTexture>(Vec3f(0.8f, 0.8f, 0.3f), constant_id), 
         /* twosided = */ true, 
         /* ior = */ Vec3f(1.9f),
-        /* tf_thickness = */ 550.0f,
+        /* tf_thickness = */ make_shared<ConstantTexture>(Vec3f(550.0f), constant_id),
         /* tf_ior = */ 1.33f, 
+        /* extinction = */ Vec3f(1.5f));
+    auto katsuo_mat = make_shared<Conductor>(conductor_id,
+        /* texture = */ make_shared<ConstantTexture>(Vec3f(1.0f), constant_id),
+        /* twosided = */ true,
+        /* ior = */ Vec3f(1.9f),
+        /* tf_thickness = */ make_shared<BitmapTexture>("Katsuo thinfilm thickness.png", bitmap_id),
+        /* tf_ior = */ 1.33f,
         /* extinction = */ Vec3f(1.5f));
 
     // Setup geometries in the scene
@@ -153,6 +160,11 @@ void App::setup()
     shared_ptr<TriangleMesh> bunny = make_shared<TriangleMesh>("resources/model/bunny.obj");
     bunny->calculateNormalSmooth();
     scene.addObject("bunny", bunny, bunny_mat, { mesh_prg, mesh_shadow_prg }, Matrix4f::translate(10, -80, 0) * Matrix4f::scale(100));
+
+    shared_ptr<TriangleMesh> katsuo = make_shared<TriangleMesh>("Katsuo.obj");
+    katsuo->calculateNormalSmooth();
+    scene.addObject("katsuo", katsuo, katsuo_mat, { mesh_prg, mesh_shadow_prg }, Matrix4f::translate(30, -80, 0) * Matrix4f::scale(10));
+    
 
 
     // Setup context
@@ -204,7 +216,8 @@ void App::draw()
     auto bunny_mat = dynamic_pointer_cast<Conductor>(bunny->materials[0]);
     
     Vec3f ior = bunny_mat->ior();
-    float tf_thickness = bunny_mat->thinfilmThickness();
+    auto tf_thickness_ptr = dynamic_pointer_cast<ConstantTexture>(bunny_mat->thinfilmThickness());
+    Vec3f tf_thickness = tf_thickness_ptr->color();
     float tf_ior = bunny_mat->thinfilmIOR();
     Vec3f extinction = bunny_mat->extinction();
     if (ImGui::TreeNode("Bunny")) {
@@ -216,8 +229,9 @@ void App::draw()
             bunny_mat->setThinfilmIOR(tf_ior);
             is_camera_updated = true;
         }
-        if (ImGui::SliderFloat("TF Thickness", &tf_thickness, 0.0f, 1000.0f)) {
-            bunny_mat->setThinfilmThickness(tf_thickness);
+        if (ImGui::SliderFloat("TF Thickness", &tf_thickness.x(), 0.0f, 1000.0f)) {
+            tf_thickness_ptr->setColor(tf_thickness);
+            bunny_mat->setThinfilmThickness(tf_thickness_ptr);
             is_camera_updated = true;
         }
         if (ImGui::SliderFloat3("Extinction", &extinction[0], 0.0f, 20.0f)) {
@@ -234,7 +248,8 @@ void App::draw()
     auto sphere_mat = dynamic_pointer_cast<Dielectric>(sphere->materials[0]);
 
     float ior_sphere = sphere_mat->ior();
-    float tf_thickness_sphere = sphere_mat->thinfilmThickness();
+    auto tf_thickness_sphere_ptr = dynamic_pointer_cast<ConstantTexture>(sphere_mat->thinfilmThickness());
+    Vec3f tf_thickness_sphere = tf_thickness_sphere_ptr->color();
     float tf_ior_sphere = sphere_mat->thinfilmIOR();
     Vec3f extinction_sphere = sphere_mat->extinction();
     if (ImGui::TreeNode("Sphere")) {
@@ -246,8 +261,9 @@ void App::draw()
             sphere_mat->setThinfilmIOR(tf_ior_sphere);
             is_camera_updated = true;
         }
-        if (ImGui::SliderFloat("TF Thickness", &tf_thickness_sphere, 0.0f, 1000.0f)) {
-            sphere_mat->setThinfilmThickness(tf_thickness_sphere);
+        if (ImGui::SliderFloat("TF Thickness", &tf_thickness_sphere.x(), 0.0f, 1000.0f)) {
+            tf_thickness_sphere_ptr->setColor(tf_thickness_sphere);
+            sphere_mat->setThinfilmThickness(tf_thickness_sphere_ptr);
             is_camera_updated = true;
         }
         if (ImGui::SliderFloat3("Extinction", &extinction_sphere[0], 0.0f, 20.0f)) {

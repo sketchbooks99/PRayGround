@@ -9,7 +9,7 @@ namespace prayground {
         float ior, 
         float absorb_coeff, 
         Sellmeier sellmeier, 
-        float tf_thickness,
+        const std::shared_ptr<Texture>& tf_thickness,
         float tf_ior, 
         Vec3f extinction
     )
@@ -45,6 +45,8 @@ namespace prayground {
     {
         if (!m_texture->devicePtr())
             m_texture->copyToDevice();
+        if (m_tf_thickness != nullptr && !m_tf_thickness->devicePtr())
+            m_tf_thickness->copyToDevice();
     
         Data data = this->getData();
 
@@ -94,12 +96,12 @@ namespace prayground {
         return m_sellmeier;
     }
 
-    void Dielectric::setThinfilmThickness(const float tf_thickness)
+    void Dielectric::setThinfilmThickness(const std::shared_ptr<Texture>& tf_thickness)
     {
         m_tf_thickness = tf_thickness;
     }
 
-    float Dielectric::thinfilmThickness() const
+    std::shared_ptr<Texture> Dielectric::thinfilmThickness() const
     {
         return m_tf_thickness;
     }
@@ -143,7 +145,7 @@ namespace prayground {
             .ior = m_ior,
             .absorb_coeff = m_absorb_coeff,
             .sellmeier = m_sellmeier, 
-            .tf_thickness = m_tf_thickness,
+            .tf_thickness = m_tf_thickness->getData(),
             .tf_ior = m_tf_ior,
             .extinction = m_extinction
         };

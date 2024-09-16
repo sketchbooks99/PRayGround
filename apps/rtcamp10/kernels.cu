@@ -444,13 +444,14 @@ extern "C" DEVICE BSDFSample __direct_callable__sample_conductor(SurfaceInteract
     sample.wi = si->wi;
     si->trace_terminate = false;
 
-    Vec3f tf_thickness = conductor->tf_thickness;
-
     const Vec3f albedo = optixDirectCall<Vec3f, const Vec2f&, void*>(
         conductor->texture.prg_id, si->shading.uv, conductor->texture.data);
     si->albedo = albedo;
     const float cos_theta = dot(si->wi, si->shading.n);
-    sample.value = fresnelAiry(1.0f, cos_theta, conductor->ior, conductor->extinction, conductor->tf_thickness, conductor->tf_ior) * albedo;
+    Vec3f tf_thickness = optixDirectCall<Vec3f, const Vec2f&, void*>(conductor->tf_thickness.prg_id, si->shading.uv, conductor->tf_thickness.data);
+    if (conductor->tf_thickness.prg_id == 0)
+        tf_thickness *= 100.0f;
+    sample.value = fresnelAiry(1.0f, cos_theta, conductor->ior, conductor->extinction, tf_thickness.x(), conductor->tf_ior) * albedo;
     si->emission = 0.0f;
 
     sample.pdf = 1.0f;
@@ -483,7 +484,8 @@ extern "C" DEVICE BSDFSample __direct_callable__sample_dielectric(SurfaceInterac
     bool cannot_refract = (ni / nt) * sin_theta > 1.0f;
 
     sample.value = albedo;
-    Vec3f tf_value = fresnelAiry(1.0f, cos_theta, 1.0f, dielectric->extinction, dielectric->tf_thickness, dielectric->tf_ior) * albedo;
+    Vec3f tf_thickness = optixDirectCall<Vec3f, const Vec2f&, void*>(dielectric->tf_thickness.prg_id, si->shading.uv, dielectric->tf_thickness.data);
+    Vec3f tf_value = fresnelAiry(1.0f, cos_theta, 1.0f, dielectric->extinction, tf_thickness.x(), dielectric->tf_ior) * albedo;
 
     if (into)
         sample.value *= tf_value;

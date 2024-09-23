@@ -4,16 +4,19 @@
 namespace prayground {
     Layered::Layered(std::vector<std::shared_ptr<Material>> materials)
     {
+        m_materials = materials;
     }
     void Layered::addTopLayer(const std::shared_ptr<Material>& material)
     {
+        m_materials.push_back(material);
     }
     void Layered::addBottomLayer(const std::shared_ptr<Material>& material)
     {
+        m_materials.insert(m_materials.begin(), material);
     }
     SurfaceType Layered::surfaceType() const
     {
-        return SurfaceType();
+        return SurfaceType::Layered;
     }
     void Layered::copyToDevice()
     {

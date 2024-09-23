@@ -101,6 +101,9 @@ extern "C" DEVICE void __raygen__pinhole() {
         si.emission = 0.0f;
         si.albedo = 0.0f;
         si.trace_terminate = false;
+        SurfaceInfo surface_info;
+        surface_info.type == SurfaceType::None;
+        si.surface_info = &surface_info;
 
         int depth = 0;
         for (;;) {
@@ -114,10 +117,11 @@ extern "C" DEVICE void __raygen__pinhole() {
                 break;
             }
 
-            if (si.surface_info.type == SurfaceType::AreaEmitter) {
+
+            if (si.surface_info->type == SurfaceType::AreaEmitter) {
                 // Evaluating emission from emitter
                 Vec3f emission = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
-                    si.surface_info.callable_id.sample, &si, si.surface_info.data
+                    si.surface_info->callable_id.sample, &si, si.surface_info->data
                 );
 
                 result += throughput * emission;
@@ -125,17 +129,17 @@ extern "C" DEVICE void __raygen__pinhole() {
                     break;
             } 
             // Specular surfaces
-            else if (+(si.surface_info.type & SurfaceType::Delta)) {
+            else if (+(si.surface_info->type & SurfaceType::Delta)) {
                 // Sample scattered ray
                 BSDFSample bsdf = optixDirectCall<BSDFSample, SurfaceInteraction*, void*>(
-                    si.surface_info.callable_id.sample, &si, si.surface_info.data);
+                    si.surface_info->callable_id.sample, &si, si.surface_info->data);
 
                 throughput *= bsdf.value / bsdf.pdf;
             }
             // Rough surface sampling with MIS
-            else if (+(si.surface_info.type & SurfaceType::Rough)) {
+            else if (+(si.surface_info->type & SurfaceType::Rough)) {
                 BSDFSample bsdf = optixDirectCall<BSDFSample, SurfaceInteraction*, void*>(
-                    si.surface_info.callable_id.sample, &si, si.surface_info.data);
+                    si.surface_info->callable_id.sample, &si, si.surface_info->data);
 
                 throughput *= bsdf.value / bsdf.pdf;
                 //LightInfo light;
@@ -150,7 +154,7 @@ extern "C" DEVICE void __raygen__pinhole() {
                 //    LightInteraction li;
                 //    // Sampling light point
                 //    optixDirectCall<void, SurfaceInteraction*, LightInfo*, LightInteraction*, void*>(
-                //        si.surface_info.callable_id.sample, &si, &light, &li, si.surface_info.data
+                //        si.surface_info->callable_id.sample, &si, &light, &li, si.surface_info->data
                 //    );
                 //    Vec3f to_light = li.p - si.p;
                 //    const float dist = length(to_light);
@@ -166,10 +170,10 @@ extern "C" DEVICE void __raygen__pinhole() {
                 //        // Next event estimation
                 //        if (!hit_object) {
                 //            const Vec3f bsdf = optixDirectCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
-                //                si.surface_info.callable_id.bsdf, &si, si.surface_info.data, light_dir);
+                //                si.surface_info->callable_id.bsdf, &si, si.surface_info->data, light_dir);
 
                 //            const float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*, const Vec3f&>(
-                //                si.surface_info.callable_id.pdf, &si, si.surface_info.data, light_dir);
+                //                si.surface_info->callable_id.pdf, &si, si.surface_info->data, light_dir);
 
                 //            const float cos_theta = dot(-light_dir, li.n);
 
@@ -184,14 +188,14 @@ extern "C" DEVICE void __raygen__pinhole() {
                 //    {
                 //        // Importance sampling according to the BSDFSample
                 //        optixDirectCall<void, SurfaceInteraction*, void*>(
-                //            si.surface_info.callable_id.sample, &si, si.surface_info.data);
+                //            si.surface_info->callable_id.sample, &si, si.surface_info->data);
                 //        
                 //        // Evaluate BSDFSample
                 //        const Vec3f bsdf = optixDirectCall<Vec3f, SurfaceInteraction*, void*, const Vec3f&>(
-                //            si.surface_info.callable_id.bsdf, &si, si.surface_info.data, si.wi);
+                //            si.surface_info->callable_id.bsdf, &si, si.surface_info->data, si.wi);
 
                 //        float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*, const Vec3f&>(
-                //            si.surface_info.callable_id.pdf, &si, si.surface_info.data, si.wi);
+                //            si.surface_info->callable_id.pdf, &si, si.surface_info->data, si.wi);
 
                 //        const float light_pdf = optixDirectCall<float, const LightInfo&, const Vec3f&, const Vec3f&, LightInteraction&>(
                 //            light.pdf_id, light, si.p, light_dir, li);
@@ -242,7 +246,6 @@ extern "C" DEVICE void __miss__envmap() {
 
     si->shading.uv = shading.uv;
     si->trace_terminate = true;
-    si->surface_info.type = SurfaceType::None;
     si->emission = optixDirectCall<Vec3f, const Vec2f&, void*>(env->texture.prg_id, si->shading.uv, env->texture.data);
 }
 
@@ -289,7 +292,7 @@ extern "C" DEVICE void __direct_callable__sample_light_plane(
         li.pdf = t * t / (li.area * cos_theta);
 
     // Emission from light source
-    const auto* area_light = (const AreaEmitter::Data*)light.surface_info.data;
+    const auto* area_light = (const AreaEmitter::Data*)light.surface_info->data;
     float is_emitted = 1.0f;
     if (!area_light->twosided)
         is_emitted = (float)(dot(li.n, normalize(wi)) > 0.0f);
@@ -333,7 +336,7 @@ extern "C" DEVICE void __direct_callable__sample_light_triangle(
         li.pdf = t * t / (li.area * cos_theta);
 
     // Emission from light source
-    const auto* area_light = (const AreaEmitter::Data*)light.surface_info.data;
+    const auto* area_light = (const AreaEmitter::Data*)light.surface_info->data;
     float is_emitted = 1.0f;
     if (!area_light->twosided)
         is_emitted = (float)(dot(li.n, normalize(wi)) > 0.0f);
@@ -392,12 +395,24 @@ extern "C" DEVICE void __closesthit__mesh() {
 
     Shading shading = pgGetMeshShading(mesh_data, optixGetTriangleBarycentrics(), optixGetPrimitiveIndex());
 
+    SurfaceInteraction* si = getPtrFromTwoPayloads<SurfaceInteraction, 0>();
+
+
+    if (data->surface_info->use_bumpmap) {
+        Frame shading_frame = Frame::FromXZ(shading.dpdu, shading.n);
+        // Fetch bumpmap normal 
+        Vec3f n = optixDirectCall<Vec3f, Vec2f&, void*>(data->surface_info->bumpmap.prg_id, shading.uv, data->surface_info->bumpmap.data);
+        n = normalize(n * 2.0f - 1.0f);
+        // Transform normal from tangent space to local space
+        n = shading_frame.fromLocal(n);
+        shading.n = normalize(n);
+    }
+
     // Transform shading from object to world space
     shading.n = normalize(optixTransformNormalFromObjectToWorldSpace(shading.n));
     shading.dpdu = optixTransformVectorFromObjectToWorldSpace(shading.dpdu);
     shading.dpdv = optixTransformVectorFromObjectToWorldSpace(shading.dpdv);
 
-    SurfaceInteraction* si = getPtrFromTwoPayloads<SurfaceInteraction, 0>();
     si->p = ray.at(ray.tmax);
     si->shading = shading;
     si->t = ray.tmax;
@@ -447,11 +462,16 @@ extern "C" DEVICE BSDFSample __direct_callable__sample_conductor(SurfaceInteract
     const Vec3f albedo = optixDirectCall<Vec3f, const Vec2f&, void*>(
         conductor->texture.prg_id, si->shading.uv, conductor->texture.data);
     si->albedo = albedo;
-    const float cos_theta = dot(si->wi, si->shading.n);
-    Vec3f tf_thickness = optixDirectCall<Vec3f, const Vec2f&, void*>(conductor->tf_thickness.prg_id, si->shading.uv, conductor->tf_thickness.data);
-    if (conductor->tf_thickness.prg_id == 0)
-        tf_thickness *= 100.0f;
-    sample.value = fresnelAiry(1.0f, cos_theta, conductor->ior, conductor->extinction, tf_thickness.x(), conductor->tf_ior) * albedo;
+    // Apply thinfilm interaction
+    const float cos_theta = dot(si->wo, si->shading.n);
+    Vec3f tf_thickness = optixDirectCall<Vec3f, const Vec2f&, void*>(conductor->thinfilm.thickness.prg_id, si->shading.uv, conductor->thinfilm.thickness.data);
+    tf_thickness *= conductor->thinfilm.thickness_scale;
+    Vec3f thinfilm = fresnelAiry(1.0f, cos_theta, conductor->thinfilm.ior, conductor->thinfilm.extinction, tf_thickness.x(), conductor->thinfilm.tf_ior);
+    
+    const float a = fminf(1.0f, tf_thickness.x() / conductor->thinfilm.thickness_scale) * 0.5f;
+
+    //sample.value = albedo * thinfilm;
+    sample.value = lerp(albedo, thinfilm, a);
     si->emission = 0.0f;
 
     sample.pdf = 1.0f;
@@ -484,14 +504,43 @@ extern "C" DEVICE BSDFSample __direct_callable__sample_dielectric(SurfaceInterac
     bool cannot_refract = (ni / nt) * sin_theta > 1.0f;
 
     sample.value = albedo;
-    Vec3f tf_thickness = optixDirectCall<Vec3f, const Vec2f&, void*>(dielectric->tf_thickness.prg_id, si->shading.uv, dielectric->tf_thickness.data);
-    Vec3f tf_value = fresnelAiry(1.0f, cos_theta, 1.0f, dielectric->extinction, tf_thickness.x(), dielectric->tf_ior) * albedo;
+    Vec3f tf_thickness = optixDirectCall<Vec3f, const Vec2f&, void*>(dielectric->thinfilm.thickness.prg_id, si->shading.uv, dielectric->thinfilm.thickness.data);
+    Vec3f tf_value = fresnelAiry(1.0f, cos_theta, 1.0f, dielectric->thinfilm.extinction, tf_thickness.x(), dielectric->thinfilm.tf_ior) * albedo;
 
     if (into)
         sample.value *= tf_value;
     si->emission = 0.0f;
 
     sample.pdf = 1.0f;
+    return sample;
+}
+
+// Disney
+extern "C" DEVICE BSDFSample __direct_callable__sample_disney(SurfaceInteraction* si, void* data) {
+    const Disney::Data* disney = reinterpret_cast<Disney::Data*>(data);
+
+    BSDFSample sample;
+
+    // Importance sampling
+    si->wi = pgImportanceSamplingDisney(disney, -si->wo, si->shading, si->seed);
+    si->trace_terminate = false;
+    sample.wi = si->wi;
+
+    // Evaluate BSDF
+    const Vec3f albedo = optixDirectCall<Vec3f, const Vec2f&, void*>(disney->albedo.prg_id, si->shading.uv, disney->albedo.data);
+    si->albedo = albedo;
+    const float cos_theta = dot(si->wi, si->shading.n);
+    Vec3f tf_thickness = optixDirectCall<Vec3f, const Vec2f&, void*>(disney->thinfilm.thickness.prg_id, si->shading.uv, disney->thinfilm.thickness.data);
+    tf_thickness *= disney->thinfilm.thickness_scale;
+
+    Vec3f tf_value = fresnelAiry(1.0f, cos_theta, disney->thinfilm.ior, disney->thinfilm.extinction, tf_thickness.x(), disney->thinfilm.tf_ior);
+    float mag_albedo = length(albedo);
+    tf_value = normalize(tf_value) * mag_albedo;
+    Vec3f bsdf = pgGetDisneyBRDF(disney, -si->wo, si->wi, si->shading, tf_value);
+    sample.value = bsdf;
+
+    // PDF
+    sample.pdf = pgGetDisneyPDF(disney, -si->wo, si->wi, si->shading);
     return sample;
 }
 

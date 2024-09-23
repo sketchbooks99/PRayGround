@@ -5,20 +5,21 @@ namespace prayground {
     // ------------------------------------------------------------------
     Disney::Disney(
         const SurfaceCallableID& surface_callable_id,
-        const std::shared_ptr<Texture>& base, 
+        const std::shared_ptr<Texture>& albedo, 
         float subsurface, float metallic,
         float specular, float specular_tint, 
         float roughness, float anisotropic, 
         float sheen, float sheen_tint, 
-        float clearcoat, float clearcoat_gloss, bool twosided)
+        float clearcoat, float clearcoat_gloss, bool twosided, 
+        Thinfilm thinfilm)
     : Material(surface_callable_id), 
-      m_base(base), 
+      m_albedo(albedo), 
       m_subsurface(subsurface), m_metallic(metallic),
       m_specular(specular), m_specular_tint(specular_tint),
       m_roughness(roughness), m_anisotropic(anisotropic), 
       m_sheen(sheen), m_sheen_tint(sheen_tint),
       m_clearcoat(clearcoat), m_clearcoat_gloss(clearcoat_gloss), 
-      m_twosided(twosided)
+      m_twosided(twosided), m_thinfilm(thinfilm)
     {
 
     }
@@ -34,22 +35,14 @@ namespace prayground {
         return SurfaceType::RoughReflection;
     }
 
-    SurfaceInfo Disney::surfaceInfo() const
-    {
-        ASSERT(d_data, "Material data on device hasn't been allocated yet.");
-
-        return SurfaceInfo{
-            .data = d_data,
-            .callable_id = m_surface_callable_id,
-            .type = SurfaceType::RoughReflection
-        };
-    }
-
     // ------------------------------------------------------------------
     void Disney::copyToDevice()
     {
-        if (!m_base->devicePtr())
-            m_base->copyToDevice();
+        Material::copyToDevice();
+        if (!m_albedo->devicePtr())
+            m_albedo->copyToDevice();
+
+        m_thinfilm.copyToDevice();
 
         Data data = this->getData();
 
@@ -60,22 +53,38 @@ namespace prayground {
             &data, sizeof(Data),
             cudaMemcpyHostToDevice
         ));
+
+        // Copy surface info to the device
+        SurfaceInfo surface_info{
+            .data = d_data,
+            .callable_id = m_surface_callable_id,
+            .type = surfaceType(),
+            .use_bumpmap = useBumpmap(),
+            .bumpmap = bumpmapData()
+        };
+        if (!d_surface_info)
+            CUDA_CHECK(cudaMalloc(&d_surface_info, sizeof(SurfaceInfo)));
+        CUDA_CHECK(cudaMemcpy(
+            d_surface_info,
+            &surface_info, sizeof(SurfaceInfo),
+            cudaMemcpyHostToDevice
+        ));
     }
 
     void Disney::free() 
     {
-        m_base->free();
+        m_albedo->free();
         Material::free();
     }
 
     // ------------------------------------------------------------------
-    void Disney::setTexture(const std::shared_ptr<Texture>& base)
+    void Disney::setTexture(const std::shared_ptr<Texture>& albedo)
     {
-        m_base = base;
+        m_albedo = albedo;
     }
     std::shared_ptr<Texture> Disney::texture() const 
     {
-        return m_base;
+        return m_albedo;
     }
 
     // ------------------------------------------------------------------
@@ -188,10 +197,19 @@ namespace prayground {
         return m_twosided;
     }
 
+    void Disney::setThinfilm(const Thinfilm& thinfilm)
+    {
+        m_thinfilm = thinfilm;
+    }
+    Thinfilm Disney::thinfilm() const
+    {
+        return m_thinfilm;
+    }
+
     Disney::Data Disney::getData() const
     {
         return Data{
-            .base = m_base->getData(),
+            .albedo = m_albedo->getData(),
             .subsurface = m_subsurface,
             .metallic = m_metallic,
             .specular = m_specular,
@@ -202,7 +220,8 @@ namespace prayground {
             .sheen_tint = m_sheen_tint,
             .clearcoat = m_clearcoat,
             .clearcoat_gloss = m_clearcoat_gloss,
-            .twosided = m_twosided
+            .twosided = m_twosided, 
+            .thinfilm = m_thinfilm.getData()
         };
     }
 

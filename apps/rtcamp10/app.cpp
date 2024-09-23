@@ -121,6 +121,7 @@ void App::setup()
     SurfaceCallableID diffuse_id = { setupCallable("__direct_callable__sample_diffuse", "") };
     SurfaceCallableID conductor_id = { setupCallable("__direct_callable__sample_conductor", "") };
     SurfaceCallableID dielectric_id = { setupCallable("__direct_callable__sample_dielectric", "") };
+    SurfaceCallableID disney_id = { setupCallable("__direct_callable__sample_disney", "") };
     SurfaceCallableID area_emitter_id = { setupCallable("__direct_callable__area_emitter", "") };
 
     // Create surfaces
@@ -130,23 +131,31 @@ void App::setup()
         /* ior = */ 1.33f,
         /* absorb_coeff = */ 0.0f,
         /* sellmeier = */ Sellmeier::None, 
-        /* tf_thickness = */ make_shared<ConstantTexture>(Vec3f(550.0f), constant_id),
-        /* tf_ior = */ 1.7f, 
-        /* extinction = */ Vec3f(1.0f));
+        Thinfilm(
+            /* ior = */ Vec3f(1.33f),
+            /* thickness = */ make_shared<ConstantTexture>(Vec3f(550.0f), constant_id),
+            /* thickness_scale = */ 1.0f,
+            /* tf_ior = */ 1.7f,
+            /* extinction = */ Vec3f(1.0f)
+        ));
     auto bunny_mat = make_shared<Conductor>(conductor_id, 
         /* texture = */ make_shared<ConstantTexture>(Vec3f(0.8f, 0.8f, 0.3f), constant_id), 
         /* twosided = */ true, 
+        Thinfilm(
+            /* ior = */ Vec3f(1.9f),
+            /* thickness = */ make_shared<ConstantTexture>(Vec3f(550.0f), constant_id),
+            /* thickness_scale = */ 1.0f,
+            /* tf_ior = */ 1.33f,
+            /* extinction = */ Vec3f(1.5f)
+        ));
+    auto katsuo_mat = make_shared<Disney>(disney_id, make_shared<BitmapTexture>("Katsuo Color.png", bitmap_id));
+    katsuo_mat->setBumpmap(make_shared<BitmapTexture>("Katsuo Normal.png", bitmap_id));
+    katsuo_mat->setThinfilm(Thinfilm(
         /* ior = */ Vec3f(1.9f),
-        /* tf_thickness = */ make_shared<ConstantTexture>(Vec3f(550.0f), constant_id),
-        /* tf_ior = */ 1.33f, 
-        /* extinction = */ Vec3f(1.5f));
-    auto katsuo_mat = make_shared<Conductor>(conductor_id,
-        /* texture = */ make_shared<ConstantTexture>(Vec3f(1.0f), constant_id),
-        /* twosided = */ true,
-        /* ior = */ Vec3f(1.9f),
-        /* tf_thickness = */ make_shared<BitmapTexture>("Katsuo thinfilm thickness.png", bitmap_id),
+        /* thickness = */ make_shared<BitmapTexture>("Katsuo thinfilm thickness.png", bitmap_id),
+        /* thickness_scale = */ 550.0f,
         /* tf_ior = */ 1.33f,
-        /* extinction = */ Vec3f(1.5f));
+        /* extinction = */ Vec3f(1.5f)));
 
     // Setup geometries in the scene
     // Floor geometry
@@ -157,7 +166,7 @@ void App::setup()
     shared_ptr<Sphere> sphere = make_shared<Sphere>(10);
     scene.addObject("sphere", sphere, sphere_mat, { sphere_prg, sphere_shadow_prg }, Matrix4f::translate(-10, -80, 0));
 
-    shared_ptr<TriangleMesh> bunny = make_shared<TriangleMesh>("resources/model/bunny.obj");
+    shared_ptr<TriangleMesh> bunny = make_shared<TriangleMesh>("uv_bunny.obj");
     bunny->calculateNormalSmooth();
     scene.addObject("bunny", bunny, bunny_mat, { mesh_prg, mesh_shadow_prg }, Matrix4f::translate(10, -80, 0) * Matrix4f::scale(100));
 
@@ -212,67 +221,67 @@ void App::draw()
     ImGui::Begin("RTCAMP 10 editor");
 
     // Update bunny parameters
-    auto bunny = scene.getObject("bunny");
-    auto bunny_mat = dynamic_pointer_cast<Conductor>(bunny->materials[0]);
-    
-    Vec3f ior = bunny_mat->ior();
-    auto tf_thickness_ptr = dynamic_pointer_cast<ConstantTexture>(bunny_mat->thinfilmThickness());
-    Vec3f tf_thickness = tf_thickness_ptr->color();
-    float tf_ior = bunny_mat->thinfilmIOR();
-    Vec3f extinction = bunny_mat->extinction();
-    if (ImGui::TreeNode("Bunny")) {
-        if (ImGui::SliderFloat3("IOR", &ior[0], 1.0f, 20.0f)) {
-            bunny_mat->setIOR(ior);
-            is_camera_updated = true;
-        }
-        if (ImGui::SliderFloat("TF IOR", &tf_ior, 1.0f, 20.0f)) {
-            bunny_mat->setThinfilmIOR(tf_ior);
-            is_camera_updated = true;
-        }
-        if (ImGui::SliderFloat("TF Thickness", &tf_thickness.x(), 0.0f, 1000.0f)) {
-            tf_thickness_ptr->setColor(tf_thickness);
-            bunny_mat->setThinfilmThickness(tf_thickness_ptr);
-            is_camera_updated = true;
-        }
-        if (ImGui::SliderFloat3("Extinction", &extinction[0], 0.0f, 20.0f)) {
-            bunny_mat->setExtinction(extinction);
-            is_camera_updated = true;
-        }
+    //auto bunny = scene.getObject("bunny");
+    //auto bunny_mat = dynamic_pointer_cast<Conductor>(bunny->materials[0]);
+    //
+    //Vec3f ior = bunny_mat->ior();
+    //auto tf_thickness_ptr = dynamic_pointer_cast<ConstantTexture>(bunny_mat->thinfilmThickness());
+    //Vec3f tf_thickness = tf_thickness_ptr->color();
+    //float tf_ior = bunny_mat->thinfilmIOR();
+    //Vec3f extinction = bunny_mat->extinction();
+    //if (ImGui::TreeNode("Bunny")) {
+    //    if (ImGui::SliderFloat3("IOR", &ior[0], 1.0f, 20.0f)) {
+    //        bunny_mat->setIOR(ior);
+    //        is_camera_updated = true;
+    //    }
+    //    if (ImGui::SliderFloat("TF IOR", &tf_ior, 1.0f, 20.0f)) {
+    //        bunny_mat->setThinfilmIOR(tf_ior);
+    //        is_camera_updated = true;
+    //    }
+    //    if (ImGui::SliderFloat("TF Thickness", &tf_thickness.x(), 0.0f, 1000.0f)) {
+    //        tf_thickness_ptr->setColor(tf_thickness);
+    //        bunny_mat->setThinfilmThickness(tf_thickness_ptr);
+    //        is_camera_updated = true;
+    //    }
+    //    if (ImGui::SliderFloat3("Extinction", &extinction[0], 0.0f, 20.0f)) {
+    //        bunny_mat->setExtinction(extinction);
+    //        is_camera_updated = true;
+    //    }
 
-        ImGui::TreePop();
-    }
-    bunny_mat->copyToDevice();
+    //    ImGui::TreePop();
+    //}
+    //bunny_mat->copyToDevice();
 
-    // Update sphere parameters
-    auto sphere = scene.getObject("sphere");
-    auto sphere_mat = dynamic_pointer_cast<Dielectric>(sphere->materials[0]);
+    //// Update sphere parameters
+    //auto sphere = scene.getObject("sphere");
+    //auto sphere_mat = dynamic_pointer_cast<Dielectric>(sphere->materials[0]);
 
-    float ior_sphere = sphere_mat->ior();
-    auto tf_thickness_sphere_ptr = dynamic_pointer_cast<ConstantTexture>(sphere_mat->thinfilmThickness());
-    Vec3f tf_thickness_sphere = tf_thickness_sphere_ptr->color();
-    float tf_ior_sphere = sphere_mat->thinfilmIOR();
-    Vec3f extinction_sphere = sphere_mat->extinction();
-    if (ImGui::TreeNode("Sphere")) {
-        if (ImGui::SliderFloat("IOR", &ior_sphere, 1.0f, 20.0f)) {
-            sphere_mat->setIor(ior_sphere);
-            is_camera_updated = true;
-        }
-        if (ImGui::SliderFloat("TF IOR", &tf_ior_sphere, 1.0f, 20.0f)) {
-            sphere_mat->setThinfilmIOR(tf_ior_sphere);
-            is_camera_updated = true;
-        }
-        if (ImGui::SliderFloat("TF Thickness", &tf_thickness_sphere.x(), 0.0f, 1000.0f)) {
-            tf_thickness_sphere_ptr->setColor(tf_thickness_sphere);
-            sphere_mat->setThinfilmThickness(tf_thickness_sphere_ptr);
-            is_camera_updated = true;
-        }
-        if (ImGui::SliderFloat3("Extinction", &extinction_sphere[0], 0.0f, 20.0f)) {
-            sphere_mat->setExtinction(extinction_sphere);
-            is_camera_updated = true;
-        }
-        ImGui::TreePop();
-    }
-    sphere_mat->copyToDevice();
+    //float ior_sphere = sphere_mat->ior();
+    //auto tf_thickness_sphere_ptr = dynamic_pointer_cast<ConstantTexture>(sphere_mat->thinfilmThickness());
+    //Vec3f tf_thickness_sphere = tf_thickness_sphere_ptr->color();
+    //float tf_ior_sphere = sphere_mat->thinfilmIOR();
+    //Vec3f extinction_sphere = sphere_mat->extinction();
+    //if (ImGui::TreeNode("Sphere")) {
+    //    if (ImGui::SliderFloat("IOR", &ior_sphere, 1.0f, 20.0f)) {
+    //        sphere_mat->setIor(ior_sphere);
+    //        is_camera_updated = true;
+    //    }
+    //    if (ImGui::SliderFloat("TF IOR", &tf_ior_sphere, 1.0f, 20.0f)) {
+    //        sphere_mat->setThinfilmIOR(tf_ior_sphere);
+    //        is_camera_updated = true;
+    //    }
+    //    if (ImGui::SliderFloat("TF Thickness", &tf_thickness_sphere.x(), 0.0f, 1000.0f)) {
+    //        tf_thickness_sphere_ptr->setColor(tf_thickness_sphere);
+    //        sphere_mat->setThinfilmThickness(tf_thickness_sphere_ptr);
+    //        is_camera_updated = true;
+    //    }
+    //    if (ImGui::SliderFloat3("Extinction", &extinction_sphere[0], 0.0f, 20.0f)) {
+    //        sphere_mat->setExtinction(extinction_sphere);
+    //        is_camera_updated = true;
+    //    }
+    //    ImGui::TreePop();
+    //}
+    //sphere_mat->copyToDevice();
         
 
     ImGui::End();

@@ -9,11 +9,14 @@ namespace prayground {
         float ior, 
         float absorb_coeff, 
         Sellmeier sellmeier, 
-        const std::shared_ptr<Texture>& tf_thickness,
-        float tf_ior, 
-        Vec3f extinction
+        Thinfilm thinfilm
     )
-        : Material(surface_callable_id), m_texture(texture), m_ior(ior), m_absorb_coeff(absorb_coeff), m_sellmeier(sellmeier), m_tf_thickness(tf_thickness), m_tf_ior(tf_ior), m_extinction(extinction)
+        : Material(surface_callable_id), 
+        m_texture(texture), 
+        m_ior(ior), 
+        m_absorb_coeff(absorb_coeff), 
+        m_sellmeier(sellmeier), 
+        m_thinfilm(thinfilm)
     {
 
     }
@@ -29,24 +32,14 @@ namespace prayground {
         return SurfaceType::Refraction;
     }
 
-    SurfaceInfo Dielectric::surfaceInfo() const
-    {
-        ASSERT(d_data, "Material data on device hasn't been allocated yet.");
-
-        return SurfaceInfo{
-            .data = d_data,
-            .callable_id = m_surface_callable_id,
-            .type = SurfaceType::Refraction
-        };
-    }
-
     // ------------------------------------------------------------------
     void Dielectric::copyToDevice()
     {
+        Material::copyToDevice();
+        
         if (!m_texture->devicePtr())
             m_texture->copyToDevice();
-        if (m_tf_thickness != nullptr && !m_tf_thickness->devicePtr())
-            m_tf_thickness->copyToDevice();
+        m_thinfilm.copyToDevice();
     
         Data data = this->getData();
 
@@ -55,6 +48,22 @@ namespace prayground {
         CUDA_CHECK(cudaMemcpy(
             d_data,
             &data, sizeof(Data),
+            cudaMemcpyHostToDevice
+        ));
+
+        // Copy surface info to the device
+        SurfaceInfo surface_info{
+            .data = d_data,
+            .callable_id = m_surface_callable_id,
+            .type = surfaceType(),
+            .use_bumpmap = useBumpmap(),
+            .bumpmap = bumpmapData()
+        };
+        if (!d_surface_info)
+            CUDA_CHECK(cudaMalloc(&d_surface_info, sizeof(SurfaceInfo)));
+        CUDA_CHECK(cudaMemcpy(
+            d_surface_info,
+            &surface_info, sizeof(SurfaceInfo),
             cudaMemcpyHostToDevice
         ));
     }
@@ -96,34 +105,13 @@ namespace prayground {
         return m_sellmeier;
     }
 
-    void Dielectric::setThinfilmThickness(const std::shared_ptr<Texture>& tf_thickness)
+    void Dielectric::setThinfilm(const Thinfilm& thinfilm)
     {
-        m_tf_thickness = tf_thickness;
+        m_thinfilm = thinfilm;
     }
-
-    std::shared_ptr<Texture> Dielectric::thinfilmThickness() const
+    Thinfilm Dielectric::thinfilm() const
     {
-        return m_tf_thickness;
-    }
-
-    void Dielectric::setThinfilmIOR(const float tf_ior)
-    {
-        m_tf_ior = tf_ior;
-    }
-
-    float Dielectric::thinfilmIOR() const
-    {
-        return m_tf_ior;
-    }
-
-    void Dielectric::setExtinction(const Vec3f& extinction)
-    {
-        m_extinction = extinction;
-    }
-
-    Vec3f Dielectric::extinction() const
-    {
-        return m_extinction;
+        return m_thinfilm;
     }
 
 
@@ -145,9 +133,7 @@ namespace prayground {
             .ior = m_ior,
             .absorb_coeff = m_absorb_coeff,
             .sellmeier = m_sellmeier, 
-            .tf_thickness = m_tf_thickness->getData(),
-            .tf_ior = m_tf_ior,
-            .extinction = m_extinction
+            .thinfilm = m_thinfilm.getData()
         };
     }
 

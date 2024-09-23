@@ -7,12 +7,12 @@ namespace prayground {
         const SurfaceCallableID& surface_callable_id, 
         const std::shared_ptr<Texture>& texture, 
         bool twosided, 
-        Vec3f ior,
-        const std::shared_ptr<Texture>& tf_thickness, 
-        float tf_ior, 
-        Vec3f extinction
+        Thinfilm thinfilm
     )
-        : Material(surface_callable_id), m_texture(texture), m_twosided(twosided), m_ior(ior), m_tf_thickness(tf_thickness), m_tf_ior(tf_ior), m_extinction(extinction)
+        : Material(surface_callable_id), 
+        m_texture(texture), 
+        m_twosided(twosided), 
+        m_thinfilm(thinfilm)
     {
     
     }
@@ -28,24 +28,14 @@ namespace prayground {
         return SurfaceType::Reflection;
     }
 
-    SurfaceInfo Conductor::surfaceInfo() const
-    {
-        ASSERT(d_data, "Material data on device hasn't been allocated yet.");
-
-        return SurfaceInfo{
-            .data = d_data,
-            .callable_id = m_surface_callable_id,
-            .type = SurfaceType::RoughReflection
-        };
-    }
-
     // ------------------------------------------------------------------
     void Conductor::copyToDevice()
     {
+        Material::copyToDevice();
         if (!m_texture->devicePtr())
             m_texture->copyToDevice();
-        if (m_tf_thickness != nullptr && !m_tf_thickness->devicePtr())
-            m_tf_thickness->copyToDevice();
+
+        m_thinfilm.copyToDevice();
 
         Data data = this->getData();
 
@@ -54,6 +44,22 @@ namespace prayground {
         CUDA_CHECK(cudaMemcpy(
             d_data,
             &data, sizeof(Data), 
+            cudaMemcpyHostToDevice
+        ));
+
+        // Copy surface info to the device
+        SurfaceInfo surface_info { 
+            .data = d_data,
+            .callable_id = m_surface_callable_id,
+            .type = surfaceType(),
+            .use_bumpmap = useBumpmap(),
+            .bumpmap = bumpmapData()
+        };
+        if (!d_surface_info)
+            CUDA_CHECK(cudaMalloc(&d_surface_info, sizeof(SurfaceInfo)));
+        CUDA_CHECK(cudaMemcpy(
+            d_surface_info,
+            &surface_info, sizeof(SurfaceInfo),
             cudaMemcpyHostToDevice
         ));
     }
@@ -85,42 +91,13 @@ namespace prayground {
         return m_twosided;
     }
 
-    void Conductor::setIOR(const Vec3f& ior)
+    void Conductor::setThinfilm(const Thinfilm& thinfilm)
     {
-        m_ior = ior;
+        m_thinfilm = thinfilm;
     }
-
-    Vec3f Conductor::ior() const
+    Thinfilm Conductor::thinfilm() const
     {
-        return m_ior;
-    }
-
-    void Conductor::setThinfilmThickness(const std::shared_ptr<Texture>& tf_thickness)
-    {
-        m_tf_thickness = tf_thickness;
-    }
-    std::shared_ptr<Texture> Conductor::thinfilmThickness() const
-    {
-        return m_tf_thickness;
-    }
-
-    void Conductor::setThinfilmIOR(float tf_ior) 
-    {
-        m_tf_ior = tf_ior;
-    }
-    float Conductor::thinfilmIOR() const
-    {
-        return m_tf_ior;
-    }
-
-    void Conductor::setExtinction(const Vec3f& extinction)
-    {
-        m_extinction = extinction;
-    }
-
-    Vec3f Conductor::extinction() const
-    {
-        return m_extinction;
+        return m_thinfilm;
     }
 
     Conductor::Data Conductor::getData() const
@@ -128,10 +105,7 @@ namespace prayground {
         return Data{
             .texture = m_texture->getData(),
             .twosided = m_twosided,
-            .ior = m_ior,
-            .tf_thickness = m_tf_thickness->getData(),
-            .tf_ior = m_tf_ior,
-            .extinction = m_extinction
+            .thinfilm = m_thinfilm.getData()
         };
     }
 

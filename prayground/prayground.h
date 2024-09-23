@@ -63,6 +63,7 @@
 #include "math/noise.h"
 #include "math/vec.h"
 #include "math/interop.h"
+#include "math/frame.h"
 
 // shape include
 #include "shape/box.h"

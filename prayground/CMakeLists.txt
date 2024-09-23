@@ -125,6 +125,8 @@ set(sources
   material/roughdielectric.h
   material/roughdielectric.cpp
   material/isotropic.h
+  material/thinfilm.h
+  material/layered.h
   material/cuda/materials.cuh
 
   # Textures ==========

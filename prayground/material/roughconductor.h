@@ -26,8 +26,6 @@ namespace prayground {
 
         SurfaceType surfaceType() const override;
 
-        SurfaceInfo surfaceInfo() const override;
-
         void copyToDevice() override;
 
         void free() override;

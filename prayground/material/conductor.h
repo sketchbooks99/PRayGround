@@ -6,24 +6,17 @@
 
 #include <prayground/core/material.h>
 #include <prayground/core/texture.h>
+#include "thinfilm.h"
 
 namespace prayground {
 
     class Conductor final : public Material {
     public:
         struct Data {
-            Material::Data base;
-
             Texture::Data texture;
             bool twosided;
 
-            // Fresnel
-            Vec3f ior;
-
-            // Thin film
-            Texture::Data tf_thickness;
-            float tf_ior;
-            Vec3f extinction;
+            Thinfilm::Data thinfilm;
         };
 
 #ifndef __CUDACC__
@@ -31,16 +24,11 @@ namespace prayground {
             const SurfaceCallableID& surface_callable_id, 
             const std::shared_ptr<Texture>& texture, 
             bool twosided=true, 
-            Vec3f ior = Vec3f(1.0f),
-            const std::shared_ptr<Texture>& tf_thickness = nullptr,
-            float tf_ior=0.0f, 
-            Vec3f extinction = Vec3f(0.0f)
+            Thinfilm thinfilm = Thinfilm()
         );
         ~Conductor();
 
         SurfaceType surfaceType() const override;
-
-        SurfaceInfo surfaceInfo() const override;
 
         void copyToDevice() override;
         void free() override;
@@ -51,30 +39,15 @@ namespace prayground {
         void setTwosided(bool twosided);
         bool twosided() const;
 
-        void setIOR(const Vec3f& ior);
-        Vec3f ior() const;
-
-        void setThinfilmThickness(const std::shared_ptr<Texture>& tf_thickness);
-        std::shared_ptr<Texture> thinfilmThickness() const;
-
-        void setThinfilmIOR(float tf_ior);
-        float thinfilmIOR() const;
-
-        void setExtinction(const Vec3f& extinction);
-        Vec3f extinction() const;
+        void setThinfilm(const Thinfilm& thinfilm);
+        Thinfilm thinfilm() const;
 
         Data getData() const;
     private:
         std::shared_ptr<Texture> m_texture;
         bool m_twosided;
 
-        // Fresnel
-        Vec3f m_ior;
-
-        // Thin film
-        std::shared_ptr<Texture> m_tf_thickness;
-        float m_tf_ior;
-        Vec3f m_extinction;
+        Thinfilm m_thinfilm;
 #endif
     };
 

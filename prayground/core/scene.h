@@ -1131,7 +1131,7 @@ namespace prayground {
                     for (uint32_t i = 0; i < _NRay; i++)
                     {
                         pgHitgroupRecord& record = m_sbt.hitgroupRecord(ID + i);
-                        record.data = { shape->devicePtr(), m->surfaceInfo() };
+                        record.data = { shape->devicePtr(), m->surfaceInfoDevicePtr() };
                     }
                     ID += _NRay;
                 }
@@ -1156,7 +1156,7 @@ namespace prayground {
                     for (uint32_t i = 0; i < _NRay; i++)
                     {
                         pgHitgroupRecord& record = m_sbt.hitgroupRecord(ID + i);
-                        record.data = { shape->devicePtr(), e->surfaceInfo() };
+                        record.data = { shape->devicePtr(), e->surfaceInfoDevicePtr() };
                     }
                     ID += _NRay;
                 }
@@ -1237,7 +1237,7 @@ namespace prayground {
                     for (auto& m : materials) {
                         m->copyToDevice();
                         pgHitgroupData hg_data;
-                        hg_data = { shape->devicePtr(), m->surfaceInfo() };
+                        hg_data = { shape->devicePtr(), m->surfaceInfoDevicePtr() };
                         for (uint32_t i = 0; i < _NRay; i++)
                             hitgroup_data[ID + i] = hg_data;
                         ID += _NRay;
@@ -1260,7 +1260,7 @@ namespace prayground {
                     for (auto& e : emitters) {
                         e->copyToDevice();
                         pgHitgroupData hg_data;
-                        hg_data = { shape->devicePtr(), e->surfaceInfo() };
+                        hg_data = { shape->devicePtr(), e->surfaceInfoDevicePtr() };
                         for (uint32_t i = 0; i < _NRay; i++)
                             hitgroup_data[ID + i] = hg_data;
                         ID += _NRay;

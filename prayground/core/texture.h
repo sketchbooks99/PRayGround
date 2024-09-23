@@ -39,7 +39,7 @@ namespace prayground {
             void* data;
 
             /* SBT index of direct/continuation callable program for texture fetch */
-            uint32_t prg_id;
+            int32_t prg_id;
         };
 
 #ifndef __CUDACC__
@@ -61,12 +61,12 @@ namespace prayground {
 
         Data getData() const { return { d_data, m_prg_id }; }
 
-        void setProgramId(const uint32_t prg_id) { m_prg_id = prg_id; }
-        uint32_t programId() const { return m_prg_id; }
+        void setProgramId(const int32_t prg_id) { m_prg_id = prg_id; }
+        int32_t programId() const { return m_prg_id; }
 
     protected:
         void* d_data{ nullptr };
-        uint32_t m_prg_id;
+        int32_t m_prg_id;
 #endif
     };
 

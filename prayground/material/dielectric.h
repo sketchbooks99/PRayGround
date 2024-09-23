@@ -2,6 +2,7 @@
 
 #include <prayground/core/material.h>
 #include <prayground/core/texture.h>
+#include "thinfilm.h"
 
 namespace prayground {
 
@@ -15,19 +16,14 @@ namespace prayground {
     class Dielectric final : public Material {
     public:
         struct Data {
-            // Base material data
-            Material::Data base;
-
             // Dielectric data
             Texture::Data texture;
             float ior;
             float absorb_coeff; 
             Sellmeier sellmeier;
 
-            // Thin film
-            Texture::Data tf_thickness;
-            float tf_ior;
-            Vec3f extinction;
+            // Thinfilm
+            Thinfilm::Data thinfilm;
         };
 
 #ifndef __CUDACC__
@@ -37,15 +33,11 @@ namespace prayground {
             float ior, 
             float absorb_coeff = 0.0f, 
             Sellmeier sellmeier = Sellmeier::None, 
-            const std::shared_ptr<Texture>& thickness = nullptr, 
-            float tf_ior = 0.0f, 
-            Vec3f extinction = Vec3f(0.0f)
+            Thinfilm thinfilm = Thinfilm()
         );
         ~Dielectric();
 
         SurfaceType surfaceType() const override;
-
-        SurfaceInfo surfaceInfo() const override;
 
         void copyToDevice() override;
         void free() override;
@@ -58,18 +50,12 @@ namespace prayground {
 
         void setSellmeierType(Sellmeier ior_func);
         Sellmeier sellmeierType() const;
-        
-        void setThinfilmThickness(const std::shared_ptr<Texture>& tf_thickness);
-        std::shared_ptr<Texture> thinfilmThickness() const;
-
-        void setThinfilmIOR(const float tf_ior);
-        float thinfilmIOR() const;
-
-        void setExtinction(const Vec3f& extinction);
-        Vec3f extinction() const;
 
         void setTexture(const std::shared_ptr<Texture>& texture);
         std::shared_ptr<Texture> texture() const;
+
+        void setThinfilm(const Thinfilm& thinfilm);
+        Thinfilm thinfilm() const;
 
         Data getData() const;
     private:
@@ -89,9 +75,7 @@ namespace prayground {
         Sellmeier m_sellmeier;
 
         // Thin film
-        std::shared_ptr<Texture> m_tf_thickness;
-        float m_tf_ior;
-        Vec3f m_extinction;
+        Thinfilm m_thinfilm;
 #endif
     };
 

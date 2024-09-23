@@ -30,7 +30,7 @@ struct LightInfo
     uint32_t pdf_id;
     bool twosided = false;
 
-    SurfaceInfo surface_info;
+    SurfaceInfo* surface_info;
 };
 
 struct LaunchParams 

@@ -36,7 +36,7 @@ namespace prayground {
 
     struct pgHitgroupData {
         void* shape_data;
-        SurfaceInfo surface_info;
+        SurfaceInfo* surface_info;
     };
 
     struct pgMissData

@@ -127,6 +127,7 @@ set(sources
   material/isotropic.h
   material/thinfilm.h
   material/layered.h
+  material/layered.cpp
   material/cuda/materials.cuh
 
   # Textures ==========

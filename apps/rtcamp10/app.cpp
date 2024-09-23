@@ -151,11 +151,11 @@ void App::setup()
     auto katsuo_mat = make_shared<Disney>(disney_id, make_shared<BitmapTexture>("Katsuo Color.png", bitmap_id));
     katsuo_mat->setBumpmap(make_shared<BitmapTexture>("Katsuo Normal.png", bitmap_id));
     katsuo_mat->setThinfilm(Thinfilm(
-        /* ior = */ Vec3f(1.9f),
+        /* ior = */ Vec3f(1.0f),
         /* thickness = */ make_shared<BitmapTexture>("Katsuo thinfilm thickness.png", bitmap_id),
-        /* thickness_scale = */ 550.0f,
-        /* tf_ior = */ 1.33f,
-        /* extinction = */ Vec3f(1.5f)));
+        /* thickness_scale = */ 2000.0f,
+        /* tf_ior = */ 1.6f,
+        /* extinction = */ Vec3f(4.5f, 8.5f, 6.0f)));
 
     // Setup geometries in the scene
     // Floor geometry

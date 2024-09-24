@@ -83,6 +83,7 @@
 #include "material/disney.h"
 #include "material/isotropic.h"
 #include "material/custom.h"
+#include "material/layered.h"
 
 // emitter include 
 #include "emitter/area.h"

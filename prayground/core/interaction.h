@@ -33,6 +33,9 @@ namespace prayground {
         // Material
         Material        = Diffuse | Reflection | Refraction | RoughReflection | RoughRefraction,
 
+        // Refractive material
+        Refractive = Refraction | RoughRefraction,
+
         // Emitter 
         AreaEmitter     = 1u << 5,
 

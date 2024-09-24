@@ -118,11 +118,29 @@ void App::setup()
     ProgramGroup plane_shadow_prg = pipeline.createHitgroupProgram(ctx, module, "__closesthit__shadow", "__intersection__plane");
 
     // Surface programs
-    SurfaceCallableID diffuse_id = { setupCallable("__direct_callable__sample_diffuse", "") };
-    SurfaceCallableID conductor_id = { setupCallable("__direct_callable__sample_conductor", "") };
-    SurfaceCallableID dielectric_id = { setupCallable("__direct_callable__sample_dielectric", "") };
-    SurfaceCallableID disney_id = { setupCallable("__direct_callable__sample_disney", "") };
-    SurfaceCallableID area_emitter_id = { setupCallable("__direct_callable__area_emitter", "") };
+    SurfaceCallableID diffuse_id = { 
+        setupCallable("__direct_callable__sample_diffuse", ""), 
+        setupCallable("__direct_callable__bsdf_diffuse", ""),
+        setupCallable("__direct_callable__pdf_diffuse", "")
+    };
+    SurfaceCallableID conductor_id = {
+        setupCallable("__direct_callable__sample_conductor", ""),
+        setupCallable("__direct_callable__bsdf_conductor", ""),
+        setupCallable("__direct_callable__pdf_conductor", "")
+    };
+    SurfaceCallableID dielectric_id = {
+        setupCallable("__direct_callable__sample_dielectric", ""),
+        setupCallable("__direct_callable__bsdf_dielectric", ""),
+        setupCallable("__direct_callable__pdf_dielectric", "")
+    };
+    SurfaceCallableID disney_id = {
+        setupCallable("__direct_callable__sample_disney", ""),
+        setupCallable("__direct_callable__bsdf_disney", ""),
+        setupCallable("__direct_callable__pdf_disney", "")
+    };
+    SurfaceCallableID area_emitter_id = { 
+        setupCallable("__direct_callable__area_emitter", "")
+    };
 
     // Create surfaces
     auto floor_mat = make_shared<Diffuse>(diffuse_id, make_shared<CheckerTexture>(Vec3f(0.8f), Vec3f(0.2f), 10, checker_id));

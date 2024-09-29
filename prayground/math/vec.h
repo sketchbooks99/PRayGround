@@ -77,7 +77,7 @@ namespace prayground {
         using Type = T;
         static constexpr uint32_t Dim = 2;
 
-        Vec2() = default;
+        Vec2() { e[0] = 0; e[1] = 0; }
         HOSTDEVICE Vec2(T x, T y) { e[0] = x; e[1] = y; }
         HOSTDEVICE Vec2(T t) { e[0] = t; e[1] = t; }
 
@@ -169,7 +169,7 @@ namespace prayground {
         using Type = T;
         static constexpr uint32_t Dim = 3;
 
-        Vec3() = default;
+        Vec3() { e[0] = 0; e[1] = 0; e[2] = 0; };
         HOSTDEVICE Vec3(T x, T y, T z) { e[0] = x; e[1] = y; e[2] = z;}
         HOSTDEVICE Vec3(T t) { e[0] = t; e[1] = t; e[2] = t; }
         
@@ -272,7 +272,7 @@ namespace prayground {
         using Type = T;
         static constexpr uint32_t Dim = 4;
 
-        Vec4() = default;
+        Vec4() { e[0] = 0; e[1] = 0; e[2] = 0; e[3] = 0; };
         HOSTDEVICE Vec4(T x, T y, T z, T w) { e[0] = x; e[1] = y; e[2] = z; e[3] = w; }
         HOSTDEVICE Vec4(T t) { e[0] = t; e[1] = t; e[2] = t; e[3] = t; }
 

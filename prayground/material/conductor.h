@@ -16,6 +16,8 @@ namespace prayground {
             Texture::Data texture;
             bool twosided;
 
+            // Thinfilm
+            bool use_thinfilm;
             Thinfilm::Data thinfilm;
         };
 

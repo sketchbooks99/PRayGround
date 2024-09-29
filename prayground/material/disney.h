@@ -25,6 +25,7 @@ namespace prayground {
             bool twosided;
 
             // Thinfilm
+            bool use_thinfilm;
             Thinfilm::Data thinfilm;
         };
 

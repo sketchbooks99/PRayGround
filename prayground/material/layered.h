@@ -16,8 +16,8 @@ namespace prayground {
             uint32_t num_layers;
         };
 #ifndef __CUDACC__
-        /* Upper layers are added to rear, and lower layers are added to front of material vector */
-        Layered(std::vector<std::shared_ptr<Material>> materials);
+        /* lower layers are added to rear, and upper layers are added to front of material vector */
+        Layered(const SurfaceCallableID& surface_callable_id, std::vector<std::shared_ptr<Material>> materials);
 
         void addTopLayer(const std::shared_ptr<Material>& material);
 
@@ -28,6 +28,9 @@ namespace prayground {
 
         void setTexture(const std::shared_ptr<Texture>& texture) override {}
         std::shared_ptr<Texture> texture() const override { return nullptr; }
+
+        void setLayerAt(const uint32_t& index, const std::shared_ptr<Material>& material);
+        std::shared_ptr<Material> layerAt(const uint32_t& index) const;
 
         void free() override;
 

@@ -62,7 +62,6 @@ namespace prayground {
 
         SurfaceInfo* surfaceInfoDevicePtr() const { return d_surface_info; }
 
-
     protected:
         SurfaceCallableID m_surface_callable_id;
         void* d_data { nullptr };

@@ -104,7 +104,7 @@ namespace prayground {
     )
     {
         if (diffuse->twosided)
-            shading.n = faceforward(shading.n, -wo, shading.n);
+            shading.n = faceforward(shading.n, wo, shading.n);
 
         // Importance sampling in cosine direction on hemisphere
         Vec2f u = UniformSampler::get2D(seed);
@@ -135,7 +135,7 @@ namespace prayground {
     )
     {
         if (disney->twosided)
-            shading.n = faceforward(shading.n, -wo, shading.n);
+            shading.n = faceforward(shading.n, wo, shading.n);
 
         const Vec2f u = UniformSampler::get2D(seed);
         const float diffuse_ratio = 0.5f * (1.0f - disney->metallic);
@@ -164,7 +164,7 @@ namespace prayground {
                 h = sampleGTR1(u[0], u[1], alpha_cc);
             }
             onb.inverseTransform(h);
-            return normalize(reflect(wo, h));
+            return normalize(reflect(-wo, h));
         }
     }
 
@@ -175,7 +175,7 @@ namespace prayground {
         const Vec3f& base)
     {
         // V ... View vector, L ... Light vector, N ... Normal
-        const Vec3f V = -wo;
+        const Vec3f V = wo;
         const Vec3f L = wi;
         const Vec3f N = shading.n;
 
@@ -305,7 +305,7 @@ namespace prayground {
         const Shading& shading
     )
     {
-        const Vec3f V = -wo;
+        const Vec3f V = wo;
         const Vec3f L = wi;
         const Vec3f N = shading.n;
 

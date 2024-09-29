@@ -35,7 +35,7 @@ void App::setup()
 
     // Initialize pipeline
     pipeline.setLaunchVariableName("params");
-    pipeline.setDirectCallableDepth(5);
+    pipeline.setDirectCallableDepth(10);
     pipeline.setContinuationCallableDepth(5);
     pipeline.setNumPayloads(5);
     pipeline.setNumAttributes(5);
@@ -138,9 +138,20 @@ void App::setup()
         setupCallable("__direct_callable__bsdf_disney", ""),
         setupCallable("__direct_callable__pdf_disney", "")
     };
+    SurfaceCallableID layered_id = {
+        setupCallable("__direct_callable__sample_layered", ""),
+        setupCallable("__direct_callable__bsdf_layered", ""),
+        setupCallable("__direct_callable__pdf_layered", "")
+    };
     SurfaceCallableID area_emitter_id = { 
         setupCallable("__direct_callable__area_emitter", "")
     };
+    PG_LOG("diffuse_id:", diffuse_id);
+    PG_LOG("conductor_id:", conductor_id);
+    PG_LOG("dielectric_id:", dielectric_id);
+    PG_LOG("disney_id:", disney_id);
+    PG_LOG("layered_id:", layered_id);
+    PG_LOG("area_emitter_id:", area_emitter_id);
 
     // Create surfaces
     auto floor_mat = make_shared<Diffuse>(diffuse_id, make_shared<CheckerTexture>(Vec3f(0.8f), Vec3f(0.2f), 10, checker_id));
@@ -151,8 +162,8 @@ void App::setup()
         /* sellmeier = */ Sellmeier::None, 
         Thinfilm(
             /* ior = */ Vec3f(1.33f),
-            /* thickness = */ make_shared<ConstantTexture>(Vec3f(550.0f), constant_id),
-            /* thickness_scale = */ 1.0f,
+            /* thickness = */ make_shared<ConstantTexture>(Vec3f(1.0f), constant_id),
+            /* thickness_scale = */ 550.0f,
             /* tf_ior = */ 1.7f,
             /* extinction = */ Vec3f(1.0f)
         ));
@@ -161,19 +172,30 @@ void App::setup()
         /* twosided = */ true, 
         Thinfilm(
             /* ior = */ Vec3f(1.9f),
-            /* thickness = */ make_shared<ConstantTexture>(Vec3f(550.0f), constant_id),
-            /* thickness_scale = */ 1.0f,
+            /* thickness = */ make_shared<ConstantTexture>(Vec3f(1.0f), constant_id),
+            /* thickness_scale = */ 550.0f,
             /* tf_ior = */ 1.33f,
             /* extinction = */ Vec3f(1.5f)
         ));
-    auto katsuo_mat = make_shared<Disney>(disney_id, make_shared<BitmapTexture>("Katsuo Color.png", bitmap_id));
+
+    auto katsuo_base = make_shared<Disney>(disney_id, make_shared<BitmapTexture>("Katsuo Color.png", bitmap_id));
+    katsuo_base->setSubsurface(0.8f);
+    katsuo_base->setMetallic(0.8f);
+    katsuo_base->setRoughness(0.2f);
+    auto katsuo_oil = make_shared<Dielectric>(dielectric_id,
+        make_shared<ConstantTexture>(Vec3f(0.9f, 0.9f, 0.8f), constant_id),
+        1.5f, 0.0f, Sellmeier::None,
+        Thinfilm(Vec3f(1.5f), make_shared<BitmapTexture>("Katsuo thinfilm thickness.png", bitmap_id), 200.0f, 1.33f, Vec3f(3.0f, 5.0f, 6.0f)));
+    std::vector <std::shared_ptr<Material>> layers = { katsuo_oil, katsuo_base };
+    auto katsuo_mat = make_shared<Layered>(layered_id, layers);
     katsuo_mat->setBumpmap(make_shared<BitmapTexture>("Katsuo Normal.png", bitmap_id));
-    katsuo_mat->setThinfilm(Thinfilm(
-        /* ior = */ Vec3f(1.0f),
-        /* thickness = */ make_shared<BitmapTexture>("Katsuo thinfilm thickness.png", bitmap_id),
-        /* thickness_scale = */ 2000.0f,
-        /* tf_ior = */ 1.6f,
-        /* extinction = */ Vec3f(4.5f, 8.5f, 6.0f)));
+
+    // Katsuo 2
+    auto katsuo2_mat = make_shared<Disney>(disney_id, make_shared<BitmapTexture>("Katsuo Color.png", bitmap_id));
+    katsuo2_mat->setSubsurface(0.8f);
+    katsuo2_mat->setMetallic(0.8f);
+    katsuo2_mat->setRoughness(0.2f);
+    katsuo2_mat->setBumpmap(make_shared<BitmapTexture>("Katsuo Normal.png", bitmap_id));
 
     // Setup geometries in the scene
     // Floor geometry
@@ -189,8 +211,10 @@ void App::setup()
     scene.addObject("bunny", bunny, bunny_mat, { mesh_prg, mesh_shadow_prg }, Matrix4f::translate(10, -80, 0) * Matrix4f::scale(100));
 
     shared_ptr<TriangleMesh> katsuo = make_shared<TriangleMesh>("Katsuo.obj");
-    katsuo->calculateNormalSmooth();
     scene.addObject("katsuo", katsuo, katsuo_mat, { mesh_prg, mesh_shadow_prg }, Matrix4f::translate(30, -80, 0) * Matrix4f::scale(10));
+
+    shared_ptr<TriangleMesh> katsuo2 = make_shared<TriangleMesh>("Katsuo.obj");
+    scene.addObject("katsuo", katsuo2, katsuo2_mat, { mesh_prg, mesh_shadow_prg }, Matrix4f::translate(60, -80, 0)* Matrix4f::scale(10));
     
 
 
@@ -238,7 +262,44 @@ void App::draw()
 
     ImGui::Begin("RTCAMP 10 editor");
 
-    // Update bunny parameters
+    // Update katsuo object
+    auto katsuo = scene.getObject("katsuo");
+    auto katsuo_mat = dynamic_pointer_cast<Layered>(katsuo->materials[0]);
+    auto katsuo_top_layer = dynamic_pointer_cast<Dielectric>(katsuo_mat->layerAt(0));
+    Thinfilm thinfilm = katsuo_top_layer->thinfilm();
+    Vec3f ior = thinfilm.ior();
+    Vec3f extinction = thinfilm.extinction();
+    float thickness_scale = thinfilm.thicknessScale();
+    float tf_ior = thinfilm.tfIor();
+
+    if (ImGui::TreeNode("Katsuo")) {
+        if (ImGui::SliderFloat3("IOR", &ior[0], 1.0f, 20.0f)) {
+            thinfilm.setIor(ior);
+            katsuo_top_layer->setThinfilm(thinfilm);
+            is_camera_updated = true;
+        }
+        if (ImGui::SliderFloat3("Extinction", &extinction[0], 0.0f, 20.0f)) {
+            thinfilm.setExtinction(extinction);
+            katsuo_top_layer->setThinfilm(thinfilm);
+            is_camera_updated = true;
+        }
+        if (ImGui::SliderFloat("Thickness Scale", &thickness_scale, 0.0f, 1000.0f)) {
+            thinfilm.setThicknessScale(thickness_scale);
+            katsuo_top_layer->setThinfilm(thinfilm);
+            is_camera_updated = true;
+        }
+        if (ImGui::SliderFloat("TF IOR", &tf_ior, 1.0f, 20.0f)) {
+            thinfilm.setTfIor(tf_ior);
+            katsuo_top_layer->setThinfilm(thinfilm);
+            is_camera_updated = true;
+        }
+
+        ImGui::TreePop();
+    }
+    katsuo_top_layer->copyToDevice();
+
+
+    // Update bunny 
     //auto bunny = scene.getObject("bunny");
     //auto bunny_mat = dynamic_pointer_cast<Conductor>(bunny->materials[0]);
     //
@@ -300,6 +361,7 @@ void App::draw()
     //    ImGui::TreePop();
     //}
     //sphere_mat->copyToDevice();
+
         
 
     ImGui::End();

@@ -263,7 +263,7 @@ namespace prayground {
     HOSTDEVICE INLINE Vec3f evalSensitivity(float opd, const Vec3f& shift) 
     {
         // Use Gaussian fits, given by 3 parameters: val, pos and var
-        float phase = 2.0f * math::pi * opd;
+        float phase = math::two_pi * opd;
         Vec3f val = Vec3f(5.4856e-13f, 4.4201e-13f, 5.2481e-13f);
         Vec3f pos = Vec3f(1.6810e+06f, 1.7953e+06f, 2.2084e+06f);
         Vec3f var = Vec3f(4.3278e+09f, 9.3046e+09f, 6.6121e+09f);

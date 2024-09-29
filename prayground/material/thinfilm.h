@@ -38,6 +38,41 @@ namespace prayground {
             return { m_ior, thickness_data, m_thickness_scale, m_tf_ior, m_extinction };
         }
 
+        void setIor(Vec3f ior) {
+            m_ior = ior;
+        }
+        Vec3f ior() const {
+            return m_ior;
+        }
+
+        void setThickness(const std::shared_ptr<Texture>& thickness) {
+            m_thickness = thickness;
+        }
+        std::shared_ptr<Texture> thickness() const {
+            return m_thickness;
+        }
+
+        void setThicknessScale(float thickness_scale) {
+            m_thickness_scale = thickness_scale;
+        }
+        float thicknessScale() const {
+            return m_thickness_scale;
+        }
+
+        void setTfIor(float tf_ior) {
+            m_tf_ior = tf_ior;
+        }
+        float tfIor() const {
+            return m_tf_ior;
+        }
+
+        void setExtinction(Vec3f extinction) {
+            m_extinction = extinction;
+        }
+        Vec3f extinction() const {
+            return m_extinction;
+        }
+
     private:
         Vec3f m_ior;
         std::shared_ptr<Texture> m_thickness;

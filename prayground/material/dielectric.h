@@ -23,6 +23,7 @@ namespace prayground {
             Sellmeier sellmeier;
 
             // Thinfilm
+            bool use_thinfilm;
             Thinfilm::Data thinfilm;
         };
 

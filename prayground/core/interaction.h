@@ -137,6 +137,11 @@ namespace prayground {
     };
 
 #ifndef __CUDACC__
+    inline std::ostream& operator<<(std::ostream& out, const SurfaceCallableID& id)
+    {
+        return out << "SurfaceCallableID{sample=" << id.sample << ", bsdf=" << id.bsdf << ", pdf=" << id.pdf << "}";
+    }
+
     inline std::ostream& operator<<(std::ostream& out, SurfaceType surface_type)
     {
         switch (surface_type)

@@ -77,12 +77,12 @@ namespace prayground {
         using Type = T;
         static constexpr uint32_t Dim = 2;
 
-        Vec2() { e[0] = 0; e[1] = 0; }
+        HOSTDEVICE Vec2() { e[0] = 0; e[1] = 0; }
         HOSTDEVICE Vec2(T x, T y) { e[0] = x; e[1] = y; }
         HOSTDEVICE Vec2(T t) { e[0] = t; e[1] = t; }
 
         // Copy constructor
-        Vec2(const Vec2& v) = default;
+        HOSTDEVICE Vec2(const Vec2& v) = default;
 
         HOSTDEVICE Vec2(const CUVec& v) { e[0] = v.x; e[1] = v.y; }
 
@@ -169,12 +169,12 @@ namespace prayground {
         using Type = T;
         static constexpr uint32_t Dim = 3;
 
-        Vec3() { e[0] = 0; e[1] = 0; e[2] = 0; };
+        HOSTDEVICE Vec3() { e[0] = 0; e[1] = 0; e[2] = 0; };
         HOSTDEVICE Vec3(T x, T y, T z) { e[0] = x; e[1] = y; e[2] = z;}
         HOSTDEVICE Vec3(T t) { e[0] = t; e[1] = t; e[2] = t; }
         
         // Copy constructor
-        Vec3(const Vec3& v) = default;
+        HOSTDEVICE Vec3(const Vec3& v) = default;
 
         // From other dimension vector
         HOSTDEVICE Vec3(const Vec2<T>& v, const T& z) { e[0] = v[0]; e[1] = v[1]; e[2] = z; }
@@ -272,12 +272,12 @@ namespace prayground {
         using Type = T;
         static constexpr uint32_t Dim = 4;
 
-        Vec4() { e[0] = 0; e[1] = 0; e[2] = 0; e[3] = 0; };
+        HOSTDEVICE Vec4() { e[0] = 0; e[1] = 0; e[2] = 0; e[3] = 0; };
         HOSTDEVICE Vec4(T x, T y, T z, T w) { e[0] = x; e[1] = y; e[2] = z; e[3] = w; }
         HOSTDEVICE Vec4(T t) { e[0] = t; e[1] = t; e[2] = t; e[3] = t; }
 
         // Copy constructor
-        Vec4(const Vec4& v) = default;
+        HOSTDEVICE Vec4(const Vec4& v) = default;
 
         // From other dimension vector
         HOSTDEVICE Vec4(const Vec2<T>& v, const T& z, const T& w) { e[0] = v[0]; e[1] = v[1]; e[2] = z; e[3] = w; }

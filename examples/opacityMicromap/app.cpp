@@ -173,7 +173,7 @@ void App::setup()
                 .callable_id = is_mat ? std::get<shared_ptr<Material>>(surface)->surfaceCallableID() : std::get<shared_ptr<AreaEmitter>>(surface)->surfaceCallableID(),
                 .type = is_mat ? std::get<shared_ptr<Material>>(surface)->surfaceType() : SurfaceType::AreaEmitter,
             },
-            .opacity_texture = opacity_texture ? opacity_texture->getData() : Texture::Data{ nullptr, bitmap_prg_id }
+            .opacity_texture = opacity_texture ? opacity_texture->getData() : Texture::Data{ nullptr, (int32_t)bitmap_prg_id }
         };
 
         // Register data for shadow ray
@@ -214,7 +214,7 @@ void App::setup()
         createGAS(shape, transform);
         AreaEmitterInfo area_emitter = {
             .shape = shape->devicePtr(),
-            .surface_info = area->surfaceInfo(),
+            .surface_info = *area->surfaceInfoDevicePtr(),
             .objToWorld = transform, 
             .worldToObj = transform.inverse()
         };

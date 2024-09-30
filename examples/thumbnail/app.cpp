@@ -211,7 +211,7 @@ void App::setup()
                 .callable_id = is_mat ? std::get<shared_ptr<Material>>(surface)->surfaceCallableID() : std::get<shared_ptr<AreaEmitter>>(surface)->surfaceCallableID(),
                 .type = is_mat ? std::get<shared_ptr<Material>>(surface)->surfaceType() : SurfaceType::AreaEmitter,
             },
-            .alpha_texture = alpha_texture ? alpha_texture->getData() : Texture::Data{ nullptr, bitmap_prg_id }
+            .alpha_texture = alpha_texture ? alpha_texture->getData() : Texture::Data{ nullptr, (int32_t)bitmap_prg_id }
         };
 
         sbt.addHitgroupRecord({ record });

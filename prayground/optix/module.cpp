@@ -149,12 +149,9 @@ namespace prayground {
     }
 
     // ------------------------------------------------------------------
+#if CUDA_NVRTC_ENABLED
     void Module::createFromCudaFile(const Context& ctx, const fs::path& filename, OptixPipelineCompileOptions pipeline_options)
     {
-    #if !(CUDA_NVRTC_ENABLED)
-        static_assert(false);
-    #endif
-
         auto filepath = pgFindDataPath(filename);
         ASSERT(filepath, "The CUDA file to create module of '" + filename.string() + "' is not found.");
 
@@ -180,14 +177,12 @@ namespace prayground {
 
     void Module::createFromCudaSource(const Context& ctx, const std::string& source, OptixPipelineCompileOptions pipeline_options)
     {
-    #if !(CUDA_NVRTC_ENABLED)
-        static_assert(false);
-    #endif
         const char** log = nullptr;
         std::string* ptx = new std::string;
         getPtxFromCuString(*ptx, source.c_str(), "", log);
         createFromPtxSource(ctx, *ptx, pipeline_options);
     }
+#endif
 
     void Module::createFromPtxFile(const Context& ctx, const fs::path& filename, OptixPipelineCompileOptions pipeline_options)
     {

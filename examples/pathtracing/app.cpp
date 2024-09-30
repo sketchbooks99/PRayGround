@@ -200,15 +200,11 @@ void App::setup()
         // Shader Binding Table へのデータの登録
         HitgroupRecord record;
         prg.recordPackHeader(&record);
+
         pgHitgroupData hg_data = 
         {
             .shape_data = primitive.shape->devicePtr(),
-            .surface_info =
-            {
-                .data = primitive.material->devicePtr(),
-                .callable_id = primitive.material->surfaceCallableID(),
-                .type = primitive.material->surfaceType()
-            }
+            .surface_info = primitive.material->surfaceInfoDevicePtr()
         };
         record.data = hg_data;
 
@@ -256,12 +252,7 @@ void App::setup()
         pgHitgroupData hg_data = 
         {
             .shape_data = shape->devicePtr(),
-            .surface_info =
-            {
-                .data = area.devicePtr(),
-                .callable_id = area_emitter_id,
-                .type = SurfaceType::AreaEmitter
-            }
+            .surface_info = area.surfaceInfoDevicePtr()
         };
         record.data = hg_data;
 
@@ -292,7 +283,7 @@ void App::setup()
             .sample_id = sample_pdf_id,
             .pdf_id = sample_pdf_id, 
             .twosided = is_plane, 
-            .surface_info = area.surfaceInfo()
+            .surface_info = *area.surfaceInfoDevicePtr()
         };
         area_emitter_infos.push_back(area_emitter_info);
     };

@@ -10,19 +10,22 @@ namespace prayground {
     namespace {
         // Application directory
         fs::path app_dir = fs::path("");
+        std::vector<fs::path> search_dirs;
 
     } // nonamed namespace
 
     // -------------------------------------------------------------------------------
     std::optional<fs::path> pgFindDataPath( const fs::path& relative_path )
     {
-        std::array<std::string, 4> parent_dirs = 
-        {
+        std::vector<std::string> parent_dirs = {
             pgAppDir().string(), 
             pgPathJoin(pgAppDir(), "data").string(), 
             "",
             pgRootDir().string(),
         };
+
+        for (auto& dir : search_dirs)
+            parent_dirs.push_back(dir.string());
 
         for (auto &parent : parent_dirs)
         {
@@ -46,6 +49,11 @@ namespace prayground {
     fs::path pgAppDir()
     {
         return app_dir;
+    }
+
+    void pgAddSearchDir(const fs::path& dir)
+    {
+        search_dirs.push_back(dir);
     }
 
     // -------------------------------------------------------------------------------

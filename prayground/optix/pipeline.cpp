@@ -81,6 +81,7 @@ namespace prayground {
     }
 
     // --------------------------------------------------------------------
+#if CUDA_NVRTC_ENABLED
     [[nodiscard]] Module Pipeline::createModuleFromCudaFile(const Context& ctx, const std::filesystem::path& filename)
     {
         m_modules.emplace_back(Module{});
@@ -94,6 +95,7 @@ namespace prayground {
         m_modules.back().createFromCudaSource(ctx, source, m_compile_options);
         return m_modules.back();
     }
+#endif
 
     [[nodiscard]] Module Pipeline::createModuleFromPtxFile(const Context& ctx, const std::filesystem::path& filename)
     {

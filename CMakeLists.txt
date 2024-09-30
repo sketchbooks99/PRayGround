@@ -35,12 +35,13 @@ set(OptiX_INSTALL_DIR "${OptiX_PATH}" CACHE PATH "Path to the OptiX SDK")
 find_package(OptiX REQUIRED)
 
 # Set the CUDA flags
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -std=c++17 -arch sm_60 --use_fast_math -lineinfo CACHE STRING "Flags for NVCC" FORCE)
+set(CUDA_NVCC_FLAGS -std=c++17 -arch sm_60 --use_fast_math -lineinfo CACHE STRING "Flags for NVCC" FORCE)
 set(CUDA_NVRTC_FLAGS ${PRAYGROUND_NVRTC_CXX} -arch compute_60 --use_fast_math -lineinfo -default-device -rdc true -D__x86_64 CACHE STRING "Semi-colon delimit multiple arguments." FORCE)
 mark_as_advanced(CUDA_NVRTC_FLAGS)
 
 if(USING_WINDOWS_CL)
     list(APPEND CUDA_NVCC_FLAGS --compiler-options /D_USE_MATH_DEFINES)
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler "/source-charset:.1252")
 endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
@@ -80,7 +81,7 @@ set(CUDA_NVRTC_OPTIONS "${CUDA_NVRTC_OPTIONS}")
 configure_file(prayground_config.h.in prayground_config.h @ONLY)
 
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR}
-                     "${CMAKE_BINARY_DIR}/include"
+                    #  "${CMAKE_BINARY_DIR}/include"
                      ${CMAKE_CURRENT_BINARY_DIR}
                      ${CUDA_INCLUDE_DIRS}
                      ${OptiX_INCLUDE}
@@ -148,20 +149,20 @@ add_subdirectory(prayground)
 # 
 # Please uncomment the target you'd like to build
 ################################################################
-add_subdirectory(examples/single_gas)
-add_subdirectory(examples/dynamic_update)
-add_subdirectory(examples/motion_blur)
-add_subdirectory(examples/pathtracing)
-add_subdirectory(examples/objscene)
-add_subdirectory(examples/rayTracingNextWeek)
-add_subdirectory(examples/rayTracingRestOfYourLife)
-add_subdirectory(examples/denoiser)
-add_subdirectory(examples/thumbnail)
-add_subdirectory(examples/spectrum)
-add_subdirectory(examples/pgVolume)
-add_subdirectory(examples/curves)
-add_subdirectory(examples/opacityMicromap)
-add_subdirectory(examples/fluidSimulation)
+# add_subdirectory(examples/single_gas)
+# add_subdirectory(examples/dynamic_update)
+# add_subdirectory(examples/motion_blur)
+# add_subdirectory(examples/pathtracing)
+# add_subdirectory(examples/objscene)
+# add_subdirectory(examples/rayTracingNextWeek)
+# add_subdirectory(examples/rayTracingRestOfYourLife)
+# add_subdirectory(examples/denoiser)
+# add_subdirectory(examples/thumbnail)
+# add_subdirectory(examples/spectrum)
+# add_subdirectory(examples/pgVolume)
+# add_subdirectory(examples/curves)
+# add_subdirectory(examples/opacityMicromap)
+# add_subdirectory(examples/fluidSimulation)
 
 ################################################################
 # Applications

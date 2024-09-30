@@ -46,12 +46,12 @@ namespace prayground {
         Layered         = 1u << 7
     };
 
-    constexpr SurfaceType  operator|(SurfaceType t1, SurfaceType t2)    { return static_cast<SurfaceType>(  (uint32_t)t1 | (uint32_t)t2 ); }
-    constexpr SurfaceType  operator|(uint32_t t1, SurfaceType t2)       { return static_cast<SurfaceType>(            t1 | (uint32_t)t2 ); }
-    constexpr SurfaceType  operator&(SurfaceType t1, SurfaceType t2)    { return static_cast<SurfaceType>(  (uint32_t)t1 & (uint32_t)t2 ); }
-    constexpr SurfaceType  operator&(uint32_t t1, SurfaceType t2)       { return static_cast<SurfaceType>(            t1 & (uint32_t)t2 ); }
-    constexpr SurfaceType  operator~(SurfaceType t1)                    { return static_cast<SurfaceType>( ~(uint32_t)t1 ); }
-    constexpr uint32_t     operator+(SurfaceType t1)                    { return static_cast<uint32_t>(t1); }
+    constexpr HOSTDEVICE SurfaceType  operator|(SurfaceType t1, SurfaceType t2)    { return static_cast<SurfaceType>(  (uint32_t)t1 | (uint32_t)t2 ); }
+    constexpr HOSTDEVICE SurfaceType  operator|(uint32_t t1, SurfaceType t2)       { return static_cast<SurfaceType>(            t1 | (uint32_t)t2 ); }
+    constexpr HOSTDEVICE SurfaceType  operator&(SurfaceType t1, SurfaceType t2)    { return static_cast<SurfaceType>(  (uint32_t)t1 & (uint32_t)t2 ); }
+    constexpr HOSTDEVICE SurfaceType  operator&(uint32_t t1, SurfaceType t2)       { return static_cast<SurfaceType>(            t1 & (uint32_t)t2 ); }
+    constexpr HOSTDEVICE SurfaceType  operator~(SurfaceType t1)                    { return static_cast<SurfaceType>( ~(uint32_t)t1 ); }
+    constexpr HOSTDEVICE uint32_t     operator+(SurfaceType t1)                    { return static_cast<uint32_t>(t1); }
 
     struct SurfaceCallableID {
         uint32_t sample;

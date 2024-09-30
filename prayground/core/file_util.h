@@ -34,6 +34,8 @@ namespace prayground {
     // This return the empty path unless to set the path to app using pgSetAppDir(APP_DIR). 
     std::filesystem::path pgAppDir();
 
+    void pgAddSearchDir(const std::filesystem::path& dir);
+
     /// @todo: Add 'pg' prefix to get~~() functions
     // Get the extension of file. 
     std::string pgGetExtension( const std::filesystem::path& filepath );

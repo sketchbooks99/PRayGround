@@ -1,5 +1,9 @@
 #include "app.h"
 
+#include <chrono>
+
+#define SUBMISSION 0
+
 void App::initResultBufferOnDevice() 
 {
     params.frame = 0u;
@@ -24,6 +28,8 @@ void App::handleCameraUpdate()
 // ------------------------------------------------------------------
 void App::setup()
 {
+    using namespace std::chrono;
+
     // Initialize CUDA 
     stream = 0;
     CUDA_CHECK(cudaFree(0));
@@ -41,7 +47,7 @@ void App::setup()
     pipeline.setNumAttributes(5);
 
     // Create module
-    Module module = pipeline.createModuleFromCudaFile(ctx, "kernels.cu");
+    Module module = pipeline.createModuleFromPtxFile(ctx, "ptx/rtcamp10_generated_kernels.cu.ptx");
 
     // Initialize bitmap 
     const int32_t width = pgGetWidth();

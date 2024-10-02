@@ -14,6 +14,8 @@ namespace prayground {
             bool is_app_window_initialized = false;
         };
         RunnerState g_state;
+
+        std::string g_app_name;
     } // nonamed namespace
 
     float pgGetMouseX()
@@ -106,6 +108,16 @@ namespace prayground {
     bool pgAppWindowInitialized()
     {
         return g_state.is_app_window_initialized;
+    }
+
+    void pgSetAppName(const std::string& name)
+    {
+        g_app_name = name;
+    }
+
+    std::string pgGetAppName()
+    {
+        return g_app_name;
     }
 
     void pgExit()

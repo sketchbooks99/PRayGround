@@ -5,25 +5,28 @@
 
 namespace prayground { 
 
-    float   pgGetMouseX();
-    float   pgGetMouseY();
-    float   pgGetPreviousMouseX();
-    float   pgGetPreviousMouseY();
-    Vec2f   pgGetMousePosition();
-    Vec2f   pgGetPreviousMousePosition();
-    int32_t pgGetMouseButton();
-    int32_t pgGetKey();
-    int32_t pgGetWidth();
-    int32_t pgGetHeight();
-    int32_t pgGetFrame();
-    float   pgGetFrameRate();
-    void    pgSetFrameRate(const float fps);
-    float   pgGetElapsedTimef();
+    float       pgGetMouseX();
+    float       pgGetMouseY();
+    float       pgGetPreviousMouseX();
+    float       pgGetPreviousMouseY();
+    Vec2f       pgGetMousePosition();
+    Vec2f       pgGetPreviousMousePosition();
+    int32_t     pgGetMouseButton();
+    int32_t     pgGetKey();
+    int32_t     pgGetWidth();
+    int32_t     pgGetHeight();
+    int32_t     pgGetFrame();
+    float       pgGetFrameRate();
+    void        pgSetFrameRate(const float fps);
+    float       pgGetElapsedTimef();
     std::shared_ptr<Window> pgGetCurrentWindow();
-    void    pgSetWindowName(const std::string& name);
-    void    pgRunApp(const std::shared_ptr<BaseApp>& app, const std::shared_ptr<Window>& window);
-    bool    pgAppWindowInitialized();
-    void    pgExit();
+    void        pgSetWindowName(const std::string& name);
+    void        pgRunApp(const std::shared_ptr<BaseApp>& app, const std::shared_ptr<Window>& window);
+    bool        pgAppWindowInitialized();
+    void        pgSetAppName(const std::string& name);
+    std::string pgGetAppName();
+    void        pgExit();
+
 
     class AppRunner
     {

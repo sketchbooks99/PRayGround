@@ -14,14 +14,28 @@ namespace prayground {
 
     } // nonamed namespace
 
+    fs::path pgGetExecutableDir()
+    {
+#if defined(_MSC_VER)
+        char path[FILENAME_MAX] = { 0 };
+        GetModuleFileName(nullptr, path, FILENAME_MAX);
+        return fs::path(path).parent_path().string();
+#else
+        char path[FILENAME_MAX];
+        ssize_t count = readlink("/proc/self/exe", path, FILENAME_MAX);
+        return fs::path(std::string(path, (count > 0) ? count : 0)).parent_path().string();
+#endif
+    }
+
     // -------------------------------------------------------------------------------
     std::optional<fs::path> pgFindDataPath( const fs::path& relative_path )
     {
         std::vector<std::string> parent_dirs = {
-            pgAppDir().string(), 
-            pgPathJoin(pgAppDir(), "data").string(), 
+            pgAppDir().string(),
+            pgPathJoin(pgAppDir(), "data").string(),
             "",
             pgRootDir().string(),
+            pgGetExecutableDir().string()
         };
 
         for (auto& dir : search_dirs)
@@ -30,6 +44,7 @@ namespace prayground {
         for (auto &parent : parent_dirs)
         {
             auto filepath = pgPathJoin(parent, relative_path);
+            std::cout << filepath << std::endl;
             if ( fs::exists(filepath) )
                 return filepath;
         }
@@ -69,7 +84,12 @@ namespace prayground {
         return is_dir ? dirpath + "/" + stem : stem;
     }
 
-    std::filesystem::path pgGetDir(const fs::path& filepath)
+    fs::path pgGetFilename(const fs::path& filepath)
+    {
+        return filepath.has_filename() ? filepath.filename().string() : "";
+    }
+
+    fs::path pgGetDir(const fs::path& filepath)
     {
         return filepath.has_parent_path() ? filepath.parent_path() : "";
     }

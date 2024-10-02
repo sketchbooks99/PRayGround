@@ -31,6 +31,7 @@
 #include <prayground_config.h>
 #include <prayground/core/file_util.h>
 #include <prayground/core/util.h>
+#include <prayground/app/app_runner.h>
 #include <prayground/optix/macros.h>
 #include <map>
 
@@ -51,16 +52,72 @@ namespace prayground {
     namespace fs = std::filesystem;
 
     namespace {
-        struct PtxSourceCache
+        struct SourceCache
         {
             std::map<std::string, std::string*> map;
-            ~PtxSourceCache()
+            ~SourceCache()
             {
                 for (std::map<std::string, std::string*>::const_iterator it = map.begin(); it != map.end(); ++it)
                     delete it->second;
             }
         };
-        PtxSourceCache g_ptxSourceCache;
+        SourceCache g_source_cache;
+
+        bool readSourceFile(std::string& str, const std::string& filename)
+        {
+            std::ifstream file(filename.c_str(), std::ios::binary);
+            if (file.good()) {
+                std::vector<uint8_t> buffer = std::vector<uint8_t>(std::istreambuf_iterator<char>(file), {});
+                str.assign(buffer.begin(), buffer.end());
+                return true;
+            }
+            return false;
+        }
+
+        std::string fileExtensionForLoading() {
+            std::string extension;
+#if PRAYGROUND_INPUT_GENERATE_PTX
+            extension = ".ptx";
+#endif
+#if PRAYGROUND_INPUT_GENERATE_OPTIXIR
+            extension = ".optixir";
+#endif
+            if (const char* ext = getenv("PRAYGROUND_INPUT_EXTENSION")) {
+                extension = ext;
+                if (extension.size() && extension[0] != '.')
+                    extension = "." + extension;
+            }
+            return extension;
+        }
+
+        std::string inputFilePath(std::string filepath) {
+            std::string extension = fileExtensionForLoading();
+            std::string dir = pgGetDir(filepath).string();
+            std::string filename = pgGetFilename(filepath).string();
+
+            std::string path = dir;
+            path += "/";
+            path += pgGetAppName();
+            path += "_generated_";
+            path += filename;
+            path += extension;
+
+            if (auto ret_filepath = pgFindDataPath(path)) {
+                return ret_filepath.value().string();
+            }
+            ASSERT(false, "The file '" + path + "' is not found.");
+        }
+
+        static void getInputDataFromFile(std::string& input_data, std::string filepath)
+        {
+            const std::string input_filepath = inputFilePath(filepath);
+
+            // Try to open source file
+            if (!readSourceFile(input_data, input_filepath)) {
+                std::string err = "Couldn't open source file " + filepath;
+                throw std::runtime_error(err.c_str());
+            }
+        }
 
     #if CUDA_NVRTC_ENABLED
         std::string g_nvrtcLog;
@@ -149,40 +206,70 @@ namespace prayground {
     }
 
     // ------------------------------------------------------------------
-#if CUDA_NVRTC_ENABLED
     void Module::createFromCudaFile(const Context& ctx, const fs::path& filename, OptixPipelineCompileOptions pipeline_options)
     {
+//        auto filepath = pgFindDataPath(filename);
+//        ASSERT(filepath, "The CUDA file to create module of '" + filename.string() + "' is not found.");
+//
+//        const char** log = nullptr;
+//        std::string key = filepath.value().string();
+//        std::map<std::string, std::string*>::iterator elem = g_source_cache.map.find(key);
+//        
+//        // Load cuda source from file
+//        std::string cu_source = pgGetTextFromFile(filepath.value());
+//        std::string* ptx;
+//        if (elem == g_source_cache.map.end())
+//        {
+//#if CUDA_NVRTC_ENABLED
+//            ptx = new std::string;
+//            getPtxFromCuString(*ptx, cu_source.c_str(), filepath.value().string().c_str(), log);
+//            g_source_cache.map[key] = ptx;
+//#else
+//            g_source_cache.map[key] = cu_source;
+//#endif
+//        }
+//        else
+//        {
+//            ptx = elem->second;
+//        }
+//        createFromPtxSource(ctx, *ptx, pipeline_options);
+
         auto filepath = pgFindDataPath(filename);
         ASSERT(filepath, "The CUDA file to create module of '" + filename.string() + "' is not found.");
 
         const char** log = nullptr;
+        std::string* input_data;
         std::string key = filepath.value().string();
-        std::map<std::string, std::string*>::iterator elem = g_ptxSourceCache.map.find(key);
-        
-        // Load cuda source from file
-        std::string cu_source = pgGetTextFromFile(filepath.value());
-        std::string* ptx;
-        if (elem == g_ptxSourceCache.map.end())
+        std::map<std::string, std::string*>::iterator elem = g_source_cache.map.find(key);
+
+        if (elem == g_source_cache.map.end())
         {
-            ptx = new std::string;
-            getPtxFromCuString(*ptx, cu_source.c_str(), filepath.value().string().c_str(), log);
-            g_ptxSourceCache.map[key] = ptx;
+            input_data = new std::string();
+#if CUDA_NVRTC_ENABLED
+            std::string cu_source = pgGetTextFromFile(filepath.value());
+            getPtxFromCuString(input_data, cu_source.c_str(), filepath.value().string().c_str(), log);
+#else
+            getInputDataFromFile(*input_data, filepath.value().string());
+#endif
+            g_source_cache.map[key] = input_data;
         }
         else
         {
-            ptx = elem->second;
+            input_data = elem->second;
         }
-        createFromPtxSource(ctx, *ptx, pipeline_options);
+        std::cout << *input_data << std::endl;
+        createFromPtxSource(ctx, *input_data, pipeline_options);
     }
 
     void Module::createFromCudaSource(const Context& ctx, const std::string& source, OptixPipelineCompileOptions pipeline_options)
     {
+#if CUDA_NVRTC_ENABLED
         const char** log = nullptr;
         std::string* ptx = new std::string;
         getPtxFromCuString(*ptx, source.c_str(), "", log);
         createFromPtxSource(ctx, *ptx, pipeline_options);
-    }
 #endif
+    }
 
     void Module::createFromPtxFile(const Context& ctx, const fs::path& filename, OptixPipelineCompileOptions pipeline_options)
     {
@@ -190,13 +277,13 @@ namespace prayground {
         ASSERT(filepath, "The PTX file to create module of '" + filename.string() + "' is not found.");
 
         std::string key = filepath.value().string();
-        std::map<std::string, std::string*>::iterator elem = g_ptxSourceCache.map.find(key);
+        std::map<std::string, std::string*>::iterator elem = g_source_cache.map.find(key);
         std::string* ptx = new std::string;
 
-        if (elem == g_ptxSourceCache.map.end())
+        if (elem == g_source_cache.map.end())
         {
             *ptx = pgGetTextFromFile(filepath.value());
-            g_ptxSourceCache.map[key] = ptx;
+            g_source_cache.map[key] = ptx;
         }
         else
         {

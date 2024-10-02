@@ -47,7 +47,7 @@ void App::setup()
     pipeline.setNumAttributes(5);
 
     // Create module
-    Module module = pipeline.createModuleFromPtxFile(ctx, "ptx/rtcamp10_generated_kernels.cu.ptx");
+    Module module = pipeline.createModuleFromCudaFile(ctx, "kernels.cu");
 
     // Initialize bitmap 
     const int32_t width = pgGetWidth();
@@ -108,7 +108,7 @@ void App::setup()
     ProgramGroup miss = pipeline.createMissProgram(ctx, module, "__miss__envmap");
     ProgramGroup miss_shadow = pipeline.createMissProgram(ctx, module, "__miss__shadow");
     scene.bindMissPrograms({ miss, miss_shadow });
-    auto envmap_texture = make_shared<FloatBitmapTexture>("resources/image/drackenstein_quarry_4k.exr", bitmap_id);
+    auto envmap_texture = make_shared<FloatBitmapTexture>("drackenstein_quarry_4k.exr", bitmap_id);
     scene.setEnvmap(envmap_texture);
     // TODO: Create Distribution2D for envmap importance sampling
 

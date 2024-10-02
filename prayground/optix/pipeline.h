@@ -31,6 +31,8 @@ public:
     [[nodiscard]] Module createModuleFromPtxFile(const Context& ctx, const std::filesystem::path& filename);
     [[nodiscard]] Module createModuleFromPtxSource(const Context& ctx, const std::string& source);
 
+    [[nodiscard]] Module createModuleFromOptixIr(const Context& ctx, const std::filesystem::path& filename);
+
     [[nodiscard]] ProgramGroup createRaygenProgram(const Context& ctx, const Module& module, const std::string& func_name);
     [[nodiscard]] ProgramGroup createRaygenProgram(const Context& ctx, const ProgramEntry& entry);
     [[nodiscard]] ProgramGroup createMissProgram(const Context& ctx, const Module& module, const std::string& func_name);

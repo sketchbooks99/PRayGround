@@ -109,6 +109,11 @@ namespace prayground {
         return m_modules.back();
     }
 
+    Module Pipeline::createModuleFromOptixIr(const Context& ctx, const std::filesystem::path& filename)
+    {
+        return Module();
+    }
+
     // --------------------------------------------------------------------
     [[nodiscard]]
     ProgramGroup Pipeline::createRaygenProgram(const Context& ctx, const Module& module, const std::string& func_name)

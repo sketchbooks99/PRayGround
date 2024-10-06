@@ -2,15 +2,21 @@
 
 #include <chrono>
 
+#define USE_DENOISER 0
+
 void App::initResultBufferOnDevice() 
 {
     params.frame = 0u;
 
     result_bmp.allocateDevicePtr();
     accum_bmp.allocateDevicePtr();
+    normal_bmp.allocateDevicePtr();
+    albedo_bmp.allocateDevicePtr();
 
-    params.result_buffer = (Vec4u*)result_bmp.deviceData();
+    params.result_buffer = (Vec4f*)result_bmp.deviceData();
     params.accum_buffer = (Vec4f*)accum_bmp.deviceData();
+    params.normal_buffer = (Vec4f*)normal_bmp.deviceData();
+    params.albedo_buffer = (Vec4f*)albedo_bmp.deviceData();
 }
 
 void App::handleCameraUpdate() 
@@ -46,28 +52,39 @@ void App::setup()
     pipeline.setNumAttributes(5);
 
     // Create module
-    Module module = pipeline.createModuleFromOptixIr(ctx, "ptx/Release/rtcamp10_generated_kernels.cu.optixir");
+#if _DEBUG
+    string dst = "Debug";
+#else
+    string dst = "Release";
+#endif
+    Module module = pipeline.createModuleFromOptixIr(ctx, "ptx/" + dst + "/rtcamp10_generated_kernels.cu.optixir");
 
     // Initialize bitmap 
     const int32_t width = pgGetWidth();
     const int32_t height = pgGetHeight();
     result_bmp.allocate(PixelFormat::RGBA, width, height);
     accum_bmp.allocate(PixelFormat::RGBA, width, height);
+    normal_bmp.allocate(PixelFormat::RGBA, width, height);
+    albedo_bmp.allocate(PixelFormat::RGBA, width, height);
     result_bmp.allocateDevicePtr();
     accum_bmp.allocateDevicePtr();
+    normal_bmp.allocateDevicePtr();
+    albedo_bmp.allocateDevicePtr();
 
     // Launch parameter initialization
     params.width = width;
     params.height = height;
 #if SUBMISSION
-    params.samples_per_launch = 32;
+    params.samples_per_launch = 64;
 #else
     params.samples_per_launch = 8;
 #endif
     params.frame = 0u;
     params.max_depth = 10;
-    params.result_buffer = (Vec4u*)result_bmp.deviceData();
+    params.result_buffer = (Vec4f*)result_bmp.deviceData();
     params.accum_buffer = (Vec4f*)accum_bmp.deviceData();
+    params.normal_buffer = (Vec4f*)normal_bmp.deviceData();
+    params.albedo_buffer = (Vec4f*)albedo_bmp.deviceData();
 
     // Setup scene
     Scene<Camera, NRay>::AccelSettings accel_settings;
@@ -113,8 +130,8 @@ void App::setup()
     ProgramGroup miss = pipeline.createMissProgram(ctx, module, "__miss__envmap");
     ProgramGroup miss_shadow = pipeline.createMissProgram(ctx, module, "__miss__shadow");
     scene.bindMissPrograms({ miss, miss_shadow });
-    auto envmap_texture = make_shared<FloatBitmapTexture>("resources/drackenstein_quarry_4k.exr", bitmap_id);
-    //auto envmap_texture = make_shared<ConstantTexture>(Vec3f(0.0f), constant_id);
+    //auto envmap_texture = make_shared<FloatBitmapTexture>("resources/christmas_photo_studio_01_4k.exr", bitmap_id);
+    auto envmap_texture = make_shared<ConstantTexture>(Vec3f(0.0f), constant_id);
     scene.setEnvmap(envmap_texture);
     // TODO: Create Distribution2D for envmap importance sampling
 
@@ -155,9 +172,15 @@ void App::setup()
         setupCallable("__direct_callable__bsdf_layered", ""),
         setupCallable("__direct_callable__pdf_layered", "")
     };
-    SurfaceCallableID area_emitter_id = { 
+    SurfaceCallableID area_emitter_id = {
         setupCallable("__direct_callable__area_emitter", "")
     };
+
+    uint32_t light_sample_sphere_id = setupCallable("__direct_callable__sample_light_sphere", "");
+    uint32_t light_pdf_sphere_id = setupCallable("__direct_callable__sample_light_sphere", "");
+
+    // Light sampling callables
+
 
     // Create surfaces
     auto floor_mat = make_shared<Diffuse>(diffuse_id, make_shared<CheckerTexture>(Vec3f(0.8f), Vec3f(0.2f), 10, checker_id));
@@ -199,7 +222,7 @@ void App::setup()
     table_mat->setMetallic(0.0f);
     table_mat->setSheenTint(0.5f);
 
-    auto sashimi_plate_mat = make_shared<Disney>(disney_id, make_shared<ConstantTexture>(Vec3f(1.0f), constant_id));
+    auto sashimi_plate_mat = make_shared<Disney>(disney_id, make_shared<ConstantTexture>(Vec3f(0.3f), constant_id));
     sashimi_plate_mat->setMetallic(0.1f);
     sashimi_plate_mat->setSpecular(0.9f);
     sashimi_plate_mat->setRoughness(0.4f);
@@ -213,20 +236,24 @@ void App::setup()
 
     // Sphere geometry
     shared_ptr<Sphere> sphere = make_shared<Sphere>(10);
-    scene.addObject("sphere", sphere, sphere_mat, { sphere_prg, sphere_shadow_prg }, Matrix4f::translate(-10, -80, 0));
+    scene.addObject("sphere", sphere, sphere_mat, { sphere_prg, sphere_shadow_prg }, Matrix4f::translate(-20, -85, 0));
 
     shared_ptr<TriangleMesh> bunny = make_shared<TriangleMesh>("resources/uv_bunny.obj");
-    bunny->calculateNormalSmooth();
-    scene.addObject("bunny", bunny, bunny_mat, { mesh_prg, mesh_shadow_prg }, Matrix4f::translate(10, -80, 0) * Matrix4f::scale(100));
+    scene.addObject("bunny", bunny, bunny_mat, { mesh_prg, mesh_shadow_prg }, Matrix4f::translate(20, -95, 0) * Matrix4f::scale(100));
 
-    shared_ptr<TriangleMesh> katsuo = make_shared<TriangleMesh>("resources/Katsuo.obj");
-    scene.addObject("katsuo", katsuo, katsuo_mat, { mesh_prg, mesh_shadow_prg }, Matrix4f::translate(30, -80, 0) * Matrix4f::scale(10));
+    //shared_ptr<TriangleMesh> katsuo = make_shared<TriangleMesh>("resources/Katsuo.obj");
+    //scene.addObject("katsuo", katsuo, katsuo_mat, { mesh_prg, mesh_shadow_prg }, Matrix4f::translate(30, -80, 0) * Matrix4f::scale(10));
 
     shared_ptr<TriangleMesh> table = make_shared<TriangleMesh>("resources/Table.obj");
     scene.addObject("table", table, table_mat, { mesh_prg, mesh_shadow_prg }, Matrix4f::translate(0, -90, 0)* Matrix4f::scale(10));
+    //shared_ptr<Plane> table = make_shared<Plane>(Vec2f(-200), Vec2f(200));
+    //scene.addObject("table", table, table_mat, { plane_prg, plane_shadow_prg }, Matrix4f::translate(0, -90, 0));
 
     shared_ptr<TriangleMesh> sashimi_plate = make_shared<TriangleMesh>("resources/Sashimi plate.obj");
+    sashimi_plate->calculateNormalFlat();
     scene.addObject("sashimi plate", sashimi_plate, sashimi_plate_mat, { mesh_prg, mesh_shadow_prg }, Matrix4f::translate(0, -90, 0)* Matrix4f::scale(10));
+    //shared_ptr<Plane> sashimi_plate = make_shared<Plane>(Vec2f(-50), Vec2f(50));
+    //scene.addObject("sashimi plate", sashimi_plate, sashimi_plate_mat, { plane_prg, plane_shadow_prg }, Matrix4f::translate(0, -85, 0));
 
     shared_ptr<Sphere> light1_geom = make_shared<Sphere>(5);
     scene.addLight("light1", light1_geom, light1, { sphere_prg, sphere_shadow_prg }, Matrix4f::translate(50, 20, 30));
@@ -234,9 +261,40 @@ void App::setup()
     scene.addLight("light3", light1_geom, light1, { sphere_prg, sphere_shadow_prg }, Matrix4f::translate(-50, 20, -30));
     scene.addLight("light4", light1_geom, light1, { sphere_prg, sphere_shadow_prg }, Matrix4f::translate(50, 20, -30));
 
+
+#if USE_DENOISER
+    // Denoiser setting
+    denoise_data.width = width;
+    denoise_data.height = height;
+    denoise_data.outputs.push_back(new float[denoise_data.width * denoise_data.height * 4]);
+    denoise_data.color = result_bmp.deviceData();
+    denoise_data.albedo = albedo_bmp.deviceData();
+    denoise_data.normal = normal_bmp.deviceData();
+    denoiser.init(ctx, denoise_data, 0, 0, false, false);
+#endif
+
     // Setup context
     CUDA_CHECK(cudaStreamCreate(&stream));
     scene.copyDataToDevice();
+
+    std::vector<LightInfo> lights;
+    for (auto name : scene.lightNames()) {
+        auto light = scene.getLight(name);
+        lights.push_back({
+            .shape_data = light->shape->devicePtr(),
+            .objToWorld = light->instance.transform(),
+            .worldToObj = light->instance.transform().inverse(),
+            .sample_id = light_sample_sphere_id,
+            .pdf_id = light_pdf_sphere_id,
+            .twosided = true,
+            .surface_info = light->emitters[0]->surfaceInfoDevicePtr()
+    });
+    }
+    CUDABuffer<LightInfo> d_lights;
+    d_lights.copyToDevice(lights);
+    params.lights = d_lights.deviceData();
+    params.num_lights = lights.size();
+
     scene.buildAccel(ctx, stream);
     scene.buildSBT();
     pipeline.create(ctx);
@@ -256,13 +314,24 @@ void App::setup()
         CUDA_SYNC_CHECK();
 
         result_bmp.copyFromDevice();
+        normal_bmp.copyFromDevice();
+        albedo_bmp.copyFromDevice();
+
+        denoise_data.color = result_bmp.deviceData();
+        denoise_data.normal = normal_bmp.deviceData();
+        denoise_data.albedo = albedo_bmp.deviceData();
+
+        denoiser.update(denoise_data);
+        denoiser.run();
+
+        denoiser.copyFromDevice();
 
         string filename = std::format("image_{:03d}.png", frame);
         filesystem::path filepath = pgPathJoin(pgGetExecutableDir(), filename);
-        result_bmp.write(filepath);
+        denoiser.write(denoise_data, filepath);
 
-        const float x = sinf(elapsed_seconds) * 50;
-        const float z = cosf(elapsed_seconds) * 50;
+        const float x = sinf(elapsed_seconds * 0.1f) * 70;
+        const float z = cosf(elapsed_seconds * 0.1f) * 70;
         camera->setOrigin(x, -50, z);
         camera->setLookat(0, -80, 0);
         is_camera_updated = true;
@@ -297,6 +366,19 @@ void App::update()
     CUDA_SYNC_CHECK();
 
     result_bmp.copyFromDevice();
+#if USE_DENOISER
+    normal_bmp.copyFromDevice();
+    albedo_bmp.copyFromDevice();
+
+    denoise_data.color = result_bmp.deviceData();
+    denoise_data.normal = normal_bmp.deviceData();
+    denoise_data.albedo = albedo_bmp.deviceData();
+
+    denoiser.update(denoise_data);
+    denoiser.run();
+
+    denoiser.copyFromDevice();
+#endif
 
     params.frame++;
 }
@@ -311,7 +393,7 @@ void App::draw()
     ImGui::Begin("RTCAMP 10 editor");
 
     // Update katsuo object
-    auto katsuo = scene.getObject("katsuo");
+    /*auto katsuo = scene.getObject("katsuo");
     auto katsuo_mat = dynamic_pointer_cast<Layered>(katsuo->materials[0]);
     auto katsuo_top_layer = dynamic_pointer_cast<Dielectric>(katsuo_mat->layerAt(0));
     Thinfilm thinfilm = katsuo_top_layer->thinfilm();
@@ -344,7 +426,7 @@ void App::draw()
 
         ImGui::TreePop();
     }
-    katsuo_top_layer->copyToDevice();
+    katsuo_top_layer->copyToDevice();*/
 
 
     // Update bunny 
@@ -410,12 +492,14 @@ void App::draw()
     //}
     //sphere_mat->copyToDevice();
 
-        
-
     ImGui::End();
     ImGui::Render();
 
+#if USE_DENOISER
+    denoiser.draw(denoise_data, 0, 0);
+#else
     result_bmp.draw();
+#endif
 
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }

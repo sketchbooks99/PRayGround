@@ -176,6 +176,9 @@ namespace prayground {
 
         void updateLightGAS(const std::string& name, const Context& ctx, CUstream stream);
 
+        std::shared_ptr<Light> getLight(const std::string& name);
+        std::vector<std::string> lightNames() const;
+
         // Moving object (especially for motion blur)
         void addMovingObject(const std::string& name, std::shared_ptr<Shape> shape, std::shared_ptr<Material> material,
             std::array<ProgramGroup, _NRay>& hitgroup_prgs, const Matrix4f& begin_transform, const Matrix4f& end_transform, uint16_t num_key = 2);
@@ -730,6 +733,27 @@ namespace prayground {
         auto& obj_val = obj.value();
 
         obj_val.value->instance.updateAccel(ctx, stream);
+    }
+
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
+    inline std::shared_ptr<typename Scene<_CamT, _NRay>::Light> Scene<_CamT, _NRay>::getLight(const std::string& name)
+    {
+        auto obj = findItem(m_lights, name);
+        if (!obj) {
+            pgLogFatal("The object named with", name, "is not found.");
+            return nullptr;
+        }
+
+        return obj.value().value;
+    }
+
+    template<DerivedFromCamera _CamT, uint32_t _NRay>
+    inline std::vector<std::string> Scene<_CamT, _NRay>::lightNames() const
+    {
+        std::vector<std::string> names;
+        for (const auto& l : m_lights)
+            names.push_back(l.name);
+        return names;
     }
 
     // -------------------------------------------------------------------------------

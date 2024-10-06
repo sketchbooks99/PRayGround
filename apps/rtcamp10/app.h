@@ -37,8 +37,13 @@ private:
 
     LaunchParams params;
 
-    Bitmap result_bmp;
+    FloatBitmap result_bmp;
     FloatBitmap accum_bmp;
+    FloatBitmap normal_bmp;
+    FloatBitmap albedo_bmp;
+
+    Denoiser denoiser;
+    Denoiser::Data denoise_data;
 
     static constexpr uint32_t NRay = 2;
     Scene<Camera, NRay> scene;

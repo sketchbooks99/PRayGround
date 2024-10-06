@@ -376,18 +376,18 @@ namespace prayground {
 
         const Face face = mesh->faces[primitive_index];
 
-        const Vec3f p0 = mesh->vertices[face.vertex_id.x()];
-        const Vec3f p1 = mesh->vertices[face.vertex_id.y()];
-        const Vec3f p2 = mesh->vertices[face.vertex_id.z()];
+        const Vec3f p0 = mesh->vertices[face.vertex_id[0]];
+        const Vec3f p1 = mesh->vertices[face.vertex_id[1]];
+        const Vec3f p2 = mesh->vertices[face.vertex_id[2]];
 
-        const Vec2f texcoord0 = mesh->texcoords[face.texcoord_id.x()];
-        const Vec2f texcoord1 = mesh->texcoords[face.texcoord_id.y()];
-        const Vec2f texcoord2 = mesh->texcoords[face.texcoord_id.z()];
+        const Vec2f texcoord0 = mesh->texcoords[face.texcoord_id[0]];
+        const Vec2f texcoord1 = mesh->texcoords[face.texcoord_id[1]];
+        const Vec2f texcoord2 = mesh->texcoords[face.texcoord_id[2]];
         shading.uv = barycentricInterop(texcoord0, texcoord1, texcoord2, bc);
 
-        const Vec3f n0 = mesh->normals[face.normal_id.x()];
-        const Vec3f n1 = mesh->normals[face.normal_id.y()];
-        const Vec3f n2 = mesh->normals[face.normal_id.z()];
+        const Vec3f n0 = mesh->normals[face.normal_id[0]];
+        const Vec3f n1 = mesh->normals[face.normal_id[1]];
+        const Vec3f n2 = mesh->normals[face.normal_id[2]];
         shading.n = barycentricInterop(n0, n1, n2, bc);
 
         const Vec2f duv02 = texcoord0 - texcoord2, duv12 = texcoord1 - texcoord2;

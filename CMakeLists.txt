@@ -179,10 +179,6 @@ if( NOT PASSED_FIRST_CONFIGURE )
     set( CUDA_NVRTC_FLAGS ${PRAYGROUND_NVRTC_CXX} -arch ${CUDA_MIN_SM_COMPUTE_TARGET} -lineinfo -use_fast_math -default-device -rdc true -D__x86_64 CACHE STRING "List of NVRTC options just for the PRAYGROUND" FORCE )
     set( CUDA_NVRTC_FLAGS_DEBUG ${PRAYGROUND_NVRTC_CXX} -arch ${CUDA_MIN_SM_COMPUTE_TARGET} -G -use_fast_math -default-device -rdc true -D__x86_64 CACHE STRING "List of NVRTC options just for the PRAYGROUND" FORCE )
   endif()    
-
-  if (WIN32)
-    optix_add_cuda_flag_config("/source-charset:utf-8")
-  endif()
 endif()
 
 message(STATUS "CUDA_NVCC_FLAGS = ${CUDA_NVCC_FLAGS}")

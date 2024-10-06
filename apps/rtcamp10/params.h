@@ -42,8 +42,10 @@ struct LaunchParams
 
     int frame;
 
-    Vec4u* result_buffer;
+    Vec4f* result_buffer;
     Vec4f* accum_buffer;
+    Vec4f* normal_buffer;
+    Vec4f* albedo_buffer;
 
     OptixTraversableHandle handle;
 

@@ -31,6 +31,12 @@ struct BSDFProperty {
     float thickness;
 };
 
+enum SCATTERED_TYPE {
+    REFLECTED = 1,
+    TRANSMITTED = 2,
+    BOTH = 3
+};
+
 struct ScatteredRay {
     Vec3f reflected;
     Vec3f transmitted;
@@ -150,9 +156,9 @@ extern "C" DEVICE void __raygen__pinhole() {
                 optixDirectCall<void, SurfaceInteraction*, void*, const Vec3f&, ScatteredRay*, float*>(
                     surface_info.callable_id.sample, &si, surface_info.data, si.wo, &out_ray, &pdf
                 );
-                if (out_ray.scattered_type == 1)
+                if (out_ray.scattered_type == REFLECTED)
                     si.wi = out_ray.reflected;
-                else if (out_ray.scattered_type == 2)
+                else if (out_ray.scattered_type == TRANSMITTED)
                     si.wi = out_ray.transmitted;
 
                 // Evaluate BSDF
@@ -168,7 +174,7 @@ extern "C" DEVICE void __raygen__pinhole() {
             // Rough surface sampling with MIS
             else if (+(surface_info.type & (SurfaceType::Rough | SurfaceType::Layered))) {
                 ScatteredRay out_ray;
-                float pdf = 1.0f / math::pi;
+                float pdf = 0.0f;
                 optixDirectCall<void, SurfaceInteraction*, void*, const Vec3f&, ScatteredRay*, float*>(
                     surface_info.callable_id.sample, &si, surface_info.data, si.wo, &out_ray, &pdf
                 );
@@ -247,7 +253,7 @@ extern "C" DEVICE void __raygen__pinhole() {
             }
 
             ro = si.p;
-            rd = si.wi;
+            rd = normalize(si.wi);
 
             ++depth;
         } // for (;;)
@@ -470,7 +476,7 @@ extern "C" DEVICE void __direct_callable__sample_diffuse(SurfaceInteraction* si,
     si->wi = pgImportanceSamplingDiffuse(diffuse, wo, si->shading, si->seed);
     si->trace_terminate = false;
 
-    *out_ray = ScatteredRay{ si->wi, Vec3f(0.0f), 1.0f, 1};
+    *out_ray = ScatteredRay{ si->wi, Vec3f(0.0f), 1.0f, REFLECTED};
     *pdf = pgGetDiffusePDF(si->wi, si->shading.n);
 }
 
@@ -497,7 +503,7 @@ extern "C" DEVICE void __direct_callable__sample_conductor(SurfaceInteraction* s
         si->shading.n = faceforward(si->shading.n, wo, si->shading.n);
     si->wi = reflect(-wo, si->shading.n);
     si->trace_terminate = false;
-    *out_ray = ScatteredRay{ si->wi, Vec3f(0.0f), 1.0f, 1};
+    *out_ray = ScatteredRay{ si->wi, Vec3f(0.0f), 1.0f, REFLECTED};
     *pdf = 1.0f;
 }
 
@@ -520,7 +526,7 @@ extern "C" DEVICE BSDFProperty __direct_callable__bsdf_conductor(SurfaceInteract
     return BSDFProperty{ thinfilm * albedo, tf_thickness.x() };
 }
 
-extern "C" float __direct_callable__pdf_conductor(SurfaceInteraction* si, void* data, const Vec3f& wi, const Vec3f& wo) {
+extern "C" DEVICE float __direct_callable__pdf_conductor(SurfaceInteraction* si, void* data, const Vec3f& wi, const Vec3f& wo, uint8_t scatter_type) {
     return 1.0f;
 }
 
@@ -547,13 +553,13 @@ extern "C" DEVICE void __direct_callable__sample_dielectric(SurfaceInteraction* 
     float reflect_prob = fresnel(cosine, ni, nt);
     // Get out going direction of the ray
     if (cannot_refract) {
-        *out_ray = ScatteredRay{ reflect(-wo, outward_normal), Vec3f(0.0f), 1.0f, 1 };
+        *out_ray = ScatteredRay{ reflect(-wo, outward_normal), Vec3f(0.0f), 1.0f, REFLECTED };
         *pdf = 1.0f;
     }
     else {
-        uint8_t scattered_type = rnd(si->seed) < reflect_prob ? 1 : 2;
+        uint8_t scattered_type = rnd(si->seed) < reflect_prob ? REFLECTED : TRANSMITTED;
         *out_ray = ScatteredRay { reflect(-wo, outward_normal), refract(-wo, outward_normal, cosine, ni, nt), reflect_prob, scattered_type };
-        *pdf = scattered_type == 1 ? reflect_prob : 1.0f - reflect_prob;
+        *pdf = 1.0f;
     }
 }
 
@@ -563,6 +569,7 @@ extern "C" DEVICE BSDFProperty __direct_callable__bsdf_dielectric(SurfaceInterac
     // Evaluate BSDFSample
     Vec3f albedo = optixDirectCall<Vec3f, const Vec2f&, void*>(
         dielectric->texture.prg_id, si->shading.uv, dielectric->texture.data);
+    si->albedo = albedo;
 
     float ni = 1.000292f;       /// @todo Consider IOR of current medium where ray goes on
     float nt = dielectric->ior;
@@ -581,12 +588,6 @@ extern "C" DEVICE BSDFProperty __direct_callable__bsdf_dielectric(SurfaceInterac
 
     // Get reflectivity by the Fresnel equation
     float reflect_prob = fresnel(cosine, ni, nt);
-    float weight = 1.0f;
-    if (!cannot_refract) {
-        weight = scatter_type == 1 ? reflect_prob : 1.0f - reflect_prob;
-    }
-
-    albedo *= weight;
 
     if (dielectric->thinfilm.thickness.prg_id == -1)
         return BSDFProperty{ albedo, 0.0f };
@@ -622,7 +623,7 @@ extern "C" DEVICE float __direct_callable__pdf_dielectric(SurfaceInteraction* si
     float reflect_prob = fresnel(cos_theta, ni, nt);
     float pdf = 1.0f;
     if (!cannot_refract)
-        pdf = scatter_type == 1 ? reflect_prob : 1.0f - reflect_prob;
+        pdf = scatter_type == REFLECTED ? reflect_prob : 1.0f - reflect_prob;
     return pdf;
 }
 
@@ -633,7 +634,7 @@ extern "C" DEVICE void __direct_callable__sample_disney(SurfaceInteraction* si, 
     // Importance sampling
     si->wi = pgImportanceSamplingDisney(disney, wo, si->shading, si->seed);
     si->trace_terminate = false;
-    *out_ray = ScatteredRay{ si->wi, Vec3f(0.0f), 1.0f, 1 };
+    *out_ray = ScatteredRay{ si->wi, Vec3f(0.0f), 1.0f, REFLECTED };
     *pdf = pgGetDisneyPDF(disney, wo, si->wi, si->shading);
 }
 
@@ -674,15 +675,15 @@ extern "C" DEVICE void __direct_callable__sample_layered(SurfaceInteraction* si,
     Vec3f _wo = wo;
     Vec3f _wi;
     int32_t layer = 1;
-    float pdf_weight = 1.0f / (float)(n_layers - 1);
+    float pdf_weight = 0.5f;
     float total_pdf = 0.0f;
 
     // Downward ray sampling in the layered surface
     while (layer < n_layers) {
         SurfaceInfo info = si->surface_info[layer];
         ScatteredRay _out_ray;
-        float _pdf = 1.0f;
         // Generate refraction and reflection ray and increment layer if interacting surface is refractive
+        float _pdf = 0.0f;
         if (+(info.type & SurfaceType::Refractive)) {
             BSDFProperty bsdf = optixDirectCall<BSDFProperty, SurfaceInteraction*, void*, const Vec3f&, const Vec3f&, uint8_t>(
                 info.callable_id.bsdf, si, info.data, si->wi, _wo, 1
@@ -692,7 +693,7 @@ extern "C" DEVICE void __direct_callable__sample_layered(SurfaceInteraction* si,
             optixDirectCall<void, SurfaceInteraction*, void*, const Vec3f&, ScatteredRay*, float*>
                 (info.callable_id.sample, si, info.data, _wo, &_out_ray, &_pdf);
 
-            if (_out_ray.reflect_prob >= 1.0f) {
+            if (_out_ray.scattered_type == REFLECTED) {
                 _wi = _out_ray.reflected;
                 total_pdf += _pdf * pdf_weight;
                 break;
@@ -730,7 +731,7 @@ extern "C" DEVICE void __direct_callable__sample_layered(SurfaceInteraction* si,
             (info.callable_id.sample, si, info.data, -_wi, &_out_ray, &_pdf);
 
         if (_out_ray.reflect_prob >= 1.0f) {
-            si->trace_terminate = true;
+            //si->trace_terminate = true;
             break;
         } else {
             _wi = _out_ray.transmitted;
@@ -750,15 +751,16 @@ extern "C" DEVICE BSDFProperty __direct_callable__bsdf_layered(SurfaceInteractio
     Vec3f total_bsdf(0.0f);
     Vec3f t_wo = wo, t_wi = wi;
     float attenuation = 1.0f;
+    Vec3f albedo(0.0f);
     while (layer < n_layers) {
         SurfaceInfo info = si->surface_info[layer];
 
         BSDFProperty bsdf = optixDirectCall<BSDFProperty, SurfaceInteraction*, void*, const Vec3f&, const Vec3f&, uint8_t>(
             info.callable_id.bsdf, si, info.data, t_wi, t_wo, scatter_type
         );
+        albedo += si->albedo * attenuation;
 
-        total_bsdf += attenuation * bsdf.bsdf;
-        //total_bsdf = lerp(total_bsdf, bsdf.bsdf, attenuation);
+        total_bsdf = lerp(total_bsdf, bsdf.bsdf, attenuation);
 
         // Terminate recursive BSDF evaluation through the layered surface
         if (layer == n_layers - 1)
@@ -781,117 +783,15 @@ extern "C" DEVICE BSDFProperty __direct_callable__bsdf_layered(SurfaceInteractio
         const float cos_o = fabs(dot(t_wo, si->shading.n));
         const float cos_i = fabs(dot(t_wi, si->shading.n));
 
-        float l = bsdf.thickness * 1e-2f * ((1.0f / cos_i) + (1.0f / cos_o));
+        float l = bsdf.thickness * 1e-1f * ((1.0f / cos_i) + (1.0f / cos_o));
         attenuation *= expf(-l);
 
         ++layer;
     }
+    si->albedo = albedo;
     return BSDFProperty{ total_bsdf, 0.0f };
 }
 
-//extern "C" DEVICE ScatteredRay __direct_callable__sample_layered(SurfaceInteraction* si, void* data, const Vec3f& wo) {
-//    const Layered::Data* layered = reinterpret_cast<Layered::Data*>(data);
-//
-//    uint32_t n_layers = layered->num_layers + 1;
-//
-//    Vec3f wi;
-//    Vec3f _wo = wo;
-//    float sample_prob;
-//    int32_t l = 1;
-//    // Downward ray tracing into the layered surface
-//    while (l < n_layers) {
-//        SurfaceInfo info = si->surface_info[l];
-//        // Generate refraction and reflection ray and increment layer if interacting surface is refractive
-//        if (+(info.type & SurfaceType::Refractive)) {
-//            BSDFProperty bsdf = optixDirectCall<BSDFProperty, SurfaceInteraction*, void*, const Vec3f&, const Vec3f&>(
-//                info.callable_id.bsdf, si, info.data, si->wi, _wo, 1
-//            );
-//            if (bsdf.thickness <= 0.0f) {
-//                ++l;
-//                continue;
-//            }
-//
-//            ScatteredRay scattered = optixDirectCall<ScatteredRay, SurfaceInteraction*, void*, const Vec3f&>(info.callable_id.sample, si, info.data, _wo);
-//
-//            // If refractive surface cannot refract, generate reflection ray and don't increment layer
-//            if (scattered.scattered_type == 1) {
-//                wi = scattered.reflected;
-//                break;
-//            }
-//            // Transmit the ray to the next layer
-//            else {
-//                _wo = -scattered.transmitted;
-//                ++l;
-//            }
-//        }
-//        // Generate reflection ray and don't increment layer
-//        else {
-//            ScatteredRay scattered = optixDirectCall<ScatteredRay, SurfaceInteraction*, void*, const Vec3f&>(info.callable_id.sample, si, info.data, _wo);
-//            wi = scattered.reflected;
-//            break;
-//        }
-//    }
-//
-//    // Upward ray tracing from the bottom layer to the top layer
-//    for (int32_t i = l - 1; i >= 1; --i) {
-//        SurfaceInfo info = si->surface_info[i];
-//        ScatteredRay scattered = optixDirectCall<ScatteredRay, SurfaceInteraction*, void*, const Vec3f&>(
-//            info.callable_id.sample, si, info.data, wi);
-//
-//        // Ray cannot go through from the surface to the outside
-//        if (rnd(si->seed) < scattered.reflect_prob) {
-//            si->trace_terminate = true;
-//        } else {
-//            wi = scattered.transmitted;
-//        }
-//    }
-//    return { wi, Vec3f(0.0f), 1.0f, 1 };
-//}
-//
-//extern "C" DEVICE BSDFProperty __direct_callable__bsdf_layered(SurfaceInteraction* si, void* data, const Vec3f& wi, const Vec3f& wo, uint8_t scatter_type) {
-//    const Layered::Data* layered = reinterpret_cast<Layered::Data*>(data);
-//
-//    uint32_t n_layers = layered->num_layers + 1;
-//
-//    int32_t layer = 1;
-//    Vec3f total_bsdf(0.0f);
-//    Vec3f t_wo = wo, t_wi = wi;
-//    float attenuation = 1.0f;
-//    while (layer < n_layers) {
-//        SurfaceInfo info = si->surface_info[layer];
-//
-//        BSDFProperty bsdf = optixDirectCall<BSDFProperty, SurfaceInteraction*, void*, const Vec3f&, const Vec3f&, uint8_t>(
-//            info.callable_id.bsdf, si, info.data, t_wi, t_wo, scatter_type
-//        );
-//        total_bsdf += attenuation * bsdf.bsdf;
-//
-//        // Transmitted ray into the next layer
-//        ScatteredRay t_wi_r = optixDirectCall<ScatteredRay, SurfaceInteraction*, void*, const Vec3f&>(
-//            info.callable_id.sample, si, info.data, t_wi);
-//        ScatteredRay t_wo_r = optixDirectCall<ScatteredRay, SurfaceInteraction*, void*, const Vec3f&>(
-//            info.callable_id.sample, si, info.data, t_wo);
-//
-//        if (t_wi_r.reflect_prob >= 1.0f || t_wo_r.reflect_prob >= 1.0f)
-//            break;
-//
-//        const float cos_i = dot(-t_wi_r.transmitted, si->shading.n);
-//        const float cos_o = dot(-t_wo_r.transmitted, si->shading.n);
-//
-//        if (bsdf.thickness == 0.0f)
-//            attenuation = 1.0f;
-//        else {
-//            float l = bsdf.thickness * 1e-9f * ((1.0f / cos_i) + (1.0f / cos_o));
-//            attenuation *= expf(-l);
-//        }
-//
-//        t_wo = -t_wo_r.transmitted;
-//        t_wi = -t_wi_r.transmitted;
-//
-//        ++layer;
-//    }
-//    return { total_bsdf, 0.0f };
-//}
-//
 extern "C" DEVICE float __direct_callable__pdf_layered(SurfaceInteraction* si, void* data, const Vec3f& wi, const Vec3f& wo, uint8_t scatter_type) {
     const Layered::Data* layered = reinterpret_cast<Layered::Data*>(data);
 

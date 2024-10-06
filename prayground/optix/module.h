@@ -26,7 +26,7 @@ public:
     void createFromCudaSource(const Context& ctx, const std::string& source, OptixPipelineCompileOptions pipeline_options);
     void createFromPtxFile(const Context& ctx, const std::filesystem::path& filename, OptixPipelineCompileOptions pipeline_options);
     void createFromPtxSource(const Context& ctx, const std::string& source, OptixPipelineCompileOptions pipeline_options);
-    void createFromOptixIr(const Context& ctx, const std::filesystem::path& filename,, OptixPipelineCompileOptions pipeline_options);
+    void createFromOptixIr(const Context& ctx, const std::filesystem::path& filename, OptixPipelineCompileOptions pipeline_options);
 
     void destroy();
 

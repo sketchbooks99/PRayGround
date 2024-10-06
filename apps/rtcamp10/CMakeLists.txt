@@ -4,6 +4,7 @@ PRAYGROUND_add_executable(rtcamp10 target_name
     app.h
     kernels.cu
     params.h
+    OPTIONS -rdc true
 )
 
 target_compile_definitions(

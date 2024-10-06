@@ -8,6 +8,8 @@
 #include <prayground/ext/imgui/imgui_impl_glfw.h>
 #include <prayground/ext/imgui/imgui_impl_opengl3.h>
 
+#define SUBMISSION 0
+
 using namespace std;
 
 class App : public BaseApp 

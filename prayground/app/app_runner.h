@@ -21,7 +21,7 @@ namespace prayground {
     float       pgGetElapsedTimef();
     std::shared_ptr<Window> pgGetCurrentWindow();
     void        pgSetWindowName(const std::string& name);
-    void        pgRunApp(const std::shared_ptr<BaseApp>& app, const std::shared_ptr<Window>& window);
+    void        pgRunApp(const std::shared_ptr<BaseApp>& app, const std::shared_ptr<Window>& window, bool use_window=true);
     bool        pgAppWindowInitialized();
     void        pgSetAppName(const std::string& name);
     std::string pgGetAppName();
@@ -31,7 +31,7 @@ namespace prayground {
     class AppRunner
     {
     public:
-        AppRunner(const std::shared_ptr<BaseApp>& app, const std::shared_ptr<Window>& window);
+        AppRunner(const std::shared_ptr<BaseApp>& app, const std::shared_ptr<Window>& window, bool use_window=true);
 
         void run() const;
         void loop() const;
@@ -42,6 +42,7 @@ namespace prayground {
     private:
         std::shared_ptr<BaseApp> m_app;
         std::shared_ptr<Window> m_window;
+        bool m_use_window;
     };
 
 } // namespace prayground

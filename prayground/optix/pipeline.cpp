@@ -111,7 +111,9 @@ namespace prayground {
 
     Module Pipeline::createModuleFromOptixIr(const Context& ctx, const std::filesystem::path& filename)
     {
-        return Module();
+        m_modules.emplace_back(Module{});
+        m_modules.back().createFromOptixIr(ctx, filename, m_compile_options);
+        return m_modules.back();
     }
 
     // --------------------------------------------------------------------

@@ -2,8 +2,6 @@
 
 #include <chrono>
 
-#define SUBMISSION 0
-
 void App::initResultBufferOnDevice() 
 {
     params.frame = 0u;
@@ -29,6 +27,7 @@ void App::handleCameraUpdate()
 void App::setup()
 {
     using namespace std::chrono;
+    system_clock::time_point start = system_clock::now();
 
     // Initialize CUDA 
     stream = 0;
@@ -47,7 +46,7 @@ void App::setup()
     pipeline.setNumAttributes(5);
 
     // Create module
-    Module module = pipeline.createModuleFromCudaFile(ctx, "kernels.cu");
+    Module module = pipeline.createModuleFromOptixIr(ctx, "ptx/Release/rtcamp10_generated_kernels.cu.optixir");
 
     // Initialize bitmap 
     const int32_t width = pgGetWidth();
@@ -60,7 +59,11 @@ void App::setup()
     // Launch parameter initialization
     params.width = width;
     params.height = height;
+#if SUBMISSION
+    params.samples_per_launch = 32;
+#else
     params.samples_per_launch = 8;
+#endif
     params.frame = 0u;
     params.max_depth = 10;
     params.result_buffer = (Vec4u*)result_bmp.deviceData();
@@ -79,7 +82,9 @@ void App::setup()
     camera->setUp(0, 1, 0);
     camera->setFov(40);
     camera->setAspect((float)width / height);
+#if !SUBMISSION
     camera->enableTracking(pgGetCurrentWindow());
+#endif
     scene.setCamera(camera);
 
     // Raygen program
@@ -108,7 +113,8 @@ void App::setup()
     ProgramGroup miss = pipeline.createMissProgram(ctx, module, "__miss__envmap");
     ProgramGroup miss_shadow = pipeline.createMissProgram(ctx, module, "__miss__shadow");
     scene.bindMissPrograms({ miss, miss_shadow });
-    auto envmap_texture = make_shared<FloatBitmapTexture>("drackenstein_quarry_4k.exr", bitmap_id);
+    auto envmap_texture = make_shared<FloatBitmapTexture>("resources/drackenstein_quarry_4k.exr", bitmap_id);
+    //auto envmap_texture = make_shared<ConstantTexture>(Vec3f(0.0f), constant_id);
     scene.setEnvmap(envmap_texture);
     // TODO: Create Distribution2D for envmap importance sampling
 
@@ -152,12 +158,6 @@ void App::setup()
     SurfaceCallableID area_emitter_id = { 
         setupCallable("__direct_callable__area_emitter", "")
     };
-    PG_LOG("diffuse_id:", diffuse_id);
-    PG_LOG("conductor_id:", conductor_id);
-    PG_LOG("dielectric_id:", dielectric_id);
-    PG_LOG("disney_id:", disney_id);
-    PG_LOG("layered_id:", layered_id);
-    PG_LOG("area_emitter_id:", area_emitter_id);
 
     // Create surfaces
     auto floor_mat = make_shared<Diffuse>(diffuse_id, make_shared<CheckerTexture>(Vec3f(0.8f), Vec3f(0.2f), 10, checker_id));
@@ -184,45 +184,55 @@ void App::setup()
             /* extinction = */ Vec3f(1.5f)
         ));
 
-    auto katsuo_base = make_shared<Disney>(disney_id, make_shared<BitmapTexture>("Katsuo Color.png", bitmap_id));
-    katsuo_base->setSubsurface(0.8f);
-    katsuo_base->setMetallic(0.8f);
-    katsuo_base->setRoughness(0.2f);
+    auto katsuo_base = make_shared<Diffuse>(diffuse_id, make_shared<BitmapTexture>("resources/Katsuo Color.png", bitmap_id));
     auto katsuo_oil = make_shared<Dielectric>(dielectric_id,
         make_shared<ConstantTexture>(Vec3f(0.9f, 0.9f, 0.8f), constant_id),
         1.5f, 0.0f, Sellmeier::None,
-        Thinfilm(Vec3f(1.5f), make_shared<BitmapTexture>("Katsuo thinfilm thickness.png", bitmap_id), 200.0f, 1.33f, Vec3f(3.0f, 5.0f, 6.0f)));
+        Thinfilm(Vec3f(1.0f), make_shared<BitmapTexture>("resources/Katsuo thinfilm thickness.png", bitmap_id), 1000.0f, 2.45f, Vec3f(3.0f, 6.0f, 2.0f)));
     std::vector <std::shared_ptr<Material>> layers = { katsuo_oil, katsuo_base };
     auto katsuo_mat = make_shared<Layered>(layered_id, layers);
-    katsuo_mat->setBumpmap(make_shared<BitmapTexture>("Katsuo Normal.png", bitmap_id));
+    katsuo_mat->setBumpmap(make_shared<BitmapTexture>("resources/Katsuo Normal.png", bitmap_id));
 
-    // Katsuo 2
-    auto katsuo2_mat = make_shared<Disney>(disney_id, make_shared<BitmapTexture>("Katsuo Color.png", bitmap_id));
-    katsuo2_mat->setSubsurface(0.8f);
-    katsuo2_mat->setMetallic(0.8f);
-    katsuo2_mat->setRoughness(0.2f);
-    katsuo2_mat->setBumpmap(make_shared<BitmapTexture>("Katsuo Normal.png", bitmap_id));
+    auto table_mat = make_shared<Disney>(disney_id, make_shared<BitmapTexture>("resources/Table Color.png", bitmap_id));
+    table_mat->setSpecular(0.5f);
+    table_mat->setRoughness(0.5f);
+    table_mat->setMetallic(0.0f);
+    table_mat->setSheenTint(0.5f);
+
+    auto sashimi_plate_mat = make_shared<Disney>(disney_id, make_shared<ConstantTexture>(Vec3f(1.0f), constant_id));
+    sashimi_plate_mat->setMetallic(0.1f);
+    sashimi_plate_mat->setSpecular(0.9f);
+    sashimi_plate_mat->setRoughness(0.4f);
+
+    auto light1 = make_shared<AreaEmitter>(area_emitter_id, make_shared<ConstantTexture>(Vec3f(1.0f), constant_id), 100.0f);
 
     // Setup geometries in the scene
     // Floor geometry
-    shared_ptr<Plane> plane = make_shared<Plane>(Vec2f(-200), Vec2f(200));
-    scene.addObject("floor", plane, floor_mat, { plane_prg, plane_shadow_prg }, Matrix4f::translate(0, -100, 0));
+    //shared_ptr<Plane> plane = make_shared<Plane>(Vec2f(-200), Vec2f(200));
+    //scene.addObject("floor", plane, floor_mat, { plane_prg, plane_shadow_prg }, Matrix4f::translate(0, -100, 0));
 
     // Sphere geometry
     shared_ptr<Sphere> sphere = make_shared<Sphere>(10);
     scene.addObject("sphere", sphere, sphere_mat, { sphere_prg, sphere_shadow_prg }, Matrix4f::translate(-10, -80, 0));
 
-    shared_ptr<TriangleMesh> bunny = make_shared<TriangleMesh>("uv_bunny.obj");
+    shared_ptr<TriangleMesh> bunny = make_shared<TriangleMesh>("resources/uv_bunny.obj");
     bunny->calculateNormalSmooth();
     scene.addObject("bunny", bunny, bunny_mat, { mesh_prg, mesh_shadow_prg }, Matrix4f::translate(10, -80, 0) * Matrix4f::scale(100));
 
-    shared_ptr<TriangleMesh> katsuo = make_shared<TriangleMesh>("Katsuo.obj");
+    shared_ptr<TriangleMesh> katsuo = make_shared<TriangleMesh>("resources/Katsuo.obj");
     scene.addObject("katsuo", katsuo, katsuo_mat, { mesh_prg, mesh_shadow_prg }, Matrix4f::translate(30, -80, 0) * Matrix4f::scale(10));
 
-    shared_ptr<TriangleMesh> katsuo2 = make_shared<TriangleMesh>("Katsuo.obj");
-    scene.addObject("katsuo", katsuo2, katsuo2_mat, { mesh_prg, mesh_shadow_prg }, Matrix4f::translate(60, -80, 0)* Matrix4f::scale(10));
-    
+    shared_ptr<TriangleMesh> table = make_shared<TriangleMesh>("resources/Table.obj");
+    scene.addObject("table", table, table_mat, { mesh_prg, mesh_shadow_prg }, Matrix4f::translate(0, -90, 0)* Matrix4f::scale(10));
 
+    shared_ptr<TriangleMesh> sashimi_plate = make_shared<TriangleMesh>("resources/Sashimi plate.obj");
+    scene.addObject("sashimi plate", sashimi_plate, sashimi_plate_mat, { mesh_prg, mesh_shadow_prg }, Matrix4f::translate(0, -90, 0)* Matrix4f::scale(10));
+
+    shared_ptr<Sphere> light1_geom = make_shared<Sphere>(5);
+    scene.addLight("light1", light1_geom, light1, { sphere_prg, sphere_shadow_prg }, Matrix4f::translate(50, 20, 30));
+    scene.addLight("light2", light1_geom, light1, { sphere_prg, sphere_shadow_prg }, Matrix4f::translate(-50, 20, 30));
+    scene.addLight("light3", light1_geom, light1, { sphere_prg, sphere_shadow_prg }, Matrix4f::translate(-50, 20, -30));
+    scene.addLight("light4", light1_geom, light1, { sphere_prg, sphere_shadow_prg }, Matrix4f::translate(50, 20, -30));
 
     // Setup context
     CUDA_CHECK(cudaStreamCreate(&stream));
@@ -233,6 +243,37 @@ void App::setup()
 
     params.handle = scene.accelHandle();
 
+#if SUBMISSION
+    double elapsed_seconds = 0.0;
+    int32_t frame = 0;
+
+    while (elapsed_seconds < 256.0) {
+        elapsed_seconds = (double)duration_cast<milliseconds>(system_clock::now() - start).count() / 1000;
+        if (elapsed_seconds > 256.0) break;
+
+        scene.launchRay(ctx, pipeline, params, stream, result_bmp.width(), result_bmp.height(), 1);
+        CUDA_CHECK(cudaStreamSynchronize(stream));
+        CUDA_SYNC_CHECK();
+
+        result_bmp.copyFromDevice();
+
+        string filename = std::format("image_{:03d}.png", frame);
+        filesystem::path filepath = pgPathJoin(pgGetExecutableDir(), filename);
+        result_bmp.write(filepath);
+
+        const float x = sinf(elapsed_seconds) * 50;
+        const float z = cosf(elapsed_seconds) * 50;
+        camera->setOrigin(x, -50, z);
+        camera->setLookat(0, -80, 0);
+        is_camera_updated = true;
+        handleCameraUpdate();
+
+        std::cout << elapsed_seconds << "s" << std::flush;
+        
+        frame++;
+    }
+    cout << endl;
+#else
     // GUI initialization
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -242,6 +283,7 @@ void App::setup()
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(pgGetCurrentWindow()->windowPtr(), true);
     ImGui_ImplOpenGL3_Init(glsl_version);
+#endif
 }
 
 

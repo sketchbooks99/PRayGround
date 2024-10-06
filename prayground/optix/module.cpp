@@ -257,7 +257,6 @@ namespace prayground {
         {
             input_data = elem->second;
         }
-        std::cout << *input_data << std::endl;
         createFromPtxSource(ctx, *input_data, pipeline_options);
     }
 
@@ -321,6 +320,29 @@ namespace prayground {
             &m_module
         ));
     #endif
+    }
+
+    void Module::createFromOptixIr(const Context& ctx, const std::filesystem::path& filename, OptixPipelineCompileOptions pipeline_options)
+    {
+        auto filepath = pgFindDataPath(filename);
+        ASSERT(filepath, "The Optix IR file to create module of '" + filename.string() + "' is not found.");
+
+        std::string* input_data = new std::string;
+        std::string key = filepath.value().string();
+        std::map<std::string, std::string*>::iterator elem = g_source_cache.map.find(key);
+
+        if (elem == g_source_cache.map.end()) {
+            if (!readSourceFile(*input_data, filepath.value().string())) {
+                std::string err = "Couldn't open source file " + filepath.value().string();
+                throw std::runtime_error(err.c_str());
+            }
+
+            g_source_cache.map[key] = input_data;
+        } else {
+            input_data = elem->second;
+        }
+
+        createFromPtxSource(ctx, *input_data, pipeline_options);
     }
 
     void Module::destroy()

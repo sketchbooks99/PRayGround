@@ -44,7 +44,6 @@ namespace prayground {
         for (auto &parent : parent_dirs)
         {
             auto filepath = pgPathJoin(parent, relative_path);
-            std::cout << filepath << std::endl;
             if ( fs::exists(filepath) )
                 return filepath;
         }

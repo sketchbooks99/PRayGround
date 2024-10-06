@@ -178,6 +178,10 @@ if( NOT PASSED_FIRST_CONFIGURE )
   else()
     set( CUDA_NVRTC_FLAGS ${PRAYGROUND_NVRTC_CXX} -arch ${CUDA_MIN_SM_COMPUTE_TARGET} -lineinfo -use_fast_math -default-device -rdc true -D__x86_64 CACHE STRING "List of NVRTC options just for the PRAYGROUND" FORCE )
     set( CUDA_NVRTC_FLAGS_DEBUG ${PRAYGROUND_NVRTC_CXX} -arch ${CUDA_MIN_SM_COMPUTE_TARGET} -G -use_fast_math -default-device -rdc true -D__x86_64 CACHE STRING "List of NVRTC options just for the PRAYGROUND" FORCE )
+  endif()    
+
+  if (WIN32)
+    optix_add_cuda_flag_config("/source-charset:utf-8")
   endif()
 endif()
 
@@ -199,7 +203,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
-set(PRAYGROUND_PTX_DIR "${CMAKE_BINARY_DIR}/bin/ptx")
+set(PRAYGROUND_PTX_DIR "${CMAKE_BINARY_DIR}/bin/Release/ptx")
 set(PRAYGROUND_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 
 set(CUDA_GENERATED_OUTPUT_DIR ${PRAYGROUND_PTX_DIR})
@@ -244,17 +248,17 @@ include_directories( ${CMAKE_CURRENT_SOURCE_DIR}
                      ${OptiX_INCLUDE}
                      )
 
-# Helper macro to generate PTX from the CUDA files in sutil.
-macro(OPTIX_sutil_compile_to_optix_input generated_files)
+# Helper macro to generate PTX from the CUDA files in prayground.
+macro(OPTIX_prayground_compile_to_optix_input generated_files)
   if( NOT CUDA_NVRTC_ENABLED )
     if( PRAYGROUND_INPUT_GENERATE_OPTIXIR )
-      message("sutil OPTIXIR")
-      CUDA_WRAP_SRCS( sutil OPTIXIR generated_files2 ${ARGN} )
+      message("prayground OPTIXIR")
+      CUDA_WRAP_SRCS( prayground OPTIXIR generated_files2 ${ARGN} )
       list(APPEND ${generated_files} ${generated_files2})
     endif()
     if( PRAYGROUND_INPUT_GENERATE_PTX )
-      message("sutil PTX")
-      CUDA_WRAP_SRCS( sutil PTX generated_files3 ${ARGN} )
+      message("prayground PTX")
+      CUDA_WRAP_SRCS( prayground PTX generated_files3 ${ARGN} )
       list(APPEND ${generated_files} ${generated_files3})
     endif()
   endif()

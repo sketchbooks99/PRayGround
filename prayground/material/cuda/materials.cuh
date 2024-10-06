@@ -305,9 +305,9 @@ namespace prayground {
         const Shading& shading
     )
     {
-        const Vec3f V = wo;
-        const Vec3f L = wi;
-        const Vec3f N = shading.n;
+        const Vec3f V = normalize(wo);
+        const Vec3f L = normalize(wi);
+        const Vec3f N = normalize(shading.n);
 
         const float diffuse_ratio = 0.5f * (1.0f - disney->metallic);
         const float specular_ratio = 1.0f - diffuse_ratio;

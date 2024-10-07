@@ -45,6 +45,8 @@ struct ScatteredRay {
     uint8_t scattered_type; 
 };
 
+#define MONTECARLO 0
+
 static INLINE DEVICE void trace(
     OptixTraversableHandle handle,
     const Vec3f& ro,
@@ -175,20 +177,22 @@ extern "C" DEVICE void __raygen__pinhole() {
             }
             // Rough surface sampling with MIS
             else if (+(surface_info.type & (SurfaceType::Rough | SurfaceType::Layered))) {
-                //ScatteredRay out_ray;
-                //float pdf = 0.0f;
-                //optixDirectCall<void, SurfaceInteraction*, void*, const Vec3f&, ScatteredRay&, float&>(
-                //    surface_info.callable_id.sample, &si, surface_info.data, si.wo, out_ray, pdf
-                //);
-                //si.wi = out_ray.reflected;
-                //BSDFProperty bsdf = optixDirectCall<BSDFProperty, SurfaceInteraction*, void*, const Vec3f&, const Vec3f&, uint8_t>(
-                //    surface_info.callable_id.bsdf, &si, surface_info.data, si.wi, si.wo, out_ray.scattered_type
-                //);
+#if MONTECARLO == 1
+                ScatteredRay out_ray;
+                float bsdf_pdf = 1.0f;
+                optixDirectCall<void, SurfaceInteraction*, void*, const Vec3f&, ScatteredRay&, float&>(
+                    surface_info.callable_id.sample, &si, surface_info.data, si.wo, out_ray, bsdf_pdf
+                );
+                si.wi = out_ray.reflected;
+                BSDFProperty bsdf = optixDirectCall<BSDFProperty, SurfaceInteraction*, void*, const Vec3f&, const Vec3f&, uint8_t>(
+                    surface_info.callable_id.bsdf, &si, surface_info.data, si.wi, si.wo, out_ray.scattered_type
+                );
 
-                //throughput *= bsdf.bsdf / pdf;
+                throughput *= bsdf.bsdf / bsdf_pdf;
+#else
                 LightInfo light;
                 if (params.num_lights > 0) {
-                    const int light_id = rndInt(si.seed, 0, params.num_lights - 1);
+                    int light_id = rndInt(si.seed, 0, params.num_lights - 1);
                     light = params.lights[light_id];
 
                     LightInteraction li;
@@ -212,15 +216,15 @@ extern "C" DEVICE void __raygen__pinhole() {
                             BSDFProperty bsdf = optixDirectCall<BSDFProperty, SurfaceInteraction*, void*, const Vec3f&, const Vec3f&, uint8_t>(
                                 surface_info.callable_id.bsdf, &si, surface_info.data, light_dir, si.wo, REFLECTED);
 
-                            const float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*, const Vec3f&, const Vec3f&, uint8_t>(
+                            float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*, const Vec3f&, const Vec3f&, uint8_t>(
                                 surface_info.callable_id.pdf, &si, surface_info.data, light_dir, si.wo, REFLECTED);
 
                             const float cos_theta = dot(-light_dir, li.n);
-
+                            bsdf_pdf *= pow2(dist) / cos_theta;
                             li.pdf /= params.num_lights;
 
                             // MIS weight
-                            const float weight = balanceHeuristic(li.pdf, bsdf_pdf * cos_theta / dist);
+                            const float weight = balanceHeuristic(li.pdf, bsdf_pdf);
 
                             result += weight * li.emission * bsdf.bsdf * throughput / li.pdf;
                         }
@@ -240,12 +244,14 @@ extern "C" DEVICE void __raygen__pinhole() {
                         );
 
                         const float light_pdf = optixDirectCall<float, const LightInfo&, const Vec3f&, const Vec3f&>(
-                            light.pdf_id, light, si.p, light_dir);
+                            light.pdf_id, light, si.p, si.wi);
+
                         
-                        const float weight = balanceHeuristic(bsdf_pdf, light_pdf);
+                        const float weight = balanceHeuristic(bsdf_pdf, light_pdf / params.num_lights);
                         throughput *= weight * bsdf.bsdf / bsdf_pdf;
                     }
                 }
+#endif
             }
 
             if (depth == 0) {
@@ -360,6 +366,12 @@ extern "C" DEVICE void __direct_callable__sample_light_plane(
     li.emission = is_emitted * base * area_light->intensity;
 }
 
+extern "C" DEVICE float __direct_callable__pdf_light_plane(
+    const LightInfo& light, const Vec3f& p, const Vec3f& wi)
+{
+    return 1.0f;
+}
+
 // Triangle light sampling
 static INLINE DEVICE Vec3f randomSampleOnTriangle(uint32_t& seed, const Triangle& triangle) {
 
@@ -406,7 +418,7 @@ extern "C" DEVICE void __direct_callable__sample_light_triangle(
 
 
 // Sphere emitter
-extern "C" __device__ void __direct_callable__sample_light_sphere(
+extern "C" DEVICE void __direct_callable__sample_light_sphere(
     const LightInfo& light, const Vec3f& p, LightInteraction& li, uint32_t& seed)
 {
     const auto* sphere = (Sphere::Data*)light.shape_data;
@@ -414,10 +426,13 @@ extern "C" __device__ void __direct_callable__sample_light_sphere(
     const Vec3f local_p = light.worldToObj.pointMul(p);
     const Vec3f oc = center - local_p;
     float distance_squared = dot(oc, oc);
-    Onb onb(normalize(oc));
+    const Vec3f unit_oc = normalize(oc);
+    Onb onb(unit_oc);
     Vec3f to_light = randomSampleToSphere(seed, sphere->radius, distance_squared);
+    li.p = local_p + sqrtf(distance_squared) * normalize(to_light);
+    li.p = light.objToWorld.pointMul(li.p);
     onb.inverseTransform(to_light);
-    li.p = light.objToWorld.pointMul(center + to_light);
+    //li.p = light.objToWorld.pointMul(center + to_light);
     
     Shading shading;
     Ray ray(local_p, to_light, 1e-3f, 1e10f);
@@ -441,7 +456,7 @@ extern "C" __device__ void __direct_callable__sample_light_sphere(
     li.emission = is_emitted * base * area_light->intensity;
 }
 
-extern "C" __device__ float __direct_callable__pdf_light_sphere(
+extern "C" DEVICE float __direct_callable__pdf_light_sphere(
     const LightInfo& light, const Vec3f& p, const Vec3f& wi)
 {
     const auto* sphere = (Sphere::Data*)light.shape_data;
@@ -735,7 +750,7 @@ extern "C" DEVICE float __direct_callable__pdf_disney(SurfaceInteraction* si, vo
     const Disney::Data* disney = reinterpret_cast<Disney::Data*>(data);
 
     // Evaluate PDF
-    return pgGetDisneyPDF(disney, -si->wo, wi, si->shading);
+    return pgGetDisneyPDF(disney, si->wo, wi, si->shading);
 }
 
 // Layered material

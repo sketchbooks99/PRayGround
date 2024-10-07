@@ -22,17 +22,17 @@
 #include <prayground/core/spectrum.h>
 #include <prayground/core/util.h>
 #include <prayground/optix/macros.h>
+#include <prayground/core/sampler.h>
 
 
 namespace prayground {
 
-    HOSTDEVICE INLINE Vec3f randomSampleToSphere(unsigned int& seed, const float radius, const float distance_squared)
+    HOSTDEVICE INLINE Vec3f randomSampleToSphere(uint32_t& seed, const float radius, const float distance_squared)
     {
-        const float r1 = rnd(seed);
-        const float r2 = rnd(seed);
-        const float z = 1.0f + r2 * (sqrtf(1.0f - radius * radius / distance_squared) - 1.0f);
+        Vec2f u = UniformSampler::get2D(seed);
+        const float z = 1.0f + u[1] * (sqrtf(1.0f - radius * radius / distance_squared) - 1.0f);
 
-        const float phi = 2.0f * math::pi * r1;
+        const float phi = 2.0f * math::pi * u[0];
         const float x = cosf(phi) * sqrtf(1.0f - z * z);
         const float y = sinf(phi) * sqrtf(1.0f - z * z);
         return Vec3f(x, y, z);
@@ -165,10 +165,9 @@ namespace prayground {
      */
     HOSTDEVICE INLINE float GTR1(float NdotH, float a)
     {
-        if (a >= 1) return 1/math::pi;
+        if (a >= 1.0f) return math::inv_pi;
         float a2 = a*a;
-        float t = 1 + (a2-1)*NdotH*NdotH;
-        return (a2-1) / (math::pi*log(a2)*t);
+        return (a2 - 1.0f) / (math::pi * logf(a2) * (1.0f + (a2 - 1.0f) * NdotH * NdotH));
     }
 
     /** 
@@ -180,27 +179,13 @@ namespace prayground {
     HOSTDEVICE INLINE float GTR2(float NdotH, float a)
     {
         float a2 = a * a;
-        float t = 1.0f - (1.0f - a2) * NdotH * NdotH;
+        float t = 1.0f + (a2 - 1.0f) * NdotH * NdotH;
         return a2 / (math::pi * t * t);
     }
 
     HOSTDEVICE INLINE float GTR2_aniso(float NdotH, float HdotX, float HdotY, float ax, float ay)
     {
-        const float sinTheta = 1.0f - sqrtf(NdotH * NdotH);
-        const float tanTheta = sinTheta / NdotH;
-        const float tan2Theta = pow2(tanTheta);
-#ifndef __CUDACC__
-        if (std::isinf(tan2Theta) || std::isnan(tan2Theta))
-#else
-        if (isinf(tan2Theta) || isnan(tan2Theta))
-#endif
-            return 0.0f;
-        const float cos4Theta = pow4(NdotH);
-
-        const float A = pow2(HdotX / ax) + pow2(HdotY / ay);
-        const float term = 1.0f + tan2Theta * A;
-        const float value = 1.0f / (math::pi * ax * ay * cos4Theta * pow2(term));
-        return value;
+        return 1.0f / (math::pi * ax * ay * pow2(pow2(HdotX / ax) + pow2(HdotY / ay) + pow2(NdotH)));
     }
 
     HOSTDEVICE INLINE float smithG_GGX(float NdotV, float alphaG)

@@ -92,7 +92,7 @@ endif()
 
 mark_as_advanced(CLEAR CUDA_64_BIT_DEVICE_CODE)
 
-set(CUDA_MIN_SM_TARGET sm_50 CACHE STRING "Minimum CUDA SM architecture to use for compilation.")
+set(CUDA_MIN_SM_TARGET sm_86 CACHE STRING "Minimum CUDA SM architecture to use for compilation.")
 
 function(optix_add_cuda_flag_config config flag)
   string(TOUPPER "${config}" config)

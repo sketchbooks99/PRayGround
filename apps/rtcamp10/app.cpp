@@ -94,8 +94,8 @@ void App::setup()
 
     // Setup camera
     shared_ptr<Camera> camera = make_shared<Camera>();
-    camera->setOrigin(0, -50, 50);
-    camera->setLookat(0, -80, 0);
+    camera->setOrigin(0.0f, 5.0f, -125.0f);
+    camera->setLookat(0.0f, -80.0f, 0.0f);
     camera->setUp(0, 1, 0);
     camera->setFov(40);
     camera->setAspect((float)width / height);
@@ -177,7 +177,9 @@ void App::setup()
     };
 
     uint32_t light_sample_sphere_id = setupCallable("__direct_callable__sample_light_sphere", "");
-    uint32_t light_pdf_sphere_id = setupCallable("__direct_callable__sample_light_sphere", "");
+    uint32_t light_pdf_sphere_id = setupCallable("__direct_callable__pdf_light_sphere", "");
+    uint32_t light_sample_plane_id = setupCallable("__direct_callable__sample_light_plane", "");
+    uint32_t light_pdf_plane_id = setupCallable("__direct_callable__pdf_light_plane", "");
 
     // Light sampling callables
 
@@ -196,16 +198,22 @@ void App::setup()
             /* tf_ior = */ 1.7f,
             /* extinction = */ Vec3f(1.0f)
         ));
-    auto bunny_mat = make_shared<Conductor>(conductor_id, 
-        /* texture = */ make_shared<ConstantTexture>(Vec3f(0.8f, 0.8f, 0.3f), constant_id), 
-        /* twosided = */ true, 
-        Thinfilm(
-            /* ior = */ Vec3f(1.9f),
-            /* thickness = */ make_shared<ConstantTexture>(Vec3f(1.0f), constant_id),
-            /* thickness_scale = */ 550.0f,
-            /* tf_ior = */ 1.33f,
-            /* extinction = */ Vec3f(1.5f)
-        ));
+    //auto bunny_mat = make_shared<Conductor>(conductor_id, 
+    //    /* texture = */ make_shared<ConstantTexture>(Vec3f(0.8f, 0.8f, 0.3f), constant_id), 
+    //    /* twosided = */ true, 
+    //    Thinfilm(
+    //        /* ior = */ Vec3f(1.9f),
+    //        /* thickness = */ make_shared<ConstantTexture>(Vec3f(1.0f), constant_id),
+    //        /* thickness_scale = */ 550.0f,
+    //        /* tf_ior = */ 1.33f,
+    //        /* extinction = */ Vec3f(1.5f)
+    //    ));
+
+    auto bunny_mat = make_shared<Disney>(disney_id, make_shared<CheckerTexture>(Vec3f(0.8f, 0.3f, 0.3f), Vec3f(0.2f), 10, checker_id));
+    bunny_mat->setTwosided(true);
+    bunny_mat->setSpecular(0.8f);
+    bunny_mat->setMetallic(0.8f);
+    bunny_mat->setRoughness(0.2f);
 
     auto katsuo_base = make_shared<Diffuse>(diffuse_id, make_shared<BitmapTexture>("resources/Katsuo Color.png", bitmap_id));
     auto katsuo_oil = make_shared<Dielectric>(dielectric_id,
@@ -222,12 +230,13 @@ void App::setup()
     table_mat->setMetallic(0.0f);
     table_mat->setSheenTint(0.5f);
 
-    auto sashimi_plate_mat = make_shared<Disney>(disney_id, make_shared<ConstantTexture>(Vec3f(0.3f), constant_id));
-    sashimi_plate_mat->setMetallic(0.1f);
-    sashimi_plate_mat->setSpecular(0.9f);
-    sashimi_plate_mat->setRoughness(0.4f);
+    auto sashimi_plate_mat = make_shared<Disney>(disney_id, make_shared<ConstantTexture>(Vec3f(1.0f), constant_id));
+    sashimi_plate_mat->setMetallic(0.0f);
+    sashimi_plate_mat->setSpecular(0.2f);
+    sashimi_plate_mat->setRoughness(0.5f);
+    sashimi_plate_mat->setSheen(0.5f);
 
-    auto light1 = make_shared<AreaEmitter>(area_emitter_id, make_shared<ConstantTexture>(Vec3f(1.0f), constant_id), 100.0f);
+    auto light1 = make_shared<AreaEmitter>(area_emitter_id, make_shared<ConstantTexture>(Vec3f(1.0f), constant_id), 50.0f);
 
     // Setup geometries in the scene
     // Floor geometry
@@ -235,31 +244,36 @@ void App::setup()
     //scene.addObject("floor", plane, floor_mat, { plane_prg, plane_shadow_prg }, Matrix4f::translate(0, -100, 0));
 
     // Sphere geometry
-    shared_ptr<Sphere> sphere = make_shared<Sphere>(10);
-    scene.addObject("sphere", sphere, sphere_mat, { sphere_prg, sphere_shadow_prg }, Matrix4f::translate(-20, -85, 0));
+    //shared_ptr<Sphere> sphere = make_shared<Sphere>(10);
+    //scene.addObject("sphere", sphere, sphere_mat, { sphere_prg, sphere_shadow_prg }, Matrix4f::translate(-20, -85, 0));
 
-    shared_ptr<TriangleMesh> bunny = make_shared<TriangleMesh>("resources/uv_bunny.obj");
-    scene.addObject("bunny", bunny, bunny_mat, { mesh_prg, mesh_shadow_prg }, Matrix4f::translate(20, -95, 0) * Matrix4f::scale(100));
+    //shared_ptr<TriangleMesh> bunny = make_shared<TriangleMesh>("resources/uv_bunny.obj");
+    //scene.addObject("bunny", bunny, bunny_mat, { mesh_prg, mesh_shadow_prg }, Matrix4f::translate(20, -95, 0) * Matrix4f::scale(100));
 
-    //shared_ptr<TriangleMesh> katsuo = make_shared<TriangleMesh>("resources/Katsuo.obj");
-    //scene.addObject("katsuo", katsuo, katsuo_mat, { mesh_prg, mesh_shadow_prg }, Matrix4f::translate(30, -80, 0) * Matrix4f::scale(10));
+    shared_ptr<TriangleMesh> katsuo = make_shared<TriangleMesh>("resources/Katsuo.obj");
+    scene.addObject("katsuo", katsuo, katsuo_mat, { mesh_prg, mesh_shadow_prg }, Matrix4f::translate(33, -92, 0) * Matrix4f::scale(10));
+
+    float x_range = 80.0f;
+    for (int i = 0; i < 5; i++) {
+        float x = 66.0f / 2.0f - (float)(i + 1) * (x_range / 6.0f);
+        scene.addObject("katsuo" + to_string(i), katsuo, katsuo_mat, { mesh_prg, mesh_shadow_prg }, Matrix4f::translate(x, -90, 2)* Matrix4f::rotate(math::pi / 9.0f, Vec3f(0, 0, 1)) * Matrix4f::scale(10));
+    }
 
     shared_ptr<TriangleMesh> table = make_shared<TriangleMesh>("resources/Table.obj");
     scene.addObject("table", table, table_mat, { mesh_prg, mesh_shadow_prg }, Matrix4f::translate(0, -90, 0)* Matrix4f::scale(10));
-    //shared_ptr<Plane> table = make_shared<Plane>(Vec2f(-200), Vec2f(200));
-    //scene.addObject("table", table, table_mat, { plane_prg, plane_shadow_prg }, Matrix4f::translate(0, -90, 0));
 
     shared_ptr<TriangleMesh> sashimi_plate = make_shared<TriangleMesh>("resources/Sashimi plate.obj");
     sashimi_plate->calculateNormalFlat();
     scene.addObject("sashimi plate", sashimi_plate, sashimi_plate_mat, { mesh_prg, mesh_shadow_prg }, Matrix4f::translate(0, -90, 0)* Matrix4f::scale(10));
-    //shared_ptr<Plane> sashimi_plate = make_shared<Plane>(Vec2f(-50), Vec2f(50));
-    //scene.addObject("sashimi plate", sashimi_plate, sashimi_plate_mat, { plane_prg, plane_shadow_prg }, Matrix4f::translate(0, -85, 0));
 
-    shared_ptr<Sphere> light1_geom = make_shared<Sphere>(5);
-    scene.addLight("light1", light1_geom, light1, { sphere_prg, sphere_shadow_prg }, Matrix4f::translate(50, 20, 30));
-    scene.addLight("light2", light1_geom, light1, { sphere_prg, sphere_shadow_prg }, Matrix4f::translate(-50, 20, 30));
-    scene.addLight("light3", light1_geom, light1, { sphere_prg, sphere_shadow_prg }, Matrix4f::translate(-50, 20, -30));
-    scene.addLight("light4", light1_geom, light1, { sphere_prg, sphere_shadow_prg }, Matrix4f::translate(50, 20, -30));
+
+    //shared_ptr<Sphere> light1_geom = make_shared<Sphere>(5);
+    //scene.addLight("light1", light1_geom, light1, { sphere_prg, sphere_shadow_prg }, Matrix4f::translate(50, 20, 30));
+    //scene.addLight("light2", light1_geom, light1, { sphere_prg, sphere_shadow_prg }, Matrix4f::translate(-50, 20, 30));
+    //scene.addLight("light3", light1_geom, light1, { sphere_prg, sphere_shadow_prg }, Matrix4f::translate(-50, 20, -30));
+    //scene.addLight("light4", light1_geom, light1, { sphere_prg, sphere_shadow_prg }, Matrix4f::translate(50, 20, -30));
+    shared_ptr<Plane> light_geom = make_shared<Plane>(Vec2f(-50, -20), Vec2f(50, 20));
+    scene.addLight("light", light_geom, light1, { plane_prg, plane_shadow_prg }, Matrix4f::translate(0, 20, 0));
 
 
 #if USE_DENOISER
@@ -284,11 +298,11 @@ void App::setup()
             .shape_data = light->shape->devicePtr(),
             .objToWorld = light->instance.transform(),
             .worldToObj = light->instance.transform().inverse(),
-            .sample_id = light_sample_sphere_id,
-            .pdf_id = light_pdf_sphere_id,
+            .sample_id = light_sample_plane_id,
+            .pdf_id = light_pdf_plane_id,
             .twosided = true,
             .surface_info = light->emitters[0]->surfaceInfoDevicePtr()
-    });
+        });
     }
     CUDABuffer<LightInfo> d_lights;
     d_lights.copyToDevice(lights);
@@ -305,6 +319,7 @@ void App::setup()
     double elapsed_seconds = 0.0;
     int32_t frame = 0;
 
+    float r = 125.0f;
     while (elapsed_seconds < 256.0) {
         elapsed_seconds = (double)duration_cast<milliseconds>(system_clock::now() - start).count() / 1000;
         if (elapsed_seconds > 256.0) break;
@@ -326,13 +341,13 @@ void App::setup()
 
         denoiser.copyFromDevice();
 
-        string filename = std::format("image_{:03d}.png", frame);
+        string filename = std::format("{:03d}.png", frame);
         filesystem::path filepath = pgPathJoin(pgGetExecutableDir(), filename);
         denoiser.write(denoise_data, filepath);
 
-        const float x = sinf(elapsed_seconds * 0.1f) * 70;
-        const float z = cosf(elapsed_seconds * 0.1f) * 70;
-        camera->setOrigin(x, -50, z);
+        const float x = sinf(elapsed_seconds * 0.1f) * r;
+        const float z = cosf(elapsed_seconds * 0.1f) * r;
+        camera->setOrigin(x, -5.0f, z);
         camera->setLookat(0, -80, 0);
         is_camera_updated = true;
         handleCameraUpdate();
@@ -393,7 +408,7 @@ void App::draw()
     ImGui::Begin("RTCAMP 10 editor");
 
     // Update katsuo object
-    /*auto katsuo = scene.getObject("katsuo");
+    auto katsuo = scene.getObject("katsuo");
     auto katsuo_mat = dynamic_pointer_cast<Layered>(katsuo->materials[0]);
     auto katsuo_top_layer = dynamic_pointer_cast<Dielectric>(katsuo_mat->layerAt(0));
     Thinfilm thinfilm = katsuo_top_layer->thinfilm();
@@ -426,71 +441,12 @@ void App::draw()
 
         ImGui::TreePop();
     }
-    katsuo_top_layer->copyToDevice();*/
+    katsuo_top_layer->copyToDevice();
 
-
-    // Update bunny 
-    //auto bunny = scene.getObject("bunny");
-    //auto bunny_mat = dynamic_pointer_cast<Conductor>(bunny->materials[0]);
-    //
-    //Vec3f ior = bunny_mat->ior();
-    //auto tf_thickness_ptr = dynamic_pointer_cast<ConstantTexture>(bunny_mat->thinfilmThickness());
-    //Vec3f tf_thickness = tf_thickness_ptr->color();
-    //float tf_ior = bunny_mat->thinfilmIOR();
-    //Vec3f extinction = bunny_mat->extinction();
-    //if (ImGui::TreeNode("Bunny")) {
-    //    if (ImGui::SliderFloat3("IOR", &ior[0], 1.0f, 20.0f)) {
-    //        bunny_mat->setIOR(ior);
-    //        is_camera_updated = true;
-    //    }
-    //    if (ImGui::SliderFloat("TF IOR", &tf_ior, 1.0f, 20.0f)) {
-    //        bunny_mat->setThinfilmIOR(tf_ior);
-    //        is_camera_updated = true;
-    //    }
-    //    if (ImGui::SliderFloat("TF Thickness", &tf_thickness.x(), 0.0f, 1000.0f)) {
-    //        tf_thickness_ptr->setColor(tf_thickness);
-    //        bunny_mat->setThinfilmThickness(tf_thickness_ptr);
-    //        is_camera_updated = true;
-    //    }
-    //    if (ImGui::SliderFloat3("Extinction", &extinction[0], 0.0f, 20.0f)) {
-    //        bunny_mat->setExtinction(extinction);
-    //        is_camera_updated = true;
-    //    }
-
-    //    ImGui::TreePop();
-    //}
-    //bunny_mat->copyToDevice();
-
-    //// Update sphere parameters
-    //auto sphere = scene.getObject("sphere");
-    //auto sphere_mat = dynamic_pointer_cast<Dielectric>(sphere->materials[0]);
-
-    //float ior_sphere = sphere_mat->ior();
-    //auto tf_thickness_sphere_ptr = dynamic_pointer_cast<ConstantTexture>(sphere_mat->thinfilmThickness());
-    //Vec3f tf_thickness_sphere = tf_thickness_sphere_ptr->color();
-    //float tf_ior_sphere = sphere_mat->thinfilmIOR();
-    //Vec3f extinction_sphere = sphere_mat->extinction();
-    //if (ImGui::TreeNode("Sphere")) {
-    //    if (ImGui::SliderFloat("IOR", &ior_sphere, 1.0f, 20.0f)) {
-    //        sphere_mat->setIor(ior_sphere);
-    //        is_camera_updated = true;
-    //    }
-    //    if (ImGui::SliderFloat("TF IOR", &tf_ior_sphere, 1.0f, 20.0f)) {
-    //        sphere_mat->setThinfilmIOR(tf_ior_sphere);
-    //        is_camera_updated = true;
-    //    }
-    //    if (ImGui::SliderFloat("TF Thickness", &tf_thickness_sphere.x(), 0.0f, 1000.0f)) {
-    //        tf_thickness_sphere_ptr->setColor(tf_thickness_sphere);
-    //        sphere_mat->setThinfilmThickness(tf_thickness_sphere_ptr);
-    //        is_camera_updated = true;
-    //    }
-    //    if (ImGui::SliderFloat3("Extinction", &extinction_sphere[0], 0.0f, 20.0f)) {
-    //        sphere_mat->setExtinction(extinction_sphere);
-    //        is_camera_updated = true;
-    //    }
-    //    ImGui::TreePop();
-    //}
-    //sphere_mat->copyToDevice();
+    ImGui::Text("Camera info:");
+    ImGui::Text("Origin,: (%.2f, %.2f, %.2f)", scene.camera()->origin().x(), scene.camera()->origin().y(), scene.camera()->origin().z());
+    ImGui::Text("Lookat: (%.2f, %.2f, %.2f)", scene.camera()->lookat().x(), scene.camera()->lookat().y(), scene.camera()->lookat().z());
+    ImGui::Text("Up: (%.2f, %.2f, %.2f)", scene.camera()->up().x(), scene.camera()->up().y(), scene.camera()->up().z());
 
     ImGui::End();
     ImGui::Render();

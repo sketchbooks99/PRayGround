@@ -119,6 +119,9 @@ namespace prayground {
         /* For propagating random seed among path */
         uint32_t seed;
 
+        /* IOR of current medium */
+        float ior = 1.000293f;
+
         /* Array of surface information. Multiple informations are typically used for layered material */
         SurfaceInfo* surface_info;
 

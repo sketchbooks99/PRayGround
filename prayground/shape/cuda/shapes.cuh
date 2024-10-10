@@ -329,7 +329,7 @@ namespace prayground {
                 return false;
         }
 
-        const Vec3f p = ray.at(t);
+        const Vec3f p = ray.at(t) - sphere->center;
         shading->n = p / sphere->radius;
         shading->uv = pgGetSphereUV(shading->n);
 
@@ -346,8 +346,8 @@ namespace prayground {
 
     INLINE DEVICE void pgReportIntersectionSphere(const Sphere::Data* sphere, const Ray& ray)
     {
-        Shading shading;
-        float time;
+        Shading shading = {};
+        float time = 0.0f;
         if (pgIntersectionSphere(sphere, ray, &shading, &time))
         {
             // Pack shading pointer to two attributes

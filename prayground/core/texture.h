@@ -15,7 +15,8 @@ namespace prayground {
         Constant = 1 << 0,
         Checkerboard = 1 << 1,
         Bitmap = 1 << 2,
-        Custom = 1 << 3
+        Gradient = 1 << 3,
+        Custom = 1 << 4
     };
 
 #ifndef __CUDACC__
@@ -27,6 +28,7 @@ namespace prayground {
         case TextureType::Constant:     return out << "TextureType::Constant";
         case TextureType::Checkerboard: return out << "TextureType::Checkerboard";
         case TextureType::Bitmap:       return out << "TextureType::Bitmap";
+        case TextureType::Gradient:     return out << "TextureType::Gradient";
         case TextureType::Custom:       return out << "TextureType::Custom";
         }
     }

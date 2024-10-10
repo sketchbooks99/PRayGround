@@ -33,6 +33,7 @@ namespace prayground {
     // ------------------------------------------------------------------
     void Diffuse::copyToDevice()
     {
+        Material::copyToDevice();
         if (!m_texture->devicePtr())
             m_texture->copyToDevice();
 

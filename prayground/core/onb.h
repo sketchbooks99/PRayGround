@@ -9,12 +9,12 @@ namespace prayground {
         {
             normal = n;
 
-            if (n.x() > 0.9f) bitangent = Vec3f(0.0f, 1.0f, 0.0f);
-            else bitangent = Vec3f(1.0f, 0.0f, 0.0f);
+            if (n.y() > 0.9999999f) tangent = Vec3f(1.0f, 0.0f, 0.0f);
+            else tangent = Vec3f(0.0f, 1.0f, 0.0f);
 
-            bitangent -= n * dot(bitangent, n);
-            bitangent = normalize(bitangent);
-            tangent = cross(bitangent, normal);
+            tangent -= n * dot(tangent, n);
+            tangent = normalize(tangent);
+            bitangent = cross(tangent, normal);
         }
 
         INLINE HOSTDEVICE void inverseTransform(Vec3f& p) const 

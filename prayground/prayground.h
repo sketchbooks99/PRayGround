@@ -93,6 +93,7 @@
 #include "texture/constant.h"
 #include "texture/checker.h"
 #include "texture/bitmap.h"
+#include "texture/gradient.h"
 
 // Medium include 
 #include "medium/atmosphere.h"

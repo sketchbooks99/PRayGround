@@ -10,6 +10,8 @@ using namespace prayground;
 
 using ConstantTexture = ConstantTexture_<Vec3f>;
 using CheckerTexture = CheckerTexture_<Vec3f>;
+using GradientTexture = GradientTexture_<Vec3f>;
+using Isotropic = Isotropic_<Vec3f>;
 
 struct Triangle {
     Vec3f v0;

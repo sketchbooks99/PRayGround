@@ -148,7 +148,7 @@ namespace prayground {
         }
 
         {
-            OptixDenoiserSizes denoiser_sizes;
+            OptixDenoiserSizes denoiser_sizes = {};
 
             OPTIX_CHECK(optixDenoiserComputeMemoryResources(
                 m_denoiser,

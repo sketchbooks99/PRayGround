@@ -8,7 +8,7 @@
 #include <prayground/ext/imgui/imgui_impl_glfw.h>
 #include <prayground/ext/imgui/imgui_impl_opengl3.h>
 
-#define SUBMISSION 0
+#define SUBMISSION 1
 
 using namespace std;
 
@@ -47,6 +47,14 @@ private:
 
     static constexpr uint32_t NRay = 2;
     Scene<Camera, NRay> scene;
+    std::vector<Keypoint<Vec3f>> cam_pos_keypoints;
+    std::vector<Keypoint<Vec3f>> cam_look_keypoints;
+
+    std::vector<PointCloud::Data> awa_pcd_points;
+    std::shared_ptr<PointCloud> awa_pcd;
+    uint32_t seed;
+
+    float debug_frame = 0.0f;
 
     bool is_camera_updated;
 };

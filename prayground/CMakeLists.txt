@@ -135,6 +135,7 @@ set(sources
   texture/bitmap.cpp
   texture/checker.h 
   texture/constant.h  
+  texture/gradient.h
   texture/cuda/textures.cuh
 
   # Medium ==========

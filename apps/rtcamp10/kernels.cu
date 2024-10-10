@@ -42,10 +42,12 @@ struct ScatteredRay {
     Vec3f transmitted;
     float reflect_prob;
     // 1: Reflected, 2: Transmitted, 1 | 2: Both
-    uint8_t scattered_type; 
+    uint8_t scattered_type;
 };
 
 #define MONTECARLO 0
+#define NEE 1
+#define MIS 0
 
 static INLINE DEVICE void trace(
     OptixTraversableHandle handle,
@@ -189,7 +191,54 @@ extern "C" DEVICE void __raygen__pinhole() {
                 );
 
                 throughput *= bsdf.bsdf / bsdf_pdf;
-#else
+#elif NEE == 1
+                LightInfo light;
+                if (params.num_lights > 0) {
+                    int light_id = rndInt(si.seed, 0, params.num_lights - 1);
+                    light = params.lights[light_id];
+
+                    LightInteraction li;
+                    // Sampling light point
+                    optixDirectCall<void, const LightInfo&, const Vec3f&, LightInteraction&, uint32_t&>(
+                        light.sample_id, light, si.p, li, si.seed
+                    );
+                    Vec3f to_light = li.p - si.p;
+                    const float dist = length(to_light);
+                    const Vec3f light_dir = normalize(to_light);
+
+                    // For light PDF
+                    {
+                        const float t_shadow = dist - 1e-3f;
+                        // Trace shadow ray
+                        const bool is_hit = traceShadowRay(
+                            params.handle, si.p, light_dir, 1e-3f, t_shadow);
+
+                        // Next event estimation
+                        if (!is_hit) {
+                            BSDFProperty bsdf = optixDirectCall<BSDFProperty, SurfaceInteraction*, void*, const Vec3f&, const Vec3f&, uint8_t>(
+                                surface_info.callable_id.bsdf, &si, surface_info.data, light_dir, si.wo, REFLECTED);
+
+                            float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*, const Vec3f&, const Vec3f&, uint8_t>(
+                                surface_info.callable_id.pdf, &si, surface_info.data, light_dir, si.wo, REFLECTED);
+
+                            // MIS weight
+                            result += li.emission * bsdf.bsdf * throughput / li.pdf;
+                        }
+                    }
+                }
+
+                ScatteredRay out_ray;
+                float bsdf_pdf = 1.0f;
+                optixDirectCall<void, SurfaceInteraction*, void*, const Vec3f&, ScatteredRay&, float&>(
+                    surface_info.callable_id.sample, &si, surface_info.data, si.wo, out_ray, bsdf_pdf
+                );
+                si.wi = out_ray.reflected;
+                BSDFProperty bsdf = optixDirectCall<BSDFProperty, SurfaceInteraction*, void*, const Vec3f&, const Vec3f&, uint8_t>(
+                    surface_info.callable_id.bsdf, &si, surface_info.data, si.wi, si.wo, out_ray.scattered_type
+                );
+
+                throughput *= bsdf.bsdf;
+#elif MIS == 1
                 LightInfo light;
                 if (params.num_lights > 0) {
                     int light_id = rndInt(si.seed, 0, params.num_lights - 1);
@@ -220,7 +269,7 @@ extern "C" DEVICE void __raygen__pinhole() {
                                 surface_info.callable_id.pdf, &si, surface_info.data, light_dir, si.wo, REFLECTED);
 
                             const float cos_theta = dot(-light_dir, li.n);
-                            bsdf_pdf *= pow2(dist) / cos_theta;
+                            //bsdf_pdf *= pow2(dist) / cos_theta;
                             li.pdf /= params.num_lights;
 
                             // MIS weight
@@ -246,7 +295,7 @@ extern "C" DEVICE void __raygen__pinhole() {
                         const float light_pdf = optixDirectCall<float, const LightInfo&, const Vec3f&, const Vec3f&>(
                             light.pdf_id, light, si.p, si.wi);
 
-                        
+
                         const float weight = balanceHeuristic(bsdf_pdf, light_pdf / params.num_lights);
                         throughput *= weight * bsdf.bsdf / bsdf_pdf;
                     }
@@ -267,7 +316,7 @@ extern "C" DEVICE void __raygen__pinhole() {
         i--;
     } // while (i > 0)
 
-    if (!result.isValid()) result = 0.0f;
+    if (!result.isValid()) result = Vec3f(0.0f);
 
     Vec3f accum_color = result / static_cast<float>(params.samples_per_launch);
     Vec3f accum_normal = normal / static_cast<float>(params.samples_per_launch);
@@ -350,11 +399,9 @@ extern "C" DEVICE void __direct_callable__sample_light_plane(
 
     const Vec3f wi = rnd_p - p;
     const float t = length(wi);
-    const float cos_theta = fabs(dot(li.n, normalize(wi)));
-    if (cos_theta < math::eps)
-        li.pdf = 0.0f;
-    else
-        li.pdf = t * t / (li.area * cos_theta);
+    const float cos_theta = clamp(fabs(dot(li.n, normalize(wi))), 1e-3f, 1.0f);
+
+    li.pdf = t * t / (li.area * cos_theta);
 
     // Emission from light source
     const auto* area_light = (const AreaEmitter::Data*)light.surface_info->data;
@@ -432,7 +479,6 @@ extern "C" DEVICE void __direct_callable__sample_light_sphere(
     li.p = local_p + sqrtf(distance_squared) * normalize(to_light);
     li.p = light.objToWorld.pointMul(li.p);
     onb.inverseTransform(to_light);
-    //li.p = light.objToWorld.pointMul(center + to_light);
     
     Shading shading;
     Ray ray(local_p, to_light, 1e-3f, 1e10f);
@@ -488,6 +534,19 @@ extern "C" DEVICE void __intersection__sphere() {
     pgReportIntersectionSphere(sphere, ray);
 }
 
+extern "C" DEVICE void __intersection__point_cloud() {
+    const pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
+    const int prim_idx = optixGetPrimitiveIndex();
+    const PointCloud::Data pcd = reinterpret_cast<PointCloud::Data*>(data->shape_data)[prim_idx];
+
+    Ray ray = getLocalRay();
+
+    Sphere::Data sphere{ pcd.point, pcd.radius };
+
+    pgReportIntersectionSphere(&sphere, ray);
+
+}
+
 extern "C" DEVICE void __intersection__plane() {
     const pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
     const Plane::Data* plane = reinterpret_cast<Plane::Data*>(data->shape_data);
@@ -507,6 +566,9 @@ extern "C" DEVICE void __closesthit__custom() {
     shading->n = normalize(optixTransformNormalFromObjectToWorldSpace(shading->n));
     shading->dpdu = normalize(optixTransformVectorFromObjectToWorldSpace(shading->dpdu));
     shading->dpdv = normalize(optixTransformVectorFromObjectToWorldSpace(shading->dpdv));
+
+    if (!shading->n.isValid())
+        shading->n = Vec3f(0.0f, 1.0f, 0.0f);
 
     auto* si = getPtrFromTwoPayloads<SurfaceInteraction, 0>();
 
@@ -528,16 +590,21 @@ extern "C" DEVICE void __closesthit__mesh() {
 
     SurfaceInteraction* si = getPtrFromTwoPayloads<SurfaceInteraction, 0>();
 
+    Vec3f mesh_n = shading.n;
     if (data->surface_info->use_bumpmap) {
         Vec3f n = optixDirectCall<Vec3f, Vec2f&, void*>(data->surface_info->bumpmap.prg_id, shading.uv, data->surface_info->bumpmap.data);
-        n = normalize(n * 2.0f - 1.0f);
         Onb onb(shading.n);
         onb.inverseTransform(n);
-        shading.n = normalize(n);
+        shading.n = n;
     }
 
     // Transform shading from object to world space
-    shading.n = normalize(optixTransformNormalFromObjectToWorldSpace(shading.n));
+    shading.n = optixTransformNormalFromObjectToWorldSpace(shading.n);
+    const float cos_theta = dot(shading.n, -ray.d);
+    if (cos_theta < 0.0f)
+        shading.n = optixTransformNormalFromObjectToWorldSpace(mesh_n);
+
+    shading.n = normalize(shading.n);
     shading.dpdu = optixTransformVectorFromObjectToWorldSpace(shading.dpdu);
     shading.dpdv = optixTransformVectorFromObjectToWorldSpace(shading.dpdv);
 
@@ -555,6 +622,27 @@ extern "C" DEVICE void __closesthit__shadow() {
 // ----------------------------------------------------------------------------
 // Surface 
 // ----------------------------------------------------------------------------
+
+// Isotropic
+extern "C" DEVICE void __direct_callable__sample_isotropic(SurfaceInteraction* si, void* data, const Vec3f& wo, ScatteredRay& out_ray, float& pdf) {
+    const Isotropic::Data* iso = reinterpret_cast<Isotropic::Data*>(data);
+    uint32_t seed = si->seed;
+    si->wi = normalize(Vec3f(rnd(seed, -1.0f, 1.0f), rnd(seed, -1.0f, 1.0f), rnd(seed, -1.0f, 1.0f)));
+    si->trace_terminate = false;
+    si->seed = seed;
+    out_ray = ScatteredRay{ si->wi, Vec3f(0.0f), 1.0f, REFLECTED };
+    pdf = 1.0f / math::two_pi;
+}
+
+extern "C" DEVICE BSDFProperty __direct_callable__bsdf_isotropic(SurfaceInteraction* si, void* data, const Vec3f& wi, const Vec3f& wo, uint8_t scatter_type) {
+    const Isotropic::Data* isotropic = reinterpret_cast<Isotropic::Data*>(data);
+    return BSDFProperty{ isotropic->albedo / math::two_pi, 0.0f };
+}
+
+extern "C" DEVICE float __direct_callable__pdf_isotropic(SurfaceInteraction* si, void* data, const Vec3f& wi, const Vec3f& wo) {
+    return 1.0f / math::two_pi;
+}
+
 // Diffuse
 extern "C" DEVICE void __direct_callable__sample_diffuse(SurfaceInteraction* si, void* data, const Vec3f& wo, ScatteredRay& out_ray, float& pdf) {
     const Diffuse::Data* diffuse = reinterpret_cast<Diffuse::Data*>(data);
@@ -621,7 +709,7 @@ extern "C" DEVICE float __direct_callable__pdf_conductor(SurfaceInteraction* si,
 extern "C" DEVICE void __direct_callable__sample_dielectric(SurfaceInteraction* si, void* data, const Vec3f& wo, ScatteredRay& out_ray, float& pdf) {
     const Dielectric::Data* dielectric = reinterpret_cast<Dielectric::Data*>(data);
 
-    float ni = 1.000292f;       /// @todo Consider IOR of current medium where ray goes on
+    float ni = si->ior;
     float nt = dielectric->ior;
     float cosine = dot(wo, si->shading.n);
     // Check where the ray is going outside or inside
@@ -645,6 +733,7 @@ extern "C" DEVICE void __direct_callable__sample_dielectric(SurfaceInteraction* 
     }
     else {
         uint8_t scattered_type = rnd(si->seed) < reflect_prob ? REFLECTED : TRANSMITTED;
+        si->ior = scattered_type == TRANSMITTED ? nt : ni;
         out_ray = ScatteredRay { reflect(-wo, outward_normal), refract(-wo, outward_normal, cosine, ni, nt), reflect_prob, scattered_type };
         pdf = 1.0f;
     }
@@ -656,7 +745,6 @@ extern "C" DEVICE BSDFProperty __direct_callable__bsdf_dielectric(SurfaceInterac
     // Evaluate BSDFSample
     Vec3f albedo = optixDirectCall<Vec3f, const Vec2f&, void*>(
         dielectric->texture.prg_id, si->shading.uv, dielectric->texture.data);
-    si->albedo = albedo;
 
     float ni = 1.000292f;       /// @todo Consider IOR of current medium where ray goes on
     float nt = dielectric->ior;
@@ -675,6 +763,12 @@ extern "C" DEVICE BSDFProperty __direct_callable__bsdf_dielectric(SurfaceInterac
 
     // Get reflectivity by the Fresnel equation
     float reflect_prob = fresnel(cosine, ni, nt);
+
+    // Calculate absorption coefficient by lambert-beer's law
+    const bool calc_coeff = !into && dielectric->absorb_coeff > 0.0f;
+    const float coeff = expf(-dielectric->absorb_coeff * fmaxf(math::eps, si->t) * (float)calc_coeff);
+    albedo *= coeff;
+    si->albedo = albedo;
 
     if (dielectric->thinfilm.thickness.prg_id == -1)
         return BSDFProperty{ albedo, 0.0f };
@@ -773,10 +867,6 @@ extern "C" DEVICE void __direct_callable__sample_layered(SurfaceInteraction* si,
         // Generate refraction and reflection ray and increment layer if interacting surface is refractive
         float _pdf = 0.0f;
         if (+(info.type & SurfaceType::Refractive)) {
-            BSDFProperty bsdf = optixDirectCall<BSDFProperty, SurfaceInteraction*, void*, const Vec3f&, const Vec3f&, uint8_t>(
-                info.callable_id.bsdf, si, info.data, si->wi, _wo, 1
-            );
-
             // Sample ray and get PDF
             optixDirectCall<void, SurfaceInteraction*, void*, const Vec3f&, ScatteredRay*, float*>
                 (info.callable_id.sample, si, info.data, _wo, &_out_ray, &_pdf);
@@ -849,6 +939,7 @@ extern "C" DEVICE BSDFProperty __direct_callable__bsdf_layered(SurfaceInteractio
         albedo += si->albedo * attenuation;
 
         total_bsdf = lerp(total_bsdf, bsdf.bsdf, attenuation);
+        //total_bsdf += bsdf.bsdf * attenuation;
 
         // Terminate recursive BSDF evaluation through the layered surface
         if (layer == n_layers - 1)
@@ -932,4 +1023,8 @@ extern "C" DEVICE Vec3f __direct_callable__constant(const Vec2f& uv, void* data)
 
 extern "C" DEVICE Vec3f __direct_callable__checker(const Vec2f& uv, void* data) {
     return pgGetCheckerTextureValue<Vec3f>(uv, data);
+}
+
+extern "C" DEVICE Vec3f __direct_callable__gradient(const Vec2f& uv, void* data) {
+    return pgGetGradientTextureValue<Vec3f>(uv, data);
 }

@@ -179,19 +179,6 @@ extern "C" DEVICE void __raygen__pinhole() {
             }
             // Rough surface sampling with MIS
             else if (+(surface_info.type & (SurfaceType::Rough | SurfaceType::Layered))) {
-#if MONTECARLO == 1
-                ScatteredRay out_ray;
-                float bsdf_pdf = 1.0f;
-                optixDirectCall<void, SurfaceInteraction*, void*, const Vec3f&, ScatteredRay&, float&>(
-                    surface_info.callable_id.sample, &si, surface_info.data, si.wo, out_ray, bsdf_pdf
-                );
-                si.wi = out_ray.reflected;
-                BSDFProperty bsdf = optixDirectCall<BSDFProperty, SurfaceInteraction*, void*, const Vec3f&, const Vec3f&, uint8_t>(
-                    surface_info.callable_id.bsdf, &si, surface_info.data, si.wi, si.wo, out_ray.scattered_type
-                );
-
-                throughput *= bsdf.bsdf / bsdf_pdf;
-#elif NEE == 1
                 LightInfo light;
                 if (params.num_lights > 0) {
                     int light_id = rndInt(si.seed, 0, params.num_lights - 1);
@@ -238,69 +225,6 @@ extern "C" DEVICE void __raygen__pinhole() {
                 );
 
                 throughput *= bsdf.bsdf;
-#elif MIS == 1
-                LightInfo light;
-                if (params.num_lights > 0) {
-                    int light_id = rndInt(si.seed, 0, params.num_lights - 1);
-                    light = params.lights[light_id];
-
-                    LightInteraction li;
-                    // Sampling light point
-                    optixDirectCall<void, const LightInfo&, const Vec3f&, LightInteraction&, uint32_t&>(
-                        light.sample_id, light, si.p, li, si.seed
-                    );
-                    Vec3f to_light = li.p - si.p;
-                    const float dist = length(to_light);
-                    const Vec3f light_dir = normalize(to_light);
-
-                    // For light PDF
-                    {
-                        const float t_shadow = dist - 1e-3f;
-                        // Trace shadow ray
-                        const bool is_hit = traceShadowRay(
-                            params.handle, si.p, light_dir, 1e-3f, t_shadow);
-
-                        // Next event estimation
-                        if (!is_hit) {
-                            BSDFProperty bsdf = optixDirectCall<BSDFProperty, SurfaceInteraction*, void*, const Vec3f&, const Vec3f&, uint8_t>(
-                                surface_info.callable_id.bsdf, &si, surface_info.data, light_dir, si.wo, REFLECTED);
-
-                            float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*, const Vec3f&, const Vec3f&, uint8_t>(
-                                surface_info.callable_id.pdf, &si, surface_info.data, light_dir, si.wo, REFLECTED);
-
-                            const float cos_theta = dot(-light_dir, li.n);
-                            //bsdf_pdf *= pow2(dist) / cos_theta;
-                            li.pdf /= params.num_lights;
-
-                            // MIS weight
-                            const float weight = balanceHeuristic(li.pdf, bsdf_pdf);
-
-                            result += weight * li.emission * bsdf.bsdf * throughput / li.pdf;
-                        }
-                    }
-
-                    // Evaluate BSDFSample
-                    {
-                        // Importance sampling according to the BSDFSample
-                        ScatteredRay out_ray;
-                        float bsdf_pdf = 0.0f;
-                        optixDirectCall<void, SurfaceInteraction*, void*, const Vec3f&, ScatteredRay&, float&>(
-                            surface_info.callable_id.sample, &si, surface_info.data, si.wo, out_ray, bsdf_pdf
-                        );
-                        si.wi = out_ray.reflected;
-                        BSDFProperty bsdf = optixDirectCall<BSDFProperty, SurfaceInteraction*, void*, const Vec3f&, const Vec3f&, uint8_t>(
-                            surface_info.callable_id.bsdf, &si, surface_info.data, si.wi, si.wo, out_ray.scattered_type
-                        );
-
-                        const float light_pdf = optixDirectCall<float, const LightInfo&, const Vec3f&, const Vec3f&>(
-                            light.pdf_id, light, si.p, si.wi);
-
-
-                        const float weight = balanceHeuristic(bsdf_pdf, light_pdf / params.num_lights);
-                        throughput *= weight * bsdf.bsdf / bsdf_pdf;
-                    }
-                }
-#endif
             }
 
             if (depth == 0) {

@@ -403,8 +403,8 @@ namespace prayground {
     void TriangleMesh::calculateNormalFlat()
     {
         // Check if faces/vertices are empty.
-        ASSERT(m_faces.empty(), "Face array to construct triangle mesh is empty.");
-        ASSERT(m_vertices.empty(), "Vertex array to construct triangle mesh is empty.");
+        ASSERT(!m_faces.empty(), "Face array to construct triangle mesh is empty.");
+        ASSERT(!m_vertices.empty(), "Vertex array to construct triangle mesh is empty.");
 
         m_normals.clear();
         for (auto& face : m_faces)

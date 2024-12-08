@@ -32,6 +32,7 @@ namespace prayground {
         RGBA        = 4
     };
 
+    // TODO: Pixel format must be specified in the template parameter
     template <typename PixelT>
     class Bitmap_ {
     private:
@@ -40,7 +41,10 @@ namespace prayground {
         using V2 = typename impl::PixelDecl<PixelT>::V2;
         using V3 = typename impl::PixelDecl<PixelT>::V3;
         using V4 = typename impl::PixelDecl<PixelT>::V4;
-        using PixelVariant = std::variant<typename impl::PixelDecl<PixelT>::V1, typename impl::PixelDecl<PixelT>::V2, typename impl::PixelDecl<PixelT>::V3, typename impl::PixelDecl<PixelT>::V4>;
+        using PixelVariant = std::variant<typename impl::PixelDecl<PixelT>::V1, 
+                                          typename impl::PixelDecl<PixelT>::V2, 
+                                          typename impl::PixelDecl<PixelT>::V3, 
+                                          typename impl::PixelDecl<PixelT>::V4>;
 
     public:
         using Type = PixelT;

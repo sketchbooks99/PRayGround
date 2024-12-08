@@ -3,6 +3,10 @@
 #include <prayground/prayground.h>
 #include "params.h"
 
+#include <prayground/ext/imgui/imgui.h>
+#include <prayground/ext/imgui/imgui_impl_glfw.h>
+#include <prayground/ext/imgui/imgui_impl_opengl3.h>
+
 using namespace std;
 
 class App : public BaseApp 
@@ -23,6 +27,7 @@ public:
 private:
     void initResultBufferOnDevice();
     void handleCameraUpdate();
+    void initParticles();
 
     Context context;
     CUstream stream;
@@ -38,6 +43,7 @@ private:
 
     bool is_camera_updated;
 
-    SPHconfig sph_config;
-    shared_ptr<ShapeGroup<SPHParticle, Shape::Custom>> particles;
+    SPHConfig sph_config;
+    shared_ptr<SPHParticles> particles;
+    AABB wall;
 };

@@ -14,17 +14,6 @@ namespace prayground {
     {
         return SurfaceType::AreaEmitter;
     }
-
-    SurfaceInfo AreaEmitter::surfaceInfo() const
-    {
-        ASSERT(d_data, "Area emitter data on device hasn't been allocated yet.");
-
-        return SurfaceInfo{
-            .data = d_data,
-            .callable_id = m_surface_callable_id,
-            .type = SurfaceType::AreaEmitter
-        };
-    }
         
     // ---------------------------------------------------------------------------
     void AreaEmitter::copyToDevice() 
@@ -39,6 +28,22 @@ namespace prayground {
         CUDA_CHECK(cudaMemcpy(
             d_data,
             &data, sizeof(Data),
+            cudaMemcpyHostToDevice
+        ));
+
+        // Copy surface info to the device
+        SurfaceInfo surface_info{
+            .data = d_data,
+            .callable_id = m_surface_callable_id,
+            .type = surfaceType(),
+            .use_bumpmap = false,
+            .bumpmap = nullptr
+        };
+        if (!d_surface_info)
+            CUDA_CHECK(cudaMalloc(&d_surface_info, sizeof(SurfaceInfo)));
+        CUDA_CHECK(cudaMemcpy(
+            d_surface_info,
+            &surface_info, sizeof(SurfaceInfo),
             cudaMemcpyHostToDevice
         ));
     }
@@ -72,4 +77,9 @@ namespace prayground {
     {
         return { m_texture->getData(), m_intensity, m_twosided };
     }
+
+    SurfaceInfo* AreaEmitter::surfaceInfoDevicePtr() const {
+        return d_surface_info;
+    }
+
 } // namespace prayground

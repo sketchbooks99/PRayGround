@@ -97,14 +97,23 @@ namespace prayground {
 
     [[nodiscard]] Module Pipeline::createModuleFromPtxFile(const Context& ctx, const std::filesystem::path& filename)
     {
-        UNIMPLEMENTED();
-        return Module{};
+        m_modules.emplace_back(Module{});
+        m_modules.back().createFromPtxFile(ctx, filename, m_compile_options);
+        return m_modules.back();
     }
 
     [[nodiscard]] Module Pipeline::createModuleFromPtxSource(const Context& ctx, const std::string& source)
     {
-        UNIMPLEMENTED();
-        return Module{};
+        m_modules.emplace_back(Module{});
+        m_modules.back().createFromPtxFile(ctx, source, m_compile_options);
+        return m_modules.back();
+    }
+
+    Module Pipeline::createModuleFromOptixIr(const Context& ctx, const std::filesystem::path& filename)
+    {
+        m_modules.emplace_back(Module{});
+        m_modules.back().createFromOptixIr(ctx, filename, m_compile_options);
+        return m_modules.back();
     }
 
     // --------------------------------------------------------------------

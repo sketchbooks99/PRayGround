@@ -39,6 +39,9 @@
 #include "app/input.h"
 
 #include "gl/shader.h"
+
+#include "physics/cuda/sph.cuh"
+
 #endif // __CUDACC__
 
 #include <optix.h>
@@ -59,6 +62,8 @@
 #include "math/random.h"
 #include "math/noise.h"
 #include "math/vec.h"
+#include "math/interop.h"
+#include "math/frame.h"
 
 // shape include
 #include "shape/box.h"
@@ -78,6 +83,7 @@
 #include "material/disney.h"
 #include "material/isotropic.h"
 #include "material/custom.h"
+#include "material/layered.h"
 
 // emitter include 
 #include "emitter/area.h"
@@ -87,6 +93,7 @@
 #include "texture/constant.h"
 #include "texture/checker.h"
 #include "texture/bitmap.h"
+#include "texture/gradient.h"
 
 // Medium include 
 #include "medium/atmosphere.h"

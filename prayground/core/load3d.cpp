@@ -24,7 +24,8 @@ namespace prayground {
     )
     {
         tinyobj::ObjReaderConfig reader_config;
-        reader_config.triangulate = true; // triangulate mesh
+        //reader_config.triangulate = true; // triangulate mesh
+        reader_config.triangulate = false;
         tinyobj::ObjReader reader;
 
         if (!reader.ParseFromFile(filepath.string(), reader_config))
@@ -42,29 +43,32 @@ namespace prayground {
         normals.resize(attrib.normals.size() / 3);
         texcoords.resize(attrib.texcoords.size() / 2);
 
+
         for (size_t s = 0; s < shapes.size(); s++)
         {
             size_t index_offset = 0;
+
             for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++)
             {
+                size_t fv = size_t(shapes[s].mesh.num_face_vertices[f]);
                 Face face{{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
-                for (size_t v = 0; v < 3; v++)
+                for (size_t v = 0; v < fv; v++)
                 {
                     // access to vertex
                     tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
                     face.vertex_id[v] = idx.vertex_index;
-                    tinyobj::real_t vx = attrib.vertices[3 * size_t(idx.vertex_index) + 0];
-                    tinyobj::real_t vy = attrib.vertices[3 * size_t(idx.vertex_index) + 1];
-                    tinyobj::real_t vz = attrib.vertices[3 * size_t(idx.vertex_index) + 2];
+                    tinyobj::real_t vx = attrib.vertices[3 * idx.vertex_index + 0];
+                    tinyobj::real_t vy = attrib.vertices[3 * idx.vertex_index + 1];
+                    tinyobj::real_t vz = attrib.vertices[3 * idx.vertex_index + 2];
                     vertices[idx.vertex_index] = Vec3f(vx, vy, vz);
 
                     // Normals if exists
                     if (idx.normal_index >= 0)
                     {
                         face.normal_id[v] = idx.normal_index;
-                        tinyobj::real_t nx = attrib.normals[3 * size_t(idx.normal_index) + 0];
-                        tinyobj::real_t ny = attrib.normals[3 * size_t(idx.normal_index) + 1];
-                        tinyobj::real_t nz = attrib.normals[3 * size_t(idx.normal_index) + 2];
+                        tinyobj::real_t nx = attrib.normals[3 * idx.normal_index + 0];
+                        tinyobj::real_t ny = attrib.normals[3 * idx.normal_index + 1];
+                        tinyobj::real_t nz = attrib.normals[3 * idx.normal_index + 2];
                         normals[idx.normal_index] = Vec3f(nx, ny, nz);
                     }
 
@@ -72,13 +76,15 @@ namespace prayground {
                     if (idx.texcoord_index >= 0)
                     {
                         face.texcoord_id[v] = idx.texcoord_index;
-                        tinyobj::real_t tx = attrib.texcoords[2 * size_t(idx.texcoord_index) + 0];
-                        tinyobj::real_t ty = attrib.texcoords[2 * size_t(idx.texcoord_index) + 1];
+                        tinyobj::real_t tx = attrib.texcoords[2 * idx.texcoord_index + 0];
+                        tinyobj::real_t ty = attrib.texcoords[2 * idx.texcoord_index + 1];
                         texcoords[idx.texcoord_index] = Vec2f(tx, ty);
                     }
                 }
                 faces.push_back(face);
-                index_offset += 3;
+                index_offset += fv;
+
+                shapes[s].mesh.material_ids[f];
             }
         }
     }

@@ -1,6 +1,6 @@
 #include "app.h"
 
-#define INTERACTIVE 1
+#define INTERACTIVE 0
 
 static void streamProgress(int frame, int max_frame, float elapsed_time, int bar_length)
 {
@@ -107,7 +107,7 @@ void App::setup()
     camera.enableTracking(pgGetCurrentWindow());
 
     // Raygen program
-    ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, raygen_module, "__raygen__pinhole");
+    ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, raygen_module, "__raygen__lens");
     // Shader binding table data for raygen program
     RaygenRecord raygen_record;
     raygen_prg.recordPackHeader(&raygen_record);
@@ -202,16 +202,12 @@ void App::setup()
         // Register data to shader binding table
         HitgroupRecord record;
         prg.recordPackHeader(&record);
+
         record.data =
         {
             .shape_data = shape->devicePtr(),
-            .surface_info =
-            {
-                .data = is_mat ? std::get<shared_ptr<Material>>(surface)->devicePtr() : std::get<shared_ptr<AreaEmitter>>(surface)->devicePtr(),
-                .callable_id = is_mat ? std::get<shared_ptr<Material>>(surface)->surfaceCallableID() : std::get<shared_ptr<AreaEmitter>>(surface)->surfaceCallableID(),
-                .type = is_mat ? std::get<shared_ptr<Material>>(surface)->surfaceType() : SurfaceType::AreaEmitter,
-            },
-            .alpha_texture = alpha_texture ? alpha_texture->getData() : Texture::Data{ nullptr, bitmap_prg_id }
+            .surface_info = is_mat ? std::get<shared_ptr<Material>>(surface)->surfaceInfoDevicePtr() : std::get<shared_ptr<AreaEmitter>>(surface)->surfaceInfoDevicePtr(),
+            .alpha_texture = alpha_texture ? alpha_texture->getData() : Texture::Data{ nullptr, (int)bitmap_prg_id }
         };
 
         sbt.addHitgroupRecord({ record });

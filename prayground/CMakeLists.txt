@@ -20,6 +20,8 @@ set(sources
   core/material.h 
   core/onb.h 
   core/ray.h 
+  core/sampling.h
+  core/sampling.cpp
   core/sampler.h
   core/shape.h 
   core/shape.cpp
@@ -123,6 +125,9 @@ set(sources
   material/roughdielectric.h
   material/roughdielectric.cpp
   material/isotropic.h
+  material/thinfilm.h
+  material/layered.h
+  material/layered.cpp
   material/cuda/materials.cuh
 
   # Textures ==========
@@ -130,6 +135,7 @@ set(sources
   texture/bitmap.cpp
   texture/checker.h 
   texture/constant.h  
+  texture/gradient.h
   texture/cuda/textures.cuh
 
   # Medium ==========
@@ -158,20 +164,20 @@ set(pg_target "prayground")
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${sources}) 
 
 # TODO: Link CUDA libraries to the prayground target
-CUDA_GET_SOURCES_AND_OPTIONS(${sources} cmake_options options)
 set(cuda_sources optix/cuda/omm.cu physics/cuda/sph.cu)
 set_source_files_properties(${cuda_sources} PROPERTIES CUDA_SOURCE_PROPERTY_FORMAT OBJ)
-if (CUDA_NVRTC_ENABLED)
-  set(cu_obj_source_files)
-  foreach(file ${sources})
+OPTIX_add_source_groups()
+set(cu_obj_source_files)
+foreach(file ${sources})
     get_source_file_property(_cuda_source_format ${file} CUDA_SOURCE_PROPERTY_FORMAT)
-    if (${_cuda_source_format} MATCHES "OBJ")
+    if(${_cuda_source_format} MATCHES "OBJ")
       list(APPEND cu_obj_source_files ${file})
+    else()
+      list(APPEND cu_optix_source_files ${file})
     endif()
-  endforeach()
+endforeach()
 
-  CUDA_WRAP_SRCS(${pg_target} OBJ generated_files ${cu_obj_source_files})
-endif()
+CUDA_WRAP_SRCS(${pg_target} OBJ generated_files ${cu_obj_source_files})
 
 add_library(${pg_target} STATIC ${sources} ${generated_files})
 

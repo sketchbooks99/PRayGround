@@ -4,6 +4,7 @@
 #include <curand_kernel.h>
 
 #include <prayground/math/vec.h>
+#include <prayground/core/texture.h>
 
 #ifdef __CUDACC__
 #include <prayground/optix/cuda/device_util.cuh>
@@ -32,19 +33,25 @@ namespace prayground {
         // Material
         Material        = Diffuse | Reflection | Refraction | RoughReflection | RoughRefraction,
 
+        // Refractive material
+        Refractive = Refraction | RoughRefraction,
+
         // Emitter 
         AreaEmitter     = 1u << 5,
 
         // Medium
-        Medium          = 1u << 6
+        Medium          = 1u << 6, 
+
+        // Layered
+        Layered         = 1u << 7
     };
 
-    constexpr SurfaceType  operator|(SurfaceType t1, SurfaceType t2)    { return static_cast<SurfaceType>(  (uint32_t)t1 | (uint32_t)t2 ); }
-    constexpr SurfaceType  operator|(uint32_t t1, SurfaceType t2)       { return static_cast<SurfaceType>(            t1 | (uint32_t)t2 ); }
-    constexpr SurfaceType  operator&(SurfaceType t1, SurfaceType t2)    { return static_cast<SurfaceType>(  (uint32_t)t1 & (uint32_t)t2 ); }
-    constexpr SurfaceType  operator&(uint32_t t1, SurfaceType t2)       { return static_cast<SurfaceType>(            t1 & (uint32_t)t2 ); }
-    constexpr SurfaceType  operator~(SurfaceType t1)                    { return static_cast<SurfaceType>( ~(uint32_t)t1 ); }
-    constexpr uint32_t     operator+(SurfaceType t1)                    { return static_cast<uint32_t>(t1); }
+    constexpr HOSTDEVICE SurfaceType  operator|(SurfaceType t1, SurfaceType t2)    { return static_cast<SurfaceType>(  (uint32_t)t1 | (uint32_t)t2 ); }
+    constexpr HOSTDEVICE SurfaceType  operator|(uint32_t t1, SurfaceType t2)       { return static_cast<SurfaceType>(            t1 | (uint32_t)t2 ); }
+    constexpr HOSTDEVICE SurfaceType  operator&(SurfaceType t1, SurfaceType t2)    { return static_cast<SurfaceType>(  (uint32_t)t1 & (uint32_t)t2 ); }
+    constexpr HOSTDEVICE SurfaceType  operator&(uint32_t t1, SurfaceType t2)       { return static_cast<SurfaceType>(            t1 & (uint32_t)t2 ); }
+    constexpr HOSTDEVICE SurfaceType  operator~(SurfaceType t1)                    { return static_cast<SurfaceType>( ~(uint32_t)t1 ); }
+    constexpr HOSTDEVICE uint32_t     operator+(SurfaceType t1)                    { return static_cast<uint32_t>(t1); }
 
     struct SurfaceCallableID {
         uint32_t sample;
@@ -61,6 +68,9 @@ namespace prayground {
         SurfaceCallableID callable_id;
     
         SurfaceType type;
+
+        bool use_bumpmap = false;
+        Texture::Data bumpmap;
     };
     
     struct MediumInfo {
@@ -109,7 +119,11 @@ namespace prayground {
         /* For propagating random seed among path */
         uint32_t seed;
 
-        SurfaceInfo surface_info;
+        /* IOR of current medium */
+        float ior = 1.000293f;
+
+        /* Array of surface information. Multiple informations are typically used for layered material */
+        SurfaceInfo* surface_info;
 
         bool trace_terminate;
     };
@@ -126,6 +140,11 @@ namespace prayground {
     };
 
 #ifndef __CUDACC__
+    inline std::ostream& operator<<(std::ostream& out, const SurfaceCallableID& id)
+    {
+        return out << "SurfaceCallableID{sample=" << id.sample << ", bsdf=" << id.bsdf << ", pdf=" << id.pdf << "}";
+    }
+
     inline std::ostream& operator<<(std::ostream& out, SurfaceType surface_type)
     {
         switch (surface_type)

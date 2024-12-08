@@ -24,12 +24,14 @@ public:
     explicit operator OptixPipeline&() { return m_pipeline; }
 
     [[nodiscard]] Module createBuiltinIntersectionModule(const Context& ctx, OptixPrimitiveType primitive_type);
-        
+
     [[nodiscard]] Module createModuleFromCudaFile(const Context& ctx, const std::filesystem::path& filename);
     [[nodiscard]] Module createModuleFromCudaSource(const Context& ctx, const std::string& source);
 
     [[nodiscard]] Module createModuleFromPtxFile(const Context& ctx, const std::filesystem::path& filename);
     [[nodiscard]] Module createModuleFromPtxSource(const Context& ctx, const std::string& source);
+
+    [[nodiscard]] Module createModuleFromOptixIr(const Context& ctx, const std::filesystem::path& filename);
 
     [[nodiscard]] ProgramGroup createRaygenProgram(const Context& ctx, const Module& module, const std::string& func_name);
     [[nodiscard]] ProgramGroup createRaygenProgram(const Context& ctx, const ProgramEntry& entry);

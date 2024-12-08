@@ -14,6 +14,8 @@ namespace prayground {
             bool is_app_window_initialized = false;
         };
         RunnerState g_state;
+
+        std::string g_app_name;
     } // nonamed namespace
 
     float pgGetMouseX()
@@ -97,9 +99,9 @@ namespace prayground {
         return g_state.runner->window();
     }
 
-    void pgRunApp(const std::shared_ptr<BaseApp>& app, const std::shared_ptr<Window>& window)
+    void pgRunApp(const std::shared_ptr<BaseApp>& app, const std::shared_ptr<Window>& window, bool use_window)
     {
-        g_state.runner = std::make_unique<AppRunner>(app, window);
+        g_state.runner = std::make_unique<AppRunner>(app, window, use_window);
         g_state.runner->run();
     }
 
@@ -108,14 +110,24 @@ namespace prayground {
         return g_state.is_app_window_initialized;
     }
 
+    void pgSetAppName(const std::string& name)
+    {
+        g_app_name = name;
+    }
+
+    std::string pgGetAppName()
+    {
+        return g_app_name;
+    }
+
     void pgExit()
     {
         g_state.runner->window()->notifyShouldClose();
     }
 
     // AppRunner ------------------------------------------------
-    AppRunner::AppRunner(const std::shared_ptr<BaseApp>& app, const std::shared_ptr<Window>& window)
-    : m_app(app), m_window(window)
+    AppRunner::AppRunner(const std::shared_ptr<BaseApp>& app, const std::shared_ptr<Window>& window, bool use_window)
+        : m_app(app), m_window(window), m_use_window(use_window)
     {
 
     }
@@ -123,6 +135,12 @@ namespace prayground {
     // ------------------------------------------------
     void AppRunner::run() const
     {
+        // frame loop disabled if not using window
+        if (!m_use_window) {
+            m_app->setup();
+            return;
+        }
+        
         m_window->setup();
         g_state.is_app_window_initialized = true;
 

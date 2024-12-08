@@ -14,6 +14,7 @@ extern "C" __device__ void __raygen__pinhole() {
     const int frame = params.frame;
 
     const Vec3ui idx(optixGetLaunchIndex());
+
     const int image_idx = idx.y() * params.width + idx.x();
     uint32_t seed = tea<4>(image_idx, frame);
 
@@ -29,7 +30,6 @@ extern "C" __device__ void __raygen__pinhole() {
         ) / Vec2f(params.width, params.height) - 1.0f;
 
         Vec3f ro, rd;
-
         getCameraRay(raygen->camera, d.x(), d.y(), ro, rd);
 
         Vec3f throughput(1.0f);
@@ -40,15 +40,18 @@ extern "C" __device__ void __raygen__pinhole() {
         si.albedo = 0.0f;
         si.trace_terminate = false;
 
+        // For dummy lighting 
+        Vec3f light_dir = normalize(Vec3f(-1.0, -1.0, 0.0));
+
         int depth = 0;
         for (;;) {
             if (depth >= params.max_depth)
                 break;
 
             uint32_t u0, u1;
-            packPointer(si, u0, u1);
+            packPointer(&si, u0, u1);
             optixTrace(params.handle, ro, rd, 1e-3f, 1e16f, 0.0f, 
-                OptixVisibilityMask(255), 
+                OptixVisibilityMask(1), 
                 OPTIX_RAY_FLAG_NONE, 0, 1, 0, 
                 u0, u1);
 
@@ -60,7 +63,7 @@ extern "C" __device__ void __raygen__pinhole() {
             // Get emission from area emitter
             if (si.surface_info.type == SurfaceType::AreaEmitter) {
                 // Evaluating emission from emitter
-                optixDirectCall<void, SurfaceInteraction*, void*>(si.surface_info.callable_id.bsdf, &si, surface_info.data);
+                optixDirectCall<void, SurfaceInteraction*, void*>(si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
 
                 result += throughput * si.emission;
                 if (si.trace_terminate)
@@ -69,22 +72,22 @@ extern "C" __device__ void __raygen__pinhole() {
             // Specular sampling
             else if (+(si.surface_info.type & SurfaceType::Delta)) {
                 // Sampling scattered direction
-                optixDirectCall<void, SurfaceInteraction*, void*>(si.surface_info.callable_id.sammple, &si, surface_info.data);
+                optixDirectCall<void, SurfaceInteraction*, void*>(si.surface_info.callable_id.sample, &si, si.surface_info.data);
 
                 // Evaluate BSDF
-                Vec3f bsdf = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(si.surface_info.callable_id.bsdf, &si, surface_info.data);
+                Vec3f bsdf = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
                 throughput *= bsdf;
             }
             // Rough surface sampling
-            else {
+            else if (+(si.surface_info.type & SurfaceType::Rough)){
                 // Sampling scattered direction
-                optixDirectCall<void, SurfaceInteraction*, void*>(si.surface_info.callable_id.sammple, &si, surface_info.data);
+                optixDirectCall<void, SurfaceInteraction*, void*>(si.surface_info.callable_id.sample, &si, si.surface_info.data);
 
                 // Evaluate BSDF
-                Vec3f bsdf = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(si.surface_info.callable_id.bsdf, &si, surface_info.data);
+                Vec3f bsdf = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
 
                 // Evaluate PDF
-                float pdf = optixDirectCall<float, SurfaceInteraction*, void*>(si.surface_info.callable_id.pdf, &si, surface_info.data);
+                float pdf = optixDirectCall<float, SurfaceInteraction*, void*>(si.surface_info.callable_id.pdf, &si, si.surface_info.data);
                 throughput *= bsdf / pdf;
             }
 
@@ -107,7 +110,7 @@ extern "C" __device__ void __raygen__pinhole() {
     }
     params.accum_buffer[image_idx] = Vec4f(accum_color, 1.0f);
     Vec3u color = make_color(accum_color);
-    params.result_buffer[image_idx] = color;
+    params.result_buffer[image_idx] = Vec4u(color, 255);
 }
 
 // ------------------------------------------------------------------
@@ -122,26 +125,38 @@ extern "C" __device__ void __miss__envmap() {
 
     Shading shading;
     float t;
-    const Sphere::Data env_sphere{Vec3f(0.0f), 1e16f};
-    pgIntersectionSphere(&env_sphere, ray, t, shading);
+    const Sphere::Data env_sphere{Vec3f(0.0f), 1e8f};
+    pgIntersectionSphere(&env_sphere, ray, &shading, &t);
 
     si->shading.uv = shading.uv;
     si->trace_terminate = true;
     si->surface_info.type = SurfaceType::None;
-    si->emission = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(env->texture.prg_id, si, env->texture.data);
+    si->emission = optixDirectCall<Vec3f, const Vec2f&, void*>(env->texture.prg_id, si->shading.uv, env->texture.data);
 }
 
 // ------------------------------------------------------------------
 // Hitgroup program
 // ------------------------------------------------------------------
+// Particle
 extern "C" __device__ void __intersection__particle() {
     const pgHitgroupData* data = (pgHitgroupData*)optixGetSbtDataPointer();
     const int prim_idx = optixGetPrimitiveIndex();
-    const SPHParticle::Data particle = (SPHParticle::Data*)data->shape_data[prim_idx];
+    const SPHParticles::Data particle = reinterpret_cast<SPHParticles::Data*>(data->shape_data)[prim_idx];
 
     Ray ray = getLocalRay();
     Sphere::Data sphere{particle.position, particle.radius};
-    pgIntersectionSphere(&sphere, ray);
+
+    pgReportIntersectionSphere(&sphere, ray);
+}
+
+// Plane
+extern "C" __device__ void __intersection__plane() {
+    const pgHitgroupData* data = (pgHitgroupData*)optixGetSbtDataPointer();
+    const Plane::Data* plane = reinterpret_cast<Plane::Data*>(data->shape_data);
+
+    Ray ray = getLocalRay();
+
+    pgReportIntersectionPlane(plane, ray);
 }
 
 extern "C" __device__ void __closesthit__custom() {
@@ -153,8 +168,8 @@ extern "C" __device__ void __closesthit__custom() {
 
     // Transform shading frame to world space
     shading->n = normalize(optixTransformNormalFromObjectToWorldSpace(shading->n));
-    shading->dpdu = normalize(optixTransformNormalFromObjectToWorldSpace(shading->dpdu));
-    shading->dpdv = normalize(optixTransformNormalFromObjectToWorldSpace(shading->dpdv));
+    shading->dpdu = normalize(optixTransformVectorFromObjectToWorldSpace(shading->dpdu));
+    shading->dpdv = normalize(optixTransformVectorFromObjectToWorldSpace(shading->dpdv));
 
     auto* si = getPtrFromTwoPayloads<SurfaceInteraction, 0>();
 
@@ -163,4 +178,104 @@ extern "C" __device__ void __closesthit__custom() {
     si->t = ray.tmax;
     si->wo = ray.d;
     si->surface_info = data->surface_info;
+}
+
+// Mesh
+extern "C" __device__ void __closesthit__mesh()
+{
+    pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
+    const TriangleMesh::Data* mesh_data = reinterpret_cast<TriangleMesh::Data*>(data->shape_data);
+
+    Ray ray = getWorldRay();
+
+    Shading shading = pgGetMeshShading(mesh_data, optixGetTriangleBarycentrics(), optixGetPrimitiveIndex());
+
+    // Transform shading from object to world space
+    shading.n = normalize(optixTransformNormalFromObjectToWorldSpace(shading.n));
+    shading.dpdu = normalize(optixTransformVectorFromObjectToWorldSpace(shading.dpdu));
+    shading.dpdv = normalize(optixTransformVectorFromObjectToWorldSpace(shading.dpdv));
+
+    SurfaceInteraction* si = getPtrFromTwoPayloads<SurfaceInteraction, 0>();
+    si->p = ray.at(ray.tmax);
+    si->shading = shading;
+    si->t = ray.tmax;
+    si->wo = ray.d;
+    si->surface_info = data->surface_info;
+}
+
+// ------------------------------------------------------------------
+// Surfaces
+// ------------------------------------------------------------------
+// Diffuse
+extern "C" __device__ void __direct_callable__sample_diffuse(SurfaceInteraction* si, void* data)
+{
+    const Diffuse::Data* diffuse = reinterpret_cast<Diffuse::Data*>(data);
+    si->wi = pgImportanceSamplingDiffuse(diffuse, si->wo, si->shading, si->seed);
+    si->trace_terminate = false;
+}
+
+extern "C" __device__ Vec3f __direct_callable__bsdf_diffuse(SurfaceInteraction* si, void* data)
+{
+    const Diffuse::Data* diffuse = reinterpret_cast<Diffuse::Data*>(data);
+    const Vec3f albedo = optixDirectCall<Vec3f, const Vec2f&, void*>(diffuse->texture.prg_id, si->shading.uv, diffuse->texture.data);
+    si->albedo = albedo;
+    si->emission = Vec3f(0.0f);
+    return albedo * pgGetDiffuseBRDF(si->wi, si->shading.n);
+}
+
+extern "C" __device__ float __direct_callable__pdf_diffuse(SurfaceInteraction* si, void* data)
+{
+    return pgGetDiffusePDF(si->wi, si->shading.n);
+}
+
+// Dielectric
+extern "C" __device__ void __direct_callable__sample_dielectric(SurfaceInteraction * si, void* data)
+{
+    const Dielectric::Data* dielectric = reinterpret_cast<Dielectric::Data*>(data);
+    si->wi = pgSamplingSmoothDielectric(dielectric, si->wo, si->shading, si->seed);
+    si->trace_terminate = false;
+}
+
+extern "C" __device__ Vec3f __direct_callable__bsdf_dielectric(SurfaceInteraction * si, void* data)
+{
+    const Dielectric::Data* dielectric = reinterpret_cast<Dielectric::Data*>(data);
+    const Vec3f albedo = optixDirectCall<Vec3f, const Vec2f&, void*>(dielectric->texture.prg_id, si->shading.uv, dielectric->texture.data);
+    si->albedo = albedo;
+    si->emission = Vec3f(0.0f);
+    return albedo;
+}
+
+extern "C" __device__ float __direct_callable__pdf_dielectric(SurfaceInteraction * /* si */, void* /* data */) {
+    return 1.0f;
+}
+
+// Area emitter
+extern "C" __device__ Vec3f __direct_callable__area_emitter(SurfaceInteraction* si, void* data)
+{
+    const auto* area = reinterpret_cast<AreaEmitter::Data*>(data);
+    si->trace_terminate = true;
+    float is_emitted = dot(si->wo, si->shading.n) < 0.0f ? 1.0f : 0.0f;
+    if (area->twosided)
+    {
+        is_emitted = 1.0f;
+        si->shading.n = faceforward(si->shading.n, -si->wo, si->shading.n);
+    }
+
+    const Vec3f base = optixDirectCall<Vec3f, const Vec2f&, void*>(area->texture.prg_id, si->shading.uv, area->texture.data);
+    si->albedo = base;
+    si->emission = base * area->intensity * is_emitted;
+    return si->emission;
+}
+
+// Textures
+extern "C" __device__ Vec3f __direct_callable__bitmap(const Vec2f& uv, void* tex_data) {
+    return pgGetBitmapTextureValue<Vec3f>(uv, tex_data);
+}
+
+extern "C" __device__ Vec3f __direct_callable__constant(const Vec2f& uv, void* tex_data) {
+    return pgGetConstantTextureValue<Vec3f>(uv, tex_data);
+}
+
+extern "C" __device__ Vec3f __direct_callable__checker(const Vec2f& uv, void* tex_data) {
+    return pgGetCheckerTextureValue<Vec3f>(uv, tex_data);
 }

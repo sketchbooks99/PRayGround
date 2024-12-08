@@ -148,7 +148,7 @@ namespace prayground {
         }
 
         {
-            OptixDenoiserSizes denoiser_sizes;
+            OptixDenoiserSizes denoiser_sizes = {};
 
             OPTIX_CHECK(optixDenoiserComputeMemoryResources(
                 m_denoiser,
@@ -351,6 +351,12 @@ namespace prayground {
     {
         m_viewer.setData(data.outputs[0], 0, 0, data.width, data.height);
         m_viewer.draw(x, y, w, h);
+    }
+
+    void Denoiser::write(const Data& data, const std::filesystem::path& filepath)
+    {
+        m_viewer.setData(data.outputs[0], 0, 0, data.width, data.height);
+        m_viewer.write(filepath);
     }
 
     // --------------------------------------------------------------------

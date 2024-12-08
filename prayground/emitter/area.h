@@ -22,8 +22,6 @@ namespace prayground {
 
         SurfaceType surfaceType() const;
 
-        SurfaceInfo surfaceInfo() const;
-
         void copyToDevice() override;
 
         EmitterType type() const override { return EmitterType::Area; }
@@ -37,11 +35,14 @@ namespace prayground {
         const SurfaceCallableID& surfaceCallableID() const;
 
         Data getData() const;
+
+        SurfaceInfo* surfaceInfoDevicePtr() const;
     private:
         SurfaceCallableID m_surface_callable_id;
         std::shared_ptr<Texture> m_texture;
         float m_intensity;
         bool m_twosided;
+        SurfaceInfo* d_surface_info{ nullptr };
 #endif
     };
 

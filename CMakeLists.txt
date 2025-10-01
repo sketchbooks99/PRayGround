@@ -349,19 +349,19 @@ add_subdirectory(prayground)
 # 
 # Please uncomment the target you'd like to build
 ################################################################
-add_subdirectory(examples/single_gas)
-add_subdirectory(examples/dynamic_update)
-add_subdirectory(examples/motion_blur)
-add_subdirectory(examples/pathtracing)
-add_subdirectory(examples/objscene)
-add_subdirectory(examples/rayTracingNextWeek)
-add_subdirectory(examples/rayTracingRestOfYourLife)
-add_subdirectory(examples/denoiser)
-add_subdirectory(examples/thumbnail)
-add_subdirectory(examples/spectrum)
-add_subdirectory(examples/pgVolume)
+# add_subdirectory(examples/single_gas)
+# add_subdirectory(examples/dynamic_update)
+# add_subdirectory(examples/motion_blur)
+# add_subdirectory(examples/pathtracing)
+# add_subdirectory(examples/objscene)
+# add_subdirectory(examples/rayTracingNextWeek)
+# add_subdirectory(examples/rayTracingRestOfYourLife)
+# add_subdirectory(examples/denoiser)
+# add_subdirectory(examples/thumbnail)
+# add_subdirectory(examples/spectrum)
+# add_subdirectory(examples/pgVolume)
 add_subdirectory(examples/curves)
-add_subdirectory(examples/opacityMicromap)
+# add_subdirectory(examples/opacityMicromap)
 add_subdirectory(examples/fluidSimulation)
 
 ################################################################
@@ -370,6 +370,7 @@ add_subdirectory(examples/fluidSimulation)
 # Please add your custom applications to build here
 ################################################################
 # add_subdirectory(apps/empty_app)
+add_subdirectory(apps/rtcamp11)
 
 ################################################################
 # Unit test

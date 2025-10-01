@@ -1,7 +1,11 @@
-PRAYGROUND_add_executable(empty_app target_name
+PRAYGROUND_add_executable(rtcamp11 target_name
     main.cpp 
     app.cpp 
     app.h
+    kernels.cu
+    params.h
+    textures.h
+    OPTIONS -rdc true
 )
 
 target_compile_definitions(

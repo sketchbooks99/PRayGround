@@ -207,8 +207,10 @@ void App::setup()
             curves->addVertex(v);
             curves->addWidth(radius);
 
-            if (s < (n_vertices - (int32_t)Curves::getNumVertexPerSegment(curves->curveType())))
+            if (s < NUM_SEGMENTS) {
                 curves->addIndex(base_idx + s);
+                pgLog(format("Add index: {}", base_idx + s));
+            }
         }
     }
 

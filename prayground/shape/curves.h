@@ -6,6 +6,8 @@
 #include <filesystem>
 #endif
 
+#include <prayground/math/bezier.h>
+
 namespace prayground {
 
     class Curves final : public Shape {
@@ -68,10 +70,10 @@ namespace prayground {
         const std::vector<float>& widths() const { return m_widths; }
         const std::vector<Vec3f>& normals() const { return m_normals; }
 
-        CUdeviceptr deviceVertices() const { return d_vertices; }
-        CUdeviceptr deviceIndices() const { return d_indices; }
-        CUdeviceptr deviceWidths() const { return d_widths; }
-        CUdeviceptr deviceNormals() const { return d_normals; }
+        CUdeviceptr hostdeviceVertices() const { return d_vertices; }
+        CUdeviceptr hostdeviceIndices() const { return d_indices; }
+        CUdeviceptr hostdeviceWidths() const { return d_widths; }
+        CUdeviceptr hostdeviceNormals() const { return d_normals; }
 
         static uint32_t getNumVertexPerSegment(Curves::Type curves_type);
 

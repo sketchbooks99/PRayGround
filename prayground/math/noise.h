@@ -6,6 +6,37 @@
 
 namespace prayground {
 
+    class RandomNoise {
+    public:
+        struct Data {
+            uint32_t seed;
+
+            int width;
+            int height;
+            int depth;
+        };
+
+        HOSTDEVICE RandomNoise(uint32_t seed) : m_seed{seed} {}
+
+        HOSTDEVICE float noise(const Vec3f& p) const {
+            unsigned int local_seed = m_seed;
+            local_seed ^= static_cast<uint32_t>(floor(p.x() * 73856093));
+            local_seed ^= static_cast<uint32_t>(floor(p.y() * 19349663));
+            local_seed ^= static_cast<uint32_t>(floor(p.z() * 83492791));
+            return rnd(local_seed);
+        }
+
+        HOSTDEVICE float noise(const Vec3i& p) const {
+            unsigned int local_seed = m_seed;
+            local_seed ^= static_cast<uint32_t>(p.x() * 73856093);
+            local_seed ^= static_cast<uint32_t>(p.y() * 19349663);
+            local_seed ^= static_cast<uint32_t>(p.z() * 83492791);
+            return rnd(local_seed);
+        }
+    private:
+        uint32_t m_seed;
+    };
+
     class PerlinNoise {
     public:
         HOSTDEVICE PerlinNoise(uint32_t seed);

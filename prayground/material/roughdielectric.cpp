@@ -32,8 +32,10 @@ namespace prayground {
             .data = d_data,
             .callable_id = m_surface_callable_id,
             .type = surfaceType(),
-            .use_bumpmap = useBumpmap(),
-            .bumpmap = bumpmapData()
+            .use_bumpmap = this->useBumpmap(),
+            .bumpmap = this->bumpmapData(),
+            .use_opacity_texture = this->useOpacityTexture(),
+            .opacity_texture = this->opacityTextureData()
         };
         if (!d_surface_info)
             CUDA_CHECK(cudaMalloc(&d_surface_info, sizeof(SurfaceInfo)));

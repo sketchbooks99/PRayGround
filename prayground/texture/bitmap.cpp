@@ -52,6 +52,43 @@ namespace prayground {
     }
 
     template<typename PixelT>
+    BitmapTexture_<PixelT>::BitmapTexture_(const std::shared_ptr<Bitmap_<PixelT>>& bitmap, int prg_id)
+    : Texture(prg_id)
+    {
+        // Copy bitmap data to this texture
+        int width = bitmap->width();
+        int height = bitmap->height();
+        int channels = bitmap->channels();
+        
+        // Determine pixel format from channels
+        PixelFormat format;
+        switch (channels) {
+            case 1: format = PixelFormat::GRAY; break;
+            case 2: format = PixelFormat::GRAY_ALPHA; break;
+            case 3: format = PixelFormat::RGB; break;
+            case 4: format = PixelFormat::RGBA; break;
+            default: 
+                pgLogFatal("Invalid number of channels: " + std::to_string(channels));
+                format = PixelFormat::RGBA;
+        }
+        
+        // Allocate and copy data
+        Bitmap_<PixelT>::allocate(format, width, height, bitmap->data());
+        
+        // Initialize texture description with default settings
+        m_tex_desc.addressMode[0] = cudaAddressModeWrap;
+        m_tex_desc.addressMode[1] = cudaAddressModeWrap;
+        m_tex_desc.filterMode = cudaFilterModeLinear;
+        m_tex_desc.normalizedCoords = 1;
+        m_tex_desc.sRGB = 0;  // Heightmap should not use sRGB
+        
+        if constexpr (std::is_same_v<PixelT, float>)
+            m_tex_desc.readMode = cudaReadModeElementType;
+        else
+            m_tex_desc.readMode = cudaReadModeNormalizedFloat;
+    }
+
+    template<typename PixelT>
     constexpr TextureType BitmapTexture_<PixelT>::type()
     {
         return TextureType::Bitmap;
@@ -78,14 +115,39 @@ namespace prayground {
     template <typename PixelT>
     void BitmapTexture_<PixelT>::copyToDevice()
     {
-        // Alloc CUDA array in device memory.
-        int32_t pitch = Bitmap_<PixelT>::width() * sizeof(ColorType);
-
-        cudaChannelFormatDesc channel_desc = cudaCreateChannelDesc<ColorType>();
-
-        CUDA_CHECK( cudaMallocArray( &d_array, &channel_desc, Bitmap_<PixelT>::width(), Bitmap_<PixelT>::height() ) );
+        int channels = Bitmap_<PixelT>::channels();
+        int width = Bitmap_<PixelT>::width();
+        int height = Bitmap_<PixelT>::height();
         PixelT* raw_data = Bitmap_<PixelT>::data();
-        CUDA_CHECK( cudaMemcpy2DToArray( d_array, 0, 0, raw_data, pitch, pitch, Bitmap_<PixelT>::height(), cudaMemcpyHostToDevice ) );
+        
+        // Calculate pitch based on actual channel count
+        int32_t element_size = channels * sizeof(PixelT);
+        int32_t pitch = width * element_size;
+        
+        // Create channel descriptor based on number of channels
+        cudaChannelFormatDesc channel_desc;
+        if constexpr (std::is_same_v<PixelT, float>) {
+            switch (channels) {
+                case 1: channel_desc = cudaCreateChannelDesc<float>(); break;
+                case 2: channel_desc = cudaCreateChannelDesc<float2>(); break;
+                case 4: channel_desc = cudaCreateChannelDesc<float4>(); break;
+                default: 
+                    pgLogFatal("Unsupported channel count for float texture: " + std::to_string(channels));
+            }
+        } else if constexpr (std::is_same_v<PixelT, unsigned char>) {
+            switch (channels) {
+                case 1: channel_desc = cudaCreateChannelDesc<unsigned char>(); break;
+                case 2: channel_desc = cudaCreateChannelDesc<uchar2>(); break;
+                case 4: channel_desc = cudaCreateChannelDesc<uchar4>(); break;
+                default: 
+                    pgLogFatal("Unsupported channel count for uchar texture: " + std::to_string(channels));
+            }
+        } else {
+            pgLogFatal("Unsupported pixel type for BitmapTexture");
+        }
+
+        CUDA_CHECK( cudaMallocArray( &d_array, &channel_desc, width, height ) );
+        CUDA_CHECK( cudaMemcpy2DToArray( d_array, 0, 0, raw_data, pitch, pitch, height, cudaMemcpyHostToDevice ) );
 
         // Create texture object.
         cudaResourceDesc res_desc;

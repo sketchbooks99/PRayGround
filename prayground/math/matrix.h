@@ -68,7 +68,11 @@ namespace prayground {
         HOSTDEVICE       T* data();
         HOSTDEVICE const T* data() const;
 
+
         HOSTDEVICE bool isIdentity() const;
+        
+        // Specialized only for Matrix4f (static method)
+        static HOSTDEVICE Matrix trackTo(const Vec3f& tangent, const Vec3f& track_dir, const Vec3f& up_dir);
 
         HOSTDEVICE Matrix inverse() const;
 
@@ -341,6 +345,43 @@ namespace prayground {
     }
 
     template <typename T, uint32_t N>
+    INLINE HOSTDEVICE Matrix<T, N> Matrix<T, N>::trackTo(const Vec3f& tangent, const Vec3f& track_dir, const Vec3f& up_dir)
+    {
+        return Matrix<T, N>();
+    }
+
+    template <>
+    INLINE HOSTDEVICE Matrix<float, 4> Matrix<float, 4>::trackTo(const Vec3f& tangent, const Vec3f& track_dir, const Vec3f& up_dir)
+    {
+        Vec3f forward = normalize(tangent);
+        Vec3f right = normalize(cross(up_dir, forward));
+        Vec3f up = normalize(cross(forward, right));
+
+        Matrix4f rot = Matrix4f::identity();
+
+        // Assume track_dir is (0, 0, 1) for Z-axis tracking
+        // Map forward to track_dir, right to X, up to Y
+        if (fabs(track_dir.z() - 1.0f) < 0.001f) {  // Z-axis (0, 0, 1)
+            // forward --> Z axis, right --> X axis, up --> Y axis
+            rot.get(0, 0) = right.x();   rot.get(0, 1) = right.y();   rot.get(0, 2) = right.z();
+            rot.get(1, 0) = up.x();      rot.get(1, 1) = up.y();      rot.get(1, 2) = up.z();
+            rot.get(2, 0) = forward.x(); rot.get(2, 1) = forward.y(); rot.get(2, 2) = forward.z();
+        }
+        else if (fabs(track_dir.y() - 1.0f) < 0.001f) {  // Y-axis (0, 1, 0)
+            rot.get(0, 0) = right.x();   rot.get(0, 1) = right.y();   rot.get(0, 2) = right.z();
+            rot.get(2, 0) = up.x();      rot.get(2, 1) = up.y();      rot.get(2, 2) = up.z();
+            rot.get(1, 0) = forward.x(); rot.get(1, 1) = forward.y(); rot.get(1, 2) = forward.z();
+        }
+        else if (fabs(track_dir.x() - 1.0f) < 0.001f) {  // X-axis (1, 0, 0)
+            rot.get(1, 0) = right.x();   rot.get(1, 1) = right.y();   rot.get(1, 2) = right.z();
+            rot.get(2, 0) = up.x();      rot.get(2, 1) = up.y();      rot.get(2, 2) = up.z();
+            rot.get(0, 0) = forward.x(); rot.get(0, 1) = forward.y(); rot.get(0, 2) = forward.z();
+        }
+
+        return rot;
+    }
+
+    template <typename T, uint32_t N>
     INLINE HOSTDEVICE Matrix<T, N> Matrix<T, N>::inverse() const
     {
         Matrix<T, N> ret = Matrix<T, N>::identity();
@@ -374,7 +415,7 @@ namespace prayground {
     template <typename T, uint32_t N>
     INLINE HOSTDEVICE Vec3f Matrix<T, N>::pointMul(const Vec3f& p) const 
     {
-        static_assert(std::is_same_v<T, float> || std::is_same_v<N, 4>);
+        static_assert(std::is_same<T, float>::value && N == 4, "pointMul requires float 4x4 matrix");
         return Vec3f(0.0f);
     }
 
@@ -395,7 +436,7 @@ namespace prayground {
     template <typename T, uint32_t N>
     INLINE HOSTDEVICE Vec3f Matrix<T, N>::vectorMul(const Vec3f& n) const 
     {
-        static_assert(std::is_same_v<T, float> || std::is_same_v<N, 4>);
+        static_assert(std::is_same<T, float>::value && N == 4, "vectorMul requires float 4x4 matrix");
         return Vec3f(0.0f);
     }
 
@@ -412,7 +453,7 @@ namespace prayground {
     template <typename T, uint32_t N>
     INLINE HOSTDEVICE Vec3f Matrix<T, N>::normalMul(const Vec3f& n) const 
     {
-        static_assert(std::is_same_v<T, float> || std::is_same_v<N, 4>);
+        static_assert(std::is_same<T, float>::value && N == 4, "normalMul requires float 4x4 matrix");
         return Vec3f(0.0f);
     }
 

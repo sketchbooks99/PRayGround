@@ -39,6 +39,8 @@ set(sources
   math/vec_math.h
   math/util.h
   math/random.h
+  math/bezier.h
+  math/quat.h
 
   # App libraries ==========
   app/baseapp.h 
@@ -156,6 +158,16 @@ set(sources
   physics/sph.cpp
   physics/cuda/sph.cu
   physics/cuda/sph.cuh
+  physics/tree.h
+  physics/tree.cpp
+  physics/cuda/tree.cu
+  physics/cuda/tree.cuh
+  physics/voronoi_rock.h
+  physics/cuda/voronoi_rock.cu
+  physics/cuda/voronoi_rock.cuh
+  physics/terrain.h
+  physics/cuda/terrain.cu
+  physics/cuda/terrain.cuh
 
   prayground.h
 )
@@ -164,7 +176,7 @@ set(pg_target "prayground")
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${sources}) 
 
 # TODO: Link CUDA libraries to the prayground target
-set(cuda_sources optix/cuda/omm.cu physics/cuda/sph.cu)
+set(cuda_sources optix/cuda/omm.cu physics/cuda/sph.cu physics/cuda/tree.cu physics/cuda/voronoi_rock.cu physics/cuda/terrain.cu)
 set_source_files_properties(${cuda_sources} PROPERTIES CUDA_SOURCE_PROPERTY_FORMAT OBJ)
 OPTIX_add_source_groups()
 set(cu_obj_source_files)

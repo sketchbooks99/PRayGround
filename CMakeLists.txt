@@ -273,6 +273,7 @@ macro(OPTIX_add_source_groups)
     endif()
   endif()
   source_group("CUDA Files" REGULAR_EXPRESSION ".+\\.cu$")
+  source_group("CUDA Header Files" REGULAR_EXPRESSION ".+\\.cuh$")
 endmacro()
 
 function(PRAYGROUND_add_executable target_name_base target_name_var)
@@ -295,7 +296,8 @@ function(PRAYGROUND_add_executable target_name_base target_name_var)
     endif()
   endforeach()
 
-  CUDA_WRAP_SRCS( ${target_name} OBJ generated_files ${cu_obj_source_files} ${cmake_options} OPTIONS ${options} )
+  # OBJ files don't need -rdc option, only OPTIX files do
+  CUDA_WRAP_SRCS( ${target_name} OBJ generated_files ${cu_obj_source_files} ${cmake_options} )
 
   # Create the rules to build the PTX and/or OPTIX files.
   if( PRAYGROUND_INPUT_GENERATE_OPTIXIR )

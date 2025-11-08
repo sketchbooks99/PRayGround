@@ -3,6 +3,7 @@
 
 #include <prayground/core/texture.h>
 #include <prayground/core/spectrum.h>
+#include <prayground/math/noise.h>
 
 namespace prayground {
 
@@ -109,6 +110,148 @@ namespace prayground {
         float m_scale;
         float m_frequency;
         float m_noise_amplitude;
+#endif // __CUDACC__
+    };
+
+    template <typename T>
+    class StarNightTexture_ final : public Texture {
+    public:
+        using ColorType = T;
+        struct Data
+        {
+            T base_color;
+            RandomNoise::Data noise_data;
+            float star_threshold;
+            float star_intensity;
+            Vec3f moon_dir;
+            float moon_intensity;
+        };
+
+#ifndef __CUDACC__
+        StarNightTexture_(
+            const T& base_color,
+            uint32_t noise_seed,
+            int noise_width,
+            int noise_height,
+            int noise_depth,
+            float star_threshold,
+            float star_intensity,
+            Vec3f moon_dir,
+            float moon_intensity,
+            int prg_id
+        )
+            : Texture(prg_id),
+            m_base_color(base_color),
+            m_seed(noise_seed),
+            m_noise_width(noise_width),
+            m_noise_height(noise_height),
+            m_noise_depth(noise_depth),
+            m_star_threshold(star_threshold),
+            m_star_intensity(star_intensity),
+            m_moon_dir(moon_dir),
+            m_moon_intensity(moon_intensity)
+        {}
+
+        constexpr TextureType type() override
+        {
+            return TextureType::Custom;
+        }
+
+        void copyToDevice() override
+        {
+            RandomNoise::Data noise_data = {
+                .seed = m_seed,
+                .width = m_noise_width,
+                .height = m_noise_height,
+                .depth = m_noise_depth
+            };
+
+            Data data = {
+                .base_color = m_base_color,
+                .noise_data = noise_data,
+                .star_threshold = m_star_threshold,
+                .star_intensity = m_star_intensity,
+                .moon_dir = m_moon_dir,
+                .moon_intensity = m_moon_intensity
+            };
+
+            if (!d_data)
+                 CUDA_CHECK(cudaMalloc(&d_data, sizeof(Data)));
+            CUDA_CHECK(cudaMemcpy(
+                d_data,
+                &data, sizeof(Data),
+                cudaMemcpyHostToDevice
+            ));
+        }
+
+    private:
+        T m_base_color;
+        uint32_t m_seed;
+        int m_noise_width;
+        int m_noise_height;
+        int m_noise_depth;
+        float m_star_threshold;
+        float m_star_intensity;
+        Vec3f m_moon_dir;
+        float m_moon_intensity;
+#endif // __CUDACC__
+    };
+
+    template <typename T>
+    class LeafTexture_ final : public Texture {
+    public:
+        using ColorType = T;
+        struct Data
+        {
+            T base_color;
+            T vein_color;
+            uint32_t seed;
+            float vein_density;
+        };
+
+#ifndef __CUDACC__
+        LeafTexture_(
+            const T& base_color,
+            const T& vein_color,
+            uint32_t seed,
+            float vein_density,
+            int prg_id
+        )
+            : Texture(prg_id),
+            m_base_color(base_color),
+            m_vein_color(vein_color),
+            m_seed(seed),
+            m_vein_density(vein_density)
+        {}
+
+        constexpr TextureType type() override
+        {
+            return TextureType::Custom;
+        }
+
+        void copyToDevice() override
+        {
+            Data data = {
+                .base_color = m_base_color,
+                .vein_color = m_vein_color,
+                .seed = m_seed,
+                .vein_density = m_vein_density
+            };
+
+            if (!d_data)
+                 CUDA_CHECK(cudaMalloc(&d_data, sizeof(Data)));
+            CUDA_CHECK(cudaMemcpy(
+                d_data,
+                &data, sizeof(Data),
+                cudaMemcpyHostToDevice
+            ));
+        }
+
+    private:
+        T m_base_color;
+        T m_vein_color;
+        uint32_t m_seed;
+        float m_vein_density;
 #endif // __CUDACC__
     };
 

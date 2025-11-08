@@ -61,16 +61,17 @@ namespace prayground {
 
     struct SurfaceInfo 
     {
-        // Surfaceのデータ
         void* data;
 
-        // BSDFの重点サンプリングと評価関数用のCallables関数へのID
         SurfaceCallableID callable_id;
     
         SurfaceType type;
 
         bool use_bumpmap = false;
         Texture::Data bumpmap;
+
+        bool use_opacity_texture = false;
+        Texture::Data opacity_texture;
     };
     
     struct MediumInfo {

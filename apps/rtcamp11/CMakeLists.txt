@@ -1,3 +1,9 @@
+# Set CUDA source properties BEFORE macro call
+set(cuda_obj_sources envmap.cu textures.cu)
+set_source_files_properties(${cuda_obj_sources} PROPERTIES 
+    CUDA_SOURCE_PROPERTY_FORMAT OBJ
+)
+
 PRAYGROUND_add_executable(rtcamp11 target_name
     main.cpp 
     app.cpp 
@@ -5,6 +11,10 @@ PRAYGROUND_add_executable(rtcamp11 target_name
     kernels.cu
     params.h
     textures.h
+    envmap.cu
+    envmap.cuh
+    textures.cuh
+    textures.cu
     OPTIONS -rdc true
 )
 

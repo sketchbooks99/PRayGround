@@ -37,7 +37,7 @@ namespace prayground {
             .callable_id = m_surface_callable_id,
             .type = surfaceType(),
             .use_bumpmap = false,
-            .bumpmap = nullptr
+            .bumpmap = {nullptr, -1}
         };
         if (!d_surface_info)
             CUDA_CHECK(cudaMalloc(&d_surface_info, sizeof(SurfaceInfo)));

@@ -20,6 +20,7 @@ public:
     BitmapTexture_() = default;
     BitmapTexture_(const std::filesystem::path& filename, int prg_id);
     BitmapTexture_(const std::filesystem::path& filename, cudaTextureDesc desc, int prg_id);
+    BitmapTexture_(const std::shared_ptr<Bitmap_<PixelT>>& bitmap, int prg_id);
 
     constexpr TextureType type() override;
 

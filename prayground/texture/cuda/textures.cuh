@@ -82,7 +82,7 @@ namespace prayground {
     {
         const BitmapTexture::Data* bitmap = reinterpret_cast<BitmapTexture::Data*>(tex_data);
         const float4 c = tex2D<float4>(bitmap->texture, uv.x(), uv.y());
-        return ReturnSpectrumT(c);
+        return ReturnSpectrumT(c) * c.w;
     }
 
     template <>

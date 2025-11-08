@@ -261,6 +261,21 @@ namespace prayground {
             return !(containsNan() || containsInf());
         }
 
+        // Spherical coordinate helpers for tree generation
+        // Declination: angle from z-axis (0 = up, 90 = horizontal, 180 = down)
+        HOSTDEVICE T declination() const
+        {
+            T len = sqrt(e[0] * e[0] + e[1] * e[1] + e[2] * e[2]);
+            if (len < 1e-6f) return T(0);
+            return acos(e[2] / len) * T(180.0 / M_PI); // Convert to degrees
+        }
+
+        // Azimuth: angle in xy-plane from x-axis
+        HOSTDEVICE T azimuth() const
+        {
+            return atan2(e[1], e[0]);
+        }
+
     private:
         T e[3];
     };
@@ -647,6 +662,12 @@ namespace prayground {
         return Vec3<float>{sqrtf(v[0]), sqrtf(v[1]), sqrtf(v[2])};
     }
 
+    // Returns the azimuth angle (in radians) of the vector in spherical coordinates
+    template <typename T>
+    INLINE HOSTDEVICE float declination(const Vec3<T>& v) {
+        return atan2(sqrtf(v[0] * v[0] + v[1] * v[1]), v[2]);
+    }
+
     template <typename T>
     INLINE HOSTDEVICE Vec3<T> max(const Vec3<T>& v, const T t)
     {
@@ -675,6 +696,14 @@ namespace prayground {
     INLINE HOSTDEVICE Vec3<T> faceforward(const Vec3<T>& n, const Vec3<T>& i, const Vec3<T>& nref)
     {
         return n * copysignf(1.0f, dot(i, nref));
+    }
+
+    template <typename T>
+    INLINE HOSTDEVICE float angle(const Vec3<T>& v1, const Vec3<T>& v2)
+    {
+        float d = dot(normalize(v1), normalize(v2));
+        d = clamp(d, -1.0f, 1.0f);
+        return acosf(d);
     }
 
     // ----------------------------------------------------------------------

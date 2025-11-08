@@ -64,6 +64,8 @@
 #include "math/vec.h"
 #include "math/interop.h"
 #include "math/frame.h"
+#include "math/bezier.h"
+#include "math/quat.h"
 
 // shape include
 #include "shape/box.h"

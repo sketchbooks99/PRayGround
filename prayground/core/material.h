@@ -26,6 +26,8 @@ namespace prayground {
         virtual void copyToDevice() {
             if (m_bumpmap && !m_bumpmap->devicePtr())
                 m_bumpmap->copyToDevice();
+            if (m_opacity_texture && !m_opacity_texture->devicePtr())
+                m_opacity_texture->copyToDevice();
         }
 
         virtual void setTexture(const std::shared_ptr<Texture>& texture) = 0;
@@ -53,6 +55,19 @@ namespace prayground {
             return m_bumpmap != nullptr;
         }
 
+        void setOpacityTexture(const std::shared_ptr<Texture>& opacity_texture) {
+            m_opacity_texture = opacity_texture;
+        }
+        Texture::Data opacityTextureData() const {
+            if (m_opacity_texture)
+                return m_opacity_texture->getData();
+            else
+                return { nullptr, -1 };
+        }
+        bool useOpacityTexture() const {
+            return m_opacity_texture != nullptr;
+        }
+
         const SurfaceCallableID& surfaceCallableID() const
         {
             return m_surface_callable_id;
@@ -71,6 +86,9 @@ namespace prayground {
 
         std::shared_ptr<Texture> m_bumpmap{ nullptr };
         int m_bumpmap_id { -1 };
+
+        std::shared_ptr<Texture> m_opacity_texture {nullptr};
+        int m_opacity_texture_id { -1 };
 
         // TODO: Displacement map
 #endif // __CUDACC__

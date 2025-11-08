@@ -3,6 +3,13 @@
 #include <prayground/prayground.h>
 #include "params.h"
 
+#ifndef __CUDACC__
+#include <prayground/physics/cuda/tree.cuh>
+#include <prayground/physics/cuda/voronoi_rock.cuh>
+#include <prayground/physics/terrain.h>
+#include <prayground/physics/tree.h>
+#endif
+
 #include <prayground/ext/imgui/imgui.h>
 #include <prayground/ext/imgui/imgui_impl_glfw.h>
 #include <prayground/ext/imgui/imgui_impl_opengl3.h>
@@ -27,9 +34,23 @@ public:
     void keyPressed(int key);
     void keyReleased(int key);
 private:
+    struct TerrainMeshResult {
+        shared_ptr<TriangleMesh> mesh;
+        shared_ptr<FloatBitmap> heightmap;
+        float min_height;
+        float max_height;
+    };
+    
     void initResultBufferOnDevice();
     void handleCameraUpdate();
-    shared_ptr<Curves> buildTreeCurves(ProceduralTreeData tree);
+    //shared_ptr<TriangleMesh> buildTreeMesh(ProceduralTreeData tree);
+    pair<shared_ptr<TriangleMesh>, shared_ptr<TriangleMesh>> buildTreeMesh(ProceduralTreeData tree, uint32_t& seed, vector<shared_ptr<BitmapTexture>> leaf_textures);
+    
+    // New Tree API version (for testing new implementation)
+    pair<shared_ptr<TriangleMesh>, shared_ptr<TriangleMesh>> buildTreeMeshWithAPI(uint32_t& seed);
+    
+    shared_ptr<TriangleMesh> buildVoronoiRockMesh();
+    TerrainMeshResult buildTerrainMesh(TerrainParams params);
 
     Context m_ctx;
     CUstream m_stream;

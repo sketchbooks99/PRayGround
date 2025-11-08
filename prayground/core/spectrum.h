@@ -191,7 +191,7 @@ namespace prayground {
         }
         HOSTDEVICE friend inline SampledSpectrum operator*(const float& t, const SampledSpectrum& s)
         {
-            assert(!isnan(t));
+            if (isnan(t)) return s;
             return s * t;
         }
 
@@ -224,8 +224,8 @@ namespace prayground {
         }
         HOSTDEVICE friend inline SampledSpectrum operator/(const float& t, const SampledSpectrum& s)
         {
-            assert(!isnan(t) && t != 0.0f);
-            return s * t;
+            if (isnan(t) || t == 0.0f) return s;
+            return s / t;
         }
 
         HOSTDEVICE bool isBlack() const

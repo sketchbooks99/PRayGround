@@ -181,6 +181,8 @@ namespace prayground {
             0
         ));
 
+        cuda_free(d_temp_buffer);
+
         CUDA_SYNC_CHECK();
     }
 

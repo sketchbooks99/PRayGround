@@ -153,6 +153,8 @@ namespace prayground {
         CUdeviceptr d_texcoords { 0 };
         CUdeviceptr d_sbt_indices{ 0 };
 
+        CUDABuffer<uint32_t> d_sbt_indices_buf;
+
 #if OPTIX_VERSION >= 70600
         bool m_use_opacitymap{ false };
         std::variant<std::shared_ptr<BitmapTexture>, std::shared_ptr<FloatBitmapTexture>> m_opacity_texture;

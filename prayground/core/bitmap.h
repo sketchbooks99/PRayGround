@@ -7,6 +7,7 @@
 #include <prayground/gl/shader.h>
 #include <prayground/app/window.h>
 #include <map>
+#include <prayground/core/cudabuffer.h>
 #include <variant>
 #endif
 
@@ -93,6 +94,8 @@ namespace prayground {
 
         std::unique_ptr<PixelT[]> m_data;  // Data on CPU
         PixelT* d_data { nullptr };        //      on GPU
+
+        CUDABuffer<Type> d_buffer;
 
         PixelFormat m_format { PixelFormat::NONE };
         int m_width { 0 };

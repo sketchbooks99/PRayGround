@@ -39,6 +39,35 @@ void App::handleCameraUpdate()
 // ------------------------------------------------------------------
 void App::setup()
 {
+    using namespace std::chrono;
+    static constexpr float TIME_LIMIT = 180.0f;
+    
+    // Start watchdog thread for time limit enforcement
+    std::atomic<bool> rendering_complete(false);
+    std::atomic<bool> time_limit_exceeded(false);
+    std::thread watchdog_thread([&]() {
+        auto watchdog_start = system_clock::now();
+        while (!rendering_complete.load()) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            auto elapsed = duration_cast<milliseconds>(system_clock::now() - watchdog_start).count() / 1000.0;
+
+            // Display elapsed time (overwrite same line)
+            std::cout << "\rElapsed: " << std::fixed << std::setprecision(1)
+                << elapsed << "s / " << TIME_LIMIT << "s" << std::flush;
+
+            if (elapsed >= TIME_LIMIT) {
+                time_limit_exceeded.store(true);  // Signal time limit exceeded
+                std::cout << "\n";
+                pgLog(format("TIME_LIMIT ({:.2f}s) reached! Force exiting...", TIME_LIMIT));
+                pgExit();
+                std::exit(0);  // Force exit immediately at 180s
+            }
+        }
+        });
+    watchdog_thread.detach();  // Detach so it runs independently
+
+    system_clock::time_point start_time = system_clock::now();
+
     m_stream = 0;
     CUDA_CHECK(cudaFree(0));
 
@@ -99,7 +128,9 @@ void App::setup()
     camera->setUp(0, 1, 0);
     camera->setFov(40);
     camera->setAspect((float)width / height);
+#if !SUBMISSION
     camera->enableTracking(pgGetCurrentWindow());
+#endif
     m_scene.setCamera(camera);
 
     // Ray generation program
@@ -413,16 +444,6 @@ void App::setup()
     smooth_bark_texture->copyToDevice();
     delete[] h_smooth_bark_data;
     CUDA_CHECK(cudaFree(d_smooth_bark_color));
-    
-    // Debug textures
-    auto plane = make_shared<Plane>(Vec2f(-10.0f), Vec2f(10.0f));
-    auto rough_bark_diffuse = make_shared<Diffuse>(diffuse_id, rough_bark_texture, true);
-    auto aged_bark_diffuse = make_shared<Diffuse>(diffuse_id, aged_bark_texture, true);
-    auto smooth_bark_diffuse = make_shared<Diffuse>(diffuse_id, smooth_bark_texture, true);
-
-    m_scene.addObject("rough_bark", plane, rough_bark_diffuse, plane_prgs, Matrix4f::translate(-100, 100, 0)* Matrix4f::rotate(math::pi / 2.0f, Vec3f(1.0f, 0.0, 0.0)));
-    m_scene.addObject("aged_bark", plane, aged_bark_diffuse, plane_prgs, Matrix4f::translate(0, 100, 0)* Matrix4f::rotate(math::pi / 2.0f, Vec3f(1.0f, 0.0, 0.0)));
-    m_scene.addObject("smooth_bark", plane, smooth_bark_diffuse, plane_prgs, Matrix4f::translate(100, 100, 0)* Matrix4f::rotate(math::pi / 2.0f, Vec3f(1.0f, 0.0, 0.0)));
 
     auto leaf1 = make_shared<BitmapTexture>("foliage_10.png", bitmap_id);
     auto leaf2 = make_shared<BitmapTexture>("foliage_15.png", bitmap_id);
@@ -509,8 +530,8 @@ void App::setup()
     
 
     // Generate grid-based forest with slight perturbation (5x6 = 30 trees)
-    const int grid_rows = 7;
-    const int grid_cols = 7;
+    const int grid_rows = 5;
+    const int grid_cols = 5;
     const float grid_spacing = 50.0f;  // Distance between grid points
     const float perturbation = 8.0f;   // Random offset ±8 units
     
@@ -710,6 +731,94 @@ void App::setup()
 
     m_params.handle = m_scene.accelHandle();
 
+#if SUBMISSION
+    constexpr uint32_t SPP = 64;
+    constexpr uint32_t SPP_PER_LAUNCH = 4;
+    constexpr uint32_t NUM_ITER = SPP / SPP_PER_LAUNCH;
+    constexpr float FPS = 10.0f;
+    constexpr float VIDEO_LENGTH = 10.0f;
+    int n_frame = static_cast<int>(VIDEO_LENGTH * FPS);
+    float interval = 1.0f / FPS;
+    
+    std::cout << "Starting rendering... (Target: " << n_frame << " frames)\n";
+    
+    int frame = 0;
+    while (frame < n_frame && !time_limit_exceeded.load()) {
+
+        // Check time limit before starting new frame
+        if (time_limit_exceeded.load()) {
+            break;
+        }
+
+        // Update scene 
+         m_scene.updateSBT(+(SBTRecordType::Hitgroup));
+         m_scene.updateAccel(m_ctx, m_stream);
+
+        is_camera_updated = true;
+        handleCameraUpdate();
+
+        for (uint32_t iter = 0; iter < NUM_ITER; iter++) {
+            // Check time limit during iterations
+            if (time_limit_exceeded.load()) {
+                break;
+            }
+
+            m_params.samples_per_launch = SPP_PER_LAUNCH;
+
+            m_scene.launchRay(m_ctx, m_ppl, m_params, m_stream, m_bitmap.width(), m_bitmap.height(), 1);
+            CUDA_SYNC_CHECK();
+
+            // Bloom
+            const int width = m_bitmap.width();
+            const int height = m_bitmap.height();
+
+            BloomParams bloom_params;
+            bloom_params.threshold = bloom_threshold;
+            bloom_params.intensity = bloom_intensity;
+            bloom_params.blur_radius = bloom_radius;
+            bloom_params.sigma = bloom_sigma;
+
+            applyBloomEffect(
+                m_params.float_result_buffer,
+                m_params.float_result_buffer,
+                d_bloom_temp1,
+                d_bloom_temp2,
+                width,
+                height,
+                bloom_params,
+                m_stream
+            );
+
+            m_params.frame = iter;
+        }
+        
+        // Output rendered image (only if not interrupted)
+        if (!time_limit_exceeded.load()) {
+            m_float_bitmap.copyFromDevice();
+            string filename = format("{:03d}.png", frame);
+            filesystem::path filepath = pgPathJoin(pgGetExecutableDir(), filename);
+            m_float_bitmap.write(filepath);
+
+            double elapsed_seconds = (double)duration_cast<milliseconds>(system_clock::now() - start_time).count() / 1000.0;
+            std::cout << "\rElapsed: " << std::fixed << std::setprecision(1) 
+                      << elapsed_seconds << "s / " << TIME_LIMIT << "s | Frame: " 
+                      << std::setw(3) << std::setfill('0') << frame << "/" << n_frame << std::flush;
+
+            frame++;
+        }
+    }
+    
+    rendering_complete.store(true);  // Signal watchdog thread
+    std::cout << "\n";  // New line after completion
+    
+    if (time_limit_exceeded.load()) {
+        pgLog(format("Rendering stopped due to time limit. {} frames completed.", frame));
+    } else {
+        pgLog("Rendering completed successfully!");
+    }
+    
+    pgExit();
+#else
     // GUI settings
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -718,6 +827,8 @@ void App::setup()
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(pgGetCurrentWindow()->windowPtr(), true);
     ImGui_ImplOpenGL3_Init("#version 330");
+#endif
+
 }
 
 // ------------------------------------------------------------------

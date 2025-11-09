@@ -183,13 +183,6 @@ namespace prayground {
             rock_center = Vec3f(seed.position.x(), params.y_position, seed.position.y());
         }
         
-        // Debug: Print first few rocks
-        if (rock_idx < 5) {
-            printf("[Rock %d] Position: (%.2f, %.2f, %.2f), Cell size: %.2f, Scale: %.2f, Vertices: %d, Category: %d, min_y_before_norm: %.2f\n",
-                   rock_idx, rock_center.x(), rock_center.y(), rock_center.z(),
-                   seed.cell_size, rock_scale, num_vertices, seed.size_category, min_y);
-        }
-        
         // Simple convex hull approximation: create triangles from centroid to all vertex pairs
         // This creates a star-shaped polyhedron (not perfect convex hull, but good enough)
         

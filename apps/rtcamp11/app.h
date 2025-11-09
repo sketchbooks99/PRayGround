@@ -16,7 +16,7 @@
 
 using namespace std;
 
-#define SUBMISSION 0
+#define SUBMISSION 1
 
 class App : public BaseApp 
 {

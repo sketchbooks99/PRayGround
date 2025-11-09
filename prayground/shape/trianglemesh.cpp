@@ -59,7 +59,6 @@ namespace prayground {
     OptixBuildInput TriangleMesh::createBuildInput() 
     {
         OptixBuildInput bi = {};
-        CUDABuffer<uint32_t> d_sbt_indices_buf;
 
         d_sbt_indices_buf.copyToDevice(m_sbt_indices);
         d_sbt_indices = d_sbt_indices_buf.devicePtr();

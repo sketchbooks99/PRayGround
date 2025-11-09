@@ -132,13 +132,18 @@ namespace prayground {
             0
         ));
 
+        cuda_free(d_temp_buffer);
+
         CUDA_SYNC_CHECK();
     }
 
     void InstanceAccel::free()
     {
         if (d_buffer) cuda_free(d_buffer);
+        if (d_instances) cuda_free(d_instances);
+        d_buffer = 0;
         d_buffer_size = 0;
+        d_instances = 0;
     }
 
     // ---------------------------------------------------------------------------

@@ -141,7 +141,6 @@ namespace prayground {
         }
         void updateMissRecordOnDevice()
         {
-            CUDABuffer<MissRecord> d_miss_records;
             d_miss_records.copyToDevice(m_miss_records.data(), N * sizeof(MissRecord));
 
         }
@@ -178,7 +177,6 @@ namespace prayground {
 
         void updateHitgroupRecordOnDevice()
         {
-            CUDABuffer<HitgroupRecord> d_hitgroup_records;
             d_hitgroup_records.copyToDevice(m_hitgroup_records);
             m_sbt.hitgroupRecordBase = d_hitgroup_records.devicePtr(); 
             m_sbt.hitgroupRecordCount = static_cast<uint32_t>(m_hitgroup_records.size());

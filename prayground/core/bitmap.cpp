@@ -467,7 +467,6 @@ namespace prayground {
     {
         ASSERT(m_data.get(), "Image data in the host side has been not allocated yet.");
 
-        CUDABuffer<PixelT> d_buffer;
         d_buffer.copyToDevice(m_data.get(), m_width * m_height * m_channels*sizeof(PixelT));
         d_data = d_buffer.deviceData();
     }

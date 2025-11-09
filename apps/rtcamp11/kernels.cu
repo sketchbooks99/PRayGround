@@ -58,7 +58,34 @@ static __forceinline__ __device__ uint32_t traceShadow(
 static __forceinline__ __device__ Vec3f reinhardToneMap(const Vec3f& color, const float white)
 {
     const float l = luminance(color);
-    return (color * 1.0f) / (1.0f + l / white);
+    Vec3f ret = (color * 1.0f) / (1.0f + l / white);
+    //if (l > 1.0f)
+    //   printf("l: %f, color: %f %f %f, ret: %f %f %f\n", l, color.x(), color.y(), color.z(), ret.x(), ret.y(), ret.z());
+    return ret;
+}
+
+// Apply gamma correction to HDR color (preserves values > 1.0)
+static __forceinline__ __device__ Vec3f applyGamma(const Vec3f& color, float gamma = 2.2f)
+{
+    const float inv_gamma = 1.0f / gamma;
+    return Vec3f(
+        powf(fmaxf(color.x(), 0.0f), inv_gamma),
+        powf(fmaxf(color.y(), 0.0f), inv_gamma),
+        powf(fmaxf(color.z(), 0.0f), inv_gamma)
+    );
+}
+
+// Apply Reinhard tone mapping + gamma correction while preserving HDR range
+// This keeps values > 1.0 after tone mapping (for bloom effect)
+static __forceinline__ __device__ Vec3f tonemapAndGamma(const Vec3f& hdr_color, float white, float gamma = 2.2f)
+{
+    // Step 1: Reinhard tone mapping (compresses HDR to manageable range)
+    Vec3f tone_mapped = reinhardToneMap(hdr_color, white);
+    
+    // Step 2: Apply gamma correction (still in float, preserves > 1.0 values)
+    Vec3f gamma_corrected = applyGamma(tone_mapped, gamma);
+    
+    return gamma_corrected;
 }
 
 // MIS power heuristic (beta = 2)
@@ -141,6 +168,11 @@ extern "C" __global__ void __raygen__pinhole() {
     uint32_t seed = tea<4>(image_idx, frame);
 
     Vec3f result(0.0f);
+
+#if DENOISE
+    Vec3f normal(0.0f);
+    Vec3f albedo(0.0f);
+#endif
 
     int i = params.samples_per_launch;
 
@@ -358,6 +390,13 @@ extern "C" __global__ void __raygen__pinhole() {
                 }
             }
 
+#if DENOISE
+            if (depth == 0) {
+                normal += si.shading.n;
+                albedo += si.albedo;
+            }
+#endif
+
             ro = si.p;
             rd = si.wi;
 
@@ -369,21 +408,45 @@ extern "C" __global__ void __raygen__pinhole() {
         result = Vec3f(0.0f);
     
     Vec3f accum_color = result / static_cast<float>(params.samples_per_launch);
+#if DENOISE
+    albedo = albedo / (float)params.samples_per_launch;
+    normal = normal / (float)params.samples_per_launch;
+#endif
 
     if (frame > 0) {
         // Proper cumulative average in linear space (before tone mapping)
         const Vec3f prev_color(params.accum_buffer[image_idx]);
-        const float weight = 1.0f / static_cast<float>(frame + 1);
-        accum_color = prev_color + (accum_color - prev_color) * weight;
+        const float a = 1.0f / static_cast<float>(frame + 1);
+        //accum_color = prev_color + (accum_color - prev_color) * weight;
+        accum_color = lerp(prev_color, accum_color, a);
+#if DENOISE
+        const Vec3f albedo_prev(params.albedo_buffer[image_idx]);
+        const Vec3f normal_prev(params.normal_buffer[image_idx]);
+        albedo = lerp(albedo_prev, albedo, a);
+        normal = lerp(normal_prev, normal, a);
+#endif
     }
 
     // Store linear color for next frame's accumulation
     params.accum_buffer[image_idx] = Vec4f(accum_color, 1.0f);
     
-    // Apply tone mapping only for display
-    Vec3f display_color = reinhardToneMap(accum_color, params.white);
+    // Apply tone mapping + gamma correction while preserving HDR (for bloom)
+    Vec3f hdr_processed = tonemapAndGamma(accum_color, params.white);
+    params.float_result_buffer[image_idx] = Vec4f(hdr_processed, 1.0f);
+    
+    // For display buffer, clamp to [0,1] and convert to byte
+    Vec3f display_color = Vec3f(
+        fminf(hdr_processed.x(), 1.0f),
+        fminf(hdr_processed.y(), 1.0f),
+        fminf(hdr_processed.z(), 1.0f)
+    );
     Vec3u color = make_color(display_color);
     params.result_buffer[image_idx] = Vec4u(color, 255);
+
+#if DENOISE
+    params.normal_buffer[image_idx] = Vec4f(normal, 1.0f);
+    params.albedo_buffer[image_idx] = Vec4f(albedo, 1.0f);
+#endif
 }
 
 // ----------------------------------------------------------------
@@ -413,7 +476,12 @@ extern "C" __global__ void __miss__envmap() {
         env->texture.prg_id, si->shading.uv, env->texture.data);
     
     // Convert Vec4f (RGBA) to Vec3f (RGB) for emission
-    si->emission = Vec3f(envmap_color.x(), envmap_color.y(), envmap_color.z());
+    si->emission = envmap_color;
+    si->albedo = Vec3f(
+        clamp(envmap_color.x(), 0.0f, 1.0f),
+        clamp(envmap_color.y(), 0.0f, 1.0f),
+        clamp(envmap_color.z(), 0.0f, 1.0f)
+    );
 }
 
 extern "C" __global__ void __miss__shadow() {
@@ -702,6 +770,10 @@ extern "C" __device__ Vec4f __direct_callable__constant(const Vec2f& uv, void* t
 
 extern "C" __device__ Vec4f __direct_callable__checker(const Vec2f& uv, void* tex_data) {
     return pgGetCheckerTextureValue<Vec4f>(uv, tex_data);
+}
+
+extern "C" __device__ Vec4f __direct_callable__uv(const Vec2f& uv, void* tex_data) {
+    return Vec4f(uv, 1.0f, 1.0f);
 }
 
 extern "C" __device__ Vec4f __direct_callable__procedural_wooden(const Vec2f& uv, void* tex_data) {

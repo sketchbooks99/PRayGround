@@ -59,10 +59,60 @@ namespace prayground {
             float amplitude;
         } noise1, noise2;
     };
+    
+    // Tree Bark Texture Types
+    enum class BarkType {
+        ROUGH,      // Worley crackle - ごつごつした樹皮
+        AGED,       // Layered FBM - 年季入った樹皮
+        SMOOTH      // Flow lines - 滑らかな流線型
+    };
+    
+    struct TreeBarkTexture {
+        // Common parameters
+        float bump_strength;            // Overall displacement strength
+        uint32_t seed;
+        BarkType type;
+        
+        // Rough Bark (Worley-based)
+        struct {
+            float cell_scale;           // Worley cell size
+            float vertical_stretch;     // Y方向の引き伸ばし (2.0-3.0)
+            float crack_depth;          // 亀裂の深さ
+            float crack_threshold;      // F2-F1 threshold
+        } rough;
+        
+        // Aged Bark (FBM-based)
+        struct {
+            int octaves;                // FBM octaves
+            float scale;                // Base scale
+            float warp_strength;        // Domain warping strength
+            float vertical_bias;        // 縦方向のバイアス
+        } aged;
+        
+        // Smooth Bark (Flow-based)
+        struct {
+            float flow_scale;           // Flow line scale
+            float flow_strength;        // Flow direction strength
+            float ripple_frequency;     // 横方向の波紋
+            float smoothness;           // 滑らかさ (0-1)
+        } smooth;
+    };
 
     extern "C" float* bakeRockTexture(
         uint32_t seed,
         RockTexture rock_data,
+        uint32_t width,
+        uint32_t height
+    );
+    
+    extern "C" float* bakeTreeBarkTexture(
+        TreeBarkTexture bark_data,
+        uint32_t width,
+        uint32_t height
+    );
+    
+    extern "C" Vec4f* bakeSmoothBarkColorTexture(
+        TreeBarkTexture bark_data,
         uint32_t width,
         uint32_t height
     );

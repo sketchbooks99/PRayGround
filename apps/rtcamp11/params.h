@@ -8,6 +8,8 @@
 #include "envmap.cuh"
 #include "textures.h"
 
+#define DENOISE 0
+
 using namespace prayground;
 
 using ConstantTexture = ConstantTexture_<Vec4f>;
@@ -63,6 +65,16 @@ struct LaunchParams {
 
     Vec4u* result_buffer;
     Vec4f* accum_buffer;
+
+    // Float result buffer for post-processing (bloom) and denoising
+    Vec4f* float_result_buffer;
+
+#if DENOISE
+    // For denoiser
+    Vec4f* normal_buffer;
+    Vec4f* albedo_buffer;
+#endif
+
     OptixTraversableHandle handle;
 
     AreaEmitterInfo* lights;

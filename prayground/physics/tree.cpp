@@ -18,8 +18,8 @@ namespace prayground {
                 v.z() * scale * g_scale
             );
             return vertex;
-            
-        };
+
+            };
 
         Vec3f v0 = _getVertex(Vec3f(-1.0f, 0.0f, 0.0f));
         Vec3f v1 = _getVertex(Vec3f(1.0f, 0.0f, 0.0f));
@@ -71,7 +71,7 @@ namespace prayground {
 
         return mesh_data;
     }
-    
+
     void Tree::makeClones(
         CHTurtle& turtle,
         int seg_ind, float split_corr_angle,
@@ -99,7 +99,7 @@ namespace prayground {
             CHTurtle n_turtle(turtle);
 
             // Tip branch down away from axis of stem  
-            n_turtle.pitchDown(spl_angle / 2);
+            n_turtle.pitchDown(math::radians(spl_angle / 2));  // Convert degrees to radians
 
             // Spread out clones  
             float eff_spr_angle;
@@ -120,7 +120,7 @@ namespace prayground {
 
             // Apply spread angle  
             if (using_direct_split) {
-                n_turtle.turnLeft(eff_spr_angle);
+                n_turtle.turnLeft(math::radians(eff_spr_angle));  // Convert degrees to radians
             }
             else {
                 Quaternion quat(Vec3f(0, 0, 1), math::radians(eff_spr_angle));
@@ -196,7 +196,7 @@ namespace prayground {
         return result;
     }
 
-    std::pair<Quatf, Quatf> Leaf::calcBendTransform(float bend) const 
+    std::pair<Quatf, Quatf> Leaf::calcBendTransform(float bend) const
     {
         Vec3f normal = cross(m_dir, m_right);
 
@@ -226,10 +226,9 @@ namespace prayground {
     // ------------------------------------------------------------------------------
     // CHTurtle
     // ------------------------------------------------------------------------------
-    CHTurtle::CHTurtle() 
-        : m_pos(0.0f), m_dir(0.0f, 0.0f, 1.0f), m_right(1.0f, 0.0f, 0.0f), m_width(1.0f)
+    CHTurtle::CHTurtle()
+        : m_pos(Vec3f(0.0f)), m_dir(Vec3f(0.0f, 0.0f, 1.0f)), m_right(Vec3f(1.0f, 0.0f, 0.0f)), m_width(1.0f)
     {
-
     }
 
     CHTurtle::CHTurtle(const Vec3f& pos, const Vec3f& dir, const Vec3f& right, float width)
@@ -295,6 +294,7 @@ namespace prayground {
     // Tree
     // ------------------------------------------------------------------------------
     
+    // ----------------------------------------------------------------------------------------------------------------------------
     // Calculate stem length based on parent and parameters
     float Tree::calcStemLength(const Stem& stem) {
         float result = 0.0f;
@@ -308,11 +308,15 @@ namespace prayground {
             result = stem.parent->length * stem.parent->length_child_max * shape_result;
         }
         else {
-            result = stem.parent->length_child_max * (stem.parent->length - 0.7f * stem.offset);
+            // For depth >= 2, use a simpler calculation based on parent length and offset
+            // Use the distance from attachment point to tip as a scaling factor
+            float remaining_parent = stem.parent->length - stem.offset;
+            result = stem.parent->length_child_max * remaining_parent;
         }
         return max(0.0f, result);
     }
 
+    // ----------------------------------------------------------------------------------------------------------------------------
     // Calculate stem radius based on length and parameters
     float Tree::calcStemRadius(const Stem& stem) {
         float result = 0.0f;
@@ -327,6 +331,7 @@ namespace prayground {
         return result;
     }
 
+    // ----------------------------------------------------------------------------------------------------------------------------
     // Get radius at specific offset along stem (0 = base, 1 = tip)
     float Tree::radiusAtOffset(const Stem& stem, float offset) {
         int depth = stem.depth;
@@ -348,6 +353,7 @@ namespace prayground {
         return max(tipRadius, 0.0001f);
     }
 
+    // ----------------------------------------------------------------------------------------------------------------------------
     void Tree::applyTropism(CHTurtle& turtle, const Vec3f& tropism_v)
     {
         Vec3f h_cross_T = cross(turtle.direction(), tropism_v);
@@ -361,6 +367,7 @@ namespace prayground {
         turtle.setRight(normalize(rot_quat.rotate(turtle.right())));
     }
 
+    // ----------------------------------------------------------------------------------------------------------------------------
     float Tree::calcLeafCount(const Stem& stem)
     {
         if (m_params.leaf_blos_num >= 0) {
@@ -370,13 +377,16 @@ namespace prayground {
                 return 0.0f;
             }
             
-            float result = leaves * (stem.length / (stem.parent->length_child_max * stem.parent->length));
+            float ratio = stem.length / (stem.parent->length_child_max * stem.parent->length);
+            float result = leaves * ratio;
+            
             return result;
         }
         else 
             return m_params.leaf_blos_num;
     }
 
+    // ----------------------------------------------------------------------------------------------------------------------------
     float Tree::calcBranchCount(const Stem& stem)
     {
         int d_p_1 = min(stem.depth + 1, 3);
@@ -385,7 +395,7 @@ namespace prayground {
         if (stem.depth == 0)
             result = m_params.branches[d_p_1] * (rnd(m_seed) * 0.2f + 0.9f);
         else {
-            if (m_params.branches[d_p_1] < 0.0f) {
+            if (m_params.branches[d_p_1] < 0) {
                 result = m_params.branches[d_p_1];
             }
             else if (stem.depth == 1) {
@@ -400,6 +410,7 @@ namespace prayground {
         return result / (1.0f - m_params.base_size[stem.depth]);
     }
 
+    // ----------------------------------------------------------------------------------------------------------------------------
     float Tree::calcCurveAngle(int depth, int seg_ind)
     {
         float curve = m_params.curve[depth];
@@ -421,26 +432,30 @@ namespace prayground {
         }
 
         curve_angle += rnd(m_seed, -1.0f, 1.0f) * (curve_v / curve_res);
-        return curve_angle;
+        return math::radians(curve_angle);  // Convert degrees to radians
     }
 
+    // ----------------------------------------------------------------------------------------------------------------------------
     float Tree::calcRotateAngle(int depth, float prev_angle)
     {
-        // Calculate rotate angle as defined in paper, limit to 0-360  
+        // Calculate rotate angle as defined in paper, limit to 0-360
+        // prev_angle is in radians, convert to degrees for calculation
+        float prev_angle_deg = math::degrees(prev_angle);
         float r_angle;
 
         if (m_params.rotate[depth] >= 0) {
-            r_angle = std::fmod(prev_angle + m_params.rotate[depth] +
+            r_angle = std::fmod(prev_angle_deg + m_params.rotate[depth] +
                 rnd(m_seed, -1.0f, 1.0f) * m_params.rotate_v[depth], 360.0f);
         }
         else {
-            r_angle = prev_angle * (180 + m_params.rotate[depth] +
+            r_angle = prev_angle_deg * (180 + m_params.rotate[depth] +
                 rnd(m_seed, -1.0f, 1.0f) * m_params.rotate_v[depth]);
         }
 
-        return r_angle;
+        return math::radians(r_angle);  // Convert degrees to radians
     }
 
+    // ----------------------------------------------------------------------------------------------------------------------------
     float Tree::calcDownAngle(Stem& stem, float stem_offset)
     {
         // Calculate down angle as defined in paper  
@@ -464,9 +479,10 @@ namespace prayground {
             d_angle += rnd(m_seed, -1.0f, 1.0f) * fabsf(d_angle * 0.1);
         }
 
-        return d_angle;
+        return math::radians(d_angle);  // Convert degrees to radians
     }
 
+    // ----------------------------------------------------------------------------------------------------------------------------
     std::tuple<Vec3f, Vec3f, Vec3f, Vec3f> Tree::calcHelixPoints(const CHTurtle& turtle, float rad, float pitch)
     {
         std::vector<Vec3f> points = {
@@ -493,6 +509,7 @@ namespace prayground {
         );
     }
 
+    // ----------------------------------------------------------------------------------------------------------------------------
     void Tree::increaseBezierPointRes(Stem& stem, int seg_ind, int points_per_seg)
     {
         int curve_res = static_cast<int>(m_params.curve_res[stem.depth]);
@@ -543,6 +560,7 @@ namespace prayground {
         }
     }
 
+    // ----------------------------------------------------------------------------------------------------------------------------
     void Tree::scaleBezierHandlesForFlare(Stem& stem, int max_points_per_seg)
     {
         for (auto& point : stem.curve->bezier_points) {
@@ -559,6 +577,7 @@ namespace prayground {
         return inside;
     }
 
+    // ----------------------------------------------------------------------------------------------------------------------------
     float Tree::shapeRatio(int shape, float ratio)
     {
         float result;
@@ -579,6 +598,7 @@ namespace prayground {
         return result;
     }
 
+    // ----------------------------------------------------------------------------------------------------------------------------
     std::tuple<CHTurtle, CHTurtle, float, float> Tree::setupBranch(CHTurtle& turtle, Stem& stem, BranchMode branch_mode, float offset, BezierPoint* start_point, BezierPoint* end_point, float stem_offset, int branch_ind, std::array<float, 1>& prev_rot_ang, int branches_in_group)
     {
         // Set up a new branch, creating the new direction and position turtle  
@@ -606,18 +626,19 @@ namespace prayground {
                     ((branch_ind / static_cast<float>(branches_in_group - 1)) - 0.5)) +
                     rnd(m_seed, -1.0f, 1.0f) * m_params.rotate_v[d_plus_1];
             }
-            branch_dir_turtle.turnRight(t_angle);
+            branch_dir_turtle.turnRight(math::radians(t_angle));  // Convert degrees to radians
             radius_limit = 0;
         }
         else {
             float r_angle;
             if (branch_mode == BranchMode::whorled) {
+                // prev_rot_ang is now in radians, convert degree calculations to radians
                 r_angle = prev_rot_ang[0] +
-                    (360 * branch_ind / static_cast<float>(branches_in_group)) +
-                    rnd(m_seed, -1.0f, 1.0f) * m_params.rotate_v[d_plus_1];
+                    math::radians(360.0f * branch_ind / static_cast<float>(branches_in_group)) +
+                    math::radians(rnd(m_seed, -1.0f, 1.0f) * m_params.rotate_v[d_plus_1]);
             }
             else {
-                r_angle = calcRotateAngle(d_plus_1, prev_rot_ang[0]);
+                r_angle = calcRotateAngle(d_plus_1, prev_rot_ang[0]);  // Already returns radians
                 if (m_params.rotate[d_plus_1] >= 0) {
                     prev_rot_ang[0] = r_angle;
                 }
@@ -650,6 +671,7 @@ namespace prayground {
         return std::make_tuple(branch_pos_turtle, branch_dir_turtle, radius_limit, stem_offset);
     }
 
+    // ----------------------------------------------------------------------------------------------------------------------------
     CHTurtle Tree::makeBranchDirTurtle(CHTurtle& turtle, bool helix, float offset, BezierPoint* start_point, BezierPoint* end_point)
     {
         CHTurtle branch_dir_turtle;
@@ -670,17 +692,19 @@ namespace prayground {
         return branch_dir_turtle;
     }
 
+    // ----------------------------------------------------------------------------------------------------------------------------
     CHTurtle Tree::makeBranchPosTurtle(CHTurtle& dir_turtle, float offset, BezierPoint* start_point, BezierPoint* end_point, float radius_limit)
     {
         // Create and setup the turtle for the position of a new branch  
         dir_turtle.setPosition(BezierSpline::evaluateCubicBezier(offset, *start_point, *end_point));
         CHTurtle branch_pos_turtle(dir_turtle);
-        branch_pos_turtle.pitchDown(90);
-        branch_pos_turtle.move(radius_limit);
+        branch_pos_turtle.pitchDown(math::radians(90.0f));  // Convert 90 degrees to radians
+        branch_pos_turtle.move(radius_limit * 0.5f);  // Move only half the radius to stay closer to center
 
         return branch_pos_turtle;
     }
 
+    // ----------------------------------------------------------------------------------------------------------------------------
     void Tree::makeStem(
         CHTurtle& turtle, 
         Stem& stem, 
@@ -691,13 +715,6 @@ namespace prayground {
         CHTurtle* pos_corr_turtle,
         CHTurtle* cloned_turtle)
     {
-        // Debug: Check initial turtle position
-        Vec3f init_pos = turtle.position();
-        if (std::isnan(init_pos.x()) || std::isnan(init_pos.y()) || std::isnan(init_pos.z())) {
-            pgLog("[ERROR] makeStem: Initial turtle position is NaN at depth=" + std::to_string(stem.depth) + 
-                  ", pos=(" + std::to_string(init_pos.x()) + ", " + std::to_string(init_pos.y()) + ", " + std::to_string(init_pos.z()) + ")\n");
-        }
-
         if (stem.radius_limit >= 0 && stem.radius_limit < 1e-3f)
             return;
         
@@ -720,7 +737,7 @@ namespace prayground {
         }
 
         // Correct position
-        if (pos_corr_turtle) {
+        if (pos_corr_turtle != nullptr) {
             pos_corr_turtle->move(min(stem.radius, stem.radius_limit));
             turtle.setPosition(pos_corr_turtle->position());
         }
@@ -870,9 +887,6 @@ namespace prayground {
                 }
 
                 new_point->co = turtle.position();
-                pgLog("[DEBUG] makeStem: depth=" + std::to_string(depth) + ", seg_ind=" + std::to_string(seg_ind) + 
-                      ", turtle.pos=(" + std::to_string(turtle.position().x()) + ", " + std::to_string(turtle.position().y()) + ", " + std::to_string(turtle.position().z()) + ")" +
-                      ", new_point->co=(" + std::to_string(new_point->co.x()) + ", " + std::to_string(new_point->co.y()) + ", " + std::to_string(new_point->co.z()) + ")\n");
                 if (cloned_turtle && seg_ind == start) {
                     new_point->handle_left = turtle.position() - cloned_turtle->direction() * (stem.length / (curve_res * 3));
                     new_point->handle_right = turtle.position() + cloned_turtle->direction() * (stem.length / (curve_res * 3));
@@ -968,7 +982,7 @@ namespace prayground {
                         makeClones(turtle, seg_ind, split_corr_angle, num_branches_factor,
                             clone_prob, stem, num_of_splits, spl_angle, spr_angle, is_base_split);
 
-                        turtle.pitchDown(spl_angle / 2);
+                        turtle.pitchDown(math::radians(spl_angle / 2));  // Convert degrees to radians
 
                         if (!is_base_split && num_of_splits == 1) {
                             if (using_direct_split) {
@@ -982,8 +996,8 @@ namespace prayground {
                         }
                     }
                     else {
-                        turtle.turnLeft(rnd(m_seed, -1.0f, 1.0f) * m_params.bend_v[depth] / curve_res);
-                        float curveAngle = calcCurveAngle(depth, seg_ind);
+                        turtle.turnLeft(math::radians(rnd(m_seed, -1.0f, 1.0f) * m_params.bend_v[depth] / curve_res));  // Convert degrees to radians
+                        float curveAngle = calcCurveAngle(depth, seg_ind);  // Already returns radians
                         turtle.pitchDown(curveAngle - split_corr_angle);
                     }
 
@@ -991,7 +1005,7 @@ namespace prayground {
                         applyTropism(turtle, Vec3f(m_params.tropism[0], m_params.tropism[1], m_params.tropism[2]));
                     }
                     else {
-                        applyTropism(turtle, Vec3f(m_params.tropism[0], m_params.tropism[1], 0));
+                        applyTropism(turtle, Vec3f(m_params.tropism[0], m_params.tropism[1], 0.0f));
                     }
                 }
 
@@ -1006,8 +1020,18 @@ namespace prayground {
             scaleBezierHandlesForFlare(stem, points_per_seg);
         }
 
+        // Check for overly vertical branches
+        if (stem.depth > 0 && stem.curve->bezier_points.size() >= 2) {
+            auto& first_point = stem.curve->bezier_points[0];
+            auto& last_point = stem.curve->bezier_points.back();
+            Vec3f branch_direction = normalize(last_point.co - first_point.co);
+            float y_component = fabs(branch_direction.y());
+        }
+
         m_stem_index++;
     }
+
+    // ----------------------------------------------------------------------------------------------------------------------------
     void Tree::makeBranches(
         CHTurtle& turtle, 
         Stem& stem, 
@@ -1018,15 +1042,6 @@ namespace prayground {
     )
     {
         // Make the required branches for a segment of the stem  
-        // Debug: Check parent stem's bezier points
-        if (stem.curve->bezier_points.size() >= 2) {
-            const auto& last = stem.curve->bezier_points.back();
-            const auto& prev = stem.curve->bezier_points[stem.curve->bezier_points.size() - 2];
-            pgLog("[DEBUG] makeBranches: depth=" + std::to_string(stem.depth) + 
-                  ", last_point.co=(" + std::to_string(last.co.x()) + ", " + std::to_string(last.co.y()) + ", " + std::to_string(last.co.z()) + ")" +
-                  ", prev_point.co=(" + std::to_string(prev.co.x()) + ", " + std::to_string(prev.co.y()) + ", " + std::to_string(prev.co.z()) + ")\n");
-        }
-        
         // Copy bezier points to avoid dangling pointers if stem is local
         BezierPoint start_point_copy = stem.curve->bezier_points[stem.curve->bezier_points.size() - 2];
         BezierPoint end_point_copy = stem.curve->bezier_points.back();
@@ -1077,8 +1092,8 @@ namespace prayground {
                         }
                     }
 
-                    // Rotate start angle for next whorl  
-                    prev_rotation_angle[0] += m_params.rotate[d_plus_1];
+                    // Rotate start angle for next whorl (convert degrees to radians)
+                    prev_rotation_angle[0] += math::radians(m_params.rotate[d_plus_1]);
                 }
             }
             else {  // alternating or opposite branches  
@@ -1109,7 +1124,7 @@ namespace prayground {
         // Make all new branches from branches_array  
         if (is_leaves) {
             for (const auto& [pos_tur, dir_tur, rad, b_offset] : branches_array) {
-                m_leaves.push_back(Leaf{ pos_tur.position(), dir_tur.direction(), dir_tur.right() });
+                m_leaves.push_back(Leaf{ pos_tur.position(), dir_tur.direction(), dir_tur.right(), rad });
             }
         }
         else {
@@ -1124,6 +1139,7 @@ namespace prayground {
         }
     }
     
+    // ----------------------------------------------------------------------------------------------------------------------------
     bool Tree::testStem(CHTurtle& turtle, Stem& stem, float start, float split_corr_angle, float clone_prob)
     {
         // Test if stem is inside pruning envelope  
@@ -1252,12 +1268,12 @@ namespace prayground {
                         }
 
                         // Apply split to base stem  
-                        turtle.pitchDown(spl_angle / 2);
+                        turtle.pitchDown(math::radians(spl_angle / 2));  // Convert degrees to radians
 
                         // Apply spread if splitting to 2 and not base split  
                         if (!is_base_split && num_of_splits == 1) {
                             if (using_direct_split) {
-                                turtle.turnLeft(spr_angle / 2);
+                                turtle.turnLeft(math::radians(spr_angle / 2));  // Convert degrees to radians
                             }
                             else {
                                 Quaternion quat(Vec3f(0, 0, 1), math::radians(-spr_angle / 2));
@@ -1268,8 +1284,8 @@ namespace prayground {
                     }
                     else {
                         // Just apply curve and split correction  
-                        turtle.turnLeft(rnd(m_seed, -1.0f, 1.0f) * m_params.bend_v[depth] / curve_res);
-                        float curve_angle = calcCurveAngle(depth, seg_ind);
+                        turtle.turnLeft(math::radians(rnd(m_seed, -1.0f, 1.0f) * m_params.bend_v[depth] / curve_res));  // Convert degrees to radians
+                        float curve_angle = calcCurveAngle(depth, seg_ind);  // Already returns radians
                         turtle.pitchDown(curve_angle - split_corr_angle);
                     }
 
@@ -1287,6 +1303,7 @@ namespace prayground {
         return pointInside(turtle.position());
     }
     
+    // ----------------------------------------------------------------------------------------------------------------------------
     void Tree::createBranches()
     {
         std::vector<std::string> level_names = { "Trunk" };
@@ -1320,10 +1337,13 @@ namespace prayground {
                 turtle.rollRight(rnd(m_seed, 0, math::two_pi));
             }
 
-            // Create trunk
-            Stem trunk(0);
-            trunk.curve->radius_interpolation = RadiusInterpolation::CARDINAL;
-            trunk.curve->resolution_u = m_params.curve_res[0];
+            // Create trunk spline in level 0 curve
+            std::shared_ptr<BezierSpline> trunk_spline = m_branch_curves[0]->addSpline();
+            trunk_spline->resolution_u = m_params.curve_res[0];
+            trunk_spline->radius_interpolation = RadiusInterpolation::CARDINAL;
+            
+            // Create trunk stem with the spline
+            Stem trunk(0, trunk_spline);
 
             makeStem(turtle, trunk);
 

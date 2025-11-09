@@ -47,9 +47,9 @@ private:
     pair<shared_ptr<TriangleMesh>, shared_ptr<TriangleMesh>> buildTreeMesh(ProceduralTreeData tree, uint32_t& seed, vector<shared_ptr<BitmapTexture>> leaf_textures);
     
     // New Tree API version (for testing new implementation)
-    pair<shared_ptr<TriangleMesh>, shared_ptr<TriangleMesh>> buildTreeMeshWithAPI(uint32_t& seed);
+    pair<shared_ptr<TriangleMesh>, shared_ptr<TriangleMesh>> buildTreeMeshWithAPI(uint32_t& seed, int n_leaf_textures = 1);
     
-    shared_ptr<TriangleMesh> buildVoronoiRockMesh();
+    shared_ptr<TriangleMesh> buildVoronoiRockMesh(const VoronoiRockParams& params);
     TerrainMeshResult buildTerrainMesh(TerrainParams params);
 
     Context m_ctx;
@@ -60,6 +60,24 @@ private:
 
     Bitmap m_bitmap;
     FloatBitmap m_accum_buffer;
+
+    // Float bitmap for bloom/post-processing (also used by denoiser)
+    FloatBitmap m_float_bitmap;
+
+    // Bloom effect buffers (Vec4f version)
+    Vec4f* d_bloom_temp1 = nullptr;
+    Vec4f* d_bloom_temp2 = nullptr;
+    bool enable_bloom = true;
+    float bloom_threshold = 1.0f;
+    float bloom_intensity = 0.3f;
+    int bloom_radius = 10;
+    float bloom_sigma = 5.0f;
+
+#if DENOISE
+    Denoiser m_denoiser;
+    Denoiser::Data m_denoise_data;
+    FloatBitmap m_accum_bitmap, m_albedo_bitmap, m_normal_bitmap;
+#endif
 
     static constexpr uint32_t NRay = 2;
     using AppScene = Scene<Camera, NRay>;

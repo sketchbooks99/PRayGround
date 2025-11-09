@@ -335,9 +335,6 @@ __global__ void generateFacesKernel(
 // ============================================================================
 
 void buildTerrainMeshCUDA(const TerrainParams& params, TerrainData& terrain_data) {
-    printf("[Terrain] Starting generation...\n");
-    printf("  Grid: %dx%d, Size: %.2f, Iterations: %d\n", 
-           params.grid_width, params.grid_height, params.terrain_size, params.erosion_iterations);
     
     int width = params.grid_width;
     int height = params.grid_height;
@@ -394,7 +391,6 @@ void buildTerrainMeshCUDA(const TerrainParams& params, TerrainData& terrain_data
         params.noise_seed + 999
     );
     cudaDeviceSynchronize();
-    printf("[Terrain] Erosion simulation completed (%d droplets)\n", params.erosion_iterations);
     
     // Step 2.5: Clamp heightmap to prevent extreme values
     clampHeightmapKernel<<<grid_size, block_size>>>(
@@ -403,7 +399,6 @@ void buildTerrainMeshCUDA(const TerrainParams& params, TerrainData& terrain_data
         params.height_scale * 2.0f    // Prevent extreme peaks
     );
     cudaDeviceSynchronize();
-    printf("[Terrain] Heightmap clamped to valid range\n");
     
     // Step 3: Generate mesh vertices and normals
     generateMeshKernel<<<grid_size, block_size>>>(
@@ -411,14 +406,12 @@ void buildTerrainMeshCUDA(const TerrainParams& params, TerrainData& terrain_data
         width, height, params.terrain_size
     );
     cudaDeviceSynchronize();
-    printf("[Terrain] Mesh vertices generated\n");
     
     // Step 4: Generate triangle faces
     generateFacesKernel<<<grid_size, block_size>>>(
         d_faces, width, height
     );
     cudaDeviceSynchronize();
-    printf("[Terrain] Triangle faces generated\n");
     
     // Copy results back to host
     terrain_data.vertices.resize(num_vertices);
@@ -448,8 +441,6 @@ void buildTerrainMeshCUDA(const TerrainParams& params, TerrainData& terrain_data
     terrain_data.min_height = min_height;
     terrain_data.max_height = max_height;
     
-    printf("[Terrain] Heightmap range: %.2f to %.2f\n", min_height, max_height);
-    
     // Free device memory
     cudaFree(d_heightmap);
     cudaFree(d_vertices);
@@ -457,7 +448,6 @@ void buildTerrainMeshCUDA(const TerrainParams& params, TerrainData& terrain_data
     cudaFree(d_texcoords);
     cudaFree(d_faces);
     
-    printf("[Terrain] Generated: %d vertices, %d faces\n", num_vertices, num_faces);
 }
 
 } // namespace prayground

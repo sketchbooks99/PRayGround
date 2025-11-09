@@ -1,5 +1,6 @@
 #include "app.h"
 #include "textures.cuh"
+#include "bloom.cuh"
 #include <queue>
 
 // ------------------------------------------------------------------
@@ -8,9 +9,19 @@ void App::initResultBufferOnDevice()
     m_params.frame = 0;
     m_bitmap.allocateDevicePtr();
     m_accum_buffer.allocateDevicePtr();
+    m_float_bitmap.allocateDevicePtr();
 
     m_params.result_buffer = (Vec4u*)m_bitmap.deviceData();
     m_params.accum_buffer = (Vec4f*)m_accum_buffer.deviceData();
+    m_params.float_result_buffer = (Vec4f*)m_float_bitmap.deviceData();
+
+#if DENOISE
+    m_normal_bitmap.allocateDevicePtr();
+    m_albedo_bitmap.allocateDevicePtr();
+
+    m_params.normal_buffer = (Vec4f*)m_normal_bitmap.deviceData();
+    m_params.albedo_buffer = (Vec4f*)m_albedo_bitmap.deviceData();
+#endif
 }
 
 // ------------------------------------------------------------------
@@ -51,9 +62,20 @@ void App::setup()
     const int width = pgGetWidth();
     const int height = pgGetHeight();
     m_bitmap.allocate(PixelFormat::RGBA, width, height);
-    m_bitmap.allocateDevicePtr();
     m_accum_buffer.allocate(PixelFormat::RGBA, width, height);
-    m_accum_buffer.allocateDevicePtr();
+    m_float_bitmap.allocate(PixelFormat::RGBA, width, height);
+
+    // Allocate bloom effect buffers (Vec4f version)
+    const size_t buffer_size = width * height * sizeof(Vec4f);
+    CUDA_CHECK(cudaMalloc(&d_bloom_temp1, buffer_size));
+    CUDA_CHECK(cudaMalloc(&d_bloom_temp2, buffer_size));
+
+#if DENOISE
+    m_normal_bitmap.allocate(PixelFormat::RGBA, width, height);
+    m_albedo_bitmap.allocate(PixelFormat::RGBA, width, height);
+#endif
+
+    initResultBufferOnDevice();
 
     // Configuration of launch parameters
     m_params.width = width;
@@ -61,9 +83,7 @@ void App::setup()
     m_params.samples_per_launch = 4;
     m_params.frame = 0u;
     m_params.max_depth = 10u;
-    m_params.result_buffer = (Vec4u*)m_bitmap.deviceData();
-    m_params.accum_buffer = (Vec4f*)m_accum_buffer.deviceData();
-    m_params.white = 5.0f;
+    m_params.white = 10.0f;
 
     // Setup scene
     AppScene::AccelSettings accel_settings = {
@@ -106,6 +126,7 @@ void App::setup()
     auto constant_id = setupCallable("__direct_callable__constant", "");
     auto procedural_wooden_id = setupCallable("__direct_callable__procedural_wooden", "");
     auto terrain_id = setupCallable("__direct_callable__terrain_heightmap", "");
+    auto uv_id = setupCallable("__direct_callable__uv", "");
     
     // Register environment map importance sampling callable functions
     auto envmap_sample_id = setupCallable("__direct_callable__sample_envmap", "");
@@ -121,9 +142,9 @@ void App::setup()
             .depth = 1
         },
         .star_threshold = 0.9995f,
-        .star_intensity = 50.0f,
+        .star_intensity = 10.0f,
         .moon_dir = normalize(Vec3f(1.0f, 0.2f, -1.0f)),
-        .moon_intensity = 300.0f
+        .moon_intensity = 100.0f
     };
     
     // Step 1: Bake to device buffer using CUDA kernel (Vec4f for RGBA)
@@ -170,9 +191,6 @@ void App::setup()
     
     // Free intermediate buffer (data is now in envmap_bitmap)
     CUDA_CHECK(cudaFree(d_envmap_colors));
-    
-    printf("[Envmap] Importance sampling enabled (sample_id: %u, pdf_id: %u)", 
-           envmap_sample_id, envmap_pdf_id);
 
     // Miss program & environemnt map
     array<ProgramGroup, NRay> miss_prgs;
@@ -256,7 +274,6 @@ void App::setup()
     float* d_rock_noise_data = bakeRockTexture(seed, rock_texture, 1024, 1024);
     
     if (d_rock_noise_data == nullptr) {
-        printf("[ERROR] Failed to bake rock texture!");
         return;
     }
 
@@ -270,7 +287,6 @@ void App::setup()
     );
 
     if (d_rock_bumpmap_data == nullptr) {
-        printf("[ERROR] Failed to create bump texture from heightmap!");
         CUDA_CHECK(cudaFree(d_rock_noise_data));
         return;
     }
@@ -285,6 +301,128 @@ void App::setup()
     delete[] h_rock_bumpmap_data;
     CUDA_CHECK(cudaFree(d_rock_noise_data));
     CUDA_CHECK(cudaFree(d_rock_bumpmap_data));
+    
+    // ===== Tree Bark Textures =====
+    // Generate 3 types of bark textures
+    
+    // 1. Rough Bark (Worley crackle - ごつごつ)
+    TreeBarkTexture rough_bark;
+    rough_bark.type = BarkType::ROUGH;
+    rough_bark.rough.cell_scale = 8.0f;
+    rough_bark.rough.vertical_stretch = 2.5f;
+    rough_bark.rough.crack_depth = 0.3f;
+    rough_bark.rough.crack_threshold = 0.15f;
+    rough_bark.bump_strength = 1.0f;
+    rough_bark.seed = tea<4>(seed, 1001);
+    
+    printf("[DEBUG APP] rough_bark.bump_strength = %.4f\n", rough_bark.bump_strength);
+    
+    uint32_t bark_width = 1024;
+    uint32_t bark_height = 1024;
+    
+    float* d_rough_bark_heightmap = bakeTreeBarkTexture(rough_bark, bark_width, bark_height);
+    
+    // Debug: Check heightmap values
+    float* h_rough_heightmap_debug = new float[100];
+    CUDA_CHECK(cudaMemcpy(h_rough_heightmap_debug, d_rough_bark_heightmap, 
+                         sizeof(float) * 100, cudaMemcpyDeviceToHost));
+    printf("[DEBUG Rough Bark] First 10 heightmap values: ");
+    for (int i = 0; i < 10; i++) {
+        printf("%.4f ", h_rough_heightmap_debug[i]);
+    }
+    printf("\n");
+    delete[] h_rough_heightmap_debug;
+
+    Vec4f* d_rough_bark_bumpmap = createBumpTextureFromHeightmap(
+        d_rough_bark_heightmap, bark_width, bark_height, 2.0f  // Increased for stronger bumps
+    );
+    
+    Vec4f* h_rough_bark_data = new Vec4f[bark_width * bark_height];
+    CUDA_CHECK(cudaMemcpy(h_rough_bark_data, d_rough_bark_bumpmap, 
+                         sizeof(Vec4f) * bark_width * bark_height, cudaMemcpyDeviceToHost));
+    auto rough_bark_bitmap = make_shared<FloatBitmap>();
+    rough_bark_bitmap->allocate(PixelFormat::RGBA, bark_width, bark_height);
+    rough_bark_bitmap->setData((float*)h_rough_bark_data, 0, 0, bark_width, bark_height);
+    auto rough_bark_texture = make_shared<FloatBitmapTexture>(rough_bark_bitmap, bitmap_id);
+    rough_bark_texture->copyToDevice();
+    delete[] h_rough_bark_data;
+    CUDA_CHECK(cudaFree(d_rough_bark_heightmap));
+    CUDA_CHECK(cudaFree(d_rough_bark_bumpmap));
+    
+    // 2. Aged Bark (Layered FBM - 年季入り)
+    TreeBarkTexture aged_bark;
+    aged_bark.type = BarkType::AGED;
+    aged_bark.aged.octaves = 6;
+    aged_bark.aged.scale = 5.0f;
+    aged_bark.aged.warp_strength = 0.3f;
+    aged_bark.aged.vertical_bias = 0.5f;
+    aged_bark.bump_strength = 1.0f;
+    aged_bark.seed = tea<4>(seed, 1002);
+    
+    printf("[DEBUG APP] aged_bark.bump_strength = %.4f\n", aged_bark.bump_strength);
+    
+    float* d_aged_bark_heightmap = bakeTreeBarkTexture(aged_bark, bark_width, bark_height);
+    
+    // Debug: Check heightmap values
+    float* h_aged_heightmap_debug = new float[100];
+    CUDA_CHECK(cudaMemcpy(h_aged_heightmap_debug, d_aged_bark_heightmap, 
+                         sizeof(float) * 100, cudaMemcpyDeviceToHost));
+    printf("[DEBUG Aged Bark] First 10 heightmap values: ");
+    for (int i = 0; i < 10; i++) {
+        printf("%.4f ", h_aged_heightmap_debug[i]);
+    }
+    printf("\n");
+    delete[] h_aged_heightmap_debug;
+    
+    Vec4f* d_aged_bark_bumpmap = createBumpTextureFromHeightmap(
+        d_aged_bark_heightmap, bark_width, bark_height, 1.5f  // Increased for stronger bumps
+    );
+    
+    Vec4f* h_aged_bark_data = new Vec4f[bark_width * bark_height];
+    CUDA_CHECK(cudaMemcpy(h_aged_bark_data, d_aged_bark_bumpmap, 
+                         sizeof(Vec4f) * bark_width * bark_height, cudaMemcpyDeviceToHost));
+    auto aged_bark_bitmap = make_shared<FloatBitmap>();
+    aged_bark_bitmap->allocate(PixelFormat::RGBA, bark_width, bark_height);
+    aged_bark_bitmap->setData((float*)h_aged_bark_data, 0, 0, bark_width, bark_height);
+    auto aged_bark_texture = make_shared<FloatBitmapTexture>(aged_bark_bitmap, bitmap_id);
+    aged_bark_texture->copyToDevice();
+    delete[] h_aged_bark_data;
+    CUDA_CHECK(cudaFree(d_aged_bark_heightmap));
+    CUDA_CHECK(cudaFree(d_aged_bark_bumpmap));
+    
+    // 3. Smooth Bark (Color texture - 滑らか)
+    TreeBarkTexture smooth_bark;
+    smooth_bark.type = BarkType::SMOOTH;
+    smooth_bark.smooth.flow_scale = 3.0f;
+    smooth_bark.smooth.flow_strength = 0.2f;
+    smooth_bark.smooth.ripple_frequency = 30.0f;
+    smooth_bark.smooth.smoothness = 2.0f;
+    smooth_bark.bump_strength = 1.0f;
+    smooth_bark.seed = tea<4>(seed, 1003);
+    
+    // Generate color texture (not bumpmap) for smooth bark
+    Vec4f* d_smooth_bark_color = bakeSmoothBarkColorTexture(smooth_bark, bark_width, bark_height);
+    
+    Vec4f* h_smooth_bark_data = new Vec4f[bark_width * bark_height];
+    CUDA_CHECK(cudaMemcpy(h_smooth_bark_data, d_smooth_bark_color, 
+                         sizeof(Vec4f) * bark_width * bark_height, cudaMemcpyDeviceToHost));
+    auto smooth_bark_bitmap = make_shared<FloatBitmap>();
+    smooth_bark_bitmap->allocate(PixelFormat::RGBA, bark_width, bark_height);
+    smooth_bark_bitmap->setData((float*)h_smooth_bark_data, 0, 0, bark_width, bark_height);
+    auto smooth_bark_texture = make_shared<FloatBitmapTexture>(smooth_bark_bitmap, bitmap_id);
+    smooth_bark_texture->copyToDevice();
+    delete[] h_smooth_bark_data;
+    CUDA_CHECK(cudaFree(d_smooth_bark_color));
+    
+    // Debug textures
+    auto plane = make_shared<Plane>(Vec2f(-10.0f), Vec2f(10.0f));
+    auto rough_bark_diffuse = make_shared<Diffuse>(diffuse_id, rough_bark_texture, true);
+    auto aged_bark_diffuse = make_shared<Diffuse>(diffuse_id, aged_bark_texture, true);
+    auto smooth_bark_diffuse = make_shared<Diffuse>(diffuse_id, smooth_bark_texture, true);
+
+    m_scene.addObject("rough_bark", plane, rough_bark_diffuse, plane_prgs, Matrix4f::translate(-100, 100, 0)* Matrix4f::rotate(math::pi / 2.0f, Vec3f(1.0f, 0.0, 0.0)));
+    m_scene.addObject("aged_bark", plane, aged_bark_diffuse, plane_prgs, Matrix4f::translate(0, 100, 0)* Matrix4f::rotate(math::pi / 2.0f, Vec3f(1.0f, 0.0, 0.0)));
+    m_scene.addObject("smooth_bark", plane, smooth_bark_diffuse, plane_prgs, Matrix4f::translate(100, 100, 0)* Matrix4f::rotate(math::pi / 2.0f, Vec3f(1.0f, 0.0, 0.0)));
 
     auto leaf1 = make_shared<BitmapTexture>("foliage_10.png", bitmap_id);
     auto leaf2 = make_shared<BitmapTexture>("foliage_15.png", bitmap_id);
@@ -292,6 +430,8 @@ void App::setup()
     auto leaf4 = make_shared<BitmapTexture>("foliage_52.png", bitmap_id);
     auto leaf5 = make_shared<BitmapTexture>("foliage_82.png", bitmap_id);
     auto leafs = vector<shared_ptr<BitmapTexture>>{ leaf1, leaf2, leaf3, leaf4, leaf5 };
+
+    auto uv_texture = make_shared<ConstantTexture>(Vec3f(0.0f), uv_id);
 
     // Surfaces
     auto floor_diffuse = make_shared<Diffuse>(diffuse_id, checker_texture);
@@ -314,9 +454,6 @@ void App::setup()
     // Use actual min/max height from terrain generation
     const float terrain_min_height = terrain_result.min_height;
     const float terrain_max_height = terrain_result.max_height;
-    
-    printf("[Terrain] Using height range: %.2f to %.2f for object placement", 
-           terrain_min_height, terrain_max_height);
     
     // Helper lambda to get terrain height at world position (x, z)
     auto getTerrainHeight = [&](float world_x, float world_z) -> float {
@@ -372,15 +509,12 @@ void App::setup()
     
 
     // Generate grid-based forest with slight perturbation (5x6 = 30 trees)
-    const int grid_rows = 6;
-    const int grid_cols = 5;
-    const float grid_spacing = 60.0f;  // Distance between grid points
+    const int grid_rows = 7;
+    const int grid_cols = 7;
+    const float grid_spacing = 50.0f;  // Distance between grid points
     const float perturbation = 8.0f;   // Random offset ±8 units
     
     vector<Vec2f> tree_positions_2d;
-    
-    printf("[Grid Forest] Placing %dx%d trees with spacing %.2f and perturbation ±%.2f", 
-           grid_cols, grid_rows, grid_spacing, perturbation);
     
     // Calculate grid center offset
     float grid_width = (grid_cols - 1) * grid_spacing;
@@ -406,8 +540,6 @@ void App::setup()
         }
     }
     
-    printf("[Grid Forest] Successfully placed %zu trees in grid pattern", tree_positions_2d.size());
-    
     float tree_height_offset = -3.0f;
 
     // Place trees at selected positions
@@ -421,71 +553,42 @@ void App::setup()
         float terrain_height = getTerrainHeight(pos_x, pos_z);
         
         Vec3f tree_pos(pos_x, terrain_height + tree_height_offset, pos_z);
+            auto [tree_mesh, leaf_mesh] = buildTreeMeshWithAPI(seed, leafs.size());
             
-            // === OLD IMPLEMENTATION (comment out to test new API) ===
-            /*
-            // Randomly select tree type
-            float tree_type = rnd(seed);
-            ProceduralTreeData tree_data;
-
-            float leaf_density = 10.0f + rnd(seed) * 10.0f - 9.0f;
+            // Select bark type randomly for variety
+            uint32_t bark_seed = tea<4>(seed, 777);
+            int bark_type = rndInt(bark_seed, 0, 2);  // 0=rough, 1=aged, 2=smooth
             
-            if (tree_type < 0.33f) {
-                // Normal tree (deciduous style)
-                tree_data.gravity = 0.1f + rnd(seed) * 0.2f;
-                tree_data.coverage = 0.4f + rnd(seed) * 0.4f;
-                tree_data.vertically = 2.0f + rnd(seed) * 1.0f;
-                tree_data.twist = rnd(seed) * 0.5f;
-                tree_data.trunk_mode = false;
-                tree_data.scale = 40.0f + rnd(seed) * 20.0f;
-                tree_data.depth = 4;
-                tree_data.radius = 2.5f + rnd(seed) * 1.5f;
-                tree_data.has_leaves = true;
-                tree_data.leaf_density = leaf_density;
-                tree_data.leaf_start_gen = 3;  // Leaves only on fine branches (gen 3+)
-                tree_data.leaf_size = 1.0f + rnd(seed) * 0.5f;
-            }
-            else if (tree_type < 0.66f) {
-                // Pine tree (coniferous style)
-                tree_data.gravity = 0.05f + rnd(seed) * 0.1f;
-                tree_data.coverage = 0.3f + rnd(seed) * 0.3f;
-                tree_data.vertically = 0.4f + rnd(seed) * 0.3f;
-                tree_data.twist = 0.0f;
-                tree_data.trunk_mode = true;
-                tree_data.scale = 50.0f + rnd(seed) * 20.0f;
-                tree_data.depth = 4 + (rnd(seed) > 0.5f ? 1 : 0);
-                tree_data.radius = 1.8f + rnd(seed) * 1.0f;
-                tree_data.has_leaves = true;
-                tree_data.leaf_density = leaf_density;
-                tree_data.leaf_start_gen = 3;  // Leaves only on fine branches (gen 3+)
-                tree_data.leaf_size = 0.5f + rnd(seed) * 1.0f;
-            }
-            else {
-                // Spiral/exotic tree
-                tree_data.gravity = 0.3f + rnd(seed) * 0.4f;
-                tree_data.coverage = 1.5f + rnd(seed) * 1.0f;
-                tree_data.vertically = 0.8f + rnd(seed) * 0.5f;
-                tree_data.twist = 2.0f + rnd(seed) * 2.0f;
-                tree_data.trunk_mode = rnd(seed) > 0.5f;
-                tree_data.scale = 35.0f + rnd(seed) * 25.0f;
-                tree_data.depth = 4 + (rnd(seed) > 0.3f ? 1 : 0);
-                tree_data.radius = 4.0f + rnd(seed) * 3.0f;
-                tree_data.has_leaves = true;
-                tree_data.leaf_density = leaf_density;
-                tree_data.leaf_start_gen = 3;  // Leaves only on fine branches (gen 3+)
-                tree_data.leaf_size = 1.0f + rnd(seed) * 1.0f;
+            shared_ptr<FloatBitmapTexture> selected_bark;
+            shared_ptr<Texture> bark_base_texture;
+            string bark_type_name;
+            switch(bark_type) {
+                case 0:
+                    selected_bark = rough_bark_texture;
+                    bark_base_texture = procedural_wooden_texture;
+                    bark_type_name = "rough";
+                    break;
+                case 1:
+                    selected_bark = aged_bark_texture;
+                    bark_base_texture = procedural_wooden_texture;
+                    bark_type_name = "aged";
+                    break;
+                case 2:
+                    selected_bark = nullptr;  // No bumpmap for smooth
+                    bark_base_texture = smooth_bark_texture;  // Use color texture
+                    bark_type_name = "smooth";
+                    break;
             }
             
-            auto [tree_mesh, leaf_mesh] = buildTreeMesh(tree_data, seed, leafs);
-            */
-            // === END OLD IMPLEMENTATION ===
-            
-            // === NEW TREE API IMPLEMENTATION (for testing) ===
-            auto [tree_mesh, leaf_mesh] = buildTreeMeshWithAPI(seed);
-            // === END NEW IMPLEMENTATION ===
+            // Create tree material
+            auto tree_material = make_shared<Diffuse>(diffuse_id, bark_base_texture, false);
+            if (selected_bark) {
+                tree_material->setBumpmap(selected_bark);  // Only rough/aged have bumpmaps
+            }
             
             string tree_name = "tree_" + to_string(i);
-            m_scene.addObject(tree_name, tree_mesh, tree_diffuse, mesh_prgs, Matrix4f::translate(tree_pos));
+            m_scene.addObject(tree_name, tree_mesh, tree_material, mesh_prgs, Matrix4f::translate(tree_pos));
+
             
             // Add leaves if generated
             if (leaf_mesh) {
@@ -505,43 +608,55 @@ void App::setup()
     }
 
     // Generate Voronoi rocks at random positions on terrain
-    // First, create a single rock mesh to reuse (with min_y offset info)
-    auto rock_mesh = buildVoronoiRockMesh();
+    // NOTE: Each rock must be generated separately because:
+    // 1. Voronoi generation is randomized, creating unique shapes each time
+    // 2. Y-normalization must be applied per-rock to ensure bottom at Y=0
+    // 3. Reusing a single mesh would cause inconsistent ground placement
     
-    // Calculate rock's Y-range to place center at terrain level
-    float rock_min_y = std::numeric_limits<float>::max();
-    float rock_max_y = std::numeric_limits<float>::lowest();
-    for (const auto& v : rock_mesh->vertices()) {
-        if (v.y() < rock_min_y) rock_min_y = v.y();
-        if (v.y() > rock_max_y) rock_max_y = v.y();
-    }
-    float rock_center_y = (rock_min_y + rock_max_y) * 0.5f;
-    printf("[Rock Placement] Rock Y-range: %.2f to %.2f, center: %.2f", rock_min_y, rock_max_y, rock_center_y);
-    
-    const int num_rocks = 5;
+    const int num_rocks = 100;  // Increased from 5 to 15
     for (int i = 0; i < num_rocks; i++) {
-        // Random position within terrain bounds (60% of terrain to ensure no overflow)
-        float rock_x = (rnd(seed) - 0.5f) * terrain_params.terrain_size * 0.6f;
-        float rock_z = (rnd(seed) - 0.5f) * terrain_params.terrain_size * 0.6f;
+        // Create unique seed for this rock (independent for shape and position)
+        uint32_t rock_seed = tea<4>(seed, i * 137);  // Use prime number for better distribution
+        
+        // Create unique parameters for each rock
+        VoronoiRockParams rock_params = createDefaultRockFieldParams();
+        rock_params.seed_count = 1;             // Generate SINGLE rock (not 30!)
+        rock_params.field_size = 10.0f;         // Small field for single rock
+        rock_params.y_position = 0.0f;          // Base Y position (rock bottom will be at 0)
+        rock_params.min_rock_vertices = 20;     // Minimum vertices per rock
+        rock_params.max_rock_vertices = 40;     // Maximum vertices per rock
+        rock_params.rock_roughness = 0.3f;      // Surface roughness variation
+        rock_params.rock_height_variation = 0.4f; // Y-axis compression variation
+        rock_params.rock_base_size = 1.0f;      // Base size (independent of field_size!)
+        rock_params.random_seed = rock_seed;    // Unique seed for rock generation
+        
+        // Generate unique rock mesh for this position
+        auto rock_mesh = buildVoronoiRockMesh(rock_params);
+        
+        // Random position within terrain bounds (80% of terrain to ensure no overflow)
+        // Use separate seed for position to avoid correlation with rock shape
+        uint32_t pos_seed = tea<4>(seed, i * 239 + 1);  // Different prime for X
+        float rock_x = (rnd(pos_seed) - 0.5f) * terrain_params.terrain_size * 0.8f;
+        
+        pos_seed = tea<4>(seed, i * 239 + 2);  // Different offset for Z
+        float rock_z = (rnd(pos_seed) - 0.5f) * terrain_params.terrain_size * 0.8f;
         
         // Get terrain height at this position
         float rock_height = getTerrainHeight(rock_x, rock_z);
         
         // Random scale for variety (medium-sized rocks)
-        float rock_scale = 5.0f + rnd(seed) * 5.0f;  // 5-10 scale
+        pos_seed = tea<4>(seed, i * 239 + 3);  // Different offset for scale
+        float rock_scale = 5.0f + rnd(pos_seed) * 5.0f;  // 5-10 scale
         
-        // Offset so rock's center (Y-axis) aligns with terrain surface
-        // After scaling, center_y becomes center_y * rock_scale
-        float rock_y_offset = -rock_center_y * rock_scale;
-        
-        printf("[Rock %d] Position: (%.2f, %.2f, %.2f), scale: %.2f, y_offset: %.2f", 
-               i, rock_x, rock_height + rock_y_offset, rock_z, rock_scale, rock_y_offset);
+        // Rock mesh is centered at origin (Y=0 is at rock center, not bottom)
+        // Transform: Scale first, then translate to world position
+        // Rock center will be placed at terrain height
         
         auto rock_diffuse = make_shared<Diffuse>(diffuse_id, grey_texture);
         rock_diffuse->setBumpmap(rock_bumpmap_texture);
         
         string rock_name = "rock_" + to_string(i);
-        Matrix4f rock_transform = Matrix4f::translate(Vec3f(rock_x, rock_height + rock_y_offset, rock_z)) * Matrix4f::scale(rock_scale);
+        Matrix4f rock_transform = Matrix4f::translate(Vec3f(rock_x, rock_height, rock_z)) * Matrix4f::scale(rock_scale);
         m_scene.addObject(rock_name, rock_mesh, rock_diffuse, mesh_prgs, rock_transform);
     }
 
@@ -562,20 +677,30 @@ void App::setup()
         light_infos.push_back(light_info);
     };
 
-    addLight("light1", 
-       make_shared<Sphere>(Vec3f(-30, 80, -30), 2.0f), 
-       make_shared<AreaEmitter>(area_emitter_id, 
-           make_shared<ConstantTexture>(Vec3f(0.9f, 0.85f, 0.7f), constant_id),
-           300.0f), 
-       sphere_prgs, 
-       Matrix4f::identity(), 
-       sphere_light_sample_id, sphere_light_pdf_id);  // Use sphere light sampling callable
+    //addLight("light1", 
+    //   make_shared<Sphere>(Vec3f(-30, 80, -30), 2.0f), 
+    //   make_shared<AreaEmitter>(area_emitter_id, 
+    //       make_shared<ConstantTexture>(Vec3f(0.9f, 0.85f, 0.7f), constant_id),
+    //       300.0f), 
+    //   sphere_prgs, 
+    //   Matrix4f::identity(), 
+    //   sphere_light_sample_id, sphere_light_pdf_id);  // Use sphere light sampling callable
 
     // Copy light info to GPU
     CUDABuffer<AreaEmitterInfo> d_light_infos;
     d_light_infos.copyToDevice(light_infos);
     m_params.lights = d_light_infos.deviceData();
     m_params.n_lights = static_cast<uint32_t>(light_infos.size());
+
+#if DENOISE
+    m_denoise_data.width = m_bitmap.width();
+    m_denoise_data.height = m_bitmap.height();
+    m_denoise_data.outputs.push_back(new float[m_denoise_data.width * m_denoise_data.height * 4]);
+    m_denoise_data.color = m_float_bitmap.deviceData();
+    m_denoise_data.albedo = m_albedo_bitmap.deviceData();
+    m_denoise_data.normal = m_normal_bitmap.deviceData();
+    m_denoiser.init(m_ctx, m_denoise_data, 0, 0, false, false);
+#endif
 
     CUDA_CHECK(cudaStreamCreate(&m_stream));
     m_scene.copyDataToDevice();
@@ -604,9 +729,55 @@ void App::update()
     CUDA_CHECK(cudaStreamSynchronize(m_stream));
     CUDA_SYNC_CHECK();
 
+    // Apply bloom effect to accumulated buffer
+    if (enable_bloom) {
+        const int width = m_bitmap.width();
+        const int height = m_bitmap.height();
+        
+        BloomParams bloom_params;
+        bloom_params.threshold = bloom_threshold;
+        bloom_params.intensity = bloom_intensity;
+        bloom_params.blur_radius = bloom_radius;
+        bloom_params.sigma = bloom_sigma;
+        
+        // Apply bloom: accum_buffer (input) -> float_result_buffer (output)
+        applyBloomEffect(
+            m_params.float_result_buffer, // input (original accumulated image)
+            m_params.float_result_buffer, // output (bloom applied)
+            d_bloom_temp1,                // temp buffer 1
+            d_bloom_temp2,                // temp buffer 2
+            width, height,
+            bloom_params,
+            m_stream
+        );
+        
+        CUDA_CHECK(cudaStreamSynchronize(m_stream));
+        CUDA_SYNC_CHECK();
+    }
+
+#if DENOISE
+    m_float_bitmap.copyFromDevice();
+    m_normal_bitmap.copyFromDevice();
+    m_albedo_bitmap.copyFromDevice();
+
+    m_denoise_data.color = m_float_bitmap.deviceData();
+    m_denoise_data.normal = m_normal_bitmap.deviceData();
+    m_denoise_data.albedo = m_albedo_bitmap.deviceData();
+
+    m_denoiser.update(m_denoise_data);
+
+    m_denoiser.run();
+
+    CUDA_CHECK(cudaStreamSynchronize(m_stream));
+    CUDA_SYNC_CHECK();
+
+    m_denoiser.copyFromDevice();
+#endif
+
     m_params.frame++;
 
-    m_bitmap.copyFromDevice();
+    // Copy float_result_buffer (with bloom) to display bitmap
+    m_float_bitmap.copyFromDevice();
 }
 
 // ------------------------------------------------------------------
@@ -619,6 +790,7 @@ void App::draw()
     ImGui::Begin("RTCAMP11");
 
     const auto& camera = m_scene.camera();
+    bool state_changed = false;
     ImGui::Text("Camera info:");
     ImGui::Text("  Origin: (%.2f, %.2f, %.2f)", camera->origin().x(), camera->origin().y(), camera->origin().z());
     ImGui::Text("  Lookat: (%.2f, %.2f, %.2f)", camera->lookat().x(), camera->lookat().y(), camera->lookat().z());
@@ -626,10 +798,37 @@ void App::draw()
     ImGui::Text("Frame rate: %.3f ms/frame (%.2f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
     ImGui::Text("Subframe index: %d", m_params.frame);
 
+    ImGui::Separator();
+    ImGui::Text("General parameters");
+    state_changed |= ImGui::SliderFloat("White", &m_params.white, 1.0f, 30.0f, "%.2f");
+
+    // Bloom effect controls
+    ImGui::Separator();
+    ImGui::Text("Bloom Effect");
+    if (ImGui::Checkbox("Enable Bloom", &enable_bloom)) {
+        // Reset frame counter when toggling bloom
+        initResultBufferOnDevice();
+    }
+    
+    if (enable_bloom) {
+        state_changed |= ImGui::SliderFloat("Threshold", &bloom_threshold, 0.0f, 3.0f, "%.2f");
+        state_changed |= ImGui::SliderFloat("Intensity", &bloom_intensity, 0.0f, 1.0f, "%.2f");
+        state_changed |= ImGui::SliderInt("Blur Radius", &bloom_radius, 1, 20);
+        state_changed |= ImGui::SliderFloat("Blur Sigma", &bloom_sigma, 1.0f, 20.0f, "%.1f");
+    }
+
+    if (state_changed) {
+        // Reset frame counter when scene parameters change
+        initResultBufferOnDevice();
+    }
+
     ImGui::End();
     ImGui::Render();
-
-    m_bitmap.draw(0, 0);
+#if DENOISE
+    m_denoiser.draw(m_denoise_data, 0, 0);
+#else
+    m_float_bitmap.draw(0, 0);
+#endif
 
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
@@ -678,19 +877,8 @@ void App::keyReleased(int key)
 }
 
 // ------------------------------------------------------------------
-shared_ptr<TriangleMesh> App::buildVoronoiRockMesh()
+shared_ptr<TriangleMesh> App::buildVoronoiRockMesh(const VoronoiRockParams& params)
 {
-    // Create rock field parameters (2D Voronoi on XZ plane)
-    VoronoiRockParams params = createDefaultRockFieldParams();
-    params.seed_count = 30;            // Number of rocks to generate
-    params.field_size = 20.0f;         // 20x20 field size
-    params.y_position = 0.0f;          // Place rocks on ground
-    params.min_rock_vertices = 20;     // Minimum vertices per rock
-    params.max_rock_vertices = 40;     // Maximum vertices per rock
-    params.rock_roughness = 0.3f;      // Surface roughness variation
-    params.rock_height_variation = 0.4f; // Y-axis compression variation
-    params.random_seed = 54321;
-
     // Call CUDA function to generate rock mesh
     Vec3f* d_vertices = nullptr;
     Vec3f* d_normals = nullptr;
@@ -712,8 +900,6 @@ shared_ptr<TriangleMesh> App::buildVoronoiRockMesh()
         &vertex_count,
         &face_count
     );
-
-    printf("[Voronoi Rock] Generated: %d vertices, %d faces", vertex_count, face_count);
 
     // Transfer results from device to host
     vector<Vec3f> h_vertices(vertex_count);
@@ -745,8 +931,22 @@ shared_ptr<TriangleMesh> App::buildVoronoiRockMesh()
         faces[i].normal_id = h_normal_indices[i];
         faces[i].texcoord_id = h_texcoord_indices[i];
     }
+    
+    // Calculate rock height (bottom is at Y=0 after CUDA normalization)
+    float max_y = 0.0f;
+    for (const auto& v : h_vertices) {
+        if (v.y() > max_y) max_y = v.y();
+    }
+    float rock_height = max_y;
+    
+    // Shift rock so center is at Y=0 (instead of bottom at Y=0)
+    // This makes placement easier: just place at terrain height
+    float y_offset = -rock_height * 0.5f;
+    for (auto& v : h_vertices) {
+        v.y() += y_offset;
+    }
 
-    // Create TriangleMesh
+    // Create TriangleMesh with centered vertices
     auto mesh = make_shared<TriangleMesh>();
     mesh->addVertices(h_vertices);
     mesh->addNormals(h_normals);
@@ -754,16 +954,6 @@ shared_ptr<TriangleMesh> App::buildVoronoiRockMesh()
     mesh->addFaces(faces);
 
     mesh->calculateNormalFlat();
-    
-    // Calculate bounding box to find minimum Y coordinate
-    float min_y = h_vertices[0].y();
-    float max_y = h_vertices[0].y();
-    for (const auto& v : h_vertices) {
-        if (v.y() < min_y) min_y = v.y();
-        if (v.y() > max_y) max_y = v.y();
-    }
-    
-    printf("[Voronoi Rock] Y-range: %.2f to %.2f (offset needed: %.2f)", min_y, max_y, -min_y);
 
     return mesh;
 }
@@ -806,10 +996,6 @@ App::TerrainMeshResult App::buildTerrainMesh(TerrainParams params)
     
     // Set normalized heightmap data
     heightmap_bitmap->setData(normalized_heightmap.data(), 0, 0, terrain_data.grid_width, terrain_data.grid_width);
-    
-    printf("[Terrain] Heightmap texture created: %dx%d (range: %.2f to %.2f)", 
-           terrain_data.grid_width, terrain_data.grid_height,
-           terrain_data.min_height, terrain_data.max_height);
     
     return TerrainMeshResult{
         .mesh = mesh,
@@ -1163,11 +1349,6 @@ pair<shared_ptr<TriangleMesh>, shared_ptr<TriangleMesh>> App::buildTreeMesh(Proc
             &leaf_vertex_count, &leaf_face_count
         );
         
-        // Check for CUDA errors after leaf generation
-        cudaError_t err = cudaGetLastError();
-        if (err != cudaSuccess) {
-            printf("[CUDA Error] buildLeafMeshCUDA failed: %s", cudaGetErrorString(err));
-        }
         CUDA_CHECK(cudaDeviceSynchronize());
 
         // デバイスからホストへコピー
@@ -1208,9 +1389,6 @@ pair<shared_ptr<TriangleMesh>, shared_ptr<TriangleMesh>> App::buildTreeMesh(Proc
                 }
                 leaf_mesh->setSbtIndices(sbt_indices);
             }
-
-            printf("CUDA Leaf Generation: %d vertices, %d faces, %d textures", 
-                   leaf_vertex_count, leaf_face_count, (int)leaf_textures.size());
         }
 
         // CUDAメモリ解放
@@ -1239,20 +1417,28 @@ pair<shared_ptr<TriangleMesh>, shared_ptr<TriangleMesh>> App::buildTreeMesh(Proc
 // ------------------------------------------------------------------
 // New Tree API version for testing
 // ------------------------------------------------------------------
-pair<shared_ptr<TriangleMesh>, shared_ptr<TriangleMesh>> App::buildTreeMeshWithAPI(uint32_t& seed) {
+pair<shared_ptr<TriangleMesh>, shared_ptr<TriangleMesh>> App::buildTreeMeshWithAPI(uint32_t& seed, int n_leaf_textures) {
     // Create Tree object with parameters
     Tree tree(seed);
     TreeParam& params = tree.getParams();
     
     // Customize some parameters (use defaults for most)
-    params.g_scale = 30.0f;
-    params.g_scale_v = 5.0f;
+    params.g_scale = 60.0f;
+    params.g_scale_v = 2.0f;
     params.levels = 3;
     params.shape = 8;
+    params.ratio = 0.03f;  // Increase trunk thickness (default 0.015)
+    params.length[2] = 0.6f;  // Shorten depth=2 branches (default 0.6)
+    params.length[3] = 0.4f;  // Set depth=3 branch length (leaf branches)
     params.branches[0] = 1;  // Single trunk
     params.branches[1] = 10;
     params.branches[2] = 10;
     params.branches[3] = 10;
+    params.leaves = 25;
+    params.leaf_blos_num = 25;
+    params.leaf_scale = 0.01f;
+    //params.prune_ratio = 0.5f;
+    params.branches = {1,50,30,10};
     
     // Generate tree structure (CPU side)
     tree.createBranches();
@@ -1266,9 +1452,6 @@ pair<shared_ptr<TriangleMesh>, shared_ptr<TriangleMesh>> App::buildTreeMeshWithA
         total_splines += curve->splines.size();
     }
     
-    pgLog("New Tree API generated: " + to_string(branch_curves.size()) + " levels, " + 
-          to_string(total_splines) + " splines, " + to_string(leaves.size()) + " leaves");
-    
     // Convert Bezier curves to mesh
     auto tree_mesh = make_shared<TriangleMesh>();
     shared_ptr<TriangleMesh> leaf_mesh = nullptr;
@@ -1281,38 +1464,30 @@ pair<shared_ptr<TriangleMesh>, shared_ptr<TriangleMesh>> App::buildTreeMeshWithA
     int radial_segments = 8;  // Number of vertices around the branch
     
     // Process each level of branches
-    for (const auto& branch_curve : branch_curves) {
+    for (int level = 0; const auto& branch_curve : branch_curves) {
+        int level_vertex_start = vertices.size();
+        
         // Process each spline in this level
-        for (const auto& spline : branch_curve->splines) {
+        for (int spline_idx = 0; const auto& spline : branch_curve->splines) {
             if (spline->bezier_points.empty()) continue;
             
-            // Debug: Check bezier points
-            pgLog(std::format("Spline has {} bezier points:", spline->bezier_points.size()));
-            for (size_t i = 0; i < std::min(size_t(3), spline->bezier_points.size()); i++) {
-                const auto& bp = spline->bezier_points[i];
-                pgLog(std::format("  Point[{}]: co=({:.3f}, {:.3f}, {:.3f}), radius={:.3f}", 
-                    i, bp.co.x(), bp.co.y(), bp.co.z(), bp.radius));
-            }
-            
+            int spline_vertex_start = vertices.size();  // Track start of this spline
             int num_points = spline->bezier_points.size();
             int samples_per_segment = 4;  // Samples between control points
             
             // Sample the bezier curve
             for (int seg = 0; seg < num_points - 1; seg++) {
+                const auto& p0 = spline->bezier_points[seg];
+                const auto& p1 = spline->bezier_points[seg + 1];
+                
                 for (int sample = 0; sample < samples_per_segment; sample++) {
                     float t_local = float(sample) / samples_per_segment;
                     float t_global = (seg + t_local) / (num_points - 1);
                     
-                    Vec3f pos = spline->evaluate(t_global);
+                    // Use proper Bezier evaluation for position and tangent
+                    Vec3f pos = BezierSpline::evaluateCubicBezier(t_local, p0, p1);
+                    Vec3f tangent = normalize(BezierSpline::evaluateCubicBezierTangent(t_local, p0, p1));
                     float radius = spline->evaluateRadius(t_global);
-
-                    pgLog(std::format("Spline Segment: {}, Sample: {}, t_global: {:.3f}, Pos: ({:.2f}, {:.2f}, {:.2f}), Radius: {:.3f}",
-                                     seg, sample, t_global, pos.x(), pos.y(), pos.z(), radius));
-                    
-                    // Calculate tangent for orientation
-                    float dt = 0.01f;
-                    Vec3f pos_next = spline->evaluate(std::min(t_global + dt, 1.0f));
-                    Vec3f tangent = normalize(pos_next - pos);
                     
                     // Create perpendicular frame
                     Vec3f up = fabs(tangent.y()) < 0.99f ? Vec3f(0, 1, 0) : Vec3f(1, 0, 0);
@@ -1323,49 +1498,53 @@ pair<shared_ptr<TriangleMesh>, shared_ptr<TriangleMesh>> App::buildTreeMeshWithA
                     
                     // Create ring of vertices around this point
                     for (int i = 0; i < radial_segments; i++) {
-                    float angle = 2.0f * math::pi * i / radial_segments;
-                    float x = cos(angle);
-                    float z = sin(angle);
-                    
-                    Vec3f offset = (right * x + forward * z) * radius;
-                    Vec3f vertex_pos = pos + offset;
-                    Vec3f normal = normalize(offset);
-                    
-                    vertices.push_back(vertex_pos);
-                    normals.push_back(normal);
-                    texcoords.push_back(Vec2f(float(i) / radial_segments, t_global));
-                }
-                //pgLog(std::format("Vertices size: {}, Normals size: {}, Texcoords size: {}", vertices.size(), normals.size(), texcoords.size()));
+                        float angle = 2.0f * math::pi * i / radial_segments;
+                        float x = cos(angle);
+                        float z = sin(angle);
+                        
+                        Vec3f offset = (right * x + forward * z) * radius;
+                        Vec3f vertex_pos = pos + offset;
+                        Vec3f normal = normalize(offset);
+                        
+                        vertices.push_back(vertex_pos);
+                        normals.push_back(normal);
+                        texcoords.push_back(Vec2f(float(i) / radial_segments, t_global));
+                    }
                 
-                // Create faces connecting to previous ring
-                if (base_vertex >= radial_segments) {
-                    int prev_base = base_vertex - radial_segments;
-                    
-                    for (int i = 0; i < radial_segments; i++) {
-                        int next_i = (i + 1) % radial_segments;
+                    // Create faces connecting to previous ring
+                    // Only connect if we're not at the start of this spline
+                    if (base_vertex >= spline_vertex_start + radial_segments) {
+                        int prev_base = base_vertex - radial_segments;
                         
-                        int v0 = prev_base + i;
-                        int v1 = prev_base + next_i;
-                        int v2 = base_vertex + next_i;
-                        int v3 = base_vertex + i;
-                        
-                        // Two triangles per quad
-                        faces.push_back(Face{
-                            Vec3i(v0, v1, v2),
-                            Vec3i(v0, v1, v2),
-                            Vec3i(v0, v1, v2)
-                        });
-                        faces.push_back(Face{
-                            Vec3i(v0, v2, v3),
-                            Vec3i(v0, v2, v3),
-                            Vec3i(v0, v2, v3)
-                        });
-                        //pgLog(std::format("v0: {}, v1: {}, v2: {}, v3: {}", v0, v1, v2, v2));
+                        for (int i = 0; i < radial_segments; i++) {
+                            int next_i = (i + 1) % radial_segments;
+                            
+                            int v0 = prev_base + i;
+                            int v1 = prev_base + next_i;
+                            int v2 = base_vertex + next_i;
+                            int v3 = base_vertex + i;
+                            
+                            // Two triangles per quad
+                            faces.push_back(Face{
+                                Vec3i(v0, v1, v2),
+                                Vec3i(v0, v1, v2),
+                                Vec3i(v0, v1, v2)
+                            });
+                            faces.push_back(Face{
+                                Vec3i(v0, v2, v3),
+                                Vec3i(v0, v2, v3),
+                                Vec3i(v0, v2, v3)
+                            });
+                        }
                     }
                 }
             }
+            
+            spline_idx++;
         }
-    }
+        
+        int level_vertices_added = vertices.size() - level_vertex_start;
+        level++;
     }
     
     // Generate leaf mesh if leaves exist
@@ -1383,12 +1562,10 @@ pair<shared_ptr<TriangleMesh>, shared_ptr<TriangleMesh>> App::buildTreeMeshWithA
         for (const auto& leaf : leaves) {
             int base_idx = (int)leaf_vertices.size();
 
-            // Use Leaf class API: position(), direction(), right()
-            Vec3f pos = leaf.position();
+            // Use Leaf class API: position(), direction(), right(), radius()
+            Vec3f stem_center = leaf.position();
             Vec3f normal = leaf.direction();
-
-            // Leaf size is controlled by params; per-leaf scale removed (was in LeafData)
-            Vec3f up = normal * leaf_size;
+            float stem_radius = leaf.radius();
 
             // Prefer using stored right vector if available; otherwise fallback to cross-product
             Vec3f right_dir = leaf.right();
@@ -1402,21 +1579,33 @@ pair<shared_ptr<TriangleMesh>, shared_ptr<TriangleMesh>> App::buildTreeMeshWithA
                 right_dir = normalize(right_dir);
             }
 
+            // Offset leaf base from stem center to stem surface
+            // Use the right direction (perpendicular to leaf normal) to place leaf on stem surface
+            Vec3f surface_offset = right_dir * stem_radius;
+            Vec3f leaf_base = stem_center + surface_offset;
+
+            // Leaf size is controlled by params; per-leaf scale removed (was in LeafData)
+            Vec3f up = normal * leaf_size;
             Vec3f right = right_dir * leaf_size * leaf_scale_x;
 
-            // Four corners of leaf quad (centered at pos)
-            leaf_vertices.push_back(pos - right - up * 0.5f);
-            leaf_vertices.push_back(pos + right - up * 0.5f);
-            leaf_vertices.push_back(pos + right + up * 0.5f);
-            leaf_vertices.push_back(pos - right + up * 0.5f);
+            // Four corners of leaf quad - base at stem surface, extends upward
+            Vec3f v0 = leaf_base - right;      // Bottom left
+            Vec3f v1 = leaf_base + right;      // Bottom right
+            Vec3f v2 = leaf_base + right + up; // Top right
+            Vec3f v3 = leaf_base - right + up; // Top left
+            leaf_vertices.push_back(v0);
+            leaf_vertices.push_back(v1);
+            leaf_vertices.push_back(v2);
+            leaf_vertices.push_back(v3);
+
 
             for (int i = 0; i < 4; i++) {
                 leaf_normals.push_back(normal);
             }
 
-            leaf_texcoords.push_back(Vec2f(0, 0));
-            leaf_texcoords.push_back(Vec2f(1, 0));
             leaf_texcoords.push_back(Vec2f(1, 1));
+            leaf_texcoords.push_back(Vec2f(1, 0));
+            leaf_texcoords.push_back(Vec2f(0, 0));
             leaf_texcoords.push_back(Vec2f(0, 1));
 
             // Two triangles for quad
@@ -1437,7 +1626,13 @@ pair<shared_ptr<TriangleMesh>, shared_ptr<TriangleMesh>> App::buildTreeMeshWithA
             leaf_mesh->addNormals(leaf_normals);
             leaf_mesh->addTexcoords(leaf_texcoords);
             leaf_mesh->addFaces(leaf_faces);
-            pgLog("New Tree API: Created leaf mesh with " + to_string(leaf_vertices.size()) + " vertices");
+
+            vector<uint32_t> sbt_indices;
+            for (int i = 0; i < leaf_mesh->faces().size(); i++) {
+                int tex_id = rndInt(seed, 0, n_leaf_textures - 1);
+                sbt_indices.push_back(tex_id);
+            }
+            leaf_mesh->setSbtIndices(sbt_indices);
         }
     }
     
@@ -1446,7 +1641,6 @@ pair<shared_ptr<TriangleMesh>, shared_ptr<TriangleMesh>> App::buildTreeMeshWithA
         tree_mesh->addNormals(normals);
         tree_mesh->addTexcoords(texcoords);
         tree_mesh->addFaces(faces);
-        pgLog("New Tree API: Created tree mesh with " + to_string(vertices.size()) + " vertices, " + to_string(faces.size()) + " faces");
     }
     
     return {tree_mesh, leaf_mesh};

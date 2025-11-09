@@ -15,6 +15,7 @@ namespace prayground {
         int max_rock_vertices;       // Maximum vertices per rock
         float rock_height_variation; // Height variation (0-1)
         float rock_roughness;        // Surface roughness (0-1)
+        float rock_base_size;        // Base size for rocks (independent of field_size)
         uint32_t random_seed;        // Random seed for reproducibility
     };
 
@@ -60,6 +61,7 @@ namespace prayground {
         params.max_rock_vertices = 40;
         params.rock_height_variation = 0.3f;
         params.rock_roughness = 0.2f;
+        params.rock_base_size = 1.0f;  // Base size 1.0, independent of field
         params.random_seed = 12345;
         return params;
     }

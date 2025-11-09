@@ -60,11 +60,16 @@ namespace prayground {
         float min_dist = 1e10f;
         Vec2f my_pos = seeds[idx].position;
         
-        // Find nearest neighbor
-        for (int i = 0; i < seed_count; i++) {
-            if (i == idx) continue;
-            float dist = length(seeds[i].position - my_pos);
-            min_dist = fminf(min_dist, dist);
+        // Find nearest neighbor (only if there are multiple seeds)
+        if (seed_count > 1) {
+            for (int i = 0; i < seed_count; i++) {
+                if (i == idx) continue;
+                float dist = length(seeds[i].position - my_pos);
+                min_dist = fminf(min_dist, dist);
+            }
+        } else {
+            // Single seed: use default cell size (full field)
+            min_dist = 1.0f;  // Normalized default
         }
         
         seeds[idx].cell_size = min_dist;
@@ -106,14 +111,13 @@ namespace prayground {
         curandState state;
         curand_init(params.random_seed + rock_idx * 1000, 0, 0, &state);
         
-        // Determine rock size based on cell category
-        // Use mix of absolute size and relative cell size for better variation
-        float absolute_base = params.field_size * 0.02f;  // Minimum 2% of field size
-        float relative_scale = seed.cell_size * 0.25f;     // 25% of cell size
-        float base_scale = fmaxf(absolute_base, relative_scale);
+        // Determine rock size based on rock_base_size (independent of field_size)
+        // Use mix of absolute base size and relative cell size for variation
+        float base_scale = params.rock_base_size;  // User-specified base size
+        float relative_variation = seed.cell_size / params.field_size;  // 0-1 range
         
         float scale_multipliers[3] = {0.7f, 1.0f, 1.3f};  // Small, medium, large
-        float rock_scale = base_scale * scale_multipliers[seed.size_category];
+        float rock_scale = base_scale * scale_multipliers[seed.size_category] * (0.8f + relative_variation * 0.4f);
         
         // Number of vertices for this rock
         int num_vertices = params.min_rock_vertices + 
@@ -122,6 +126,8 @@ namespace prayground {
         // Generate random points on a sphere (will form convex hull)
         Vec3f rock_vertices[64];  // Max 64 vertices per rock (stack allocation)
         if (num_vertices > 64) num_vertices = 64;
+        
+        float min_y = 1e10f;  // Track minimum Y coordinate
         
         for (int i = 0; i < num_vertices; i++) {
             // Random point on unit sphere using rejection sampling
@@ -148,23 +154,40 @@ namespace prayground {
                 p.z() * radius * rock_scale
             );
             
+            // Track minimum Y for normalization
+            if (rock_vertices[i].y() < min_y) {
+                min_y = rock_vertices[i].y();
+            }
+            
             // Safety check for NaN in generated vertex
-            if (isnan(rock_vertices[i].x()) || isnan(rock_vertices[i].y()) || isnan(rock_vertices[i].z())) {
-                printf("[ERROR] NaN rock_vertex! Rock %d, vertex %d: p=(%.3f,%.3f,%.3f), radius=%.3f, rock_scale=%.3f, y_scale=%.3f\n",
-                       rock_idx, i, p.x(), p.y(), p.z(), radius, rock_scale, y_scale);
+            if (!rock_vertices[i].isValid()) {
                 // Force to small valid value
                 rock_vertices[i] = Vec3f(0.1f, 0.1f, 0.1f);
             }
         }
         
-        // Rock center position (XZ plane mapping: seed.position.x -> world X, seed.position.y -> world Z)
-        Vec3f rock_center(seed.position.x(), params.y_position, seed.position.y());
+        // Normalize Y coordinates so bottom is at Y=0
+        for (int i = 0; i < num_vertices; i++) {
+            rock_vertices[i].y() -= min_y;
+        }
+        
+        // Rock center position
+        // For single rock generation (seed_count=1), place at origin
+        // For multi-rock generation, use seed position for distribution
+        Vec3f rock_center;
+        if (seed_count == 1) {
+            // Single rock: always at origin (0, y_position, 0)
+            rock_center = Vec3f(0.0f, params.y_position, 0.0f);
+        } else {
+            // Multiple rocks: XZ plane mapping from seed position
+            rock_center = Vec3f(seed.position.x(), params.y_position, seed.position.y());
+        }
         
         // Debug: Print first few rocks
         if (rock_idx < 5) {
-            printf("[Rock %d] Position: (%.2f, %.2f, %.2f), Cell size: %.2f, Scale: %.2f, Vertices: %d, Category: %d\n",
+            printf("[Rock %d] Position: (%.2f, %.2f, %.2f), Cell size: %.2f, Scale: %.2f, Vertices: %d, Category: %d, min_y_before_norm: %.2f\n",
                    rock_idx, rock_center.x(), rock_center.y(), rock_center.z(),
-                   seed.cell_size, rock_scale, num_vertices, seed.size_category);
+                   seed.cell_size, rock_scale, num_vertices, seed.size_category, min_y);
         }
         
         // Simple convex hull approximation: create triangles from centroid to all vertex pairs
@@ -228,13 +251,10 @@ namespace prayground {
                 } else {
                     // Fallback to upward normal if vertex is at origin (shouldn't happen)
                     normal = Vec3f(0.0f, 1.0f, 0.0f);
-                    printf("[WARNING] Rock vertex at origin detected! Rock %d, vertex %d\n", rock_idx, i);
                 }
                 
                 // Additional safety: check for NaN in normal
                 if (isnan(normal.x()) || isnan(normal.y()) || isnan(normal.z())) {
-                    printf("[ERROR] NaN normal detected! Rock %d, vertex %d, vertex_len=%.6f\n", 
-                           rock_idx, i, vertex_len);
                     normal = Vec3f(0.0f, 1.0f, 0.0f);
                 }
                 

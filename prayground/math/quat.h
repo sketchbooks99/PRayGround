@@ -21,6 +21,12 @@ namespace prayground {
         // axis: rotation axis (will be normalized)
         // angle: rotation angle in radians
         HOSTDEVICE Quaternion(const Vec3<T>& axis, T angle) {
+            if (length(axis) < T(1e-6)) {
+                // Zero rotation
+                w = 1; x = 0; y = 0; z = 0;
+                return;
+            }
+
             T half_angle = angle * T(0.5);
             T s = sin(half_angle);
             Vec3<T> normalized_axis = normalize(axis);

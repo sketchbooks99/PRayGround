@@ -32,12 +32,12 @@ namespace prayground {
         std::shared_ptr<BezierSpline> curve;           // Bezier curve (owned by Stem)
         Stem* parent;                 // Pointer to parent branch
         float offset;                 // Starting position on parent branch 
-        float radius_limit;            // Limit of radius 
+        float radius_limit;           // Limit of radius 
 
         std::vector<std::shared_ptr<Stem>> children;  // List of branch children
         float length;                 // Length of branch
         float radius;                 // Radius of branch 
-        float length_child_max;         // Maximum coefficient of children branch length
+        float length_child_max;       // Maximum coefficient of children branch length
 
         Stem(int depth, Stem* parent = nullptr,
             float offset = 0.0f, float radius_limit = -1.0f)
@@ -107,18 +107,10 @@ namespace prayground {
         std::vector<Vec3f> normals;
     };
 
-    // Simple leaf data for new tree generation
-    struct LeafData {
-        Vec3f position;
-        Vec3f normal;
-        float scale;
-        
-        LeafData() : position(0.0f), normal(0, 0, 1), scale(1.0f) {}
-    };
-
     class Leaf {
     public:
-        Leaf(const Vec3f& pos, const Vec3f& dir, const Vec3f& r) : m_pos(pos), m_dir(dir), m_right(r) {}
+        Leaf(const Vec3f& pos, const Vec3f& dir, const Vec3f& r, float radius = 0.0f) 
+            : m_pos(pos), m_dir(dir), m_right(r), m_radius(radius) {}
 
         // Create quad for leaf
         static MeshData getShape(float g_scale, float scale, float scale_x);
@@ -134,10 +126,13 @@ namespace prayground {
         void setDirection(const Vec3f& dir) { m_dir = dir; }
         const Vec3f& right() const { return m_right; }
         void setRight(const Vec3f& right) { m_right = right; }
+        float radius() const { return m_radius; }
+        void setRadius(float radius) { m_radius = radius; }
     private:
         Vec3f m_pos;
         Vec3f m_dir;
         Vec3f m_right;
+        float m_radius;
     };
 
     class CHTurtle {

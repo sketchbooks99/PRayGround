@@ -1,5 +1,5 @@
 # Set CUDA source properties BEFORE macro call
-set(cuda_obj_sources envmap.cu textures.cu)
+set(cuda_obj_sources envmap.cu textures.cu bloom.cu)
 set_source_files_properties(${cuda_obj_sources} PROPERTIES 
     CUDA_SOURCE_PROPERTY_FORMAT OBJ
 )
@@ -15,6 +15,8 @@ PRAYGROUND_add_executable(rtcamp11 target_name
     envmap.cuh
     textures.cuh
     textures.cu
+    bloom.cuh
+    bloom.cu
     OPTIONS -rdc true
 )
 

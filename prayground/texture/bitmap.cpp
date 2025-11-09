@@ -146,7 +146,8 @@ namespace prayground {
             pgLogFatal("Unsupported pixel type for BitmapTexture");
         }
 
-        CUDA_CHECK( cudaMallocArray( &d_array, &channel_desc, width, height ) );
+        if (!d_array)
+            CUDA_CHECK( cudaMallocArray( &d_array, &channel_desc, width, height ) );
         CUDA_CHECK( cudaMemcpy2DToArray( d_array, 0, 0, raw_data, pitch, pitch, height, cudaMemcpyHostToDevice ) );
 
         // Create texture object.

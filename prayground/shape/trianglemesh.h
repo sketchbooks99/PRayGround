@@ -153,6 +153,10 @@ namespace prayground {
         CUdeviceptr d_texcoords { 0 };
         CUdeviceptr d_sbt_indices{ 0 };
 
+        CUDABuffer<Vec3f> d_vertices_buf;
+        CUDABuffer<Face> d_faces_buf;
+        CUDABuffer<Vec3f> d_normals_buf;
+        CUDABuffer<Vec2f> d_texcoords_buf;
         CUDABuffer<uint32_t> d_sbt_indices_buf;
 
 #if OPTIX_VERSION >= 70600

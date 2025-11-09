@@ -91,11 +91,6 @@ namespace prayground {
 
     Curves::Data Curves::getData()
     {
-        CUDABuffer<Vec3f> d_vertices_buf;
-        CUDABuffer<int> d_indices_buf;
-        CUDABuffer<float> d_widths_buf;
-        CUDABuffer<Vec3f> d_normals_buf;
-
         d_vertices_buf.copyToDevice(m_vertices);
         d_indices_buf.copyToDevice(m_indices);
         d_widths_buf.copyToDevice(m_widths);

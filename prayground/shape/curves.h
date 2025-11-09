@@ -90,6 +90,11 @@ namespace prayground {
         CUdeviceptr d_widths { 0 };
         CUdeviceptr d_normals{ 0 };
 
+        CUDABuffer<Vec3f> d_vertices_buf;
+        CUDABuffer<int32_t> d_indices_buf;
+        CUDABuffer<float> d_widths_buf;
+        CUDABuffer<Vec3f> d_normals_buf;
+
 #endif
     };
 

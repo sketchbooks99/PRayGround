@@ -1,4 +1,4 @@
-#include "bloom.cuh"
+#include "postprocess.cuh"
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include <cmath>
@@ -253,6 +253,158 @@ void applyBloomEffect(
     // Step 4: Additive blend with original
     launchAdditiveBlendKernel(input, temp_buffer1, output, width, height, 
                              params.intensity, stream);
+}
+
+// ----------------------------------------------------------------------------
+// Firefly Filtering Kernel
+// ----------------------------------------------------------------------------
+
+__global__ void fireflyFilterKernel(
+    const Vec4f* input,
+    Vec4f* output,
+    int width,
+    int height,
+    float outlier_ratio,
+    float min_luminance
+) {
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (x >= width || y >= height) return;
+
+    int idx = y * width + x;
+    Vec4f current_color = input[idx];
+    float current_lum = luminance(current_color);
+    
+    // Calculate 8-neighbor average
+    Vec4f neighbor_sum(0.0f, 0.0f, 0.0f, 0.0f);
+    int neighbor_count = 0;
+    
+    // 8-neighbor offsets (Moore neighborhood)
+    const int dx[] = {-1, 1, 0, 0, -1, -1, 1, 1};
+    const int dy[] = {0, 0, -1, 1, -1, 1, -1, 1};
+    
+    for (int i = 0; i < 8; i++) {
+        int nx = x + dx[i];
+        int ny = y + dy[i];
+        
+        // Check bounds
+        if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+            int neighbor_idx = ny * width + nx;
+            Vec4f neighbor_color = input[neighbor_idx];
+            neighbor_sum += neighbor_color;
+            neighbor_count++;
+        }
+    }
+    
+    // If we have valid neighbors, check for outliers
+    if (neighbor_count > 0) {
+        Vec4f neighbor_mean = neighbor_sum / static_cast<float>(neighbor_count);
+        float neighbor_lum = luminance(neighbor_mean);
+        
+        // Check if this pixel is an outlier (significantly brighter than neighbors)
+        // Only apply filtering if neighbor luminance is above threshold (avoid dark areas)
+        if (current_lum > neighbor_lum * outlier_ratio && neighbor_lum > min_luminance) {
+            // Replace outlier with neighbor average to suppress firefly
+            output[idx] = neighbor_mean + (current_color / (float)(neighbor_count + 1));
+        } else {
+            // Keep original color
+            output[idx] = current_color;
+        }
+    } else {
+        // No valid neighbors (edge case), keep original
+        output[idx] = current_color;
+    }
+}
+
+void launchFireflyFilterKernel(
+    const Vec4f* input,
+    Vec4f* output,
+    int width,
+    int height,
+    const FireflyFilterParams& params,
+    cudaStream_t stream
+) {
+    dim3 blockSize(16, 16);
+    dim3 gridSize((width + blockSize.x - 1) / blockSize.x,
+                  (height + blockSize.y - 1) / blockSize.y);
+    
+    fireflyFilterKernel<<<gridSize, blockSize, 0, stream>>>(
+        input, output, width, height, params.outlier_ratio, params.min_luminance
+    );
+}
+
+// ----------------------------------------------------------------------------
+// Convergence Check Kernel
+// ----------------------------------------------------------------------------
+
+__global__ void countConvergedPixelsKernel(
+    const uint8_t* converged_buffer,
+    uint32_t* count_buffer,  // Output: single counter
+    int total_pixels
+) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    // Use shared memory for reduction within block
+    __shared__ uint32_t shared_count[256];
+    
+    int tid = threadIdx.x;
+    shared_count[tid] = 0;
+    
+    // Each thread counts converged pixels in its stride
+    for (int i = idx; i < total_pixels; i += blockDim.x * gridDim.x) {
+        if (converged_buffer[i] != 0) {
+            shared_count[tid]++;
+        }
+    }
+    
+    __syncthreads();
+    
+    // Block-level reduction
+    for (int s = blockDim.x / 2; s > 0; s >>= 1) {
+        if (tid < s) {
+            shared_count[tid] += shared_count[tid + s];
+        }
+        __syncthreads();
+    }
+    
+    // First thread in block writes to global memory
+    if (tid == 0) {
+        atomicAdd(count_buffer, shared_count[0]);
+    }
+}
+
+float checkConvergenceRatio(
+    const uint8_t* d_converged_buffer,
+    int width,
+    int height,
+    cudaStream_t stream
+) {
+    int total_pixels = width * height;
+    
+    // Allocate counter on device
+    uint32_t* d_count;
+    cudaMalloc(&d_count, sizeof(uint32_t));
+    cudaMemset(d_count, 0, sizeof(uint32_t));
+    
+    // Launch kernel
+    int blockSize = 256;
+    int gridSize = (total_pixels + blockSize - 1) / blockSize;
+    // Limit grid size for better reduction
+    gridSize = min(gridSize, 1024);
+    
+    countConvergedPixelsKernel<<<gridSize, blockSize, 0, stream>>>(
+        d_converged_buffer, d_count, total_pixels
+    );
+    
+    // Copy result back
+    uint32_t converged_count;
+    cudaMemcpy(&converged_count, d_count, sizeof(uint32_t), cudaMemcpyDeviceToHost);
+    cudaFree(d_count);
+    
+    // Calculate ratio
+    float ratio = static_cast<float>(converged_count) / static_cast<float>(total_pixels);
+    return ratio;
 }
 
 } // namespace prayground

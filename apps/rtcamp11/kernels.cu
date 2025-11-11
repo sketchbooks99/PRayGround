@@ -194,21 +194,100 @@ extern "C" __global__ void __raygen__pinhole() {
     const int height = params.height;
     uint32_t seed = tea<4>(image_idx, frame);
     
-    // Adaptive sampling: Skip if pixel has converged
-    if (params.use_adaptive_sampling && params.converged_buffer[image_idx]) {
-        return;  // This pixel is done sampling
+    // Adaptive sampling: Check convergence and skip if converged
+    if (params.use_adaptive_sampling && frame >= params.adaptive_min_samples) {
+        // Check if already converged
+        if (params.converged_buffer[image_idx] != 0) {
+            return;  // Already converged, skip sampling
+        }
+        
+        // Calculate variance to determine convergence
+        // Use sum_buffer and sum_squared_buffer for statistics
+        Vec3f sum(params.sum_buffer[image_idx]);
+        Vec3f sum_sq(params.sum_squared_buffer[image_idx]);
+        int count = params.sample_count_buffer[image_idx];
+        
+        if (count > 0) {
+            Vec3f mean = sum / float(count);
+            Vec3f mean_sq = sum_sq / float(count);
+            Vec3f variance = mean_sq - mean * mean;
+            float temporal_variance = fmaxf(variance.x(), fmaxf(variance.y(), variance.z()));
+            
+            // Calculate spatial variance
+            Vec3f neighbor_sum = Vec3f(0.0f);
+            int neighbor_count = 0;
+            const int dx[] = { -1, 1, 0, 0 };
+            const int dy[] = { 0, 0, -1, 1};
+            
+            for (int i = 0; i < 4; i++) {
+                int nx = x + dx[i];
+                int ny = y + dy[i];
+                if (nx >= 0 && nx < params.width && ny >= 0 && ny < params.height) {
+                    int neighbor_idx = ny * params.width + nx;
+                    // Get neighbor's mean from sum_buffer and sample_count
+                    Vec3f neighbor_sum_val(params.sum_buffer[neighbor_idx]);
+                    int neighbor_count_val = params.sample_count_buffer[neighbor_idx];
+                    if (neighbor_count_val > 0) {
+                        Vec3f neighbor_color = neighbor_sum_val / float(neighbor_count_val);
+                        neighbor_sum = neighbor_sum + neighbor_color;
+                        neighbor_count++;
+                    }
+                }
+            }
+            
+            float spatial_variance = 0.0f;
+            if (neighbor_count > 0) {
+                Vec3f neighbor_mean = neighbor_sum / float(neighbor_count);
+                Vec3f diff = mean - neighbor_mean;
+                spatial_variance = dot(diff, diff);
+            }
+            
+            // Thresholds
+            const float temporal_threshold = 0.001f;
+            const float spatial_threshold = 0.001f;
+            
+            // Check convergence: both temporal and spatial variance below threshold
+            bool converged = (temporal_variance < temporal_threshold) && 
+                           (spatial_variance < spatial_threshold);
+            
+            // Mark as converged in buffer
+            if (converged) {
+                params.converged_buffer[image_idx] = 1;
+                return;  // Pixel converged, skip sampling
+            }
+            
+            /* ===== PROBABILISTIC VERSION (commented out) =====
+            // Calculate sampling probability based on how close to convergence
+            // variance_ratio = 1.0 → at threshold → 50% sampling
+            // variance_ratio = 0.1 → well converged → 5% sampling
+            // variance_ratio > 1.0 → not converged → 100% sampling
+            float temporal_ratio = temporal_variance / temporal_threshold;
+            float spatial_ratio = spatial_variance / spatial_threshold;
+            float max_ratio = fmaxf(temporal_ratio, spatial_ratio);
+            
+            float sample_prob;
+            if (max_ratio >= 1.0f) {
+                sample_prob = 1.0f;  // Not converged, always sample
+            } else {
+                // Converged: probability proportional to variance ratio
+                // Clamp to [0.05, 0.5] for reasonable range
+                sample_prob = fmaxf(0.05f, fminf(0.3f, max_ratio));
+            }
+            
+            // Probabilistic skip
+            if (rnd(seed) > sample_prob) {
+                return;  // Skip sampling this frame
+            }
+            */
+        }
     }
 
     Vec3f result(0.0f);
 
-#if DENOISE || USE_SVGF
+#if !SUBMISSION
     Vec3f normal(0.0f);
     Vec3f albedo(0.0f);
-#endif
-
-#if USE_SVGF
-    Vec3f position(0.0f);      // World-space position
-    bool first_hit_found = false;
+    Vec3f uv(0.0f);
 #endif
 
     int i = params.samples_per_launch;
@@ -219,21 +298,10 @@ extern "C" __global__ void __raygen__pinhole() {
         const uint32_t samples_so_far = frame * params.samples_per_launch;
         const uint32_t current_sample = samples_so_far + (params.samples_per_launch - i);
         
-        // Map sample index to stratified grid cell
-        const uint32_t dim = params.stratified_dim;
-        const uint32_t sx = current_sample % dim;
-        const uint32_t sy = (current_sample / dim) % dim;
-        
         // Stratified jitter: random within the grid cell
-        const Vec2f cell_offset = UniformSampler::get2D(seed);  // [0, 1]
-        const Vec2f stratified_jitter = Vec2f(
-            (static_cast<float>(sx) + cell_offset.x()) / static_cast<float>(dim),
-            (static_cast<float>(sy) + cell_offset.y()) / static_cast<float>(dim)
-        ) - 0.5f;  // Center around 0 ([-0.5, 0.5])
+        const Vec2f jitter = UniformSampler::get2D(seed);  // [0, 1]
         
         // Combine stratified jitter with temporal jitter for TAA
-        const Vec2f taa_jitter = params.taa_jitter;
-        const Vec2f jitter = stratified_jitter + taa_jitter;
         
         const Vec2f d = 2.0f * Vec2f(
             static_cast<float>(idx.x()) + jitter.x(),
@@ -263,74 +331,37 @@ extern "C" __global__ void __raygen__pinhole() {
             if (depth >= params.max_depth)
                 break;
 
-            // Russian Roulette path termination (improved + firefly prevention)
-            // Start earlier for dark paths to reduce wasted computation
-            float max_throughput = fmaxf(throughput.x(), fmaxf(throughput.y(), throughput.z()));
-            
-            // ===== Firefly Prevention: High-luminance path termination =====
-            // Terminate very bright paths probabilistically to prevent fireflies
-            // This reduces extreme outliers while maintaining unbiased estimation
-            if (depth >= 1) {
-                float path_luminance = luminance(result);
-                const float firefly_threshold = 50.0f;  // Brightness threshold
+            // Russian Roulette path termination (simple version)
+            if (depth >= 3) {
+                float max_throughput = fmaxf(throughput.x(), fmaxf(throughput.y(), throughput.z()));
+                float continue_prob = fminf(0.95f, max_throughput);  // Cap at 95%
                 
-                if (path_luminance > firefly_threshold) {
-                    // Probability of continuing decreases with brightness
-                    float continuation_prob = firefly_threshold / path_luminance;
-                    continuation_prob = fmaxf(0.1f, fminf(0.9f, continuation_prob));  // Clamp to [0.1, 0.9]
-                    
-                    if (rnd(si.seed) > continuation_prob) {
-                        break;  // Terminate bright path
-                    }
-                    // Compensate for termination probability
-                    throughput /= continuation_prob;
-                }
-            }
-            
-            // Early termination for dark paths (depth >= 2)
-            if (depth >= 2 && max_throughput < 0.3f) {
-                if (rnd(si.seed) > max_throughput) {
-                    break;  // Terminate dark path early
-                }
-                throughput /= max_throughput;
-            }
-            // Standard termination (depth >= 3)
-            else if (depth >= 3) {
-                float p = fminf(0.95f, max_throughput);  // Cap at 95% to avoid infinite paths
-                
-                if (rnd(si.seed) > p) {
+                if (rnd(si.seed) > continue_prob) {
                     break;  // Terminate path
                 }
                 
                 // Unbiased estimator: scale throughput by survival probability
-                throughput /= p;
+                throughput /= continue_prob;
             }
 
             trace(params.handle, ro, rd, 0.01f, 1e10f, /* ray_type = */ 0, &si);
 
             if (si.trace_terminate) {
+                if (depth == 0) {
+                    float luma = luminance(si.emission);
+                    luma = luma < 1.0f ? 1.0f : luma;
+                    result += si.emission / luma;
+                    env_evaluated = true;
+#if !SUBMISSION
+                    normal = si.shading.n;
+                    albedo = si.emission / luma;
+                    uv = Vec3f(si.shading.uv, 1.0f);
+#endif
+                }
                 // Hit environment (miss shader)
                 if (!env_evaluated) {
-                    if (depth == 0) {
-                        float luma = luminance(si.emission);
-                        luma = luma < 1.0f ? 1.0f : luma;
-                        result += si.emission / luma;
-                    }
-                    else {
-                        result += throughput * si.emission;
-                    }
+                    result += throughput * si.emission;
                 }
-#if USE_SVGF
-                // For environment/miss, use a fixed far position so all env pixels have same depth
-                // This allows them to be filtered together without position weight rejection
-                if (depth == 0 && !first_hit_found) {
-                    position += Vec3f(0.0f, 0.0f, 1e8f);  // Fixed far position (not ray-dependent)
-                    first_hit_found = true;
-                    
-                    normal += si.shading.n;
-                    albedo += si.albedo;
-                }
-#endif
                 break;
             }
 
@@ -338,19 +369,19 @@ extern "C" __global__ void __raygen__pinhole() {
             if (si.surface_info->type == SurfaceType::AreaEmitter) {
                 Vec3f emission = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
                     si.surface_info->callable_id.bsdf, &si, si.surface_info->data);
-                // Only add direct hit contribution if not already evaluated by NEE
-                if (!area_evaluated) {
-                    if (depth == 0)
-                        result += emission / luminance(emission);
-                    else
-                        result += throughput * emission;
-                }
-#if DENOISE || USE_SVGF
                 if (depth == 0) {
-                    normal += si.shading.n;
-                    albedo += si.albedo;
-                }
+                    result += emission / luminance(emission);
+                    area_evaluated = true;
+#if !SUBMISSION
+                    normal = si.shading.n;
+                    albedo = si.emission / luminance(emission);
+                    uv = Vec3f(si.shading.uv, 1.0f);
 #endif
+                }
+
+                // Only add direct hit contribution if not already evaluated by NEE
+                if (!area_evaluated)
+                    result += throughput * emission;
                 if (si.trace_terminate)
                     break;
             }
@@ -431,14 +462,6 @@ extern "C" __global__ void __raygen__pinhole() {
                                 
                                 const float pdf_light = light_interaction.pdf * static_cast<float>(params.n_lights);
                                 
-                                // ===== Firefly Prevention: Low-PDF rejection =====
-                                // Skip samples with extremely low PDF (likely to cause fireflies)
-                                const float min_pdf_threshold = 1e-6f;
-                                if (pdf_light < min_pdf_threshold) {
-                                    // Skip this sample - too unreliable
-                                    continue;
-                                }
-                                
                                 // Calculate BSDF PDF for light direction
                                 float pdf_bsdf = optixDirectCall<float, SurfaceInteraction*, void*>(
                                     si.surface_info->callable_id.pdf, &si, si.surface_info->data);
@@ -446,8 +469,11 @@ extern "C" __global__ void __raygen__pinhole() {
                                 // MIS weight using selected heuristic
                                 const float mis_weight = computeMISWeight(pdf_light, pdf_bsdf, params.mis_heuristic);
                                 
-                                // ===== Firefly Prevention: Contribution clamping =====
+                                // Calculate contribution
                                 Vec3f contribution = bsdf_light * emission * cos_theta_surface * mis_weight / pdf_light;
+                                
+                                // Firefly Prevention: Clamp contribution by luminance
+                                contribution = clampLuminance(contribution, 100.0f);
                                 
                                 // Add area light contribution (no strategy probability needed)
                                 L_dir += contribution;
@@ -493,12 +519,6 @@ extern "C" __global__ void __raygen__pinhole() {
                                 float pdf_env = optixDirectCall<float, SurfaceInteraction*, void*>(
                                     params.envmap_pdf_id, &si_env, params.envmap_sampling_data);
                                 
-                                // ===== Firefly Prevention: Low-PDF rejection =====
-                                const float min_pdf_threshold = 1e-6f;
-                                if (pdf_env < min_pdf_threshold) {
-                                    continue;  // Skip unreliable samples
-                                }
-                                
                                 // Calculate BSDF PDF for environment direction
                                 float pdf_bsdf = optixDirectCall<float, SurfaceInteraction*, void*>(
                                     si.surface_info->callable_id.pdf, &si, si.surface_info->data);
@@ -507,8 +527,11 @@ extern "C" __global__ void __raygen__pinhole() {
                                 const float mis_weight = computeMISWeight(pdf_env, pdf_bsdf, params.mis_heuristic);
                                 
                                 if (pdf_env > 0.0f) {
-                                    // ===== Firefly Prevention: Contribution clamping =====
+                                    // Calculate contribution
                                     Vec3f contribution = bsdf_env * env_radiance * cos_theta_surface * mis_weight / pdf_env;
+                                    
+                                    // Firefly Prevention: Clamp contribution by luminance
+                                    contribution = clampLuminance(contribution, 100.0f);
                                     
                                     // Add environment light contribution (no strategy probability needed)
                                     L_dir += contribution;
@@ -574,8 +597,14 @@ extern "C" __global__ void __raygen__pinhole() {
                             // MIS weight using selected heuristic
                             const float mis_weight = computeMISWeight(pdf_light, pdf_bsdf, params.mis_heuristic);
                             
+                            // Calculate contribution
+                            Vec3f contribution = (bsdf_light * emission * cos_theta_surface * mis_weight / pdf_light) / light_sampling_prob;
+                            
+                            // Firefly Prevention: Clamp contribution by luminance
+                            contribution = clampLuminance(contribution, 100.0f);
+                            
                             // Account for sampling strategy probability
-                            L_dir += (bsdf_light * emission * cos_theta_surface * mis_weight / pdf_light) / light_sampling_prob;
+                            L_dir += contribution;
                             area_evaluated = true;
                         }
                     }
@@ -627,8 +656,14 @@ extern "C" __global__ void __raygen__pinhole() {
                             const float mis_weight = computeMISWeight(pdf_env, pdf_bsdf, params.mis_heuristic);
                             
                             if (pdf_env > 0.0f) {
+                                // Calculate contribution
+                                Vec3f contribution = (bsdf_env * env_radiance * cos_theta_surface * mis_weight / pdf_env) / (1.0f - light_sampling_prob);
+                                
+                                // Firefly Prevention: Clamp contribution by luminance
+                                contribution = clampLuminance(contribution, 100.0f);
+                                
                                 // Account for sampling strategy probability
-                                L_dir += (bsdf_env * env_radiance * cos_theta_surface * mis_weight / pdf_env) / (1.0f - light_sampling_prob);
+                                L_dir += contribution;
                                 env_evaluated = true;
                             }
                         }
@@ -666,16 +701,11 @@ extern "C" __global__ void __raygen__pinhole() {
                 }
             }
 
-#if DENOISE || USE_SVGF
+#if !SUBMISSION
             if (depth == 0) {
                 normal += si.shading.n;
                 albedo += si.albedo;
-#if USE_SVGF
-                if (!first_hit_found) {
-                    position += si.p;
-                    first_hit_found = true;
-                }
-#endif
+                uv = Vec3f(si.shading.uv, 1.0f);
             }
 #endif
 
@@ -694,42 +724,6 @@ extern "C" __global__ void __raygen__pinhole() {
     
     // Final accumulated color (will be set differently based on mode)
     Vec3f accum_color;
-
-    // ===== Firefly Prevention: Spatial outlier smoothing =====
-    // Replace bright outlier pixels with average of 8-neighbors to suppress fireflies
-    if (params.use_adaptive_sampling && frame > 0) {
-        // Calculate 8-neighbor average
-        Vec3f neighbor_sum = Vec3f(0.0f);
-        int neighbor_count = 0;
-
-        const int dx[] = { -1, 1, 0, 0, -1, -1, 1, 1 };  // 8-neighbors
-        const int dy[] = { 0, 0, -1, 1, -1, 1, -1, 1 };
-
-        for (int i = 0; i < 8; i++) {
-            int nx = x + dx[i];
-            int ny = y + dy[i];
-
-            if (nx >= 0 && nx < params.width && ny >= 0 && ny < params.height) {
-                int neighbor_idx = ny * params.width + nx;
-                Vec3f neighbor_color(params.accum_buffer[neighbor_idx]);
-                neighbor_sum = neighbor_sum + neighbor_color;
-                neighbor_count++;
-            }
-        }
-
-        if (neighbor_count > 0) {
-            Vec3f neighbor_mean = neighbor_sum / float(neighbor_count);
-            float my_luminance = luminance(accum_color);
-            float neighbor_luminance = luminance(neighbor_mean);
-
-            // If this pixel is significantly brighter than neighbors, replace with average
-            const float outlier_ratio = 2.5f;  // 2.5x brighter = outlier
-            if (my_luminance > neighbor_luminance * outlier_ratio && neighbor_luminance > 0.01f) {
-                // Replace outlier with neighbor average to smooth firefly
-                accum_color = neighbor_mean + (accum_color / 9.0f);
-            }
-        }
-    }
     
     // Adaptive sampling: Update statistics and use mean directly
     if (params.use_adaptive_sampling) {
@@ -752,155 +746,8 @@ extern "C" __global__ void __raygen__pinhole() {
         // Use mean from adaptive sampling statistics directly
         accum_color = sum / float(count);
         
-        // Check convergence after minimum samples
-        if (count >= params.adaptive_min_samples) {
-            // ===== Spatio-Temporal Adaptive Sampling (AV-based) =====
-            // Temporal: variance over time (same pixel, multiple samples)
-            // Spatial: variance with neighbors (detect outliers/artifacts)
-            
-            Vec3f mean = accum_color;
-            Vec3f mean_sq = sum_sq / float(count);
-            Vec3f variance = mean_sq - mean * mean;
-            
-            // Temporal convergence: absolute variance
-            float temporal_variance = fmaxf(variance.x(), fmaxf(variance.y(), variance.z()));
-            
-            // Spatial convergence: compare with neighbors
-            // Sample 4-neighbors (up, down, left, right)
-            Vec3f neighbor_sum = Vec3f(0.0f);
-            int neighbor_count = 0;
-            
-            const int dx[] = {-1, 1, 0, 0};
-            const int dy[] = {0, 0, -1, 1};
-            
-            for (int i = 0; i < 4; i++) {
-                int nx = x + dx[i];
-                int ny = y + dy[i];
-                
-                if (nx >= 0 && nx < params.width && ny >= 0 && ny < params.height) {
-                    int neighbor_idx = ny * params.width + nx;
-                    Vec3f neighbor_color(params.accum_buffer[neighbor_idx]);
-                    neighbor_sum = neighbor_sum + neighbor_color;
-                    neighbor_count++;
-                }
-            }
-            
-            float spatial_variance = 0.0f;
-            if (neighbor_count > 0) {
-                Vec3f neighbor_mean = neighbor_sum / float(neighbor_count);
-                Vec3f diff = mean - neighbor_mean;
-                spatial_variance = dot(diff, diff);  // Squared distance
-            }
-            
-            // Combined convergence criterion
-            const float temporal_threshold = 0.001f;  // Absolute variance threshold
-            const float spatial_threshold = 0.001f;    // Spatial difference threshold
-            
-            if (temporal_variance < temporal_threshold && spatial_variance < spatial_threshold) {
-                params.converged_buffer[image_idx] = 1;
-            }
-            
-            // ===== CV (Coefficient of Variation) Method - OLD =====
-            /*
-            Vec3f mean = accum_color;
-            Vec3f mean_sq = sum_sq / float(count);
-            Vec3f variance = mean_sq - mean * mean;
-            Vec3f std_dev = sqrt(max(variance, Vec3f(0.0f)));
-            
-            // Coefficient of Variation (CV) = std_dev / mean
-            Vec3f cv = Vec3f(
-                mean.x() > 1e-6f ? std_dev.x() / mean.x() : 0.0f,
-                mean.y() > 1e-6f ? std_dev.y() / mean.y() : 0.0f,
-                mean.z() > 1e-6f ? std_dev.z() / mean.z() : 0.0f
-            );
-            
-            float max_cv = fmaxf(cv.x(), fmaxf(cv.y(), cv.z()));
-            const float cv_threshold = 0.05f;  // 5% relative error
-            
-            if (max_cv < cv_threshold) {
-                params.converged_buffer[image_idx] = 1;
-            }
-            */
-            
-            // ===== AV (Absolute Variance) with Luminance-Adaptive Threshold - OLD =====
-            /*
-            Vec3f mean = accum_color;
-            Vec3f mean_sq = sum_sq / float(count);
-            Vec3f variance = mean_sq - mean * mean;
-
-            // Calculate luminance for adaptive threshold
-            float luminance = 0.2126f * mean.x() + 0.7152f * mean.y() + 0.0722f * mean.z();
-
-            // Adaptive threshold based on luminance
-            // Base threshold at luminance = 1.0
-            // Scales down for darker pixels but maintains minimum quality
-            const float base_variance_threshold = 0.002f;  // For luminance = 1.0 (loosened)
-            const float min_threshold_scale = 0.8f;  // Don't go below 80% of base (stricter for dark)
-
-            // Threshold = base * (min_scale + (1 - min_scale) * luminance)
-            float threshold_scale = min_threshold_scale + (1.0f - min_threshold_scale) * fminf(1.0f, luminance);
-            float variance_threshold = base_variance_threshold * threshold_scale;
-
-            float max_variance = fmaxf(variance.x(), fmaxf(variance.y(), variance.z()));
-
-            if (max_variance < variance_threshold) {
-                params.converged_buffer[image_idx] = 1;
-            }
-            */
-
-            // ===== Hybrid CV + AV Method - OLD =====
-            /*
-            Vec3f mean = accum_color;
-            Vec3f mean_sq = sum_sq / float(count);
-            Vec3f variance = mean_sq - mean * mean;
-            Vec3f std_dev = sqrt(max(variance, Vec3f(0.0f)));
-
-            // Coefficient of Variation (CV) = std_dev / mean
-            Vec3f cv = Vec3f(
-                mean.x() > 1e-6f ? std_dev.x() / mean.x() : 0.0f,
-                mean.y() > 1e-6f ? std_dev.y() / mean.y() : 0.0f,
-                mean.z() > 1e-6f ? std_dev.z() / mean.z() : 0.0f
-            );
-
-            // Average luminance for brightness-aware threshold
-            float luminance = 0.2126f * mean.x() + 0.7152f * mean.y() + 0.0722f * mean.z();
-
-            // Adaptive threshold based on brightness
-            // Bright pixels (luminance > 0.5): Use base threshold
-            // Dark pixels (luminance < 0.1): Use stricter threshold (50% of base)
-            const float cv_base_threshold = 0.02f;  // Base 2% relative error
-            const float brightness_scale = fminf(1.0f, fmaxf(0.5f, luminance / 0.5f));
-            float cv_threshold = cv_base_threshold * brightness_scale;
-
-            float max_cv = fmaxf(cv.x(), fmaxf(cv.y(), cv.z()));
-
-            if (max_cv < cv_threshold) {
-                params.converged_buffer[image_idx] = 1;
-            }
-            */
-
-            // ===== Method 1: CV only - OLDER =====
-            /*
-            Vec3f mean = accum_color;
-            Vec3f mean_sq = sum_sq / float(count);
-            Vec3f variance = mean_sq - mean * mean;
-            Vec3f std_dev = sqrt(max(variance, Vec3f(0.0f)));
-
-            // Coefficient of Variation (CV) = std_dev / mean
-            Vec3f cv = Vec3f(
-                mean.x() > 1e-6f ? std_dev.x() / mean.x() : 0.0f,
-                mean.y() > 1e-6f ? std_dev.y() / mean.y() : 0.0f,
-                mean.z() > 1e-6f ? std_dev.z() / mean.z() : 0.0f
-            );
-
-            float max_cv = fmaxf(cv.x(), fmaxf(cv.y(), cv.z()));
-            const float cv_threshold = 0.02f;  // 2% relative error
-
-            if (max_cv < cv_threshold) {
-                params.converged_buffer[image_idx] = 1;
-            }
-            */
-        }
+        // Note: Convergence detection is now done at kernel start (probabilistic sampling)
+        // No need for duplicate variance calculation here
     }
     // Standard accumulation (non-adaptive sampling)
     else {
@@ -914,68 +761,19 @@ extern "C" __global__ void __raygen__pinhole() {
         }
     }
     
-#if DENOISE || USE_SVGF
+#if !SUBMISSION
     albedo = albedo / (float)params.samples_per_launch;
     normal = normal / (float)params.samples_per_launch;
-#endif
+    uv = uv / (float)params.samples_per_launch;
 
-#if USE_SVGF
-    position = position / (float)params.samples_per_launch;
-#endif
-
-#if DENOISE || USE_SVGF
     if (frame > 0 && !params.use_adaptive_sampling) {
         const Vec3f albedo_prev(params.albedo_buffer[image_idx]);
         const Vec3f normal_prev(params.normal_buffer[image_idx]);
+        const Vec3f uv_prev(params.uv_buffer[image_idx]);
         albedo = lerp(albedo_prev, albedo, 1.0f / static_cast<float>(frame + 1));
         normal = lerp(normal_prev, normal, 1.0f / static_cast<float>(frame + 1));
-#if USE_SVGF
-        const Vec3f position_prev(params.position_buffer[image_idx]);
-        position = lerp(position_prev, position, 1.0f / static_cast<float>(frame + 1));
-#endif
+        uv = lerp(uv_prev, uv, 1.0f / static_cast<float>(frame + 1));
     }
-#endif
-
-#if USE_SVGF
-    // Calculate motion vector using proper reprojection
-    Vec2f motion(0.0f, 0.0f);
-    
-    if (frame > 0 && first_hit_found) {
-        // Convert POD MatrixData to Matrix4f
-        Matrix4f curr_vp(params.curr_view_projection.data);
-        Matrix4f prev_vp(params.prev_view_projection.data);
-        
-        // Project current world position to current screen space (NDC)
-        // Use pointMul to avoid ambiguous operator* overload
-        Vec3f curr_clip = curr_vp.pointMul(position);
-        Vec2f curr_ndc(curr_clip.x(), curr_clip.y());
-        
-        // Project current world position to previous screen space (NDC)
-        Vec3f prev_clip = prev_vp.pointMul(position);
-        Vec2f prev_ndc(prev_clip.x(), prev_clip.y());
-        
-        // Motion vector: where was this pixel in the previous frame?
-        // We want prev - curr so that temporal accumulation can look backward
-        Vec2f motion_ndc = prev_ndc - curr_ndc;
-        
-        // Motion vector in normalized screen space [0, 1]
-        // NDC is [-1, 1], so we divide by 2 to get [-0.5, 0.5] range
-        motion = Vec2f(
-            motion_ndc.x() * 0.5f,
-            motion_ndc.y() * 0.5f
-        );
-        
-        // Clamp extreme motion (disocclusion detection)
-        float motion_mag = length(motion);
-        if (motion_mag > 0.5f) {  // More than half screen = likely disocclusion
-            motion = Vec2f(10.0f, 10.0f);  // Mark as invalid (out of range)
-        }
-    }
-    
-    // Store current position for next frame
-    params.prev_position_buffer[image_idx] = Vec4f(position, 1.0f);
-    params.position_buffer[image_idx] = Vec4f(position, 1.0f);
-    params.motion_buffer[image_idx] = Vec4f(motion, 0.0f, 0.0f);
 #endif
 
     // Store linear color for next frame's accumulation
@@ -993,9 +791,10 @@ extern "C" __global__ void __raygen__pinhole() {
     );
     Vec3u color = make_color(display_color);
 
-#if DENOISE || USE_SVGF
+#if !SUBMISSION
     params.normal_buffer[image_idx] = Vec4f(normal, 1.0f);
     params.albedo_buffer[image_idx] = Vec4f(albedo, 1.0f);
+    params.uv_buffer[image_idx] = Vec4f(uv, 1.0f);
 #endif
 }
 

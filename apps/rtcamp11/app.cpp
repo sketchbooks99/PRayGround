@@ -1,6 +1,6 @@
 #include "app.h"
 #include "textures.cuh"
-#include "bloom.cuh"
+#include "postprocess.cuh"
 #if SVGF
 #include "svgf.cuh"
 #endif
@@ -52,14 +52,20 @@ void App::initResultBufferOnDevice()
         CUDA_CHECK(cudaMemset(m_params.sum_squared_buffer, 0, buffer_size));
         CUDA_CHECK(cudaMemset(m_params.sample_count_buffer, 0, m_params.width * m_params.height * sizeof(uint32_t)));
         CUDA_CHECK(cudaMemset(m_params.converged_buffer, 0, m_params.width * m_params.height * sizeof(uint8_t)));
+        // Note: converged_buffer removed (using probabilistic sampling instead)
     }
 
-#if DENOISE || USE_SVGF
+#if !SUBMISSION
     m_normal_bitmap.allocateDevicePtr();
     m_albedo_bitmap.allocateDevicePtr();
+    m_uv_bitmap.allocateDevicePtr();
 
     m_params.normal_buffer = (Vec4f*)m_normal_bitmap.deviceData();
     m_params.albedo_buffer = (Vec4f*)m_albedo_bitmap.deviceData();
+    m_params.uv_buffer = (Vec4f*)m_uv_bitmap.deviceData();
+#endif
+
+#if DENOISE || USE_SVGF
 #endif
 
 #if USE_SVGF
@@ -316,7 +322,6 @@ int App::buildBranchMeshRecursive(
     
     int branch_start = vertices.size();
     int num_points = spline->bezier_points.size();
-    int samples_per_segment = 8;  // Increased from 4 for smoother mesh (蛇腹対策)
     
     int first_ring_start = -1;  // Track first ring of this branch
     int last_ring_start = -1;   // Track last ring of this branch
@@ -329,117 +334,136 @@ int App::buildBranchMeshRecursive(
     
     // Frame vectors for smooth tube (initialized on first ring, then propagated)
     Vec3f prev_right, prev_forward;
-    bool frame_initialized = false;
     
     // Inherit parent's frame if provided (for smooth connection)
     if (parent_right && parent_tangent) {
         prev_right = *parent_right;
         prev_forward = *parent_tangent;
-        frame_initialized = true;
     }
     
-    // Build tube mesh for this branch
-    for (int seg = 0; seg < num_points - 1; seg++) {
-        const auto& p0 = spline->bezier_points[seg];
-        const auto& p1 = spline->bezier_points[seg + 1];
+    // Build tube mesh for this branch - one ring per bezier point
+    for (int pt = 0; pt < num_points; pt++) {
+        const auto& bezier_pt = spline->bezier_points[pt];
         
-        for (int sample = 0; sample < samples_per_segment; sample++) {
-            float t_local = float(sample) / samples_per_segment;
-            // Calculate continuous UV coordinate from parent
-            float local_t = (seg + t_local) / (num_points - 1);
-            float t_global = parent_t_offset + local_t;
-            
-            // Evaluate Bezier curve
-            Vec3f pos = BezierSpline::evaluateCubicBezier(t_local, p0, p1);
-            Vec3f tangent = normalize(BezierSpline::evaluateCubicBezierTangent(t_local, p0, p1));
-            // Use local_t for radius calculation (not offset-adjusted t_global)
-            float radius = spline->evaluateRadius(local_t);
-            
-            // Create perpendicular frame - rotate from previous frame to avoid twisting
-            Vec3f right, forward;
-            if (!frame_initialized) {
-                // Initialize frame for first ring
+        // Calculate t parameter along the branch [0, 1]
+        float local_t = float(pt) / float(num_points - 1);
+        float t_global = parent_t_offset + local_t;
+        
+        // Evaluate position and tangent at this point
+        Vec3f pos = bezier_pt.co;
+        Vec3f tangent = spline->evaluateTangent(local_t);
+        
+        // Ensure tangent is valid (not zero)
+        if (length(tangent) < 1e-6f) {
+            continue;  // Skip degenerate points
+        }
+        tangent = normalize(tangent);
+        
+        // Get radius at this point
+        float radius = spline->evaluateRadius(local_t);
+        
+        // Create perpendicular frame
+        Vec3f right, forward;
+        if (pt == 0) {
+            if (parent_right && parent_tangent) {
+                // First point: inherit from parent
+                right = *parent_right;
+            } else {
+                // First point: create initial frame
                 Vec3f up = fabs(tangent.y()) < 0.99f ? Vec3f(0, 1, 0) : Vec3f(1, 0, 0);
                 right = normalize(cross(tangent, up));
-                forward = normalize(cross(right, tangent));
-                frame_initialized = true;
+            }
+        } else {
+            // Subsequent points: project previous right onto perpendicular plane
+            right = prev_right - tangent * dot(prev_right, tangent);
+            float len = length(right);
+            if (len > 1e-6f) {
+                right = right / len;
             } else {
-                // Rotate previous frame to align with new tangent (minimize rotation)
-                Vec3f rotation_axis = cross(prev_forward, tangent);
-                float rotation_angle = acos(fmaxf(-1.0f, fminf(1.0f, dot(prev_forward, tangent))));
-                
-                if (length(rotation_axis) > 1e-6f && rotation_angle > 1e-6f) {
-                    rotation_axis = normalize(rotation_axis);
-                    // Rodrigues' rotation formula
-                    float cos_angle = cos(rotation_angle);
-                    float sin_angle = sin(rotation_angle);
-                    right = prev_right * cos_angle + cross(rotation_axis, prev_right) * sin_angle 
-                            + rotation_axis * dot(rotation_axis, prev_right) * (1.0f - cos_angle);
-                    right = normalize(right);
-                } else {
-                    right = prev_right;
-                }
-                forward = normalize(cross(right, tangent));
+                // Fallback
+                Vec3f up = fabs(tangent.y()) < 0.99f ? Vec3f(0, 1, 0) : Vec3f(1, 0, 0);
+                right = normalize(cross(tangent, up));
             }
+        }
+        
+        forward = normalize(cross(right, tangent));
+        
+        // Update for next iteration
+        prev_right = right;
+        prev_forward = tangent;
             
-            prev_right = right;
-            prev_forward = tangent;
+        // Update for next iteration
+        prev_right = right;
+        prev_forward = tangent;
+        
+        int ring_start = (int)vertices.size();
+        
+        // Create ring of vertices
+        // Need radial_segments + 1 vertices for proper UV wrapping (0 and 1 at seam)
+        for (int i = 0; i <= radial_segments; i++) {
+            float angle = 2.0f * math::pi * (i % radial_segments) / radial_segments;
+            float x = cos(angle);
+            float z = sin(angle);
             
-            int ring_start = (int)vertices.size();
+            Vec3f offset = (right * x + forward * z) * radius;
+            Vec3f vertex_pos = pos + offset;
+            Vec3f normal = normalize(offset);
             
-            // Create ring of vertices
+            // U coordinate: 0 to 1 including both endpoints for seam
+            float u_coord = float(i) / float(radial_segments);
+            
+            // Triangle wave for V coordinate: 0→1→0→1→0...
+            // Makes texture repeat without seams (循環させる)
+            float cycles = 2.0f;  // Number of cycles along the branch
+            float v_raw = t_global * cycles;
+            float v_fract = v_raw - floorf(v_raw);  // Get fractional part [0, 1)
+            int cycle = (int)floorf(v_raw);
+            
+            // Triangle wave: even cycles go up (0→1), odd cycles go down (1→0)
+            float v_coord = (cycle % 2 == 0) ? v_fract : (1.0f - v_fract);
+            
+            vertices.push_back(vertex_pos);
+            normals.push_back(normal);
+            texcoords.push_back(Vec2f(u_coord, v_coord));
+        }
+        
+        // Remember first ring for parent connection
+        if (first_ring_start == -1) {
+            first_ring_start = ring_start;
+        }
+        last_ring_start = ring_start;
+        
+        // Store this ring position for child attachment
+        ring_positions.push_back({t_global, ring_start});
+        
+        // Store frame at this ring for children to inherit
+        ring_frames.push_back({right, tangent});
+        
+        // Connect to previous ring
+        int prev_ring = (ring_start == first_ring_start && parent_ring_start >= 0) 
+                        ? parent_ring_start  // Connect to parent's ring
+                        : ring_start - (radial_segments + 1);  // Previous ring in this branch (+1 for seam vertex)
+        
+        if (ring_start > branch_start || parent_ring_start >= 0) {
             for (int i = 0; i < radial_segments; i++) {
-                float angle = 2.0f * math::pi * i / radial_segments;
-                float x = cos(angle);
-                float z = sin(angle);
+                int next_i = i + 1;  // No modulo needed - we have the extra vertex
                 
-                Vec3f offset = (right * x + forward * z) * radius;
-                Vec3f vertex_pos = pos + offset;
-                Vec3f normal = normalize(offset);
+                int v0 = prev_ring + i;
+                int v1 = prev_ring + next_i;
+                int v2 = ring_start + next_i;
+                int v3 = ring_start + i;
                 
-                vertices.push_back(vertex_pos);
-                normals.push_back(normal);
-                texcoords.push_back(Vec2f(float(i) / radial_segments, t_global));
-            }
-            
-            // Remember first ring for parent connection
-            if (first_ring_start == -1) {
-                first_ring_start = ring_start;
-            }
-            last_ring_start = ring_start;
-            
-            // Store this ring position for child attachment
-            ring_positions.push_back({t_global, ring_start});
-            
-            // Store frame at this ring for children to inherit
-            ring_frames.push_back({right, tangent});
-            
-            // Connect to previous ring
-            int prev_ring = (ring_start == first_ring_start && parent_ring_start >= 0) 
-                            ? parent_ring_start  // Connect to parent's ring
-                            : ring_start - radial_segments;  // Connect to previous ring in this branch
-            
-            if (ring_start > branch_start || parent_ring_start >= 0) {
-                for (int i = 0; i < radial_segments; i++) {
-                    int next_i = (i + 1) % radial_segments;
-                    
-                    int v0 = prev_ring + i;
-                    int v1 = prev_ring + next_i;
-                    int v2 = ring_start + next_i;
-                    int v3 = ring_start + i;
-                    
-                    // Two triangles per quad
-                    faces.push_back(Face{
-                        Vec3i(v0, v1, v2),
-                        Vec3i(v0, v1, v2),
-                        Vec3i(v0, v1, v2)
-                    });
-                    faces.push_back(Face{
-                        Vec3i(v0, v2, v3),
-                        Vec3i(v0, v2, v3),
-                        Vec3i(v0, v2, v3)
-                    });
-                }
+                // Two triangles per quad
+                faces.push_back(Face{
+                    Vec3i(v0, v1, v2),
+                    Vec3i(v0, v1, v2),
+                    Vec3i(v0, v1, v2)
+                });
+                faces.push_back(Face{
+                    Vec3i(v0, v2, v3),
+                    Vec3i(v0, v2, v3),
+                    Vec3i(v0, v2, v3)
+                });
             }
         }
     }
@@ -471,8 +495,10 @@ int App::buildBranchMeshRecursive(
         const Vec3f& attach_right = ring_frames[ring_index].first;
         const Vec3f& attach_tangent = ring_frames[ring_index].second;
         
+        // Build child branch independently (no parent ring connection)
+        // Each child starts from its own Bezier curve position
         buildBranchMeshRecursive(*child, vertices, normals, texcoords, faces, 
-                                  radial_segments, attachment_ring, child_parent_t_offset,
+                                  radial_segments, -1, child_parent_t_offset,
                                   &attach_right, &attach_tangent);
     }
     
@@ -617,7 +643,7 @@ pair<shared_ptr<TriangleMesh>, shared_ptr<TriangleMesh>> App::buildTreeMesh(
         tree_mesh->addTexcoords(texcoords);
         tree_mesh->addFaces(faces);
     }
-    
+
     return {tree_mesh, leaf_mesh};
 }
 
@@ -658,7 +684,7 @@ void App::setup()
     n_frame = static_cast<int>(VIDEO_LENGTH * FPS);
     m_interval = 1.0f / FPS;
     m_frame_time = 0.0f;
-    m_camera_ease = EaseType::InOutQuad;
+    m_camera_ease = EaseType::InOutSine;
 
     m_stream = 0;
     CUDA_CHECK(cudaFree(0));
@@ -691,6 +717,7 @@ void App::setup()
     const size_t buffer_size = width * height * sizeof(Vec4f);
     CUDA_CHECK(cudaMalloc(&d_bloom_temp1, buffer_size));
     CUDA_CHECK(cudaMalloc(&d_bloom_temp2, buffer_size));
+    CUDA_CHECK(cudaMalloc(&d_firefly_temp, buffer_size));
 
     // Allocate adaptive sampling buffers
     CUDA_CHECK(cudaMalloc(&m_params.sum_buffer, buffer_size));
@@ -704,15 +731,10 @@ void App::setup()
     CUDA_CHECK(cudaMemset(m_params.sample_count_buffer, 0, width * height * sizeof(uint32_t)));
     CUDA_CHECK(cudaMemset(m_params.converged_buffer, 0, width * height * sizeof(uint8_t)));
 
-#if DENOISE || USE_SVGF
+#if !SUBMISSION
     m_normal_bitmap.allocate(PixelFormat::RGBA, width, height);
     m_albedo_bitmap.allocate(PixelFormat::RGBA, width, height);
-#if USE_SVGF
-    m_svgf_output.allocate(PixelFormat::RGBA, width, height);
-    m_position_bitmap.allocate(PixelFormat::RGBA, width, height);
-    m_motion_bitmap.allocate(PixelFormat::RGBA, width, height);
-    m_prev_position_bitmap.allocate(PixelFormat::RGBA, width, height);
-#endif
+    m_uv_bitmap.allocate(PixelFormat::RGBA, width, height);
 #endif
 
     initResultBufferOnDevice();
@@ -723,28 +745,26 @@ void App::setup()
     m_params.samples_per_launch = 1;
     m_params.frame = 0u;
     m_params.max_depth = 4u;
-    m_params.max_luminance = 5.0f;  // Firefly clamping (0 = disabled)
     
     // Stratified sampling: Calculate grid dimension based on total SPP
     // SPP = 16 → 4x4, SPP = 64 → 8x8, SPP = 256 → 16x16, etc.
     m_params.stratified_dim = static_cast<uint32_t>(sqrtf(static_cast<float>(SPP)));
     
     // Adaptive sampling configuration
-    m_params.use_adaptive_sampling = true;  // Enable/disable adaptive sampling
-    m_params.adaptive_variance_threshold = 0.005f;  // Lower = more samples
-    m_params.adaptive_min_samples = 32;  // Minimum samples before convergence check
+    m_params.use_adaptive_sampling = ADAPTIVE_SAMPLING;  // Enable/disable adaptive sampling
+    m_params.adaptive_min_samples = ADAPTIVE_MIN_SAMPLES;  // Minimum samples before convergence check
     
     // MIS configuration
-    m_params.mis_heuristic = MISHeuristic::Balance;  // Balance or PowerBeta2
-    m_params.use_multi_light_sampling = false;  // Sample both area+env lights
+    m_params.mis_heuristic = MISHeuristic::PowerBeta2;  // Balance or PowerBeta2
+    m_params.use_multi_light_sampling = true;  // Sample both area+env lights
     
-    m_params.white = 5.0f;
+    m_params.white = 0.5f;
 
     // Bloom parameters
-    bloom_threshold = 0.2f;
-    bloom_intensity = 0.6f;
-    bloom_radius = 5.0f;
-    bloom_sigma = 5.0f;
+    bloom_threshold = 0.1f;
+    bloom_intensity = 0.7f;
+    bloom_radius = 10.0f;
+    bloom_sigma = 10.0f;
 
     // Setup scene
     AppScene::AccelSettings accel_settings = {
@@ -766,19 +786,17 @@ void App::setup()
     // Camera positions
     m_cam_points = {
         {first_point, 0.0f},
-        {final_point, 7.5f}
+        {final_point, VIDEO_LENGTH * 0.9f}
     };
     m_look_points = {
         {first_look, 0.0f},
-        {final_look, 7.5f}
+        {final_look, VIDEO_LENGTH * 0.9f}
     };
 
     // Camera settings
     shared_ptr<Camera> camera = make_shared<Camera>();
     camera->setOrigin(first_point);
     camera->setLookat(first_look);
-    //camera->setOrigin(final_point);
-    //camera->setLookat(final_look);
     camera->setUp(0, 1, 0);
     camera->setFov(40);
     camera->setAspect((float)width / height);
@@ -829,7 +847,7 @@ void App::setup()
         .star_threshold = 0.9996f,
         .star_intensity = 5.0f,
         .moon_dir = normalize(Vec3f(1.0f, 0.2f, -1.0f)),
-        .moon_intensity = 500.0f
+        .moon_intensity = 100.0f
     };
     
     // Step 1: Bake to device buffer using CUDA kernel (Vec4f for RGBA)
@@ -1009,8 +1027,8 @@ void App::setup()
     // 1. Rough Bark (Worley crackle - ごつごつ)
     TreeBarkTexture rough_bark;
     rough_bark.type = BarkType::ROUGH;
-    rough_bark.rough.cell_scale = 8.0f;
-    rough_bark.rough.vertical_stretch = 2.5f;
+    rough_bark.rough.cell_scale = 1.0f;
+    rough_bark.rough.vertical_stretch = 1.0f;
     rough_bark.rough.crack_depth = 0.3f;
     rough_bark.rough.crack_threshold = 0.15f;
     rough_bark.bump_strength = 1.0f;
@@ -1035,7 +1053,7 @@ void App::setup()
     delete[] h_rough_heightmap_debug;
 
     Vec4f* d_rough_bark_bumpmap = createBumpTextureFromHeightmap(
-        d_rough_bark_heightmap, bark_width, bark_height, 2.0f  // Increased for stronger bumps
+        d_rough_bark_heightmap, bark_width, bark_height, -2.0f  // Negative for inverted normals (凹凸逆転)
     );
     
     Vec4f* h_rough_bark_data = new Vec4f[bark_width * bark_height];
@@ -1053,8 +1071,8 @@ void App::setup()
     // 2. Aged Bark (Layered FBM - 年季入り)
     TreeBarkTexture aged_bark;
     aged_bark.type = BarkType::AGED;
-    aged_bark.aged.octaves = 6;
-    aged_bark.aged.scale = 5.0f;
+    aged_bark.aged.octaves = 8;
+    aged_bark.aged.scale = 8.0f;
     aged_bark.aged.warp_strength = 0.3f;
     aged_bark.aged.vertical_bias = 0.5f;
     aged_bark.bump_strength = 1.0f;
@@ -1090,9 +1108,9 @@ void App::setup()
     TreeBarkTexture smooth_bark;
     smooth_bark.type = BarkType::SMOOTH;
     smooth_bark.smooth.flow_scale = 3.0f;
-    smooth_bark.smooth.flow_strength = 0.2f;
+    smooth_bark.smooth.flow_strength = 0.3f;
     smooth_bark.smooth.ripple_frequency = 30.0f;
-    smooth_bark.smooth.smoothness = 2.0f;
+    smooth_bark.smooth.smoothness = 1.0f;
     smooth_bark.bump_strength = 1.0f;
     smooth_bark.seed = tea<4>(seed, 1003);
     
@@ -1581,9 +1599,7 @@ void App::setup()
     m_light_ease = EaseType::Linear;
     Vec3f first_light_pos(-200.0f, 15.5f, 53.8f);
     Vec3f final_light_pos = (m_bunny1_pos + m_bunny2_pos + m_bunny3_pos) / 3.0f;
-    // Vec3f final_light_pos = m_bunny2_pos + 3.0f;
     final_light_pos.y() += 40.0f;
-    // final_light_pos.x() -= 2.0f;
 
     Vec3f second_pos = lerp(first_light_pos, final_light_pos, 2.0f / 7.5f);
     Vec3f third_pos = lerp(first_light_pos, final_light_pos, 3.5f / 7.5f);
@@ -1591,16 +1607,15 @@ void App::setup()
     
     m_light_points = {
         {first_light_pos, 0.0f},
-        {second_pos, 2.0f},
-        {third_pos, 3.5f},
-        {final_light_pos, 7.5f}
+        {second_pos, VIDEO_LENGTH * 0.3f},
+        {third_pos, VIDEO_LENGTH * 0.5f},
+        {final_light_pos, VIDEO_LENGTH * 0.9f}
     };
 
     addLight("light1", 
       make_shared<Sphere>(first_light_pos, 3.0f), 
       make_shared<AreaEmitter>(area_emitter_id, 
-        //   make_shared<ConstantTexture>(Vec3f(0.8f, 0.7f, 0.5f), constant_id),
-          make_shared<ConstantTexture>(Vec3f(0.5f, 0.5f, 1.0f), constant_id),
+          make_shared<ConstantTexture>(Vec3f(0.5f, 0.5f, 0.9f), constant_id),
           10.0f), 
       sphere_prgs, 
       Matrix4f::identity(), 
@@ -1608,32 +1623,6 @@ void App::setup()
 
     // Copy light info to GPU
     copyAreaEmitterToDevice();
-
-#if DENOISE
-    m_denoise_data.width = m_bitmap.width();
-    m_denoise_data.height = m_bitmap.height();
-    m_denoise_data.outputs.push_back(new float[m_denoise_data.width * m_denoise_data.height * 4]);
-    m_denoise_data.color = m_float_bitmap.deviceData();
-    m_denoise_data.albedo = m_albedo_bitmap.deviceData();
-    m_denoise_data.normal = m_normal_bitmap.deviceData();
-    m_denoiser.init(m_ctx, m_denoise_data, 0, 0, false, false);
-#endif
-
-#if USE_SVGF
-    // Initialize SVGF denoiser
-    m_svgf.init(m_bitmap.width(), m_bitmap.height());
-    m_svgf_gbuffer.width = m_bitmap.width();
-    m_svgf_gbuffer.height = m_bitmap.height();
-    // G-Buffer pointers directly use existing buffers (zero-copy!)
-    m_svgf_gbuffer.position = m_params.position_buffer;
-    m_svgf_gbuffer.normal = m_params.normal_buffer;
-    m_svgf_gbuffer.albedo = m_params.albedo_buffer;
-    m_svgf_gbuffer.motion = m_params.motion_buffer;
-    // m_svgf.params().use_temporal = false;
-    m_svgf.params().use_spatial = false;
-    m_svgf.params().filter_iterations = 1;
-    // m_svgf.params().detail_strength = 1.0f;
-#endif
 
     CUDA_CHECK(cudaStreamCreate(&m_stream));
     m_scene.copyDataToDevice();
@@ -1669,103 +1658,58 @@ void App::setup()
             m_scene.launchRay(m_ctx, m_ppl, m_params, m_stream, m_bitmap.width(), m_bitmap.height(), 1);
             CUDA_SYNC_CHECK();
 
-#if USE_SVGF
-            // Apply SVGF filter
-            // Input: m_params.float_result_buffer (tone-mapped HDR with bloom)
-            // Output: m_svgf_output (denoised)
-            // G-Buffer: Uses existing normal/albedo buffers directly (zero-copy!)
-            m_svgf.filter(
-                m_params.float_result_buffer,
-                m_svgf_gbuffer,
-                (Vec4f*)m_svgf_output.deviceData(),
-                m_stream
-            );
+            if (enable_firefly_filter) {
+                const int width = m_bitmap.width();
+                const int height = m_bitmap.height();
 
-            CUDA_CHECK(cudaStreamSynchronize(m_stream));
-            CUDA_SYNC_CHECK();
+                FireflyFilterParams firefly_params;
+                firefly_params.outlier_ratio = 2.5f;     // 2.5x brighter than neighbors = outlier
+                firefly_params.min_luminance = 0.01f;    // Minimum luminance to consider (avoid dark areas)
 
-            // Copy denoised result back to float_result_buffer for display
-            CUDA_CHECK(cudaMemcpyAsync(
-                m_params.float_result_buffer,
-                m_svgf_output.deviceData(),
-                m_bitmap.width() * m_bitmap.height() * sizeof(Vec4f),
-                cudaMemcpyDeviceToDevice,
-                m_stream
-            ));
-#endif
+                launchFireflyFilterKernel(
+                    m_params.float_result_buffer,
+                    d_firefly_temp,  // Use temp buffer as output
+                    width,
+                    height,
+                    firefly_params,
+                    m_stream
+                );
 
-#if DENOISE
-            m_float_bitmap.copyFromDevice();
-            m_normal_bitmap.copyFromDevice();
-            m_albedo_bitmap.copyFromDevice();
-
-            m_denoise_data.color = m_float_bitmap.deviceData();
-            m_denoise_data.normal = m_normal_bitmap.deviceData();
-            m_denoise_data.albedo = m_albedo_bitmap.deviceData();
-
-            m_denoiser.update(m_denoise_data);
-
-            m_denoiser.run();
-
-            CUDA_CHECK(cudaStreamSynchronize(m_stream));
-            CUDA_SYNC_CHECK();
-
-            m_denoiser.copyFromDevice();
-#endif
-
-            // Bloom
-            const int width = m_bitmap.width();
-            const int height = m_bitmap.height();
-
-            BloomParams bloom_params;
-            bloom_params.threshold = bloom_threshold;
-            bloom_params.intensity = bloom_intensity;
-            bloom_params.blur_radius = bloom_radius;
-            bloom_params.sigma = bloom_sigma;
-
-#if DENOISE
-            m_denoiser.updateViewer(m_denoise_data);
-            m_denoiser.viewer().copyToDevice();
-
-            applyBloomEffect(
-                (Vec4f*)m_denoiser.viewer().deviceData(),
-                (Vec4f*)m_bloom_bitmap.deviceData(),
-                d_bloom_temp1,
-                d_bloom_temp2,
-                width,
-                height,
-                bloom_params,
-                m_stream
-            );
-#else
-            applyBloomEffect(
-                m_params.float_result_buffer,
-                (Vec4f*)m_bloom_bitmap.deviceData(),
-                d_bloom_temp1,
-                d_bloom_temp2,
-                width,
-                height,
-                bloom_params,
-                m_stream
-            );
-
-#endif
-
+                // Copy filtered result back to float_result_buffer
+                CUDA_CHECK(cudaMemcpyAsync(
+                    m_params.float_result_buffer,
+                    d_firefly_temp,
+                    width * height * sizeof(Vec4f),
+                    cudaMemcpyDeviceToDevice,
+                    m_stream
+                ));
+            }
+            
             m_params.frame = iter;
-        }
+        }        // Bloom
+        BloomParams bloom_params;
+        bloom_params.threshold = bloom_threshold;
+        bloom_params.intensity = bloom_intensity;
+        bloom_params.blur_radius = bloom_radius;
+        bloom_params.sigma = bloom_sigma;
+
+        applyBloomEffect(
+            m_params.float_result_buffer,
+            (Vec4f*)m_bloom_bitmap.deviceData(),
+            d_bloom_temp1,
+            d_bloom_temp2,
+            width,
+            height,
+            bloom_params,
+            m_stream
+        );
         
         // Output rendered image (only if not interrupted)
         if (!time_limit_exceeded.load()) {
             m_bloom_bitmap.copyFromDevice();
             string filename = format("{:03d}.png", frame);
             filesystem::path filepath = pgPathJoin(pgGetExecutableDir(), filename);
-#if DENOISE
-            //m_denoiser.write(m_denoise_data, filepath);
-            m_denoiser.viewer().copyFromDevice();
-            m_denoiser.viewer().write(filepath);
-#else
             m_bloom_bitmap.write(filepath);
-#endif
 
             double elapsed_seconds = (double)duration_cast<milliseconds>(system_clock::now() - start_time).count() / 1000.0;
             std::cout << "\rElapsed: " << std::fixed << std::setprecision(1) 
@@ -1832,7 +1776,6 @@ void App::update()
 #if USE_SVGF
     // Temporal Anti-Aliasing: Apply sub-pixel jitter
     Vec2f jitter = getJitter(m_taa_frame_index);
-    m_params.taa_jitter = jitter;
     m_taa_frame_index++;
     
     // Update view-projection matrices for motion vector calculation
@@ -1849,12 +1792,39 @@ void App::update()
     m_params.prev_view_projection = prev_vp_data;
     m_params.curr_view_projection = curr_vp_data;
 #else
-    m_params.taa_jitter = Vec2f(0.0f, 0.0f);
 #endif
 
 #if INTERACTIVE
     m_scene.launchRay(m_ctx, m_ppl, m_params, m_stream, m_bitmap.width(), m_bitmap.height(), 1);
     CUDA_SYNC_CHECK();
+
+    // Firefly filtering (before bloom to prevent fireflies from spreading)
+    if (enable_firefly_filter) {
+        const int width = m_bitmap.width();
+        const int height = m_bitmap.height();
+
+        FireflyFilterParams firefly_params;
+        firefly_params.outlier_ratio = 2.5f;     // 2.5x brighter than neighbors = outlier
+        firefly_params.min_luminance = 0.01f;    // Minimum luminance to consider (avoid dark areas)
+
+        launchFireflyFilterKernel(
+            m_params.float_result_buffer,
+            d_bloom_temp1,  // Use temp buffer as output
+            width,
+            height,
+            firefly_params,
+            m_stream
+        );
+        
+        // Copy filtered result back to float_result_buffer
+        CUDA_CHECK(cudaMemcpyAsync(
+            m_params.float_result_buffer,
+            d_bloom_temp1,
+            width * height * sizeof(Vec4f),
+            cudaMemcpyDeviceToDevice,
+            m_stream
+        ));
+    }
 #else
 
     for (uint32_t iter = 0; iter < NUM_ITER; iter++) {
@@ -1863,10 +1833,33 @@ void App::update()
         m_scene.launchRay(m_ctx, m_ppl, m_params, m_stream, m_bitmap.width(), m_bitmap.height(), 1);
         CUDA_SYNC_CHECK();
 
-        // Bloom
+        // Firefly filtering (before bloom to prevent fireflies from spreading)
         const int width = m_bitmap.width();
         const int height = m_bitmap.height();
 
+        FireflyFilterParams firefly_params;
+        firefly_params.outlier_ratio = 2.5f;     // 2.5x brighter than neighbors = outlier
+        firefly_params.min_luminance = 0.01f;    // Minimum luminance to consider (avoid dark areas)
+
+        launchFireflyFilterKernel(
+            m_params.float_result_buffer,
+            d_firefly_temp,  // Use temp buffer as output
+            width,
+            height,
+            firefly_params,
+            m_stream
+        );
+        
+        // Copy filtered result back to float_result_buffer
+        CUDA_CHECK(cudaMemcpyAsync(
+            m_params.float_result_buffer,
+            d_firefly_temp,
+            width * height * sizeof(Vec4f),
+            cudaMemcpyDeviceToDevice,
+            m_stream
+        ));
+
+        // Bloom
         BloomParams bloom_params;
         bloom_params.threshold = bloom_threshold;
         bloom_params.intensity = bloom_intensity;
@@ -2087,7 +2080,7 @@ void App::draw()
     state_changed |= ImGui::InputFloat3("Bunny2 Position", &m_bunny2_pos[0], "%.2f");
     state_changed |= ImGui::SliderFloat("Bunny2 Scale", &m_bunny2_scale, 10.0f, 300.0f, "%.2f");
     if (state_changed) {
-        m_scene.updateObjectTransform("bunny2", Matrix4f::translate(m_bunny2_pos) * Matrix4f::scale(m_bunny2_scale));
+        m_scene.updateObjectTransform("bunny2", Matrix4f::translate(m_bunny2_pos) * Matrix4f::rotate(-math::pi / 6.0f, Vec3f(0, 1, 0)) * Matrix4f::scale(m_bunny2_scale));
         m_scene.updateAccel(m_ctx, m_stream);
     }
 
@@ -2095,7 +2088,7 @@ void App::draw()
     state_changed |= ImGui::InputFloat3("Bunny3 Position", &m_bunny3_pos[0], "%.2f");
     state_changed |= ImGui::SliderFloat("Bunny3 Scale", &m_bunny3_scale, 10.0f, 300.0f, "%.2f");
     if (state_changed) {
-        m_scene.updateObjectTransform("bunny3", Matrix4f::translate(m_bunny3_pos) * Matrix4f::scale(m_bunny3_scale));
+        m_scene.updateObjectTransform("bunny3", Matrix4f::translate(m_bunny3_pos) * Matrix4f::rotate(-math::two_pi / 3.0f, Vec3f(0, 1, 0)) * Matrix4f::scale(m_bunny3_scale));
         m_scene.updateAccel(m_ctx, m_stream);
     }
 
@@ -2111,6 +2104,13 @@ void App::draw()
         m_scene.updateLightGAS("light1", m_ctx, m_stream);
         m_scene.updateAccel(m_ctx, m_stream);
         copyAreaEmitterToDevice();
+    }
+
+    ImGui::Separator();
+    ImGui::Text("Firefly filter");
+    if (ImGui::Checkbox("Enable Firefly filter", &enable_firefly_filter)) {
+        // Reset frame counter when toggling bloom
+        initResultBufferOnDevice();
     }
 
     // Bloom effect controls
@@ -2138,10 +2138,22 @@ void App::draw()
 #if DENOISE
     m_denoiser.draw(m_denoise_data, 0, 0);
 #else
+    auto w = pgGetWidth();
+    auto h = pgGetHeight();
+    //m_albedo_bitmap.copyFromDevice();
+    //m_normal_bitmap.copyFromDevice();
+    //m_uv_bitmap.copyFromDevice();
     if (enable_bloom)
-        m_bloom_bitmap.draw(0, 0, pgGetWidth(), pgGetHeight());
+        m_bloom_bitmap.draw(0, 0, w, h);
     else
-        m_float_bitmap.draw(0, 0, pgGetWidth(), pgGetHeight());
+        m_float_bitmap.draw(0, 0, w, h);
+
+
+    //m_bloom_bitmap.draw(0, 0, w / 2, h / 2);
+    //m_float_bitmap.draw(w / 2, 0, w / 2, h / 2);
+    //// m_albedo_bitmap.draw(w / 2, 0, w / 2, h / 2);
+    //m_normal_bitmap.draw(0, h / 2, w / 2, h / 2);
+    //m_uv_bitmap.draw(w / 2, h / 2, w / 2, h / 2);
     
 #if USE_SVGF
     m_albedo_bitmap.copyFromDevice();

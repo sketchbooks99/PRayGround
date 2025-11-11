@@ -18,9 +18,6 @@
 
 using namespace std;
 
-#define SUBMISSION 0
-#define INTERACTIVE 1
-
 class App : public BaseApp 
 {
 public:
@@ -86,30 +83,16 @@ private:
     // Bloom effect buffers (Vec4f version)
     Vec4f* d_bloom_temp1 = nullptr;
     Vec4f* d_bloom_temp2 = nullptr;
+    Vec4f* d_firefly_temp = nullptr;
     bool enable_bloom = true;
     float bloom_threshold = 1.0f;
     float bloom_intensity = 0.3f;
     int bloom_radius = 5.0f;
     float bloom_sigma = 5.0f;
 
-#if DENOISE || USE_SVGF
-#if DENOISE
-    Denoiser m_denoiser;
-    Denoiser::Data m_denoise_data;
-#endif
-#if USE_SVGF
-    SVGF m_svgf;
-    SVGFGBuffer m_svgf_gbuffer;
-    FloatBitmap m_svgf_output;
-    FloatBitmap m_position_bitmap;
-    FloatBitmap m_motion_bitmap;
-    FloatBitmap m_prev_position_bitmap;
-    Matrix4f m_prev_vp_matrix;  // Store previous frame's view-projection for motion vectors
-    int m_taa_frame_index = 0;  // For temporal jitter pattern
-#endif
-    FloatBitmap m_accum_bitmap, m_albedo_bitmap, m_normal_bitmap;
-#endif
+    bool enable_firefly_filter = true;
 
+    FloatBitmap m_albedo_bitmap, m_normal_bitmap, m_uv_bitmap;
     static constexpr uint32_t NRay = 2;
     using AppScene = Scene<Camera, NRay>;
     AppScene m_scene;
@@ -143,10 +126,13 @@ private:
 #if !INTERACTIVE && !SUBMISSION
     static constexpr uint32_t SPP = 16;
 #else
-    static constexpr uint32_t SPP = 144;
+    static constexpr uint32_t SPP = 128;
 #endif
-    static constexpr uint32_t SPP_PER_LAUNCH = 8;
+    static constexpr uint32_t SPP_PER_LAUNCH = 1;
     static constexpr uint32_t NUM_ITER = SPP / SPP_PER_LAUNCH;
-    static constexpr float FPS = 10.0f;
-    static constexpr float VIDEO_LENGTH = 10.0f;
+    static constexpr float FPS = 12.0f;
+    static constexpr float VIDEO_LENGTH = 6.0f;
+
+    static constexpr bool ADAPTIVE_SAMPLING = true;
+    static constexpr uint32_t ADAPTIVE_MIN_SAMPLES = 40;
 };

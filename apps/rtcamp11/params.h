@@ -11,6 +11,8 @@
 
 #define DENOISE 0
 #define USE_SVGF 0
+#define SUBMISSION 1
+#define INTERACTIVE 1
 
 using namespace prayground;
 
@@ -74,12 +76,8 @@ struct LaunchParams {
     int32_t frame;
     uint32_t max_depth;
     
-    // Firefly clamping: maximum allowed luminance (0 = disabled)
-    float max_luminance;
-    
     // Adaptive sampling parameters
     bool use_adaptive_sampling;
-    float adaptive_variance_threshold;  // Variance threshold for convergence
     uint32_t adaptive_min_samples;      // Minimum samples before checking convergence
     
     // Stratified sampling parameters
@@ -105,12 +103,12 @@ struct LaunchParams {
     Vec4f* sum_buffer;         // Sum of samples (RGB)
     Vec4f* sum_squared_buffer; // Sum of squared samples (RGB)
     uint32_t* sample_count_buffer; // Per-pixel sample count
-    uint8_t* converged_buffer;     // Per-pixel convergence flag
+    uint8_t* converged_buffer; // Per-pixel convergence flag (0 = not converged, 1 = converged)
 
-#if DENOISE || USE_SVGF
-    // For denoiser
+#if !SUBMISSION
     Vec4f* normal_buffer;
     Vec4f* albedo_buffer;
+    Vec4f* uv_buffer;
 #endif
 
 #if USE_SVGF

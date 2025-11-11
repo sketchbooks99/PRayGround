@@ -61,7 +61,7 @@ __global__ void bakeTextureKernel(
     Vec3f color(0.0f);
     if (moon_proximity > cosf(moon_radius)) {
         float moon_factor = (moon_proximity - cosf(moon_radius)) / (1.0f - cosf(moon_radius));
-        color = Vec3f(1.0f, 0.8f, 0.6f) * (moon_intensity + moon_factor * moon_intensity);
+        color = Vec3f(0.9f, 0.75f, 0.6f) * (moon_intensity + moon_factor * moon_intensity);
     } 
     else if (value > star_thres) {
         // Use pixel-based seed for random color variation

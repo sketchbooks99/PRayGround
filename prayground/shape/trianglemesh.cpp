@@ -129,10 +129,6 @@ namespace prayground {
     // ------------------------------------------------------------------
     TriangleMesh::Data TriangleMesh::getData()
     {
-        CUDABuffer<Vec3f> d_vertices_buf;
-        CUDABuffer<Face> d_faces_buf;
-        CUDABuffer<Vec3f> d_normals_buf;
-        CUDABuffer<Vec2f> d_texcoords_buf;
         d_vertices_buf.copyToDevice(m_vertices);
         d_faces_buf.copyToDevice(m_faces);
         d_normals_buf.copyToDevice(m_normals);

@@ -13,24 +13,24 @@ namespace prayground {
         using ColorType = T;
 
         struct Data {
-            Keypoint<T>* keypoints;
+            KeyPoint<T>* keypoints;
             uint32_t num_keypoints;
             EaseType ease_type;
             Vec2f dir;
         };
 #ifndef __CUDACC__
-        GradientTexture_(std::vector<Keypoint<T>> keypoints, int prg_id, EaseType ease_type = EaseType::Linear, const Vec2f& dir = Vec2f(0, 1))
+        GradientTexture_(std::vector<KeyPoint<T>> keypoints, int prg_id, EaseType ease_type = EaseType::Linear, const Vec2f& dir = Vec2f(0, 1))
             : Texture(prg_id), m_keypoints(keypoints), m_dir(dir) {}
 
         constexpr TextureType type() override {
             return TextureType::Gradient;
         }
 
-        void addKeypoint(const Keypoint<T>& keypoint) {
+        void addKeyPoint(const KeyPoint<T>& keypoint) {
             m_keypoints.push_back(keypoint);
         }
 
-        void removeKeypoint(int index) {
+        void removeKeyPoint(int index) {
             if (index < 0 || index >= m_keypoints.size()) {
                 PG_LOG_WARN("Invalid index: ", index);
                 return;
@@ -45,7 +45,7 @@ namespace prayground {
         void copyToDevice() override {
             if (m_keypoints.empty()) return;
 
-            CUDABuffer<Keypoint<T>> d_keypoints;
+            CUDABuffer<KeyPoint<T>> d_keypoints;
             d_keypoints.copyToDevice(m_keypoints);
             Data data = { 
                 .keypoints = d_keypoints.deviceData(), 
@@ -59,7 +59,7 @@ namespace prayground {
             CUDA_CHECK(cudaMemcpy(d_data, &data, sizeof(Data), cudaMemcpyHostToDevice));
         }
     private:
-        std::vector<Keypoint<T>> m_keypoints;
+        std::vector<KeyPoint<T>> m_keypoints;
         EaseType m_ease_type;
         Vec2f m_dir;
 #endif

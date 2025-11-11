@@ -2,6 +2,7 @@
 
 #include <optix.h>
 #include <prayground/math/vec.h>
+#include <prayground/math/matrix.h>
 #include <prayground/texture/constant.h>
 #include <prayground/texture/checker.h>
 #include <prayground/physics/tree.h>
@@ -9,6 +10,7 @@
 #include "textures.h"
 
 #define DENOISE 0
+#define USE_SVGF 0
 
 using namespace prayground;
 
@@ -17,6 +19,18 @@ using CheckerTexture = CheckerTexture_<Vec4f>;
 using ProceduralWoodenTexture = ProceduralWoodenTexture_<Vec4f>;
 using StarNightTexture = StarNightTexture_<Vec4f>;
 using LeafTexture = LeafTexture_<Vec4f>;
+
+// MIS (Multiple Importance Sampling) heuristic types
+enum class MISHeuristic : uint32_t {
+    Balance = 0,     // Balance heuristic: w = pdf_i / sum(pdf_j)
+    PowerBeta2 = 1,  // Power heuristic with beta=2: w = pdf_i^2 / sum(pdf_j^2)
+};
+
+// POD structure for 4x4 matrix (compatible with __constant__ memory)
+// Can be converted to Matrix4f using: Matrix4f(mat_data.data)
+struct MatrixData {
+    float data[12];  // First 12 elements (row-major), last row is [0,0,0,1]
+};
 
 struct AreaEmitterInfo
 {
@@ -60,19 +74,52 @@ struct LaunchParams {
     int32_t frame;
     uint32_t max_depth;
     
+    // Firefly clamping: maximum allowed luminance (0 = disabled)
+    float max_luminance;
+    
+    // Adaptive sampling parameters
+    bool use_adaptive_sampling;
+    float adaptive_variance_threshold;  // Variance threshold for convergence
+    uint32_t adaptive_min_samples;      // Minimum samples before checking convergence
+    
+    // Stratified sampling parameters
+    uint32_t stratified_dim;  // Grid dimension (e.g., 4 for 4x4=16spp, 8 for 8x8=64spp)
+    
+    // MIS (Multiple Importance Sampling) parameters
+    MISHeuristic mis_heuristic;  // Balance or Power (beta=2)
+    bool use_multi_light_sampling;  // Sample both area lights and environment map
+    
     // Elapsed time from the start of rendering (in seconds)
     float elapsed_time;
+
+    // Temporal anti-aliasing jitter (in pixel units)
+    float2 taa_jitter;
 
     Vec4u* result_buffer;
     Vec4f* accum_buffer;
 
     // Float result buffer for post-processing (bloom) and denoising
     Vec4f* float_result_buffer;
+    
+    // Adaptive sampling buffers
+    Vec4f* sum_buffer;         // Sum of samples (RGB)
+    Vec4f* sum_squared_buffer; // Sum of squared samples (RGB)
+    uint32_t* sample_count_buffer; // Per-pixel sample count
+    uint8_t* converged_buffer;     // Per-pixel convergence flag
 
-#if DENOISE
+#if DENOISE || USE_SVGF
     // For denoiser
     Vec4f* normal_buffer;
     Vec4f* albedo_buffer;
+#endif
+
+#if USE_SVGF
+    // For SVGF temporal filtering
+    Vec4f* position_buffer;     // World-space position
+    Vec4f* motion_buffer;        // Screen-space motion vector (current - previous)
+    Vec4f* prev_position_buffer; // Previous frame position for motion calculation
+    MatrixData prev_view_projection; // Previous frame's view-projection matrix (POD)
+    MatrixData curr_view_projection; // Current frame's view-projection matrix (POD)
 #endif
 
     OptixTraversableHandle handle;

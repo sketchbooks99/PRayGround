@@ -352,7 +352,7 @@ add_subdirectory(prayground)
 # Please uncomment the target you'd like to build
 ################################################################
 # add_subdirectory(examples/single_gas)
-# add_subdirectory(examples/dynamic_update)
+add_subdirectory(examples/dynamic_update)
 # add_subdirectory(examples/motion_blur)
 # add_subdirectory(examples/pathtracing)
 # add_subdirectory(examples/objscene)

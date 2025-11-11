@@ -15,6 +15,7 @@ set(sources
   core/file_util.h 
   core/file_util.cpp 
   core/interaction.h
+  core/keypoint.h
   core/load3d.h 
   core/load3d.cpp
   core/material.h 

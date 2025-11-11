@@ -53,7 +53,7 @@ void App::setup()
     pipeline.setNumAttributes(5);
 
     // OptiXのModuleをCUDAファイルから生成
-    Module module = pipeline.createModuleFromCudaFile(context, "kernels.cu");
+    Module module = pipeline.createModuleFromOptixIr(context, "dynamic_update_generated_kernels.cu.optixir");
 
     // レンダリング結果を保存する用のBitmapを用意
     result_bitmap.allocate(PixelFormat::RGBA, pgGetWidth(), pgGetHeight());

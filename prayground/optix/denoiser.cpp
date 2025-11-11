@@ -360,6 +360,17 @@ namespace prayground {
     }
 
     // --------------------------------------------------------------------
+    void Denoiser::updateViewer(const Data& data)
+    {
+        m_viewer.setData(data.outputs[0], 0, 0, data.width, data.height);
+    }
+
+    FloatBitmap& Denoiser::viewer()
+    {
+        return m_viewer;
+    }
+
+    // --------------------------------------------------------------------
     void Denoiser::destroy()
     {
     #if OPTIX_VERSION <= 70200

@@ -580,10 +580,40 @@ namespace prayground {
     // ----------------------------------------------------------------------------------------------------------------------------
     float Tree::shapeRatio(int shape, float ratio)
     {
-        float result;
+        // Conical
+        float result = 0.2f + 0.8f * ratio;
         
         // Envelope
-        if (shape == 8) {
+        // Spherical
+        switch (shape) {
+        case 1:
+            result = 0.2f + 0.8f * sinf(math::pi * ratio);
+            break;
+        case 2:
+            result = 0.2f + 0.8f * sinf(0.5f * math::pi * ratio);
+            break;
+        case 3:
+            result = 1.0f;
+            break;
+        case 4:
+            result = 0.5f + 0.5f * ratio;
+            break;
+        case 5:
+            if (ratio <= 0.7f)
+                result = ratio / 0.7f;
+            else
+                result = 0.5f + 0.5f * (1.0f - ratio) / 0.3f;
+            break;
+        case 6:
+            result = 1.0f - 0.8f * ratio;
+            break;
+        case 7:
+            if (ratio <= 0.7f)
+                result = 0.5f + 0.5f * ratio / 0.7f;
+            else
+                result = 0.5f + 0.5f * (1.0f - ratio) / 0.3f;
+            break;
+        case 8:
             if (ratio < 0 || ratio > 1) {
                 result = 0.0f;
             }
@@ -593,6 +623,9 @@ namespace prayground {
             else {
                 result = pow((1.0f - ratio) / (1.0f - m_params.prune_width_peak), m_params.prune_power_low);
             }
+            break;
+        default:
+            result = 0.2f + 0.8f * ratio;
         }
 
         return result;
@@ -1132,9 +1165,15 @@ namespace prayground {
                 std::shared_ptr<BezierSpline> new_spline = m_branch_curves[d_plus_1]->addSpline();
                 new_spline->resolution_u = m_params.curve_res[d_plus_1];
                 new_spline->radius_interpolation = RadiusInterpolation::CARDINAL;
-                auto new_stem = Stem(d_plus_1, new_spline, &stem, b_offset, rad);
-                // Don't add to m_stems here - splines are accessible via m_branch_curves
-                makeStem(dir_tur, new_stem, 0, 0, 1, 1, &pos_tur);
+                
+                // Create child stem as shared_ptr so it can be added to parent's children
+                auto new_stem = std::make_shared<Stem>(d_plus_1, new_spline, &stem, b_offset, rad);
+                
+                // Add to parent's children list
+                stem.children.push_back(new_stem);
+                
+                // Recursively build this child stem
+                makeStem(dir_tur, *new_stem, 0, 0, 1, 1, &pos_tur);
             }
         }
     }
@@ -1344,10 +1383,13 @@ namespace prayground {
             
             // Create trunk stem with the spline
             Stem trunk(0, trunk_spline);
-
-            makeStem(turtle, trunk);
-
+            
+            // Add to m_stems FIRST, then build with reference
+            // This ensures children are added to the actual stored stem, not a copy
             m_stems.push_back(trunk);
+            Stem& trunk_ref = m_stems.back();  // Get reference to stored stem
+            
+            makeStem(turtle, trunk_ref);  // Build on the stored reference
         }
     }
 

@@ -128,7 +128,7 @@ namespace prayground {
         void bindExceptionProgram(ProgramGroup& prg);
 
         void setCamera(const std::shared_ptr<_CamT>& camera);
-        const std::shared_ptr<_CamT>& camera();
+        std::shared_ptr<_CamT> camera();
 
         // Automatically load and create envmap texture from file
         void setEnvmap(const std::shared_ptr<Texture>& texture);
@@ -422,7 +422,7 @@ namespace prayground {
 
     // -------------------------------------------------------------------------------
     template<DerivedFromCamera _CamT, uint32_t _NRay>
-    inline const std::shared_ptr<_CamT>& Scene<_CamT, _NRay>::camera()
+    inline std::shared_ptr<_CamT> Scene<_CamT, _NRay>::camera()
     {
         return m_camera;
     }
@@ -628,6 +628,10 @@ namespace prayground {
         const AccelSettings& gas_settings)
     {
         auto instance = std::make_shared<ShapeInstance>(shape->type(), shape, transform);
+        if (gas_settings.allow_accel_update)
+            instance->allowUpdate();
+        if (gas_settings.allow_accel_compaction)
+            instance->allowCompaction();
         m_lights.emplace_back(Item<Light>{ name, m_current_sbt_id, std::make_shared<Light>( shape, emitters, instance ) });
 
         // Add hitgroup record data
@@ -650,6 +654,10 @@ namespace prayground {
         ASSERT(hitgroup_prgs.size() == _NRay, "The number of hitgroup programs must be same with the number of ray types.");
 
         auto instance = std::make_shared<ShapeInstance>(shape->type(), shape, transform);
+        if (gas_settings.allow_accel_update)
+            instance->allowUpdate();
+        if (gas_settings.allow_accel_compaction)
+            instance->allowCompaction();
         m_lights.emplace_back(Item<Light>{name, m_current_sbt_id, std::make_shared<Light>( shape, emitters, instance )});
 
         // Add hitgroup record data

@@ -19,6 +19,12 @@ public:
     constexpr ShapeType type() override;
     OptixBuildInput createBuildInput() override;
 
+    void setCenter(const Vec3f& c) { m_center = c; }
+    const Vec3f& center() const { return m_center; }
+
+    void setRadius(float r) { m_radius = r; }
+    float radius() const { return m_radius; }
+
     uint32_t numPrimitives() const override;
 
     void copyToDevice() override;

@@ -11,12 +11,12 @@ namespace prayground {
 
     struct Light
     {
-        Vec3f pos;
+        float3 pos;
     };
 
     struct LaunchParams
     {
-        unsigned int width, height;
+        uint32_t width, height;
         Vec4u* result_buffer;
         Vec3f* normal_buffer;
         Vec3f* albedo_buffer;

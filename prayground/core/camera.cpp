@@ -141,6 +141,41 @@ namespace prayground {
         U *= ulen;
     }
 
+    Matrix4f Camera::getViewMatrix() const
+    {
+        Vec3f forward = normalize(m_lookat - m_origin);
+        Vec3f right = normalize(cross(forward, m_up));
+        Vec3f up = cross(right, forward);
+        
+        // View matrix (world to camera space)
+        return Matrix4f(
+            { right.x(), up.x(), -forward.x(), 0.0f,
+            right.y(), up.y(), -forward.y(), 0.0f,
+            right.z(), up.z(), -forward.z(), 0.0f,
+            -dot(right, m_origin), -dot(up, m_origin), dot(forward, m_origin), 1.0f }
+        );
+    }
+
+    Matrix4f Camera::getProjectionMatrix() const
+    {
+        float fov_radians = math::radians(m_fov);
+        float f = 1.0f / tanf(fov_radians * 0.5f);
+        float range_inv = 1.0f / (m_nearclip - m_farclip);
+        
+        // Perspective projection matrix
+        return Matrix4f(
+            { f / m_aspect, 0.0f, 0.0f, 0.0f,
+            0.0f, f, 0.0f, 0.0f,
+            0.0f, 0.0f, (m_farclip + m_nearclip) * range_inv, -1.0f,
+            0.0f, 0.0f, 2.0f * m_farclip * m_nearclip * range_inv, 0.0f }
+        );
+    }
+
+    Matrix4f Camera::getViewProjectionMatrix() const
+    {
+        return getProjectionMatrix() * getViewMatrix();
+    }
+
     Camera::Data Camera::getData() const
     {
         Vec3f U, V, W;

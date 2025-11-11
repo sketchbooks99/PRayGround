@@ -150,13 +150,16 @@ namespace prayground {
             CUDA_CHECK( cudaMallocArray( &d_array, &channel_desc, width, height ) );
         CUDA_CHECK( cudaMemcpy2DToArray( d_array, 0, 0, raw_data, pitch, pitch, height, cudaMemcpyHostToDevice ) );
 
-        // Create texture object.
-        cudaResourceDesc res_desc;
-        std::memset(&res_desc, 0, sizeof(cudaResourceDesc));
-        res_desc.resType = cudaResourceTypeArray;
-        res_desc.res.array.array = d_array;
+        // Create texture object only if not already created
+        if (d_texture == 0) {
+            cudaResourceDesc res_desc;
+            std::memset(&res_desc, 0, sizeof(cudaResourceDesc));
+            res_desc.resType = cudaResourceTypeArray;
+            res_desc.res.array.array = d_array;
 
-        CUDA_CHECK( cudaCreateTextureObject( &d_texture, &res_desc, &m_tex_desc, nullptr ) );
+            CUDA_CHECK( cudaCreateTextureObject( &d_texture, &res_desc, &m_tex_desc, nullptr ) );
+        }
+        
         BitmapTexture_<PixelT>::Data texture_data = { 
             .texture = d_texture
         };

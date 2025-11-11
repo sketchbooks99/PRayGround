@@ -8,8 +8,8 @@ namespace prayground {
 // Terrain generation parameters
 struct TerrainParams {
     // Grid settings
-    int grid_width = 256;           // Number of vertices in X direction
-    int grid_height = 256;          // Number of vertices in Z direction
+    int grid_width = 512;           // Number of vertices in X direction
+    int grid_height = 512;          // Number of vertices in Z direction
     float terrain_size = 100.0f;    // Physical size of terrain (world units)
 
     // Initial height generation (Perlin noise)

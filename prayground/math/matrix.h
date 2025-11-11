@@ -32,7 +32,7 @@ namespace prayground {
     template <typename T, uint32_t N> INLINE HOSTDEVICE Matrix<T, N>& operator*=(Matrix<T, N>& m1, const Matrix<T, N>& m2);
     template <typename T, uint32_t N> INLINE HOSTDEVICE Matrix<T, N>& operator*=(Matrix<T, N>& m, const float t);
     template <typename T, uint32_t N> INLINE HOSTDEVICE Matrix<T, N>  operator/(const Matrix<T, N>& m1, const float t);
-    template <typename T, uint32_t N> INLINE HOSTDEVICE typename Matrix<T, N>::VecT operator*(const Matrix<T, N>& m, typename Matrix<T, N>::VecT& v);
+    template <typename T, uint32_t N> INLINE HOSTDEVICE typename Matrix<T, N>::VecT operator*(const Matrix<T, N>& m, const typename Matrix<T, N>::VecT& v);
 
     template <typename T> INLINE HOSTDEVICE Vec4f operator*(const Matrix<T, 3>& m, const Vec4f& v);
     template <typename T> INLINE HOSTDEVICE Vec3f operator*(const Matrix<T, 4>& m, const Vec3f& v);
@@ -67,7 +67,6 @@ namespace prayground {
 
         HOSTDEVICE       T* data();
         HOSTDEVICE const T* data() const;
-
 
         HOSTDEVICE bool isIdentity() const;
         

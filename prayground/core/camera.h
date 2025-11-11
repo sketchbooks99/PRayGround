@@ -78,6 +78,15 @@ namespace prayground {
 
         void UVWFrame(Vec3f& U, Vec3f& V, Vec3f& W) const;
 
+        // Get view matrix (world to camera transform)
+        Matrix4f getViewMatrix() const;
+        
+        // Get projection matrix
+        Matrix4f getProjectionMatrix() const;
+        
+        // Get combined view-projection matrix
+        Matrix4f getViewProjectionMatrix() const;
+
         Data getData() const;
 
     protected:

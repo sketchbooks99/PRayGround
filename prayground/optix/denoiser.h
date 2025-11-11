@@ -39,6 +39,9 @@ public:
     // Finialize denoiser
     void destroy();
 
+    void updateViewer(const Data& data);
+    FloatBitmap& viewer();
+
     // test flow vectors: flow is applied to noisy input image and written back to result
     // no denoising
     void copyFlowFromDevice();

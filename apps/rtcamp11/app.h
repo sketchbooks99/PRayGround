@@ -14,9 +14,12 @@
 #include <prayground/ext/imgui/imgui_impl_glfw.h>
 #include <prayground/ext/imgui/imgui_impl_opengl3.h>
 
+#include "svgf.cuh"
+
 using namespace std;
 
-#define SUBMISSION 1
+#define SUBMISSION 0
+#define INTERACTIVE 1
 
 class App : public BaseApp 
 {
@@ -43,11 +46,25 @@ private:
     
     void initResultBufferOnDevice();
     void handleCameraUpdate();
-    //shared_ptr<TriangleMesh> buildTreeMesh(ProceduralTreeData tree);
-    pair<shared_ptr<TriangleMesh>, shared_ptr<TriangleMesh>> buildTreeMesh(ProceduralTreeData tree, uint32_t& seed, vector<shared_ptr<BitmapTexture>> leaf_textures);
+    void resetMovie();
+    void copyAreaEmitterToDevice();
     
     // New Tree API version (for testing new implementation)
-    pair<shared_ptr<TriangleMesh>, shared_ptr<TriangleMesh>> buildTreeMeshWithAPI(uint32_t& seed, int n_leaf_textures = 1);
+    pair<shared_ptr<TriangleMesh>, shared_ptr<TriangleMesh>> buildTreeMesh(
+        uint32_t& seed, Tree tree, TreeParam params, const vector<int>& leaf_texture_ids);
+    
+    // Recursive branch mesh building helper
+    int buildBranchMeshRecursive(
+        const Stem& stem,
+        vector<Vec3f>& vertices,
+        vector<Vec3f>& normals,
+        vector<Vec2f>& texcoords,
+        vector<Face>& faces,
+        int radial_segments,
+        int parent_ring_start = -1,
+        float parent_t_offset = 0.0f,  // UV offset from parent for continuity
+        const Vec3f* parent_right = nullptr,   // Frame from parent to avoid twisting
+        const Vec3f* parent_tangent = nullptr);
     
     shared_ptr<TriangleMesh> buildVoronoiRockMesh(const VoronoiRockParams& params);
     TerrainMeshResult buildTerrainMesh(TerrainParams params);
@@ -64,18 +81,32 @@ private:
     // Float bitmap for bloom/post-processing (also used by denoiser)
     FloatBitmap m_float_bitmap;
 
+    FloatBitmap m_bloom_bitmap;
+
     // Bloom effect buffers (Vec4f version)
     Vec4f* d_bloom_temp1 = nullptr;
     Vec4f* d_bloom_temp2 = nullptr;
     bool enable_bloom = true;
     float bloom_threshold = 1.0f;
     float bloom_intensity = 0.3f;
-    int bloom_radius = 10;
+    int bloom_radius = 5.0f;
     float bloom_sigma = 5.0f;
 
+#if DENOISE || USE_SVGF
 #if DENOISE
     Denoiser m_denoiser;
     Denoiser::Data m_denoise_data;
+#endif
+#if USE_SVGF
+    SVGF m_svgf;
+    SVGFGBuffer m_svgf_gbuffer;
+    FloatBitmap m_svgf_output;
+    FloatBitmap m_position_bitmap;
+    FloatBitmap m_motion_bitmap;
+    FloatBitmap m_prev_position_bitmap;
+    Matrix4f m_prev_vp_matrix;  // Store previous frame's view-projection for motion vectors
+    int m_taa_frame_index = 0;  // For temporal jitter pattern
+#endif
     FloatBitmap m_accum_bitmap, m_albedo_bitmap, m_normal_bitmap;
 #endif
 
@@ -86,4 +117,36 @@ private:
     bool is_camera_updated;
 
     vector<shared_ptr<Curves>> m_tree_curves;
+
+    vector<KeyPoint<Vec3f>> m_cam_points;
+    vector<KeyPoint<Vec3f>> m_look_points;
+    vector<KeyPoint<Vec3f>> m_light_points;
+
+    map<string, AreaEmitterInfo> m_light_infos;
+    CUDABuffer<AreaEmitterInfo> d_light_infos;
+
+    Vec3f m_bunny1_pos;
+    float m_bunny1_scale;
+
+    Vec3f m_bunny2_pos;
+    float m_bunny2_scale;
+    
+    Vec3f m_bunny3_pos;
+    float m_bunny3_scale;
+
+    // For debugging
+    float m_frame_time;
+    float m_interval;
+    EaseType m_camera_ease;
+    EaseType m_light_ease;
+    int n_frame;
+#if !INTERACTIVE && !SUBMISSION
+    static constexpr uint32_t SPP = 16;
+#else
+    static constexpr uint32_t SPP = 144;
+#endif
+    static constexpr uint32_t SPP_PER_LAUNCH = 8;
+    static constexpr uint32_t NUM_ITER = SPP / SPP_PER_LAUNCH;
+    static constexpr float FPS = 10.0f;
+    static constexpr float VIDEO_LENGTH = 10.0f;
 };

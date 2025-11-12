@@ -127,8 +127,8 @@ namespace prayground {
     
     // ===== Tree Bark Texture Generation =====
     
-    // Worley/Cellular noise (2D)
-    __device__ void worleyNoise2D(Vec2f p, float scale, uint32_t seed, float* f1, float* f2) {
+    // Worley/Cellular noise (2D) with anisotropic distance
+    __device__ void worleyNoise2D(Vec2f p, float scale, uint32_t seed, float* f1, float* f2, float anisotropy = 1.0f) {
         p = p * scale;
         Vec2f cell = Vec2f(floor(p.x()), floor(p.y()));
         Vec2f frac = Vec2f(p.x() - cell.x(), p.y() - cell.y());
@@ -149,7 +149,10 @@ namespace prayground {
                 float py = rnd(h);
                 Vec2f point = neighbor + Vec2f(px, py);
                 
-                float dist = length(point - p);
+                // Anisotropic distance: stretch Y coordinate for distance calculation
+                Vec2f diff = point - p;
+                diff.y() *= anisotropy;  // Apply anisotropy to Y axis
+                float dist = length(diff);
                 
                 if (dist < *f1) {
                     *f2 = *f1;
@@ -168,16 +171,14 @@ namespace prayground {
     }
     
     // Rough bark (Worley crackle)
-    __device__ float roughBarkHeight(Vec2f uv, const TreeBarkTexture& bark) {
-        // Stretch vertically for wood grain direction
-        float vertical_stretch = 2.5f;  // bark.rough.vertical_stretch
+    __device__ float roughBarkHeight(Vec2f uv, PerlinNoiseData* perlin, const TreeBarkTexture& bark) {
+        // Use isotropic Voronoi (no UV stretching)
         float cell_scale = 8.0f;        // bark.rough.cell_scale
         float crack_depth = 0.5f;       // bark.rough.crack_depth (increased)
-        
-        Vec2f stretched_uv = Vec2f(uv.x(), uv.y() * vertical_stretch);
+        float anisotropy = 1.5f;        // Anisotropic distance metric for wood grain
         
         float f1, f2;
-        worleyNoise2D(stretched_uv, cell_scale, bark.seed, &f1, &f2);
+        worleyNoise2D(uv, cell_scale, bark.seed, &f1, &f2, anisotropy);
         
         // Crack pattern (F2-F1)
         float crack = f2 - f1;
@@ -191,11 +192,12 @@ namespace prayground {
         // Add crack depth (inverted crack_mask makes cracks deeper)
         height -= crack_depth * (1.0f - crack_mask);
         
-        // Add small detail
-        float detail = sinf(uv.x() * 50.0f + uv.y() * 30.0f) * 0.05f;
+        // Add Perlin noise for fine detail (ざらざら感)
+        Vec3f p_fine = Vec3f(uv.x(), uv.y(), 0.5f) * 60.0f;
+        float fine_noise = perlin->noise(p_fine) * 0.06f;
         
         // Ensure positive values and scale to reasonable range
-        return fmaxf(0.0f, height + detail + 0.5f);  // Offset to ensure positive
+        return fmaxf(0.0f, height + fine_noise + 0.5f);  // Offset to ensure positive
     }
     
     // Aged bark (Layered FBM with domain warping)
@@ -318,7 +320,7 @@ namespace prayground {
         
         switch(d_bark->type) {
             case BarkType::ROUGH:
-                bark_height = roughBarkHeight(uv, *d_bark);
+                bark_height = roughBarkHeight(uv, d_perlin, *d_bark);
                 if (ix == 0 && iy == 0) printf("[KERNEL] ROUGH bark_height = %.4f\n", bark_height);
                 break;
             case BarkType::AGED:
@@ -580,16 +582,16 @@ namespace prayground {
         float hD = (iy > 0) ? d_heightmap[(iy - 1) * width + ix] : d_heightmap[iy * width + ix];
         float hU = (iy < height - 1) ? d_heightmap[(iy + 1) * width + ix] : d_heightmap[iy * width + ix];
 
-        // Create tangent vectors from height differences
-        // Tangent along X axis: (2, hR - hL, 0)  (2 pixels apart in X)
-        // Tangent along Z axis: (0, hU - hD, 2)  (2 pixels apart in Z)
+        // Create tangent vectors from height differences (Z-up coordinate system)
+        // Tangent along X axis: (dx, 0, height_diff)
+        // Tangent along Y axis: (0, dy, height_diff)
         float h_size = 1.0f / (float)width;
         float v_size = 1.0f / (float)height;
         Vec3f tangent_x = normalize(Vec3f(h_size, 0.0f, (hR - hL) * bump_strength));
         Vec3f tangent_y = normalize(Vec3f(0.0f, v_size, (hU - hD) * bump_strength));
         
-        // Normal is cross product of tangents
-        Vec3f normal = normalize(cross(tangent_x, tangent_y));
+        // Normal is cross product of tangents (Z-up: tangent_y × tangent_x for upward normal)
+        Vec3f normal = normalize(cross(tangent_y, tangent_x));
 
         if (length(normal) == 0.0f) {
             printf("Normal is zero at pixel (%u, %u)\n", ix, iy);

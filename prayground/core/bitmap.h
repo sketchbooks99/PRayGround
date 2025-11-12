@@ -55,7 +55,6 @@ namespace prayground {
         explicit Bitmap_(const std::filesystem::path& filename);
         explicit Bitmap_(const std::filesystem::path& filename, PixelFormat format);
         /// @todo: Check if "Disallow the copy-constructor"
-        // Bitmap_(const Bitmap_& bmp) = delete;
 
         void allocate(PixelFormat format, int width, int height, PixelT* data = nullptr);
         void setData(PixelT* data, int offset_x, int offset_y, int width, int height);

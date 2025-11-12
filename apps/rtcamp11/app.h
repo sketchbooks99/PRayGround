@@ -91,6 +91,7 @@ private:
     float bloom_sigma = 5.0f;
 
     bool enable_firefly_filter = true;
+    bool enable_gbuffer = false;
 
     FloatBitmap m_albedo_bitmap, m_normal_bitmap, m_uv_bitmap;
     static constexpr uint32_t NRay = 2;
@@ -107,6 +108,8 @@ private:
 
     map<string, AreaEmitterInfo> m_light_infos;
     CUDABuffer<AreaEmitterInfo> d_light_infos;
+
+    float max_spp_for_debug = 128;
 
     Vec3f m_bunny1_pos;
     float m_bunny1_scale;

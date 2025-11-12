@@ -1635,9 +1635,12 @@ void App::setup()
 #if SUBMISSION
     
     std::cout << "Starting rendering... (Target: " << n_frame << " frames)\n";
+    double total_render_time = 0.0;
     
     int frame = 0;
     while (frame < n_frame && !time_limit_exceeded.load()) {
+
+        std::chrono::time_point<std::chrono::system_clock> start_time = std::chrono::system_clock::now();
 
         // Check time limit before starting new frame
         if (time_limit_exceeded.load()) {
@@ -1703,6 +1706,9 @@ void App::setup()
             bloom_params,
             m_stream
         );
+
+        auto render_time = system_clock::now() - start_time;
+        total_render_time += (double)duration_cast<milliseconds>(render_time).count() / 1000.0;
         
         // Output rendered image (only if not interrupted)
         if (!time_limit_exceeded.load()) {
@@ -1744,6 +1750,11 @@ void App::setup()
 
         is_camera_updated = true;
     }
+
+    std::cout << "\nRendering finished. Total render time: " 
+              << std::fixed << std::setprecision(2) << total_render_time << " seconds.\n"
+              << "Average time per frame: "
+              << std::fixed << std::setprecision(2) << (total_render_time / frame) << " seconds.\n";
     
     rendering_complete.store(true);  // Signal watchdog thread
     std::cout << "\n";  // New line after completion
@@ -1772,6 +1783,9 @@ void App::setup()
 void App::update()
 {
     handleCameraUpdate();
+
+    if (m_params.frame >= max_spp_for_debug)
+        return;
 
 #if USE_SVGF
     // Temporal Anti-Aliasing: Apply sub-pixel jitter
@@ -1997,10 +2011,6 @@ void App::update()
     // Store current VP matrix for next frame
     m_prev_vp_matrix = m_scene.camera()->getViewProjectionMatrix();
 #endif
-
-    // Copy float_result_buffer (with bloom) to display bitmap
-    m_float_bitmap.copyFromDevice();
-    m_bloom_bitmap.copyFromDevice();
 }
 #ifdef ENABLE_AVG_LUM_DEBUG
     // Debug: copy accum buffer to host and print average luminance
@@ -2068,47 +2078,51 @@ void App::draw()
         m_scene.camera()->setLookat(cam_lookat);
     }
 
-    ImGui::Text("Bunny1 Control");
-    state_changed |= ImGui::InputFloat3("Bunny1 Position", &m_bunny1_pos[0], "%.2f");
-    state_changed |= ImGui::SliderFloat("Bunny1 Scale", &m_bunny1_scale, 10.0f, 300.0f, "%.2f");
-    if (state_changed) {
-        m_scene.updateObjectTransform("bunny1", Matrix4f::translate(m_bunny1_pos) * Matrix4f::scale(m_bunny1_scale));
-        m_scene.updateAccel(m_ctx, m_stream);
-    }
+    //ImGui::Text("Bunny1 Control");
+    //state_changed |= ImGui::InputFloat3("Bunny1 Position", &m_bunny1_pos[0], "%.2f");
+    //state_changed |= ImGui::SliderFloat("Bunny1 Scale", &m_bunny1_scale, 10.0f, 300.0f, "%.2f");
+    //if (state_changed) {
+    //    m_scene.updateObjectTransform("bunny1", Matrix4f::translate(m_bunny1_pos) * Matrix4f::scale(m_bunny1_scale));
+    //    m_scene.updateAccel(m_ctx, m_stream);
+    //}
 
-    ImGui::Text("Bunny2 Control");
-    state_changed |= ImGui::InputFloat3("Bunny2 Position", &m_bunny2_pos[0], "%.2f");
-    state_changed |= ImGui::SliderFloat("Bunny2 Scale", &m_bunny2_scale, 10.0f, 300.0f, "%.2f");
-    if (state_changed) {
-        m_scene.updateObjectTransform("bunny2", Matrix4f::translate(m_bunny2_pos) * Matrix4f::rotate(-math::pi / 6.0f, Vec3f(0, 1, 0)) * Matrix4f::scale(m_bunny2_scale));
-        m_scene.updateAccel(m_ctx, m_stream);
-    }
+    //ImGui::Text("Bunny2 Control");
+    //state_changed |= ImGui::InputFloat3("Bunny2 Position", &m_bunny2_pos[0], "%.2f");
+    //state_changed |= ImGui::SliderFloat("Bunny2 Scale", &m_bunny2_scale, 10.0f, 300.0f, "%.2f");
+    //if (state_changed) {
+    //    m_scene.updateObjectTransform("bunny2", Matrix4f::translate(m_bunny2_pos) * Matrix4f::rotate(-math::pi / 6.0f, Vec3f(0, 1, 0)) * Matrix4f::scale(m_bunny2_scale));
+    //    m_scene.updateAccel(m_ctx, m_stream);
+    //}
 
-    ImGui::Text("Bunny3 Control");
-    state_changed |= ImGui::InputFloat3("Bunny3 Position", &m_bunny3_pos[0], "%.2f");
-    state_changed |= ImGui::SliderFloat("Bunny3 Scale", &m_bunny3_scale, 10.0f, 300.0f, "%.2f");
-    if (state_changed) {
-        m_scene.updateObjectTransform("bunny3", Matrix4f::translate(m_bunny3_pos) * Matrix4f::rotate(-math::two_pi / 3.0f, Vec3f(0, 1, 0)) * Matrix4f::scale(m_bunny3_scale));
-        m_scene.updateAccel(m_ctx, m_stream);
-    }
+    //ImGui::Text("Bunny3 Control");
+    //state_changed |= ImGui::InputFloat3("Bunny3 Position", &m_bunny3_pos[0], "%.2f");
+    //state_changed |= ImGui::SliderFloat("Bunny3 Scale", &m_bunny3_scale, 10.0f, 300.0f, "%.2f");
+    //if (state_changed) {
+    //    m_scene.updateObjectTransform("bunny3", Matrix4f::translate(m_bunny3_pos) * Matrix4f::rotate(-math::two_pi / 3.0f, Vec3f(0, 1, 0)) * Matrix4f::scale(m_bunny3_scale));
+    //    m_scene.updateAccel(m_ctx, m_stream);
+    //}
 
-    ImGui::Text("Light Control");
-    auto light1 = m_scene.getLight("light1");
-    // Get sphere pointer from abstract shape class
-    auto light1_sphere = dynamic_pointer_cast<Sphere>(light1->shape);
-    Vec3f center = light1_sphere->center();
-    state_changed |= ImGui::SliderFloat3("Light Position", &center[0], -500.0f, 500.0f, "%.2f");
-    if (state_changed) {
-        light1_sphere->setCenter(center);
-        light1_sphere->copyToDevice();
-        m_scene.updateLightGAS("light1", m_ctx, m_stream);
-        m_scene.updateAccel(m_ctx, m_stream);
-        copyAreaEmitterToDevice();
-    }
+    //ImGui::Text("Light Control");
+    //auto light1 = m_scene.getLight("light1");
+    //// Get sphere pointer from abstract shape class
+    //auto light1_sphere = dynamic_pointer_cast<Sphere>(light1->shape);
+    //Vec3f center = light1_sphere->center();
+    //state_changed |= ImGui::SliderFloat3("Light Position", &center[0], -500.0f, 500.0f, "%.2f");
+    //if (state_changed) {
+    //    light1_sphere->setCenter(center);
+    //    light1_sphere->copyToDevice();
+    //    m_scene.updateLightGAS("light1", m_ctx, m_stream);
+    //    m_scene.updateAccel(m_ctx, m_stream);
+    //    copyAreaEmitterToDevice();
+    //}
 
     ImGui::Separator();
-    ImGui::Text("Firefly filter");
     if (ImGui::Checkbox("Enable Firefly filter", &enable_firefly_filter)) {
+        // Reset frame counter when toggling bloom
+        initResultBufferOnDevice();
+    }
+
+    if (ImGui::Checkbox("Visualize G-Buffer", &enable_gbuffer)) {
         // Reset frame counter when toggling bloom
         initResultBufferOnDevice();
     }
@@ -2135,36 +2149,30 @@ void App::draw()
 
     ImGui::End();
     ImGui::Render();
-#if DENOISE
-    m_denoiser.draw(m_denoise_data, 0, 0);
-#else
+
     auto w = pgGetWidth();
     auto h = pgGetHeight();
-    //m_albedo_bitmap.copyFromDevice();
-    //m_normal_bitmap.copyFromDevice();
-    //m_uv_bitmap.copyFromDevice();
-    if (enable_bloom)
-        m_bloom_bitmap.draw(0, 0, w, h);
-    else
-        m_float_bitmap.draw(0, 0, w, h);
 
+    m_bloom_bitmap.copyFromDevice();
+    m_float_bitmap.copyFromDevice();
 
-    //m_bloom_bitmap.draw(0, 0, w / 2, h / 2);
-    //m_float_bitmap.draw(w / 2, 0, w / 2, h / 2);
-    //// m_albedo_bitmap.draw(w / 2, 0, w / 2, h / 2);
-    //m_normal_bitmap.draw(0, h / 2, w / 2, h / 2);
-    //m_uv_bitmap.draw(w / 2, h / 2, w / 2, h / 2);
+    if (enable_gbuffer) {
+        m_albedo_bitmap.copyFromDevice();
+        m_normal_bitmap.copyFromDevice();
+        m_uv_bitmap.copyFromDevice();
+
+        //m_bloom_bitmap.draw(0, 0, w / 2, h / 2);
+        m_albedo_bitmap.draw(0, 0, w / 2, h / 2);
+        m_normal_bitmap.draw(0, h / 2, w / 2, h / 2);
+        m_uv_bitmap.draw(w / 2, 0, w / 2, h / 2);
+    }
+    else {
+        if (enable_bloom)
+            m_bloom_bitmap.draw(0, 0, w, h);
+        else
+            m_float_bitmap.draw(0, 0, w, h);
+    }
     
-#if USE_SVGF
-    m_albedo_bitmap.copyFromDevice();
-    m_normal_bitmap.copyFromDevice();
-    m_position_bitmap.copyFromDevice();
-    m_albedo_bitmap.draw(pgGetWidth() / 2, 0);
-    m_normal_bitmap.draw(0, pgGetHeight() / 2);
-    m_position_bitmap.draw(pgGetWidth() / 2, pgGetHeight() / 2);
-#endif
-#endif
-
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
@@ -2236,6 +2244,16 @@ void App::keyReleased(int key)
         m_scene.camera()->setOrigin(m_scene.camera()->origin() - m_scene.camera()->direction() * 1.0f);
         m_scene.camera()->setLookat(m_scene.camera()->lookat() - m_scene.camera()->direction() * 1.0f);
         is_camera_updated = true;
+    }
+    else if (key == Key::S) {
+        if (enable_bloom) {
+            m_bloom_bitmap.copyFromDevice();
+            m_bloom_bitmap.write("frame.png");
+        }
+        else {
+            m_float_bitmap.copyFromDevice();
+            m_float_bitmap.write("frame.png");
+        }
     }
 }
 

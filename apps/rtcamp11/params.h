@@ -11,7 +11,7 @@
 
 #define DENOISE 0
 #define USE_SVGF 0
-#define SUBMISSION 1
+#define SUBMISSION 0
 #define INTERACTIVE 1
 
 using namespace prayground;
@@ -133,6 +133,8 @@ struct LaunchParams {
     void* envmap_texture_data;
 
     float white;
+
+    bool enable_mis;
 };
 
 struct ProceduralTreeData {

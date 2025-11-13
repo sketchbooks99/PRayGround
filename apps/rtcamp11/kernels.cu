@@ -3,8 +3,6 @@
 
 extern "C" { __constant__ LaunchParams params; }
 
-#define MIS 1
-
 using SurfaceInteraction = SurfaceInteraction_<Vec3f>;
 
 // Clamp color by luminance to reduce fireflies
@@ -358,10 +356,6 @@ extern "C" __global__ void __raygen__pinhole() {
                     uv = Vec3f(si.shading.uv, 1.0f);
 #endif
                 }
-                // Hit environment (miss shader)
-                if (!env_evaluated) {
-                    result += throughput * si.emission;
-                }
                 break;
             }
 
@@ -380,8 +374,8 @@ extern "C" __global__ void __raygen__pinhole() {
                 }
 
                 // Only add direct hit contribution if not already evaluated by NEE
-                if (!area_evaluated)
-                    result += throughput * emission;
+                // if (!area_evaluated)
+                //     result += throughput * emission;
                 if (si.trace_terminate)
                     break;
             }
@@ -403,276 +397,262 @@ extern "C" __global__ void __raygen__pinhole() {
             // Diffuse sampling
             else if (+(si.surface_info->type & SurfaceType::Rough)) 
             {
-#if MIS
-                Vec3f L_dir(0.0f);  // Direct lighting contribution
-                
-                // Strategy selection for light sampling
-                bool has_envmap = params.envmap_sampling_data != nullptr;
-                bool has_lights = params.n_lights > 0;
-                
-                // Skip NEE (Next Event Estimation) for deep paths (depth > 2)
-                // Deep indirect bounces contribute less, so BSDF sampling alone is sufficient
-                // This reduces PDF calculations and shadow rays significantly
-                bool use_nee = (depth <= 2);
-                //has_lights = false; has_envmap = false; use_nee = false;
-                
-                // Multi-light sampling: Sample both area lights AND environment map
-                if (params.use_multi_light_sampling && use_nee) {
-                    // ===== Area light sampling =====
-                    if (has_lights) {
-                        // Pick a random light (uniform sampling)
-                        const uint32_t light_idx = min(
-                            static_cast<uint32_t>(UniformSampler::get1D(si.seed) * params.n_lights),
-                            params.n_lights - 1
-                        );
-                        const AreaEmitterInfo& light_info = params.lights[light_idx];
-                        
-                        // Sample a point on the light
-                        LightInteraction light_interaction = optixDirectCall<LightInteraction, SurfaceInteraction*, void*>(
-                            light_info.sample_id, &si, light_info.shape_data);
-                        
-                        const Vec3f to_light = light_interaction.p - si.p;
-                        const float dist_to_light_sq = dot(to_light, to_light);
-                        const float dist_to_light = sqrtf(dist_to_light_sq);
-                        const Vec3f wi_light = to_light / dist_to_light;
-                        
-                        // Check if light is on the correct side
-                        const float cos_theta_light = dot(light_interaction.n, -wi_light);
-                        const float cos_theta_surface = dot(si.shading.n, wi_light);
-                        
-                        if (cos_theta_light > 0.0f && cos_theta_surface > 0.0f) {
-                            // Cast shadow ray
-                            uint32_t visibility = traceShadow(
-                                params.handle, si.p, wi_light, 0.01f, dist_to_light - 0.01f);
-                            
-                            if (visibility == 1) {  // Not occluded
-                                // Evaluate BSDF at light direction
-                                si.wi = wi_light;
-                                Vec3f bsdf_light = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
-                                    si.surface_info->callable_id.bsdf, &si, si.surface_info->data);
-                                
-                                // Evaluate light emission
-                                SurfaceInteraction si_light;
-                                si_light.shading.uv = light_interaction.uv;
-                                si_light.shading.n = light_interaction.n;
-                                si_light.wo = -wi_light;
-                                si_light.surface_info = light_info.surface_info;
-                                Vec3f emission = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
-                                    light_info.surface_info->callable_id.bsdf, &si_light, light_info.surface_info->data);
-                                
-                                const float pdf_light = light_interaction.pdf * static_cast<float>(params.n_lights);
-                                
-                                // Calculate BSDF PDF for light direction
-                                float pdf_bsdf = optixDirectCall<float, SurfaceInteraction*, void*>(
-                                    si.surface_info->callable_id.pdf, &si, si.surface_info->data);
-                                
-                                // MIS weight using selected heuristic
-                                const float mis_weight = computeMISWeight(pdf_light, pdf_bsdf, params.mis_heuristic);
-                                
-                                // Calculate contribution
-                                Vec3f contribution = bsdf_light * emission * cos_theta_surface * mis_weight / pdf_light;
-                                
-                                // Firefly Prevention: Clamp contribution by luminance
-                                contribution = clampLuminance(contribution, 100.0f);
-                                
-                                // Add area light contribution (no strategy probability needed)
-                                L_dir += contribution;
-                                area_evaluated = true;
+                Vec3f L_dir(0.0f);
+                if (params.enable_mis) {
+
+                    // Strategy selection for light sampling
+                    bool has_envmap = params.envmap_sampling_data != nullptr;
+                    bool has_lights = params.n_lights > 0;
+
+                    // Skip NEE (Next Event Estimation) for deep paths (depth > 2)
+                    // Deep indirect bounces contribute less, so BSDF sampling alone is sufficient
+                    // This reduces PDF calculations and shadow rays significantly
+                    bool use_nee = (depth <= 2);
+                    //has_lights = false; has_envmap = false; use_nee = false;
+
+                    // Multi-light sampling: Sample both area lights AND environment map
+                    if (params.use_multi_light_sampling && use_nee) {
+                        // ===== Area light sampling =====
+                        if (has_lights) {
+                            // Pick a random light (uniform sampling)
+                            const uint32_t light_idx = min(
+                                static_cast<uint32_t>(UniformSampler::get1D(si.seed) * params.n_lights),
+                                params.n_lights - 1
+                            );
+                            const AreaEmitterInfo& light_info = params.lights[light_idx];
+
+                            // Sample a point on the light
+                            LightInteraction light_interaction = optixDirectCall<LightInteraction, SurfaceInteraction*, void*>(
+                                light_info.sample_id, &si, light_info.shape_data);
+
+                            const Vec3f to_light = light_interaction.p - si.p;
+                            const float dist_to_light_sq = dot(to_light, to_light);
+                            const float dist_to_light = sqrtf(dist_to_light_sq);
+                            const Vec3f wi_light = to_light / dist_to_light;
+
+                            // Check if light is on the correct side
+                            const float cos_theta_light = dot(light_interaction.n, -wi_light);
+                            const float cos_theta_surface = dot(si.shading.n, wi_light);
+
+                            if (cos_theta_light > 0.0f && cos_theta_surface > 0.0f) {
+                                // Cast shadow ray
+                                uint32_t visibility = traceShadow(
+                                    params.handle, si.p, wi_light, 0.01f, dist_to_light - 0.01f);
+
+                                if (visibility == 1) {  // Not occluded
+                                    // Evaluate BSDF at light direction
+                                    si.wi = wi_light;
+                                    Vec3f bsdf_light = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
+                                        si.surface_info->callable_id.bsdf, &si, si.surface_info->data);
+
+                                    // Evaluate light emission
+                                    SurfaceInteraction si_light;
+                                    si_light.shading.uv = light_interaction.uv;
+                                    si_light.shading.n = light_interaction.n;
+                                    si_light.wo = -wi_light;
+                                    si_light.surface_info = light_info.surface_info;
+                                    Vec3f emission = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
+                                        light_info.surface_info->callable_id.bsdf, &si_light, light_info.surface_info->data);
+
+                                    const float pdf_light = light_interaction.pdf * static_cast<float>(params.n_lights);
+
+                                    // Calculate BSDF PDF for light direction
+                                    float pdf_bsdf = optixDirectCall<float, SurfaceInteraction*, void*>(
+                                        si.surface_info->callable_id.pdf, &si, si.surface_info->data);
+
+                                    // MIS weight using selected heuristic
+                                    const float mis_weight = computeMISWeight(pdf_light, pdf_bsdf, params.mis_heuristic);
+
+                                    // Calculate contribution
+                                    Vec3f contribution = bsdf_light * emission * cos_theta_surface * mis_weight / pdf_light;
+
+                                    // Add area light contribution (no strategy probability needed)
+                                    L_dir += contribution;
+                                    area_evaluated = true;
+                                }
                             }
                         }
-                    }
-                    
-                    // ===== Environment map sampling =====
-                    if (has_envmap) {
-                        // Sample direction from environment map
-                        SurfaceInteraction si_env = si;
-                        si_env.p = si.p;
-                        si_env.seed = si.seed;
-                        optixDirectCall<void, SurfaceInteraction*, void*>(
-                            params.envmap_sample_id, &si_env, params.envmap_sampling_data);
-                        
-                        const Vec3f wi_env = si_env.wo;
-                        const float cos_theta_surface = dot(si.shading.n, wi_env);
-                        
-                        if (cos_theta_surface > 0.0f) {
-                            // Cast shadow ray to infinity
-                            uint32_t visibility = traceShadow(
-                                params.handle, si.p, wi_env, 0.01f, 1e10f);
-                            
-                            if (visibility == 1) {  // Not occluded - hits environment
-                                // Evaluate BSDF at environment direction
-                                si.wi = wi_env;
-                                Vec3f bsdf_env = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
-                                    si.surface_info->callable_id.bsdf, &si, si.surface_info->data);
-                                
-                                // Get environment radiance
-                                float theta = acosf(clamp(wi_env.y(), -1.0f, 1.0f));
-                                float phi = atan2f(wi_env.z(), wi_env.x());
-                                if (phi < 0) phi += 2.0f * math::pi;
-                                Vec2f env_uv(phi / (2.0f * math::pi), theta / math::pi);
 
-                                Vec3f env_radiance = optixDirectCall<Vec4f, const Vec2f&, void*>(
-                                    params.envmap_texture_id, env_uv, params.envmap_texture_data);
+                        // ===== Environment map sampling =====
+                        if (has_envmap) {
+                            // Sample direction from environment map
+                            SurfaceInteraction si_env = si;
+                            si_env.p = si.p;
+                            si_env.seed = si.seed;
+                            optixDirectCall<void, SurfaceInteraction*, void*>(
+                                params.envmap_sample_id, &si_env, params.envmap_sampling_data);
 
-                                // Calculate PDF for environment map sampling
-                                si_env.wo = wi_env;
-                                float pdf_env = optixDirectCall<float, SurfaceInteraction*, void*>(
-                                    params.envmap_pdf_id, &si_env, params.envmap_sampling_data);
-                                
-                                // Calculate BSDF PDF for environment direction
-                                float pdf_bsdf = optixDirectCall<float, SurfaceInteraction*, void*>(
-                                    si.surface_info->callable_id.pdf, &si, si.surface_info->data);
-                                
-                                // MIS weight using selected heuristic
-                                const float mis_weight = computeMISWeight(pdf_env, pdf_bsdf, params.mis_heuristic);
-                                
-                                if (pdf_env > 0.0f) {
-                                    // Calculate contribution
-                                    Vec3f contribution = bsdf_env * env_radiance * cos_theta_surface * mis_weight / pdf_env;
-                                    
-                                    // Firefly Prevention: Clamp contribution by luminance
-                                    contribution = clampLuminance(contribution, 100.0f);
-                                    
-                                    // Add environment light contribution (no strategy probability needed)
-                                    L_dir += contribution;
-                                    env_evaluated = true;
+                            const Vec3f wi_env = si_env.wo;
+                            const float cos_theta_surface = dot(si.shading.n, wi_env);
+
+                            if (cos_theta_surface > 0.0f) {
+                                // Cast shadow ray to infinity
+                                uint32_t visibility = traceShadow(
+                                    params.handle, si.p, wi_env, 0.01f, 1e10f);
+
+                                if (visibility == 1) {  // Not occluded - hits environment
+                                    // Evaluate BSDF at environment direction
+                                    si.wi = wi_env;
+                                    Vec3f bsdf_env = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
+                                        si.surface_info->callable_id.bsdf, &si, si.surface_info->data);
+
+                                    // Get environment radiance
+                                    float theta = acosf(clamp(wi_env.y(), -1.0f, 1.0f));
+                                    float phi = atan2f(wi_env.z(), wi_env.x());
+                                    if (phi < 0) phi += 2.0f * math::pi;
+                                    Vec2f env_uv(phi / (2.0f * math::pi), theta / math::pi);
+
+                                    Vec3f env_radiance = optixDirectCall<Vec4f, const Vec2f&, void*>(
+                                        params.envmap_texture_id, env_uv, params.envmap_texture_data);
+
+                                    // Calculate PDF for environment map sampling
+                                    si_env.wo = wi_env;
+                                    float pdf_env = optixDirectCall<float, SurfaceInteraction*, void*>(
+                                        params.envmap_pdf_id, &si_env, params.envmap_sampling_data);
+
+                                    // Calculate BSDF PDF for environment direction
+                                    float pdf_bsdf = optixDirectCall<float, SurfaceInteraction*, void*>(
+                                        si.surface_info->callable_id.pdf, &si, si.surface_info->data);
+
+                                    // MIS weight using selected heuristic
+                                    const float mis_weight = computeMISWeight(pdf_env, pdf_bsdf, params.mis_heuristic);
+
+                                    if (pdf_env > 0.0f) {
+                                        // Calculate contribution
+                                        Vec3f contribution = bsdf_env * env_radiance * cos_theta_surface * mis_weight / pdf_env;
+
+                                        // Add environment light contribution (no strategy probability needed)
+                                        L_dir += contribution;
+                                        env_evaluated = true;
+                                    }
                                 }
                             }
                         }
                     }
-                }
-                // Single light sampling: Choose one light source randomly (old behavior)
-                else if (use_nee) {  // Also skip for deep paths in single-light mode
-                    const float light_sampling_prob = has_lights && has_envmap ? 0.5f : (has_lights ? 1.0f : 0.0f);
-                    const bool sample_area_light = UniformSampler::get1D(si.seed) < light_sampling_prob;
-                    
-                    // ===== Area light sampling for MIS =====
-                    if (has_lights && sample_area_light) {
-                    // Pick a random light (uniform sampling)
-                    const uint32_t light_idx = min(
-                        static_cast<uint32_t>(UniformSampler::get1D(si.seed) * params.n_lights),
-                        params.n_lights - 1
-                    );
-                    const AreaEmitterInfo& light_info = params.lights[light_idx];
-                    
-                    // Sample a point on the light
-                    LightInteraction light_interaction = optixDirectCall<LightInteraction, SurfaceInteraction*, void*>(
-                        light_info.sample_id, &si, light_info.shape_data);
-                    
-                    const Vec3f to_light = light_interaction.p - si.p;
-                    const float dist_to_light_sq = dot(to_light, to_light);
-                    const float dist_to_light = sqrtf(dist_to_light_sq);
-                    const Vec3f wi_light = to_light / dist_to_light;
-                    
-                    // Check if light is on the correct side
-                    const float cos_theta_light = dot(light_interaction.n, -wi_light);
-                    const float cos_theta_surface = dot(si.shading.n, wi_light);
-                    
-                    if (cos_theta_light > 0.0f && cos_theta_surface > 0.0f) {
-                        // Cast shadow ray
-                        uint32_t visibility = traceShadow(
-                            params.handle, si.p, wi_light, 0.01f, dist_to_light - 0.01f);
-                        
-                        if (visibility == 1) {  // Not occluded
-                            // Evaluate BSDF at light direction
-                            si.wi = wi_light;
-                            Vec3f bsdf_light = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
-                                si.surface_info->callable_id.bsdf, &si, si.surface_info->data);
-                            
-                            // Evaluate light emission
-                            SurfaceInteraction si_light;
-                            si_light.shading.uv = light_interaction.uv;
-                            si_light.shading.n = light_interaction.n;
-                            si_light.wo = -wi_light;
-                            si_light.surface_info = light_info.surface_info;
-                            Vec3f emission = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
-                                light_info.surface_info->callable_id.bsdf, &si_light, light_info.surface_info->data);
-                            
-                            const float pdf_light = light_interaction.pdf * static_cast<float>(params.n_lights);
-                            
-                            // Calculate BSDF PDF for light direction
-                            float pdf_bsdf = optixDirectCall<float, SurfaceInteraction*, void*>(
-                                si.surface_info->callable_id.pdf, &si, si.surface_info->data);
-                            
-                            // MIS weight using selected heuristic
-                            const float mis_weight = computeMISWeight(pdf_light, pdf_bsdf, params.mis_heuristic);
-                            
-                            // Calculate contribution
-                            Vec3f contribution = (bsdf_light * emission * cos_theta_surface * mis_weight / pdf_light) / light_sampling_prob;
-                            
-                            // Firefly Prevention: Clamp contribution by luminance
-                            contribution = clampLuminance(contribution, 100.0f);
-                            
-                            // Account for sampling strategy probability
-                            L_dir += contribution;
-                            area_evaluated = true;
-                        }
-                    }
-                }
-                // ===== Environment map sampling for MIS =====
-                else if (has_envmap && !sample_area_light) {
-                    // Sample direction from environment map
-                    SurfaceInteraction si_env = si;
-                    si_env.p = si.p;
-                    si_env.seed = si.seed;
-                    optixDirectCall<void, SurfaceInteraction*, void*>(
-                        params.envmap_sample_id, &si_env, params.envmap_sampling_data);
-                    
-                    // Note: sample_envmap writes the sampled direction to si_env.wo
-                    // But we need it as incoming direction (wi)
-                    const Vec3f wi_env = si_env.wo;
-                    const float cos_theta_surface = dot(si.shading.n, wi_env);
-                    
-                    if (cos_theta_surface > 0.0f) {
-                        // Cast shadow ray to infinity
-                        uint32_t visibility = traceShadow(
-                            params.handle, si.p, wi_env, 0.01f, 1e10f);
-                        
-                        if (visibility == 1) {  // Not occluded - hits environment
-                            // Evaluate BSDF at environment direction
-                            si.wi = wi_env;
-                            Vec3f bsdf_env = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
-                                si.surface_info->callable_id.bsdf, &si, si.surface_info->data);
-                            
-                            // Get environment radiance by converting direction to UV
-                            float theta = acosf(clamp(wi_env.y(), -1.0f, 1.0f));
-                            float phi = atan2f(wi_env.z(), wi_env.x());
-                            if (phi < 0) phi += 2.0f * math::pi;
-                            Vec2f env_uv(phi / (2.0f * math::pi), theta / math::pi);
+                    // Single light sampling: Choose one light source randomly (old behavior)
+                    else if (use_nee) {  // Also skip for deep paths in single-light mode
+                        const float light_sampling_prob = has_lights && has_envmap ? 0.5f : (has_lights ? 1.0f : 0.0f);
+                        const bool sample_area_light = UniformSampler::get1D(si.seed) < light_sampling_prob;
 
-                            Vec3f env_radiance = optixDirectCall<Vec4f, const Vec2f&, void*>(
-                                params.envmap_texture_id, env_uv, params.envmap_texture_data);
+                        // ===== Area light sampling for MIS =====
+                        if (has_lights && sample_area_light) {
+                            // Pick a random light (uniform sampling)
+                            const uint32_t light_idx = min(
+                                static_cast<uint32_t>(UniformSampler::get1D(si.seed) * params.n_lights),
+                                params.n_lights - 1
+                            );
+                            const AreaEmitterInfo& light_info = params.lights[light_idx];
 
-                            // Calculate PDF for environment map sampling
-                            si_env.wo = wi_env;
-                            float pdf_env = optixDirectCall<float, SurfaceInteraction*, void*>(
-                                params.envmap_pdf_id, &si_env, params.envmap_sampling_data);
-                            
-                            // Calculate BSDF PDF for environment direction
-                            float pdf_bsdf = optixDirectCall<float, SurfaceInteraction*, void*>(
-                                si.surface_info->callable_id.pdf, &si, si.surface_info->data);
-                            
-                            // MIS weight using selected heuristic
-                            const float mis_weight = computeMISWeight(pdf_env, pdf_bsdf, params.mis_heuristic);
-                            
-                            if (pdf_env > 0.0f) {
-                                // Calculate contribution
-                                Vec3f contribution = (bsdf_env * env_radiance * cos_theta_surface * mis_weight / pdf_env) / (1.0f - light_sampling_prob);
-                                
-                                // Firefly Prevention: Clamp contribution by luminance
-                                contribution = clampLuminance(contribution, 100.0f);
-                                
-                                // Account for sampling strategy probability
-                                L_dir += contribution;
-                                env_evaluated = true;
+                            // Sample a point on the light
+                            LightInteraction light_interaction = optixDirectCall<LightInteraction, SurfaceInteraction*, void*>(
+                                light_info.sample_id, &si, light_info.shape_data);
+
+                            const Vec3f to_light = light_interaction.p - si.p;
+                            const float dist_to_light_sq = dot(to_light, to_light);
+                            const float dist_to_light = sqrtf(dist_to_light_sq);
+                            const Vec3f wi_light = to_light / dist_to_light;
+
+                            // Check if light is on the correct side
+                            const float cos_theta_light = dot(light_interaction.n, -wi_light);
+                            const float cos_theta_surface = dot(si.shading.n, wi_light);
+
+                            if (cos_theta_light > 0.0f && cos_theta_surface > 0.0f) {
+                                // Cast shadow ray
+                                uint32_t visibility = traceShadow(
+                                    params.handle, si.p, wi_light, 0.01f, dist_to_light - 0.01f);
+
+                                if (visibility == 1) {  // Not occluded
+                                    // Evaluate BSDF at light direction
+                                    si.wi = wi_light;
+                                    Vec3f bsdf_light = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
+                                        si.surface_info->callable_id.bsdf, &si, si.surface_info->data);
+
+                                    // Evaluate light emission
+                                    SurfaceInteraction si_light;
+                                    si_light.shading.uv = light_interaction.uv;
+                                    si_light.shading.n = light_interaction.n;
+                                    si_light.wo = -wi_light;
+                                    si_light.surface_info = light_info.surface_info;
+                                    Vec3f emission = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
+                                        light_info.surface_info->callable_id.bsdf, &si_light, light_info.surface_info->data);
+
+                                    const float pdf_light = light_interaction.pdf * static_cast<float>(params.n_lights);
+
+                                    // Calculate BSDF PDF for light direction
+                                    float pdf_bsdf = optixDirectCall<float, SurfaceInteraction*, void*>(
+                                        si.surface_info->callable_id.pdf, &si, si.surface_info->data);
+
+                                    // MIS weight using selected heuristic
+                                    const float mis_weight = computeMISWeight(pdf_light, pdf_bsdf, params.mis_heuristic);
+
+                                    // Calculate contribution
+                                    Vec3f contribution = (bsdf_light * emission * cos_theta_surface * mis_weight / pdf_light) / light_sampling_prob;
+
+                                    // Account for sampling strategy probability
+                                    L_dir += contribution;
+                                    area_evaluated = true;
+                                }
                             }
                         }
-                    }
+                        // ===== Environment map sampling for MIS =====
+                        else if (has_envmap && !sample_area_light) {
+                            // Sample direction from environment map
+                            SurfaceInteraction si_env = si;
+                            si_env.p = si.p;
+                            si_env.seed = si.seed;
+                            optixDirectCall<void, SurfaceInteraction*, void*>(
+                                params.envmap_sample_id, &si_env, params.envmap_sampling_data);
+
+                            // Note: sample_envmap writes the sampled direction to si_env.wo
+                            // But we need it as incoming direction (wi)
+                            const Vec3f wi_env = si_env.wo;
+                            const float cos_theta_surface = dot(si.shading.n, wi_env);
+
+                            if (cos_theta_surface > 0.0f) {
+                                // Cast shadow ray to infinity
+                                uint32_t visibility = traceShadow(
+                                    params.handle, si.p, wi_env, 0.01f, 1e10f);
+
+                                if (visibility == 1) {  // Not occluded - hits environment
+                                    // Evaluate BSDF at environment direction
+                                    si.wi = wi_env;
+                                    Vec3f bsdf_env = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
+                                        si.surface_info->callable_id.bsdf, &si, si.surface_info->data);
+
+                                    // Get environment radiance by converting direction to UV
+                                    float theta = acosf(clamp(wi_env.y(), -1.0f, 1.0f));
+                                    float phi = atan2f(wi_env.z(), wi_env.x());
+                                    if (phi < 0) phi += 2.0f * math::pi;
+                                    Vec2f env_uv(phi / (2.0f * math::pi), theta / math::pi);
+
+                                    Vec3f env_radiance = optixDirectCall<Vec4f, const Vec2f&, void*>(
+                                        params.envmap_texture_id, env_uv, params.envmap_texture_data);
+
+                                    // Calculate PDF for environment map sampling
+                                    si_env.wo = wi_env;
+                                    float pdf_env = optixDirectCall<float, SurfaceInteraction*, void*>(
+                                        params.envmap_pdf_id, &si_env, params.envmap_sampling_data);
+
+                                    // Calculate BSDF PDF for environment direction
+                                    float pdf_bsdf = optixDirectCall<float, SurfaceInteraction*, void*>(
+                                        si.surface_info->callable_id.pdf, &si, si.surface_info->data);
+
+                                    // MIS weight using selected heuristic
+                                    const float mis_weight = computeMISWeight(pdf_env, pdf_bsdf, params.mis_heuristic);
+
+                                    if (pdf_env > 0.0f) {
+                                        // Calculate contribution
+                                        Vec3f contribution = (bsdf_env * env_radiance * cos_theta_surface * mis_weight / pdf_env) / (1.0f - light_sampling_prob);
+
+                                        // Account for sampling strategy probability
+                                        L_dir += contribution;
+                                        env_evaluated = true;
+                                    }
+                                }
+                            }
+                        }
+                    } // End of multi_light_sampling check
                 }
-                } // End of multi_light_sampling check
-#else
-                Vec3f L_dir(0.0f);
-#endif
                 // ===== BSDF sampling for indirect lighting =====
                 // Sampling scattered direction
                 optixDirectCall<void, SurfaceInteraction*, void*>(
@@ -1302,7 +1282,7 @@ extern "C" __device__ float __direct_callable__pdf_envmap(
     Vec3f radiance = optixDirectCall<Vec4f, const Vec2f&, void*>(
         envmap->texture_id, uv, envmap->texture_data);
     
-    float luminance = 0.299f * radiance.x() + 0.587f * radiance.y() + 0.114f * radiance.z();
+    float luma = luminance(radiance);
     
     // PDF in solid angle measure
     // PDF(ω) = (L(ω) * sin(θ)) / (∫ L(ω') * sin(θ') dω')
@@ -1313,7 +1293,7 @@ extern "C" __device__ float __direct_callable__pdf_envmap(
     if (sin_theta < 1e-6f) sin_theta = 1e-6f;  // Avoid division by zero
     
     // PDF in solid angle
-    float pdf_omega = (luminance * sin_theta) / envmap->total_luminance;
+    float pdf_omega = (luma * sin_theta) / envmap->total_luminance;
     
     // Convert to PDF per steradian by accounting for the Jacobian of the transformation
     // from (u,v) to solid angle: dω = sin(θ) du dv / (width * height)

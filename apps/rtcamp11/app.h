@@ -90,8 +90,9 @@ private:
     int bloom_radius = 5.0f;
     float bloom_sigma = 5.0f;
 
-    bool enable_firefly_filter = true;
+    bool enable_firefly_filter = false;
     bool enable_gbuffer = false;
+    bool enable_mis = true;
 
     FloatBitmap m_albedo_bitmap, m_normal_bitmap, m_uv_bitmap;
     static constexpr uint32_t NRay = 2;
@@ -129,13 +130,14 @@ private:
 #if !INTERACTIVE && !SUBMISSION
     static constexpr uint32_t SPP = 16;
 #else
-    static constexpr uint32_t SPP = 128;
+    static constexpr uint32_t SPP = 1024;
 #endif
     static constexpr uint32_t SPP_PER_LAUNCH = 1;
     static constexpr uint32_t NUM_ITER = SPP / SPP_PER_LAUNCH;
     static constexpr float FPS = 12.0f;
     static constexpr float VIDEO_LENGTH = 6.0f;
 
-    static constexpr bool ADAPTIVE_SAMPLING = true;
+    static constexpr bool ADAPTIVE_SAMPLING = false;
     static constexpr uint32_t ADAPTIVE_MIN_SAMPLES = 40;
+    static constexpr float TIME_LIMIT = 7200.0f;
 };

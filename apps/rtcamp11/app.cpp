@@ -651,7 +651,6 @@ pair<shared_ptr<TriangleMesh>, shared_ptr<TriangleMesh>> App::buildTreeMesh(
 void App::setup()
 {
     using namespace std::chrono;
-    static constexpr float TIME_LIMIT = 180.0f;
 
 #if SUBMISSION
     // Start watchdog thread for time limit enforcement
@@ -706,8 +705,8 @@ void App::setup()
     Module module = m_ppl.createModuleFromOptixIr(m_ctx, "rtcamp11_generated_kernels.cu.optixir");
 
     // Initialize buffers
-    const int width = pgGetWidth() / 2;
-    const int height = pgGetHeight() / 2;
+    const int width = pgGetWidth();
+    const int height = pgGetHeight();
     m_bitmap.allocate(PixelFormat::RGBA, width, height);
     m_accum_buffer.allocate(PixelFormat::RGBA, width, height);
     m_float_bitmap.allocate(PixelFormat::RGBA, width, height);
@@ -744,7 +743,8 @@ void App::setup()
     m_params.height = height;
     m_params.samples_per_launch = 1;
     m_params.frame = 0u;
-    m_params.max_depth = 4u;
+    m_params.max_depth = 10u;
+    m_params.enable_mis = enable_mis;
     
     // Stratified sampling: Calculate grid dimension based on total SPP
     // SPP = 16 → 4x4, SPP = 64 → 8x8, SPP = 256 → 16x16, etc.
@@ -795,8 +795,8 @@ void App::setup()
 
     // Camera settings
     shared_ptr<Camera> camera = make_shared<Camera>();
-    camera->setOrigin(first_point);
-    camera->setLookat(first_look);
+    camera->setOrigin(final_point);
+    camera->setLookat(final_look);
     camera->setUp(0, 1, 0);
     camera->setFov(40);
     camera->setAspect((float)width / height);
@@ -1613,7 +1613,7 @@ void App::setup()
     };
 
     addLight("light1", 
-      make_shared<Sphere>(first_light_pos, 3.0f), 
+      make_shared<Sphere>(final_light_pos, 3.0f), 
       make_shared<AreaEmitter>(area_emitter_id, 
           make_shared<ConstantTexture>(Vec3f(0.5f, 0.5f, 0.9f), constant_id),
           10.0f), 
@@ -1783,9 +1783,6 @@ void App::setup()
 void App::update()
 {
     handleCameraUpdate();
-
-    if (m_params.frame >= max_spp_for_debug)
-        return;
 
 #if USE_SVGF
     // Temporal Anti-Aliasing: Apply sub-pixel jitter
@@ -2102,19 +2099,19 @@ void App::draw()
     //    m_scene.updateAccel(m_ctx, m_stream);
     //}
 
-    //ImGui::Text("Light Control");
-    //auto light1 = m_scene.getLight("light1");
-    //// Get sphere pointer from abstract shape class
-    //auto light1_sphere = dynamic_pointer_cast<Sphere>(light1->shape);
-    //Vec3f center = light1_sphere->center();
-    //state_changed |= ImGui::SliderFloat3("Light Position", &center[0], -500.0f, 500.0f, "%.2f");
-    //if (state_changed) {
-    //    light1_sphere->setCenter(center);
-    //    light1_sphere->copyToDevice();
-    //    m_scene.updateLightGAS("light1", m_ctx, m_stream);
-    //    m_scene.updateAccel(m_ctx, m_stream);
-    //    copyAreaEmitterToDevice();
-    //}
+    ImGui::Text("Light Control");
+    auto light1 = m_scene.getLight("light1");
+    // Get sphere pointer from abstract shape class
+    auto light1_sphere = dynamic_pointer_cast<Sphere>(light1->shape);
+    Vec3f center = light1_sphere->center();
+    state_changed |= ImGui::SliderFloat3("Light Position", &center[0], -500.0f, 500.0f, "%.2f");
+    if (state_changed) {
+        light1_sphere->setCenter(center);
+        light1_sphere->copyToDevice();
+        m_scene.updateLightGAS("light1", m_ctx, m_stream);
+        m_scene.updateAccel(m_ctx, m_stream);
+        copyAreaEmitterToDevice();
+    }
 
     ImGui::Separator();
     if (ImGui::Checkbox("Enable Firefly filter", &enable_firefly_filter)) {
@@ -2124,6 +2121,10 @@ void App::draw()
 
     if (ImGui::Checkbox("Visualize G-Buffer", &enable_gbuffer)) {
         // Reset frame counter when toggling bloom
+        initResultBufferOnDevice();
+    }
+
+    if (ImGui::Checkbox("Enable MIS", &m_params.enable_mis)) {
         initResultBufferOnDevice();
     }
 

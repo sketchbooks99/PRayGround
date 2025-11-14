@@ -414,7 +414,7 @@ namespace prayground {
     float Tree::calcCurveAngle(int depth, int seg_ind)
     {
         float curve = m_params.curve[depth];
-        float curve_v = m_params.curve[depth];
+        float curve_v = m_params.curve_v[depth];
         float curve_back = m_params.curve_back[depth];
         int curve_res = static_cast<int>(m_params.curve_res[depth]);
 
@@ -853,7 +853,7 @@ namespace prayground {
                 applyTropism(turtle, Vec3f(m_params.tropism[0], m_params.tropism[1], m_params.tropism[2]));
             }
             else {
-                applyTropism(turtle, Vec3f(m_params.tropism[0], m_params.tropism[1], 0));
+                applyTropism(turtle, Vec3f(m_params.tropism[0], 0, m_params.tropism[2]));
             }
 
             std::tie(helP0, helP1, helP2, helAxis) = calcHelixPoints(turtle, hel_radius, hel_pitch);
@@ -868,10 +868,11 @@ namespace prayground {
 
             // ベジェ点の設定  
             BezierPoint* new_point;
+            is_helix = m_params.curve_v[depth] < 0;
             if (is_helix) {
                 // ヘリックス枝の処理  
                 Vec3f pos = turtle.position();
-                if (seg_ind == 0) {
+                if (seg_ind == 0 && !stem.curve->bezier_points.empty()) {
                     new_point = &stem.curve->bezier_points[0];
                     new_point->co = pos;
                     new_point->handle_right = helP0 + pos;
@@ -1038,7 +1039,7 @@ namespace prayground {
                         applyTropism(turtle, Vec3f(m_params.tropism[0], m_params.tropism[1], m_params.tropism[2]));
                     }
                     else {
-                        applyTropism(turtle, Vec3f(m_params.tropism[0], m_params.tropism[1], 0.0f));
+                        applyTropism(turtle, Vec3f(m_params.tropism[0], 0.0f, m_params.tropism[2]));
                     }
                 }
 
@@ -1218,7 +1219,7 @@ namespace prayground {
                 applyTropism(turtle, Vec3f(m_params.tropism[0], m_params.tropism[1], m_params.tropism[2]));
             }
             else {
-                applyTropism(turtle, Vec3f(m_params.tropism[0], m_params.tropism[1], 0));
+                applyTropism(turtle, Vec3f(m_params.tropism[0], 0.0f, m_params.tropism[2]));
             }
 
             auto [hel_p_0, hel_p_1, hel_p_2_temp, hel_axis_temp] =
@@ -1333,7 +1334,7 @@ namespace prayground {
                         applyTropism(turtle, Vec3f(m_params.tropism[0], m_params.tropism[1], m_params.tropism[2]));
                     }
                     else {
-                        applyTropism(turtle, Vec3f(m_params.tropism[0], m_params.tropism[1], 0));
+                        applyTropism(turtle, Vec3f(m_params.tropism[0], 0, m_params.tropism[2]));
                     }
                 }
             }

@@ -40,11 +40,29 @@ private:
         float min_height;
         float max_height;
     };
+
+    struct Callable {
+        Callable(const pair<ProgramGroup, uint32_t>& callable)
+            : prg(callable.first), ID(callable.second) {
+        };
+        ProgramGroup prg;
+        uint32_t ID;
+    };
+
+    static constexpr uint32_t NRay = 2;
     
     void initResultBufferOnDevice();
     void handleCameraUpdate();
     void resetMovie();
     void copyAreaEmitterToDevice();
+
+    uint32_t setupCallable(Module module, const string& dc_name, const string& cc_name);
+    SurfaceCallableID setupSurfaceCallable(Module module, const string& dc_sample, const string& cc_bsdf, const string& dc_pdf);
+    void addLight(const string& name, shared_ptr<Shape> shape, shared_ptr<AreaEmitter> emitter, array<ProgramGroup, NRay>& prgs, const Matrix4f& transform, uint32_t sample_id, uint32_t pdf_id);
+
+    void submitScene(Module module, uint32_t width, uint32_t height);
+    void treeTropismScene(Module module, uint32_t width, uint32_t height);
+    void treeVariationScene(Module module, uint32_t width, uint32_t height);
     
     // New Tree API version (for testing new implementation)
     pair<shared_ptr<TriangleMesh>, shared_ptr<TriangleMesh>> buildTreeMesh(
@@ -84,7 +102,7 @@ private:
     Vec4f* d_bloom_temp1 = nullptr;
     Vec4f* d_bloom_temp2 = nullptr;
     Vec4f* d_firefly_temp = nullptr;
-    bool enable_bloom = true;
+    bool enable_bloom = false;
     float bloom_threshold = 1.0f;
     float bloom_intensity = 0.3f;
     int bloom_radius = 5.0f;
@@ -95,7 +113,6 @@ private:
     bool enable_mis = true;
 
     FloatBitmap m_albedo_bitmap, m_normal_bitmap, m_uv_bitmap;
-    static constexpr uint32_t NRay = 2;
     using AppScene = Scene<Camera, NRay>;
     AppScene m_scene;
 

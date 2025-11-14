@@ -172,13 +172,14 @@ namespace prayground {
         int shape = 8;
         float g_scale = 13.0f;
         float g_scale_v = 3.0f;
-        int levels = 3;
         float ratio = 0.015f;
         float ratio_power = 1.2f;
         float flare = 0.6f;
         int base_splits = 0;
         
         // Arrays for each level [0-3]
+
+        int levels = 3;
         std::array<float, 4> base_size = {0.3f, 0.02f, 0.02f, 0.02f};
         std::array<float, 4> down_angle = {0.0f, 60.0f, 45.0f, 45.0f};
         std::array<float, 4> down_angle_v = {0.0f, -50.0f, 10.0f, 10.0f};
@@ -186,8 +187,7 @@ namespace prayground {
         std::array<float, 4> rotate_v = {0.0f, 0.0f, 0.0f, 0.0f};
         std::array<int, 4> branches = {1, 50, 30, 10};
         std::array<float, 4> length = {1.0f, 0.3f, 0.6f, 0.0f};
-        std::array<float, 4> length_v = {0.0f, 0.0f, 0.0f, 0.0f};
-        std::array<float, 4> taper = {1.0f, 1.0f, 1.0f, 1.0f};
+        
         std::array<float, 4> seg_splits = {0.0f, 0.0f, 0.0f, 0.0f};
         std::array<float, 4> split_angle = {40.0f, 0.0f, 0.0f, 0.0f};
         std::array<float, 4> split_angle_v = {5.0f, 0.0f, 0.0f, 0.0f};
@@ -199,6 +199,8 @@ namespace prayground {
         std::array<float, 4> bend_v = {0.0f, 50.0f, 0.0f, 0.0f};
         std::array<float, 4> branch_dist = {0.0f, 0.0f, 0.0f, 0.0f};
         std::array<float, 4> radius_mod = {1.0f, 1.0f, 1.0f, 1.0f};
+        std::array<float, 4> length_v = {0.0f, 0.0f, 0.0f, 0.0f};
+        std::array<float, 4> taper = {1.0f, 1.0f, 1.0f, 1.0f};
         
         // Leaf and blossom properties
         int leaves = 25;  // Number of leaves per tip
@@ -212,7 +214,7 @@ namespace prayground {
         float blossom_rate = 0.0f;
         
         // Environmental effects
-        std::array<float, 3> tropism = {0.0f, 0.0f, 0.5f};
+        std::array<float, 3> tropism = {0.0f, 0.5f, 0.0f};
         float prune_ratio = 0.0f;
         float prune_width = 0.5f;
         float prune_width_peak = 0.5f;

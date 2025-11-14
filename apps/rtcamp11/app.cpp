@@ -116,6 +116,37 @@ void App::copyAreaEmitterToDevice()
     m_params.n_lights = static_cast<uint32_t>(m_light_infos.size());
 }
 
+uint32_t App::setupCallable(Module module, const string& dc_name, const string& cc_name)
+{
+    Callable callable = m_ppl.createCallablesProgram(m_ctx, module, dc_name, cc_name);
+    m_scene.bindCallablesProgram(callable.prg);
+    return callable.ID;
+}
+
+SurfaceCallableID App::setupSurfaceCallable(Module module, const string& dc_sample, const string& cc_bsdf, const string& dc_pdf) 
+{
+    uint32_t sample_bsdf_id = setupCallable(module, dc_sample, cc_bsdf);
+    uint32_t pdf_id = setupCallable(module, dc_pdf, "");
+
+    return SurfaceCallableID{ sample_bsdf_id, sample_bsdf_id, pdf_id };
+};
+
+void App::addLight(const string& name, shared_ptr<Shape> shape, shared_ptr<AreaEmitter> emitter, array<ProgramGroup, NRay>& prgs, const Matrix4f& transform, uint32_t sample_id, uint32_t pdf_id)
+{
+    emitter->copyToDevice();
+    shape->copyToDevice();
+    m_scene.addLight(name, shape, emitter, prgs, transform);
+    AreaEmitterInfo light_info = {
+        .shape_data = shape->devicePtr(),
+        .surface_info = emitter->surfaceInfoDevicePtr(),
+        .objToWorld = transform,
+        .worldToObj = transform.inverse(),
+        .sample_id = sample_id,
+        .pdf_id = pdf_id
+    };
+    m_light_infos.insert(make_pair(name, light_info));
+}
+
 // ------------------------------------------------------------------
 shared_ptr<TriangleMesh> App::buildVoronoiRockMesh(const VoronoiRockParams& params)
 {
@@ -648,6 +679,1339 @@ pair<shared_ptr<TriangleMesh>, shared_ptr<TriangleMesh>> App::buildTreeMesh(
 }
 
 // ------------------------------------------------------------------
+void App::submitScene(Module module, uint32_t width, uint32_t height)
+{
+    uint32_t seed = tea<4>(0, 0);
+
+    // Texture callables
+    auto bitmap_id = setupCallable(module, "__direct_callable__bitmap", "");
+    auto checker_id = setupCallable(module, "__direct_callable__checker", "");
+    auto constant_id = setupCallable(module, "__direct_callable__constant", "");
+    auto procedural_wooden_id = setupCallable(module, "__direct_callable__procedural_wooden", "");
+    auto terrain_id = setupCallable(module, "__direct_callable__terrain_heightmap", "");
+    auto uv_id = setupCallable(module, "__direct_callable__uv", "");
+
+    // Register environment map importance sampling callable functions
+    auto envmap_sample_id = setupCallable(module, "__direct_callable__sample_envmap", "");
+    auto envmap_pdf_id = setupCallable(module, "__direct_callable__pdf_envmap", "");
+
+    // Hitgroup programs
+    array<ProgramGroup, NRay> mesh_prgs;
+    mesh_prgs[0] = m_ppl.createHitgroupProgram(m_ctx, module, "__closesthit__mesh", "", "__anyhit__mesh_opacity");
+    mesh_prgs[1] = m_ppl.createHitgroupProgram(m_ctx, module, "__closesthit__shadow", "", "__anyhit__mesh_opacity");
+    // Sphere
+    array<ProgramGroup, NRay> sphere_prgs;
+    sphere_prgs[0] = m_ppl.createHitgroupProgram(m_ctx, module, "__closesthit__sphere", "__intersection__sphere");
+    sphere_prgs[1] = m_ppl.createHitgroupProgram(m_ctx, module, "__closesthit__shadow", "__intersection__sphere");
+    // Plane
+    array<ProgramGroup, NRay> plane_prgs;
+    plane_prgs[0] = m_ppl.createHitgroupProgram(m_ctx, module, "__closesthit__plane", "__intersection__plane");
+    plane_prgs[1] = m_ppl.createHitgroupProgram(m_ctx, module, "__closesthit__shadow", "__intersection__plane");
+    // Curves
+    array<ProgramGroup, NRay> curve_prgs;
+    Module curve_module = m_ppl.createBuiltinIntersectionModule(m_ctx, OPTIX_PRIMITIVE_TYPE_ROUND_CUBIC_BSPLINE);
+    curve_prgs[0] = m_ppl.createHitgroupProgram(m_ctx, { module, "__closesthit__curves" }, { curve_module, "" });
+    curve_prgs[1] = m_ppl.createHitgroupProgram(m_ctx, { module, "__closesthit__shadow" }, { curve_module, "" });
+
+    auto diffuse_id = setupSurfaceCallable(
+        module,
+        "__direct_callable__sample_diffuse",
+        "__continuation_callable__bsdf_diffuse",
+        "__direct_callable__pdf_diffuse"
+    );
+
+    auto dielectric_id = setupSurfaceCallable(
+        module,
+        "__direct_callable__sample_dielectric",
+        "__continuation_callable__bsdf_dielectric",
+        "__direct_callable__pdf_dielectric"
+    );
+
+    auto disney_id = setupSurfaceCallable(
+        module,
+        "__direct_callable__sample_disney",
+        "__continuation_callable__bsdf_disney",
+        "__direct_callable__pdf_disney"
+    );
+
+    // Light sampling callables for MIS
+    uint32_t sphere_light_sample_id = setupCallable(module, "__direct_callable__sample_sphere_light", "");
+    uint32_t sphere_light_pdf_id = setupCallable(module, "__direct_callable__pdf_sphere_light", "");
+
+    uint32_t area_id = setupCallable(module, "__direct_callable__area_emitter", "");
+    SurfaceCallableID area_emitter_id = {
+        area_id,
+        area_id,
+        area_id
+    };
+
+    // Textures
+    auto procedural_wooden_texture = make_shared<ProceduralWoodenTexture>(
+        Vec4f(0.76f, 0.60f, 0.42f, 1.0f), Vec4f(0.4f, 0.2f, 0.1f, 1.0f),
+        0.1f, 20.0f, 0.2f,
+        procedural_wooden_id
+    );
+    auto checker_texture = make_shared<CheckerTexture>(
+        Vec4f(0.2f, 0.2f, 0.2f, 1.0f), Vec4f(0.8f, 0.8f, 0.8f, 1.0f), 10.0f, checker_id
+    );
+    auto grey_texture = make_shared<ConstantTexture>(Vec4f(0.5f, 0.5f, 0.5f, 1.0f), constant_id);
+    auto white_texture = make_shared<ConstantTexture>(Vec4f(1.0f), constant_id);
+    auto winered_checker_texture = make_shared<CheckerTexture>(
+        Vec4f(0.5f, 0.0f, 0.0f, 1.0f), Vec4f(0.2f, 0.2f, 0.2f, 1.0f), 5.0f, checker_id
+    );
+
+    Vec3f final_point = Vec3f(161.6f, 18.17f, -80.72f);
+    Vec3f final_look = Vec3f(182.31f, 15.81f, -93.42f);
+    Vec3f move_dir = normalize(final_point - Vec3f(0.0f, 18.17f, 0.0f));
+    Vec3f look_dir = normalize(final_look - Vec3f(0.0f, 15.81f, 0.0f));
+    Vec3f first_point = Vec3f(-306.5f, 18.2f, 116.5f);
+    Vec3f first_look = Vec3f(-213.1f, 15.8f, 80.6f);
+    pgLog("First point:", first_point);
+    pgLog("First look:", first_look);
+    // Camera positions
+    m_cam_points = {
+        {first_point, 0.0f},
+        {final_point, VIDEO_LENGTH * 0.9f}
+    };
+    m_look_points = {
+        {first_look, 0.0f},
+        {final_look, VIDEO_LENGTH * 0.9f}
+    };
+
+    // Camera settings
+    shared_ptr<Camera> camera = make_shared<Camera>();
+    camera->setOrigin(final_point);
+    camera->setLookat(final_look);
+    camera->setUp(0, 1, 0);
+    camera->setFov(40);
+    camera->setAspect((float)width / height);
+#if !SUBMISSION
+    camera->enableTracking(pgGetCurrentWindow());
+#endif
+    m_scene.setCamera(camera);
+
+    // Bake procedural texture and build CDF for importance sampling
+    StarNightTexture::Data star_night_data{
+        .base_color = Vec4f(0.0f, 0.0f, 0.0001f, 1.0f),
+        .noise_data = RandomNoise::Data{
+            .seed = 1234,
+            .width = 4096,
+            .height = 4096,
+            .depth = 1
+        },
+        .star_threshold = 0.9996f,
+        .star_intensity = 5.0f,
+        .moon_dir = normalize(Vec3f(1.0f, 0.2f, -1.0f)),
+        .moon_intensity = 100.0f
+    };
+
+    // Step 1: Bake to device buffer using CUDA kernel (Vec4f for RGBA)
+    uint32_t envmap_width = 4096;
+    uint32_t envmap_height = 4096;
+    Vec4f* d_envmap_colors = bakeProceduralTextureToDevice(
+        star_night_data,
+        envmap_width,
+        envmap_height
+    );
+
+    // Step 2: Create FloatBitmap from device buffer for texture sampling
+    auto envmap_bitmap = make_shared<FloatBitmap>();
+    envmap_bitmap->allocate(PixelFormat::RGBA, envmap_width, envmap_height);
+    envmap_bitmap->allocateDevicePtr();
+
+    // Directly copy from d_envmap_colors to device bitmap (no host copy needed)
+    CUDA_CHECK(cudaMemcpy(envmap_bitmap->deviceData(), d_envmap_colors,
+        sizeof(Vec4f)* envmap_width* envmap_height,
+        cudaMemcpyDeviceToDevice));
+
+    envmap_bitmap->copyFromDevice();
+    auto envmap_texture = make_shared<FloatBitmapTexture>(envmap_bitmap, bitmap_id);
+    envmap_texture->copyToDevice();
+
+    // Step 3: Build CDF from device buffer
+    auto envmap_data = buildEnvmapSamplingDataFromDevice(
+        d_envmap_colors,
+        4096, 4096,
+        bitmap_id,
+        envmap_bitmap->deviceData()
+    );
+    envmap_data.texture_id = bitmap_id;
+    envmap_data.texture_data = envmap_texture->devicePtr();
+
+    CUDABuffer<EnvmapSamplingData> d_envmap_data;
+    d_envmap_data.copyToDevice(&envmap_data, sizeof(EnvmapSamplingData));
+
+    m_params.envmap_sampling_data = d_envmap_data.deviceData();
+    m_params.envmap_sample_id = envmap_sample_id;
+    m_params.envmap_pdf_id = envmap_pdf_id;
+    m_params.envmap_texture_id = bitmap_id;
+    m_params.envmap_texture_data = envmap_texture->devicePtr();
+
+    // Free intermediate buffer (data is now in envmap_bitmap)
+    CUDA_CHECK(cudaFree(d_envmap_colors));
+
+    // Miss program & environemnt map
+    array<ProgramGroup, NRay> miss_prgs;
+    miss_prgs[0] = m_ppl.createMissProgram(m_ctx, module, "__miss__envmap");
+    miss_prgs[1] = m_ppl.createMissProgram(m_ctx, module, "__miss__shadow");
+    m_scene.bindMissPrograms(miss_prgs);
+    m_scene.setEnvmap(envmap_texture);
+
+    // Procedural rock textures
+    RockTexture rock_texture;
+    rock_texture.noise1 = {
+        .depth = 7,
+        .scale = 5.0f,
+        .amplitude = 1.0f
+    };
+    rock_texture.noise2 = {
+        .depth = 7,
+        .scale = 10.0f,
+        .amplitude = 0.5f
+    };
+
+    // Clear any previous CUDA errors before texture generation
+    cudaGetLastError();
+
+    float* d_rock_noise_data = bakeRockTexture(seed, rock_texture, 1024, 1024);
+
+    if (d_rock_noise_data == nullptr) {
+        return;
+    }
+
+    uint32_t rock_bump_width = 1024;
+    uint32_t rock_bump_height = 1024;
+
+    Vec4f* d_rock_bumpmap_data = createBumpTextureFromHeightmap(
+        d_rock_noise_data,
+        rock_bump_width, rock_bump_height,
+        0.3f  // bump strength
+    );
+
+    if (d_rock_bumpmap_data == nullptr) {
+        CUDA_CHECK(cudaFree(d_rock_noise_data));
+        return;
+    }
+
+    Vec4f* h_rock_bumpmap_data = new Vec4f[rock_bump_width * rock_bump_height];
+    CUDA_CHECK(cudaMemcpy(h_rock_bumpmap_data, d_rock_bumpmap_data, sizeof(Vec4f) * rock_bump_width * rock_bump_height, cudaMemcpyDeviceToHost));
+    auto rock_bumpmap_bitmap = make_shared<FloatBitmap>();
+    rock_bumpmap_bitmap->allocate(PixelFormat::RGBA, rock_bump_width, rock_bump_height);
+    rock_bumpmap_bitmap->setData((float*)h_rock_bumpmap_data, 0, 0, rock_bump_width, rock_bump_height);
+    auto rock_bumpmap_texture = make_shared<FloatBitmapTexture>(rock_bumpmap_bitmap, bitmap_id);
+    rock_bumpmap_texture->copyToDevice();
+    delete[] h_rock_bumpmap_data;
+    CUDA_CHECK(cudaFree(d_rock_noise_data));
+    CUDA_CHECK(cudaFree(d_rock_bumpmap_data));
+
+    // ===== Tree Bark Textures =====
+    // Generate 3 types of bark textures
+
+    // 1. Rough Bark (Worley crackle - ごつごつ)
+    TreeBarkTexture rough_bark;
+    rough_bark.type = BarkType::ROUGH;
+    rough_bark.rough.cell_scale = 1.0f;
+    rough_bark.rough.vertical_stretch = 1.0f;
+    rough_bark.rough.crack_depth = 0.3f;
+    rough_bark.rough.crack_threshold = 0.15f;
+    rough_bark.bump_strength = 1.0f;
+    rough_bark.seed = tea<4>(seed, 1001);
+
+    printf("[DEBUG APP] rough_bark.bump_strength = %.4f\n", rough_bark.bump_strength);
+
+    uint32_t bark_width = 1024;
+    uint32_t bark_height = 1024;
+
+    float* d_rough_bark_heightmap = bakeTreeBarkTexture(rough_bark, bark_width, bark_height);
+
+    // Debug: Check heightmap values
+    float* h_rough_heightmap_debug = new float[100];
+    CUDA_CHECK(cudaMemcpy(h_rough_heightmap_debug, d_rough_bark_heightmap,
+        sizeof(float) * 100, cudaMemcpyDeviceToHost));
+    printf("[DEBUG Rough Bark] First 10 heightmap values: ");
+    for (int i = 0; i < 10; i++) {
+        printf("%.4f ", h_rough_heightmap_debug[i]);
+    }
+    printf("\n");
+    delete[] h_rough_heightmap_debug;
+
+    Vec4f* d_rough_bark_bumpmap = createBumpTextureFromHeightmap(
+        d_rough_bark_heightmap, bark_width, bark_height, -2.0f  // Negative for inverted normals (凹凸逆転)
+    );
+
+    Vec4f* h_rough_bark_data = new Vec4f[bark_width * bark_height];
+    CUDA_CHECK(cudaMemcpy(h_rough_bark_data, d_rough_bark_bumpmap,
+        sizeof(Vec4f) * bark_width * bark_height, cudaMemcpyDeviceToHost));
+    auto rough_bark_bitmap = make_shared<FloatBitmap>();
+    rough_bark_bitmap->allocate(PixelFormat::RGBA, bark_width, bark_height);
+    rough_bark_bitmap->setData((float*)h_rough_bark_data, 0, 0, bark_width, bark_height);
+    auto rough_bark_texture = make_shared<FloatBitmapTexture>(rough_bark_bitmap, bitmap_id);
+    rough_bark_texture->copyToDevice();
+    delete[] h_rough_bark_data;
+    CUDA_CHECK(cudaFree(d_rough_bark_heightmap));
+    CUDA_CHECK(cudaFree(d_rough_bark_bumpmap));
+
+    // 2. Aged Bark (Layered FBM - 年季入り)
+    TreeBarkTexture aged_bark;
+    aged_bark.type = BarkType::AGED;
+    aged_bark.aged.octaves = 8;
+    aged_bark.aged.scale = 8.0f;
+    aged_bark.aged.warp_strength = 0.3f;
+    aged_bark.aged.vertical_bias = 0.5f;
+    aged_bark.bump_strength = 1.0f;
+    aged_bark.seed = tea<4>(seed, 1002);
+
+    printf("[DEBUG APP] aged_bark.bump_strength = %.4f\n", aged_bark.bump_strength);
+
+    float* d_aged_bark_heightmap = bakeTreeBarkTexture(aged_bark, bark_width, bark_height);
+
+    // Debug: Check heightmap values
+    float* h_aged_heightmap_debug = new float[100];
+    CUDA_CHECK(cudaMemcpy(h_aged_heightmap_debug, d_aged_bark_heightmap,
+        sizeof(float) * 100, cudaMemcpyDeviceToHost));
+    delete[] h_aged_heightmap_debug;
+
+    Vec4f* d_aged_bark_bumpmap = createBumpTextureFromHeightmap(
+        d_aged_bark_heightmap, bark_width, bark_height, 1.5f  // Increased for stronger bumps
+    );
+
+    Vec4f* h_aged_bark_data = new Vec4f[bark_width * bark_height];
+    CUDA_CHECK(cudaMemcpy(h_aged_bark_data, d_aged_bark_bumpmap,
+        sizeof(Vec4f) * bark_width * bark_height, cudaMemcpyDeviceToHost));
+    auto aged_bark_bitmap = make_shared<FloatBitmap>();
+    aged_bark_bitmap->allocate(PixelFormat::RGBA, bark_width, bark_height);
+    aged_bark_bitmap->setData((float*)h_aged_bark_data, 0, 0, bark_width, bark_height);
+    auto aged_bark_texture = make_shared<FloatBitmapTexture>(aged_bark_bitmap, bitmap_id);
+    aged_bark_texture->copyToDevice();
+    delete[] h_aged_bark_data;
+    CUDA_CHECK(cudaFree(d_aged_bark_heightmap));
+    CUDA_CHECK(cudaFree(d_aged_bark_bumpmap));
+
+    // 3. Smooth Bark (Color texture - 滑らか)
+    TreeBarkTexture smooth_bark;
+    smooth_bark.type = BarkType::SMOOTH;
+    smooth_bark.smooth.flow_scale = 3.0f;
+    smooth_bark.smooth.flow_strength = 0.3f;
+    smooth_bark.smooth.ripple_frequency = 30.0f;
+    smooth_bark.smooth.smoothness = 1.0f;
+    smooth_bark.bump_strength = 1.0f;
+    smooth_bark.seed = tea<4>(seed, 1003);
+
+    // Generate color texture (not bumpmap) for smooth bark
+    Vec4f* d_smooth_bark_color = bakeSmoothBarkColorTexture(smooth_bark, bark_width, bark_height);
+
+    Vec4f* h_smooth_bark_data = new Vec4f[bark_width * bark_height];
+    CUDA_CHECK(cudaMemcpy(h_smooth_bark_data, d_smooth_bark_color,
+        sizeof(Vec4f) * bark_width * bark_height, cudaMemcpyDeviceToHost));
+    auto smooth_bark_bitmap = make_shared<FloatBitmap>();
+    smooth_bark_bitmap->allocate(PixelFormat::RGBA, bark_width, bark_height);
+    smooth_bark_bitmap->setData((float*)h_smooth_bark_data, 0, 0, bark_width, bark_height);
+    auto smooth_bark_texture = make_shared<FloatBitmapTexture>(smooth_bark_bitmap, bitmap_id);
+    smooth_bark_texture->copyToDevice();
+    delete[] h_smooth_bark_data;
+    CUDA_CHECK(cudaFree(d_smooth_bark_color));
+
+    auto leaf1 = make_shared<BitmapTexture>("foliage_10.png", bitmap_id);
+    auto leaf2 = make_shared<BitmapTexture>("foliage_15.png", bitmap_id);
+    auto leaf3 = make_shared<BitmapTexture>("foliage_24.png", bitmap_id);
+    auto leaf4 = make_shared<BitmapTexture>("foliage_52.png", bitmap_id);
+    auto leaf5 = make_shared<BitmapTexture>("foliage_82.png", bitmap_id);
+    auto leafs = vector<shared_ptr<BitmapTexture>>{ leaf1, leaf2, leaf3, leaf4, leaf5 };
+
+    auto uv_texture = make_shared<ConstantTexture>(Vec3f(0.0f), uv_id);
+
+    // Surfaces
+    auto floor_diffuse = make_shared<Diffuse>(diffuse_id, checker_texture);
+    auto tree_diffuse = make_shared<Diffuse>(diffuse_id, procedural_wooden_texture, false);
+
+    // Generate terrain first (before placing trees/rocks)
+    TerrainParams terrain_params;
+    terrain_params.terrain_size = 1000.0f;
+    terrain_params.height_scale = 100.0f;
+    auto terrain_result = buildTerrainMesh(terrain_params);
+    auto terrain_mesh = terrain_result.mesh;
+    auto terrain_heightmap = terrain_result.heightmap;
+    auto terrain_texture = make_shared<FloatBitmapTexture>(terrain_heightmap, terrain_id);
+    auto terrain_diffuse = make_shared<Diffuse>(diffuse_id, terrain_texture);
+
+    // Terrain offset
+    const Vec3f terrain_offset(0, -terrain_params.height_scale / 2.0f, 0);
+    m_scene.addObject("terrain", terrain_mesh, terrain_diffuse, mesh_prgs, Matrix4f::translate(terrain_offset));
+
+    // Use actual min/max height from terrain generation
+    const float terrain_min_height = terrain_result.min_height;
+    const float terrain_max_height = terrain_result.max_height;
+
+    // Helper lambda to get terrain height at world position (x, z)
+    auto getTerrainHeight = [&](float world_x, float world_z) -> float {
+        // Convert world coordinates to terrain local coordinates
+        float local_x = world_x - terrain_offset.x();
+        float local_z = world_z - terrain_offset.z();
+
+        // Convert to UV coordinates (terrain is centered at origin, size is terrain_size)
+        float half_size = terrain_params.terrain_size * 0.5f;
+        float u = (local_x + half_size) / terrain_params.terrain_size;
+        float v = (local_z + half_size) / terrain_params.terrain_size;
+
+        // Clamp to valid range
+        u = clamp(u, 0.0f, 1.0f);
+        v = clamp(v, 0.0f, 1.0f);
+
+        // Sample heightmap (bilinear interpolation)
+        int width = terrain_heightmap->width();
+        int height = terrain_heightmap->height();
+        float fx = u * (width - 1);
+        float fy = v * (height - 1);
+        int x0 = static_cast<int>(fx);
+        int y0 = static_cast<int>(fy);
+        int x1 = std::min(x0 + 1, width - 1);
+        int y1 = std::min(y0 + 1, height - 1);
+
+        float tx = fx - x0;
+        float ty = fy - y0;
+
+        // Get normalized height values [0,1] from bitmap
+        auto getData = [&](int x, int y) -> float {
+            return get<float>(terrain_heightmap->at(x, y));  // GRAY format, single channel
+            };
+
+        float h00 = getData(x0, y0);
+        float h10 = getData(x1, y0);
+        float h01 = getData(x0, y1);
+        float h11 = getData(x1, y1);
+
+        // Bilinear interpolation
+        float h0 = h00 * (1.0f - tx) + h10 * tx;
+        float h1 = h01 * (1.0f - tx) + h11 * tx;
+        float normalized_height = h0 * (1.0f - ty) + h1 * ty;
+
+        // Convert normalized height [0,1] back to actual height
+        // normalized = (height - min) / (max - min)
+        // height = normalized * (max - min) + min
+        float height_range = terrain_max_height - terrain_min_height;
+        float actual_height = normalized_height * height_range + terrain_min_height;
+
+        return terrain_offset.y() + actual_height;
+        };
+
+    Vec3f camera_start(first_point);
+    Vec3f camera_end(final_point);
+    Vec3f camera_direction = camera_end - camera_start;
+    float path_length = length(camera_direction);
+
+    // Normalize direction for forward axis
+    Vec3f forward = normalize(camera_direction);
+
+    // Create perpendicular axis for grid (right vector)
+    Vec3f up(0.0f, 1.0f, 0.0f);
+    Vec3f right = normalize(cross(forward, up));
+
+    const int grid_rows = 8;       // Along camera path
+    const int grid_cols = 8;       // Perpendicular to path
+    const float grid_spacing = 50.0f;  // Distance between grid points
+    const float perturbation = 8.0f;   // Random offset ±8 units
+
+    vector<Vec2f> tree_positions_2d;
+
+    // Define exclusion zones (sacred areas where trees should not be placed)
+    struct ExclusionZone {
+        Vec2f center;
+        float radius;
+    };
+
+    vector<ExclusionZone> exclusion_zones;
+
+    // Sacred zone 1: Final camera position
+    exclusion_zones.push_back({ Vec2f(final_point.x(), final_point.z()), 150.0f });
+
+    // Sacred zone 2: Bunny1 vicinity (in front of bunny)
+    exclusion_zones.push_back({ Vec2f(m_bunny1_pos.x(), m_bunny1_pos.z()), 200.0f });
+
+    // Sacred zone 3: Bunny2 vicinity
+    exclusion_zones.push_back({ Vec2f(m_bunny2_pos.x(), m_bunny2_pos.z()), 200.0f });
+
+    // Sacred zone 4: Bunny3 vicinity
+    exclusion_zones.push_back({ Vec2f(m_bunny3_pos.x(), m_bunny3_pos.z()), 200.0f });
+
+    // Helper to check if position is in exclusion zone
+    auto isInExclusionZone = [&](const Vec2f& pos) -> bool {
+        for (const auto& zone : exclusion_zones) {
+            Vec2f diff = pos - zone.center;
+            float dist_sq = diff.x() * diff.x() + diff.y() * diff.y();
+            if (dist_sq < zone.radius * zone.radius) {
+                return true;
+            }
+        }
+        return false;
+        };
+
+    m_bunny1_pos = Vec3f(270.0f, -7.0f, -210.0f);
+    m_bunny2_pos = Vec3f(350.0f, -7.0f, -200.0f);
+    m_bunny3_pos = Vec3f(280.0f, -9.0f, -110.0f);
+
+    // Special tree: Place one tree diagonally behind bunny2 and bunny3
+    {
+        // Calculate position between bunny2 and bunny3, then offset backward
+        Vec3f bunny_midpoint = (m_bunny2_pos + m_bunny3_pos) * 0.5f;
+
+        // Move backward (opposite of forward direction) by ~80 units
+        Vec3f special_tree_3d = bunny_midpoint + forward * 100.0f;
+
+        Vec2f special_tree_pos(special_tree_3d.x(), special_tree_3d.z());
+        tree_positions_2d.push_back(special_tree_pos);
+
+        pgLog("Special tree placed at:", special_tree_3d);
+    }
+
+    // Generate grid aligned with camera path
+    for (int row = 0; row < grid_rows; row++) {
+        for (int col = 0; col < grid_cols; col++) {
+            // Position along camera path (row) and perpendicular (col)
+            float forward_dist = (row - grid_rows * 0.5f) * grid_spacing;
+            float right_dist = (col - grid_cols * 0.5f) * grid_spacing;
+
+            // Calculate 3D position
+            Vec3f base_pos = forward * forward_dist + right * right_dist;
+
+            // Add random perturbation
+            float perturb_x = (rnd(seed) - 0.5f) * perturbation * 2.0f;
+            float perturb_z = (rnd(seed) - 0.5f) * perturbation * 2.0f;
+
+            float pos_x = base_pos.x() + perturb_x;
+            float pos_z = base_pos.z() + perturb_z;
+
+            tree_positions_2d.push_back(Vec2f(pos_x, pos_z));
+        }
+    }
+
+    // Add random trees around the grid (19 trees, since we already have 1 special tree)
+    const int num_random_trees = 19;
+    const float grid_half_width = grid_cols * 0.5f * grid_spacing;
+    const float grid_half_depth = grid_rows * 0.5f * grid_spacing;
+    const float outer_min_distance = grid_spacing * 0.5f;  // Minimum distance from grid edge
+    const float outer_max_distance = grid_spacing * 3.0f;  // Maximum distance from grid edge
+
+    int attempts = 0;
+    int placed_random_trees = 0;
+    const int max_attempts = 1000;  // Prevent infinite loop
+
+    while (placed_random_trees < num_random_trees && attempts < max_attempts) {
+        seed = tea<4>(attempts + 10000, 42);  // Different seed offset for random trees
+
+        // Choose random side: 0=front, 1=back, 2=left, 3=right
+        int side = static_cast<int>(rnd(seed) * 4.0f);
+
+        float pos_x, pos_z;
+
+        if (side == 0) {
+            // Front side (positive forward direction)
+            float dist = grid_half_depth + outer_min_distance + rnd(seed) * (outer_max_distance - outer_min_distance);
+            pos_x = (rnd(seed) - 0.5f) * grid_half_width * 3.0f;  // Wider spread
+            Vec3f pos_3d = forward * dist + right * pos_x;
+            pos_x = pos_3d.x();
+            pos_z = pos_3d.z();
+        }
+        else if (side == 1) {
+            // Back side (negative forward direction)
+            float dist = -(grid_half_depth + outer_min_distance + rnd(seed) * (outer_max_distance - outer_min_distance));
+            pos_x = (rnd(seed) - 0.5f) * grid_half_width * 3.0f;
+            Vec3f pos_3d = forward * dist + right * pos_x;
+            pos_x = pos_3d.x();
+            pos_z = pos_3d.z();
+        }
+        else if (side == 2) {
+            // Left side (negative right direction)
+            float dist = -(grid_half_width + outer_min_distance + rnd(seed) * (outer_max_distance - outer_min_distance));
+            float forward_offset = (rnd(seed) - 0.5f) * grid_half_depth * 3.0f;
+            Vec3f pos_3d = right * dist + forward * forward_offset;
+            pos_x = pos_3d.x();
+            pos_z = pos_3d.z();
+        }
+        else {
+            // Right side (positive right direction)
+            float dist = grid_half_width + outer_min_distance + rnd(seed) * (outer_max_distance - outer_min_distance);
+            float forward_offset = (rnd(seed) - 0.5f) * grid_half_depth * 3.0f;
+            Vec3f pos_3d = right * dist + forward * forward_offset;
+            pos_x = pos_3d.x();
+            pos_z = pos_3d.z();
+        }
+
+        Vec2f candidate_pos(pos_x, pos_z);
+
+        // Check if position is in exclusion zone
+        if (!isInExclusionZone(candidate_pos)) {
+            tree_positions_2d.push_back(candidate_pos);
+            placed_random_trees++;
+        }
+
+        attempts++;
+    }
+
+    pgLog("Random trees placed:", placed_random_trees, "out of", num_random_trees, "attempts:", attempts);
+
+    float tree_height_offset = -3.0f;
+
+    // Place trees at selected positions
+    for (size_t i = 0; i < tree_positions_2d.size(); i++) {
+        seed = tea<4>(i, 1);
+
+        // Create Tree object with parameters
+        Tree tree(seed);
+        TreeParam& tree_params = tree.getParams();
+
+        // Add variation to tree parameters
+        uint32_t variation_seed = tea<4>(seed, 555);
+
+        // Random shape variation (0-8)
+        tree_params.shape = rndInt(variation_seed, 0, 8);
+
+        // Base parameters with variation
+        tree_params.g_scale = 80.0f + rnd(variation_seed) * 40.0f;  // 80-120
+        tree_params.g_scale_v = 2.0f + rnd(variation_seed) * 2.0f;  // 1.5-2.5
+        tree_params.levels = 3;  // 2 or 3 levels
+        tree_params.ratio = 0.025f + rnd(variation_seed) * 0.015f;  // 0.025-0.04 trunk thickness
+
+        // Branch length variation
+        tree_params.length[1] = 0.2f + rnd(variation_seed) * 0.3f;  // 0.1-0.3
+        tree_params.length[2] = 0.3f + rnd(variation_seed) * 0.4f;  // 0.3-0.7
+        tree_params.length[3] = 0.3f + rnd(variation_seed) * 0.2f;  // 0.3-0.5
+
+        // Branch count variation
+        tree_params.branches[0] = 1;  // Always single trunk
+        tree_params.branches[1] = rndInt(variation_seed, 20, 40);   // 10-40
+        tree_params.branches[2] = rndInt(variation_seed, 5, 30);   // 5-30
+        tree_params.branches[3] = rndInt(variation_seed, 5, 10);   // 5-10
+
+        tree_params.curve_res = { 5,4,3,2 };
+
+        // Leaf parameters with variation
+        tree_params.leaves = rndInt(variation_seed, 20, 35);  // 20-35
+        tree_params.leaf_blos_num = rndInt(variation_seed, 20, 35);
+        tree_params.leaf_scale = 0.008f + rnd(variation_seed) * 0.004f;  // 0.008-0.012
+
+        float x_power = -2.0f + rnd(variation_seed) * 4.0f;  // -1.0 to 1.0
+        float z_power = -2.0f + rnd(variation_seed) * 4.0f;  // -1.0 to 1.0
+        float y_power = -5.0f + rnd(variation_seed) * 5.0f;
+        tree_params.tropism = { x_power, y_power, z_power };
+
+        // Decide leaf texture variation (single color or mixed)
+        uint32_t leaf_seed = tea<4>(seed, 888);
+        vector<int> leaf_texture_ids;
+
+        float single_color_chance = 0.3f;  // 30% chance of single-color tree
+        if (rnd(leaf_seed) < single_color_chance) {
+            // Single-color leaves: pick one texture
+            int tex_id = rndInt(leaf_seed, 0, leafs.size() - 1);
+            leaf_texture_ids.push_back(tex_id);
+        }
+        else {
+            // Mixed leaves: use 2-3 random textures
+            int num_textures = rndInt(leaf_seed, 2, 3);
+            for (int t = 0; t < num_textures; t++) {
+                int tex_id = rndInt(leaf_seed, 0, leafs.size() - 1);
+                leaf_texture_ids.push_back(tex_id);
+            }
+        }
+
+        float pos_x = tree_positions_2d[i].x();
+        float pos_z = tree_positions_2d[i].y();
+
+        // Get terrain height at this position
+        float terrain_height = getTerrainHeight(pos_x, pos_z);
+
+        Vec3f tree_pos(pos_x, terrain_height + tree_height_offset, pos_z);
+        auto [tree_mesh, leaf_mesh] = buildTreeMesh(seed, tree, tree_params, leaf_texture_ids);
+
+        // Select bark type randomly for variety
+        uint32_t bark_seed = tea<4>(seed, 777);
+        int bark_type = rndInt(bark_seed, 0, 2);  // 0=rough, 1=aged, 2=smooth
+
+        shared_ptr<FloatBitmapTexture> selected_bark;
+        shared_ptr<Texture> bark_base_texture;
+        string bark_type_name;
+        switch (bark_type) {
+        case 0:
+            selected_bark = rough_bark_texture;
+            bark_base_texture = procedural_wooden_texture;
+            bark_type_name = "rough";
+            break;
+        case 1:
+            selected_bark = aged_bark_texture;
+            bark_base_texture = procedural_wooden_texture;
+            bark_type_name = "aged";
+            break;
+        case 2:
+            selected_bark = nullptr;  // No bumpmap for smooth
+            bark_base_texture = smooth_bark_texture;  // Use color texture
+            bark_type_name = "smooth";
+            break;
+        }
+
+        // Create tree material
+        auto tree_material = make_shared<Diffuse>(diffuse_id, bark_base_texture, false);
+        if (selected_bark) {
+            tree_material->setBumpmap(selected_bark);  // Only rough/aged have bumpmaps
+        }
+
+        string tree_name = "tree_" + to_string(i);
+        m_scene.addObject(tree_name, tree_mesh, tree_material, mesh_prgs, Matrix4f::translate(tree_pos));
+
+
+        // Add leaves if generated
+        if (leaf_mesh) {
+            string leaf_name = "leaves_" + to_string(i);
+
+            // Create vector of leaf materials (one per texture)
+            vector<shared_ptr<Material>> leaf_materials;
+            for (auto& leaf_tex : leafs) {
+                leaf_tex->copyToDevice();
+                auto leaf_diffuse = make_shared<Diffuse>(diffuse_id, leaf_tex, true);
+                leaf_diffuse->setOpacityTexture(leaf_tex);
+                leaf_materials.push_back(leaf_diffuse);
+            }
+
+            m_scene.addObject(leaf_name, leaf_mesh, leaf_materials, mesh_prgs, Matrix4f::translate(tree_pos));
+        }
+    }
+
+    // Generate Voronoi rocks at random positions on terrain
+    // NOTE: Each rock must be generated separately because:
+    // 1. Voronoi generation is randomized, creating unique shapes each time
+    // 2. Y-normalization must be applied per-rock to ensure bottom at Y=0
+    // 3. Reusing a single mesh would cause inconsistent ground placement
+
+    const int num_rocks = 100;  // Increased from 5 to 15
+    for (int i = 0; i < num_rocks; i++) {
+        // Create unique seed for this rock (independent for shape and position)
+        uint32_t rock_seed = tea<4>(seed, i * 137);  // Use prime number for better distribution
+
+        // Create unique parameters for each rock
+        VoronoiRockParams rock_params = createDefaultRockFieldParams();
+        rock_params.seed_count = 1;             // Generate SINGLE rock (not 30!)
+        rock_params.field_size = 10.0f;         // Small field for single rock
+        rock_params.y_position = 0.0f;          // Base Y position (rock bottom will be at 0)
+        rock_params.min_rock_vertices = 20;     // Minimum vertices per rock
+        rock_params.max_rock_vertices = 40;     // Maximum vertices per rock
+        rock_params.rock_roughness = 0.3f;      // Surface roughness variation
+        rock_params.rock_height_variation = 0.4f; // Y-axis compression variation
+        rock_params.rock_base_size = 1.0f;      // Base size (independent of field_size!)
+        rock_params.random_seed = rock_seed;    // Unique seed for rock generation
+
+        // Generate unique rock mesh for this position
+        auto rock_mesh = buildVoronoiRockMesh(rock_params);
+
+        // Random position within terrain bounds (80% of terrain to ensure no overflow)
+        // Use separate seed for position to avoid correlation with rock shape
+        uint32_t pos_seed = tea<4>(seed, i * 239 + 1);  // Different prime for X
+        float rock_x = (rnd(pos_seed) - 0.5f) * terrain_params.terrain_size * 0.8f;
+
+        pos_seed = tea<4>(seed, i * 239 + 2);  // Different offset for Z
+        float rock_z = (rnd(pos_seed) - 0.5f) * terrain_params.terrain_size * 0.8f;
+
+        // Get terrain height at this position
+        float rock_height = getTerrainHeight(rock_x, rock_z);
+
+        // Random scale for variety (medium-sized rocks)
+        pos_seed = tea<4>(seed, i * 239 + 3);  // Different offset for scale
+        float rock_scale = 5.0f + rnd(pos_seed) * 5.0f;  // 5-10 scale
+
+        // Rock mesh is centered at origin (Y=0 is at rock center, not bottom)
+        // Transform: Scale first, then translate to world position
+        // Rock center will be placed at terrain height
+
+        auto rock_diffuse = make_shared<Diffuse>(diffuse_id, grey_texture);
+        rock_diffuse->setBumpmap(rock_bumpmap_texture);
+
+        string rock_name = "rock_" + to_string(i);
+        Matrix4f rock_transform = Matrix4f::translate(Vec3f(rock_x, rock_height, rock_z)) * Matrix4f::scale(rock_scale);
+        m_scene.addObject(rock_name, rock_mesh, rock_diffuse, mesh_prgs, rock_transform);
+    }
+
+    auto bunny_white = make_shared<Diffuse>(diffuse_id, white_texture);
+    auto bunny_glass = make_shared<Dielectric>(dielectric_id, white_texture, 1.5f, 0.01f);
+    auto bunny_disney = make_shared<Disney>(
+        disney_id,
+        winered_checker_texture,
+        /* subsurface = */ 0.2f,
+        /* metallic = */ 0.9f,
+        /* specular = */ 0.5f,
+        /* specular_tint = */ 0.5f,
+        /* roughness = */ 0.3f,
+        /* anisotropic = */ 0.5f,
+        /* sheen = */ 0.0f,
+        /* sheen_tint = */ 0.0f,
+        /* clearcoat = */ 0.0f,
+        /* clearcoat_gloss = */ 0.0f
+    );
+
+    auto bunny_mesh = make_shared<TriangleMesh>("uv_bunny.obj");
+    // Bunny 
+    {
+        m_bunny1_scale = 150.0f;
+        Matrix4f bunny_transform = Matrix4f::translate(m_bunny1_pos) * Matrix4f::scale(m_bunny1_scale);
+        m_scene.addObject("bunny1", bunny_mesh, bunny_white, mesh_prgs, bunny_transform);
+    }
+
+    {
+        m_bunny2_scale = 180.0f;
+        Matrix4f bunny_transform = Matrix4f::translate(m_bunny2_pos) * Matrix4f::rotate(-math::pi / 6.0f, Vec3f(0, 1, 0)) * Matrix4f::scale(m_bunny2_scale);
+        m_scene.addObject("bunny2", bunny_mesh, bunny_disney, mesh_prgs, bunny_transform);
+    }
+
+    {
+        m_bunny3_scale = 120.0f;
+        Matrix4f bunny_transform = Matrix4f::translate(m_bunny3_pos) * Matrix4f::rotate(-math::two_pi / 3.0f, Vec3f(0, 1, 0)) * Matrix4f::scale(m_bunny3_scale);
+        m_scene.addObject("bunny3", bunny_mesh, bunny_glass, mesh_prgs, bunny_transform);
+    }
+
+    m_light_ease = EaseType::Linear;
+    Vec3f first_light_pos(-200.0f, 15.5f, 53.8f);
+    Vec3f final_light_pos = (m_bunny1_pos + m_bunny2_pos + m_bunny3_pos) / 3.0f;
+    final_light_pos.y() += 40.0f;
+
+    Vec3f second_pos = lerp(first_light_pos, final_light_pos, 2.0f / 7.5f);
+    Vec3f third_pos = lerp(first_light_pos, final_light_pos, 3.5f / 7.5f);
+    third_pos.y() += 15.0f;
+
+    m_light_points = {
+        {first_light_pos, 0.0f},
+        {second_pos, VIDEO_LENGTH * 0.3f},
+        {third_pos, VIDEO_LENGTH * 0.5f},
+        {final_light_pos, VIDEO_LENGTH * 0.9f}
+    };
+
+    addLight("light1",
+        make_shared<Sphere>(final_light_pos, 3.0f),
+        make_shared<AreaEmitter>(area_emitter_id,
+            make_shared<ConstantTexture>(Vec3f(0.5f, 0.5f, 0.9f), constant_id),
+            10.0f),
+        sphere_prgs,
+        Matrix4f::identity(),
+        sphere_light_sample_id, sphere_light_pdf_id);  // Use sphere light sampling callable
+
+    // Copy light info to GPU
+    copyAreaEmitterToDevice();
+}
+
+// ------------------------------------------------------------------
+void App::treeTropismScene(Module module, uint32_t width, uint32_t height)
+{
+    uint32_t seed = tea<4>(0, 0);
+
+    // Texture callables
+    auto bitmap_id = setupCallable(module, "__direct_callable__bitmap", "");
+    auto checker_id = setupCallable(module, "__direct_callable__checker", "");
+    auto constant_id = setupCallable(module, "__direct_callable__constant", "");
+    auto procedural_wooden_id = setupCallable(module, "__direct_callable__procedural_wooden", "");
+    auto terrain_id = setupCallable(module, "__direct_callable__terrain_heightmap", "");
+    auto uv_id = setupCallable(module, "__direct_callable__uv", "");
+
+    // Register environment map importance sampling callable functions
+    auto envmap_sample_id = setupCallable(module, "__direct_callable__sample_envmap", "");
+    auto envmap_pdf_id = setupCallable(module, "__direct_callable__pdf_envmap", "");
+
+    // Hitgroup programs
+    array<ProgramGroup, NRay> mesh_prgs;
+    mesh_prgs[0] = m_ppl.createHitgroupProgram(m_ctx, module, "__closesthit__mesh", "", "__anyhit__mesh_opacity");
+    mesh_prgs[1] = m_ppl.createHitgroupProgram(m_ctx, module, "__closesthit__shadow", "", "__anyhit__mesh_opacity");
+    // Sphere
+    array<ProgramGroup, NRay> sphere_prgs;
+    sphere_prgs[0] = m_ppl.createHitgroupProgram(m_ctx, module, "__closesthit__sphere", "__intersection__sphere");
+    sphere_prgs[1] = m_ppl.createHitgroupProgram(m_ctx, module, "__closesthit__shadow", "__intersection__sphere");
+    // Plane
+    array<ProgramGroup, NRay> plane_prgs;
+    plane_prgs[0] = m_ppl.createHitgroupProgram(m_ctx, module, "__closesthit__plane", "__intersection__plane");
+    plane_prgs[1] = m_ppl.createHitgroupProgram(m_ctx, module, "__closesthit__shadow", "__intersection__plane");
+    // Curves
+    array<ProgramGroup, NRay> curve_prgs;
+    Module curve_module = m_ppl.createBuiltinIntersectionModule(m_ctx, OPTIX_PRIMITIVE_TYPE_ROUND_CUBIC_BSPLINE);
+    curve_prgs[0] = m_ppl.createHitgroupProgram(m_ctx, { module, "__closesthit__curves" }, { curve_module, "" });
+    curve_prgs[1] = m_ppl.createHitgroupProgram(m_ctx, { module, "__closesthit__shadow" }, { curve_module, "" });
+
+    auto diffuse_id = setupSurfaceCallable(
+        module,
+        "__direct_callable__sample_diffuse",
+        "__continuation_callable__bsdf_diffuse",
+        "__direct_callable__pdf_diffuse"
+    );
+
+    auto dielectric_id = setupSurfaceCallable(
+        module,
+        "__direct_callable__sample_dielectric",
+        "__continuation_callable__bsdf_dielectric",
+        "__direct_callable__pdf_dielectric"
+    );
+
+    auto disney_id = setupSurfaceCallable(
+        module,
+        "__direct_callable__sample_disney",
+        "__continuation_callable__bsdf_disney",
+        "__direct_callable__pdf_disney"
+    );
+
+    // Light sampling callables for MIS
+    uint32_t sphere_light_sample_id = setupCallable(module, "__direct_callable__sample_sphere_light", "");
+    uint32_t sphere_light_pdf_id = setupCallable(module, "__direct_callable__pdf_sphere_light", "");
+
+    uint32_t area_id = setupCallable(module, "__direct_callable__area_emitter", "");
+    SurfaceCallableID area_emitter_id = {
+        area_id,
+        area_id,
+        area_id
+    };
+
+    // Camera settings
+    shared_ptr<Camera> camera = make_shared<Camera>();
+    camera->setOrigin(Vec3f(0.0, 20.0f, -100.0f));
+    camera->setLookat(Vec3f(0.0f, 0.0f, 0.0f));
+    camera->setUp(0, 1, 0);
+    camera->setFov(40);
+    camera->setAspect((float)width / height);
+#if !SUBMISSION
+    camera->enableTracking(pgGetCurrentWindow());
+#endif
+    m_scene.setCamera(camera);
+
+    // Envmap
+    shared_ptr<FloatBitmap> envmap_bitmap = make_shared<FloatBitmap>("resources/image/drackenstein_quarry_4k.exr");
+    envmap_bitmap->copyToDevice();
+    auto envmap_texture = make_shared<FloatBitmapTexture>(envmap_bitmap, bitmap_id);
+    envmap_texture->copyToDevice();
+
+    // Build CDF from device buffer
+    auto envmap_data = buildEnvmapSamplingDataFromDevice(
+        (Vec4f*)envmap_bitmap->deviceData(),
+        envmap_bitmap->width(),
+        envmap_bitmap->height(),
+        bitmap_id,
+        envmap_bitmap->deviceData()
+    );
+    envmap_data.texture_id = bitmap_id;
+    envmap_data.texture_data = envmap_texture->devicePtr();
+
+    CUDABuffer<EnvmapSamplingData> d_envmap_data;
+    d_envmap_data.copyToDevice(&envmap_data, sizeof(EnvmapSamplingData));
+
+    m_params.envmap_sampling_data = d_envmap_data.deviceData();
+    m_params.envmap_sample_id = envmap_sample_id;
+    m_params.envmap_pdf_id = envmap_pdf_id;
+    m_params.envmap_texture_id = bitmap_id;
+    m_params.envmap_texture_data = envmap_texture->devicePtr();
+
+    // Miss program & environemnt map
+    array<ProgramGroup, NRay> miss_prgs;
+    miss_prgs[0] = m_ppl.createMissProgram(m_ctx, module, "__miss__envmap");
+    miss_prgs[1] = m_ppl.createMissProgram(m_ctx, module, "__miss__shadow");
+    m_scene.bindMissPrograms(miss_prgs);
+    m_scene.setEnvmap(envmap_texture);
+
+    // Textures
+    auto leaf1 = make_shared<BitmapTexture>("foliage_10.png", bitmap_id);
+    auto leaf2 = make_shared<BitmapTexture>("foliage_15.png", bitmap_id);
+    auto leaf3 = make_shared<BitmapTexture>("foliage_24.png", bitmap_id);
+    auto leaf4 = make_shared<BitmapTexture>("foliage_52.png", bitmap_id);
+    auto leaf5 = make_shared<BitmapTexture>("foliage_82.png", bitmap_id);
+    auto leafs = vector<shared_ptr<BitmapTexture>>{ leaf1, leaf2, leaf3, leaf4, leaf5 };
+
+    auto procedural_wooden_texture = make_shared<ProceduralWoodenTexture>(
+        Vec4f(0.76f, 0.60f, 0.42f, 1.0f), Vec4f(0.4f, 0.2f, 0.1f, 1.0f),
+        0.1f, 20.0f, 0.2f,
+        procedural_wooden_id
+    );
+    auto checker_texture = make_shared<CheckerTexture>(
+        Vec4f(0.2f, 0.2f, 0.2f, 1.0f), Vec4f(0.8f, 0.8f, 0.8f, 1.0f), 10.0f, checker_id
+    );
+
+    vector<Vec2f> tree_positions_2d = {
+        Vec2f(-75.0f, 0.0f),
+        Vec2f(-25.0f, 0.0f),
+        Vec2f(25.0f, 0.0f),
+        Vec2f(75.0f, 0.0f),
+    };
+
+    // Place trees at selected positions
+    for (size_t i = 0; i < tree_positions_2d.size(); i++) {
+        seed = tea<4>(i, 1);
+
+        // Create Tree object with parameters
+        Tree tree(seed);
+        TreeParam& tree_params = tree.getParams();
+
+        // Add variation to tree parameters
+        uint32_t variation_seed = tea<4>(seed, 555);
+
+        // Random shape variation (0-8)
+        tree_params.shape = 8;
+
+        // Base parameters with variation
+        tree_params.g_scale = 100;  // 80-120
+        tree_params.levels = 3;  // 2 or 3 levels
+
+        tree_params.curve_res = { 5,4,3,2 };
+
+        // Leaf parameters with variation
+        tree_params.leaves = 30;  // 20-35
+        tree_params.leaf_blos_num = 30;
+        tree_params.leaf_scale = 0.01f;  // 0.008-0.012
+        float x_power = -1.0f * (float)(i == 1);
+        float y_power = -3.0f * (float)(i == 2);
+        float z_power = -1.0f * (float)(i == 3);
+        tree_params.tropism = { x_power, y_power, z_power };
+
+        // Decide leaf texture variation (single color or mixed)
+        uint32_t leaf_seed = tea<4>(seed, 888);
+        vector<int> leaf_texture_ids = { (int)i % static_cast<int>(leafs.size()) };  // Use different texture per tree
+
+        float pos_x = tree_positions_2d[i].x();
+        float pos_z = tree_positions_2d[i].y();
+
+
+        Vec3f tree_pos(pos_x, 0.0f, pos_z);
+        auto [tree_mesh, leaf_mesh] = buildTreeMesh(seed, tree, tree_params, leaf_texture_ids);
+
+        // Create tree material
+        auto tree_material = make_shared<Diffuse>(diffuse_id, procedural_wooden_texture, false);
+
+        string tree_name = "tree_" + to_string(i);
+        m_scene.addObject(tree_name, tree_mesh, tree_material, mesh_prgs, Matrix4f::translate(tree_pos));
+
+
+        // Add leaves if generated
+        if (leaf_mesh) {
+            string leaf_name = "leaves_" + to_string(i);
+
+            // Create vector of leaf materials (one per texture)
+            vector<shared_ptr<Material>> leaf_materials;
+            for (auto& leaf_tex : leafs) {
+                leaf_tex->copyToDevice();
+                auto leaf_diffuse = make_shared<Diffuse>(diffuse_id, leaf_tex, true);
+                leaf_diffuse->setOpacityTexture(leaf_tex);
+                leaf_materials.push_back(leaf_diffuse);
+            }
+
+            m_scene.addObject(leaf_name, leaf_mesh, leaf_materials, mesh_prgs, Matrix4f::translate(tree_pos));
+        }
+    }
+
+    m_scene.addObject("floor", make_shared<Plane>(Vec2f(-1000), Vec2f(1000)),
+        make_shared<Diffuse>(diffuse_id, checker_texture), plane_prgs);
+}
+// ------------------------------------------------------------------
+void App::treeVariationScene(Module module, uint32_t width, uint32_t height)
+{
+        uint32_t seed = tea<4>(0, 0);
+
+    // Texture callables
+    auto bitmap_id = setupCallable(module, "__direct_callable__bitmap", "");
+    auto checker_id = setupCallable(module, "__direct_callable__checker", "");
+    auto constant_id = setupCallable(module, "__direct_callable__constant", "");
+    auto procedural_wooden_id = setupCallable(module, "__direct_callable__procedural_wooden", "");
+    auto terrain_id = setupCallable(module, "__direct_callable__terrain_heightmap", "");
+    auto uv_id = setupCallable(module, "__direct_callable__uv", "");
+
+    // Register environment map importance sampling callable functions
+    auto envmap_sample_id = setupCallable(module, "__direct_callable__sample_envmap", "");
+    auto envmap_pdf_id = setupCallable(module, "__direct_callable__pdf_envmap", "");
+
+    // Hitgroup programs
+    array<ProgramGroup, NRay> mesh_prgs;
+    mesh_prgs[0] = m_ppl.createHitgroupProgram(m_ctx, module, "__closesthit__mesh", "", "__anyhit__mesh_opacity");
+    mesh_prgs[1] = m_ppl.createHitgroupProgram(m_ctx, module, "__closesthit__shadow", "", "__anyhit__mesh_opacity");
+    // Sphere
+    array<ProgramGroup, NRay> sphere_prgs;
+    sphere_prgs[0] = m_ppl.createHitgroupProgram(m_ctx, module, "__closesthit__sphere", "__intersection__sphere");
+    sphere_prgs[1] = m_ppl.createHitgroupProgram(m_ctx, module, "__closesthit__shadow", "__intersection__sphere");
+    // Plane
+    array<ProgramGroup, NRay> plane_prgs;
+    plane_prgs[0] = m_ppl.createHitgroupProgram(m_ctx, module, "__closesthit__plane", "__intersection__plane");
+    plane_prgs[1] = m_ppl.createHitgroupProgram(m_ctx, module, "__closesthit__shadow", "__intersection__plane");
+    // Curves
+    array<ProgramGroup, NRay> curve_prgs;
+    Module curve_module = m_ppl.createBuiltinIntersectionModule(m_ctx, OPTIX_PRIMITIVE_TYPE_ROUND_CUBIC_BSPLINE);
+    curve_prgs[0] = m_ppl.createHitgroupProgram(m_ctx, { module, "__closesthit__curves" }, { curve_module, "" });
+    curve_prgs[1] = m_ppl.createHitgroupProgram(m_ctx, { module, "__closesthit__shadow" }, { curve_module, "" });
+
+    auto diffuse_id = setupSurfaceCallable(
+        module,
+        "__direct_callable__sample_diffuse",
+        "__continuation_callable__bsdf_diffuse",
+        "__direct_callable__pdf_diffuse"
+    );
+
+    auto dielectric_id = setupSurfaceCallable(
+        module,
+        "__direct_callable__sample_dielectric",
+        "__continuation_callable__bsdf_dielectric",
+        "__direct_callable__pdf_dielectric"
+    );
+
+    auto disney_id = setupSurfaceCallable(
+        module,
+        "__direct_callable__sample_disney",
+        "__continuation_callable__bsdf_disney",
+        "__direct_callable__pdf_disney"
+    );
+
+    // Light sampling callables for MIS
+    uint32_t sphere_light_sample_id = setupCallable(module, "__direct_callable__sample_sphere_light", "");
+    uint32_t sphere_light_pdf_id = setupCallable(module, "__direct_callable__pdf_sphere_light", "");
+
+    uint32_t area_id = setupCallable(module, "__direct_callable__area_emitter", "");
+    SurfaceCallableID area_emitter_id = {
+        area_id,
+        area_id,
+        area_id
+    };
+
+    // Camera settings
+    shared_ptr<Camera> camera = make_shared<Camera>();
+    camera->setOrigin(Vec3f(0.0, 80.0f, -300.0f));
+    camera->setLookat(Vec3f(0.0f, 40.0f, 0.0f));
+    camera->setUp(0, 1, 0);
+    camera->setFov(40);
+    camera->setAspect((float)width / height);
+#if !SUBMISSION
+    camera->enableTracking(pgGetCurrentWindow());
+#endif
+    m_scene.setCamera(camera);
+
+    // Envmap
+    shared_ptr<FloatBitmap> envmap_bitmap = make_shared<FloatBitmap>("resources/image/drackenstein_quarry_4k.exr");
+    envmap_bitmap->copyToDevice();
+    auto envmap_texture = make_shared<FloatBitmapTexture>(envmap_bitmap, bitmap_id);
+    envmap_texture->copyToDevice();
+
+    // Build CDF from device buffer
+    auto envmap_data = buildEnvmapSamplingDataFromDevice(
+        (Vec4f*)envmap_bitmap->deviceData(),
+        envmap_bitmap->width(),
+        envmap_bitmap->height(),
+        bitmap_id,
+        envmap_bitmap->deviceData()
+    );
+    envmap_data.texture_id = bitmap_id;
+    envmap_data.texture_data = envmap_texture->devicePtr();
+
+    CUDABuffer<EnvmapSamplingData> d_envmap_data;
+    d_envmap_data.copyToDevice(&envmap_data, sizeof(EnvmapSamplingData));
+
+    m_params.envmap_sampling_data = d_envmap_data.deviceData();
+    m_params.envmap_sample_id = envmap_sample_id;
+    m_params.envmap_pdf_id = envmap_pdf_id;
+    m_params.envmap_texture_id = bitmap_id;
+    m_params.envmap_texture_data = envmap_texture->devicePtr();
+
+    // Miss program & environemnt map
+    array<ProgramGroup, NRay> miss_prgs;
+    miss_prgs[0] = m_ppl.createMissProgram(m_ctx, module, "__miss__envmap");
+    miss_prgs[1] = m_ppl.createMissProgram(m_ctx, module, "__miss__shadow");
+    m_scene.bindMissPrograms(miss_prgs);
+    m_scene.setEnvmap(envmap_texture);
+
+    // Textures
+    auto leaf1 = make_shared<BitmapTexture>("foliage_10.png", bitmap_id);
+    auto leaf2 = make_shared<BitmapTexture>("foliage_15.png", bitmap_id);
+    auto leaf3 = make_shared<BitmapTexture>("foliage_24.png", bitmap_id);
+    auto leaf4 = make_shared<BitmapTexture>("foliage_52.png", bitmap_id);
+    auto leaf5 = make_shared<BitmapTexture>("foliage_82.png", bitmap_id);
+    auto leafs = vector<shared_ptr<BitmapTexture>>{ leaf1, leaf2, leaf3, leaf4, leaf5 };
+
+    auto procedural_wooden_texture = make_shared<ProceduralWoodenTexture>(
+        Vec4f(0.76f, 0.60f, 0.42f, 1.0f), Vec4f(0.4f, 0.2f, 0.1f, 1.0f),
+        0.1f, 20.0f, 0.2f,
+        procedural_wooden_id
+    );
+    auto checker_texture = make_shared<CheckerTexture>(
+        Vec4f(0.2f, 0.2f, 0.2f, 1.0f), Vec4f(0.8f, 0.8f, 0.8f, 1.0f), 10.0f, checker_id
+    );
+
+    vector<Vec2f> tree_positions_2d = {
+        Vec2f(-100.0f, 0.0f),
+        Vec2f(-50.0f, 0.0f),
+        Vec2f(0.0f, 0.0f),
+        Vec2f(50.0f, 0.0f),
+        Vec2f(100.0f, 0.0f)
+    };
+
+    // Place trees at selected positions
+    for (size_t i = 0; i < tree_positions_2d.size(); i++) {
+        seed = tea<4>(i, 1);
+
+        // Create Tree object with parameters
+        Tree tree(seed);
+        TreeParam& tree_params = tree.getParams();
+
+        // Add variation to tree parameters based on tree index
+        if (i == 0) {
+            // Tree 0: Conical pine-like
+            tree_params.shape = 2;  // Conical
+            tree_params.g_scale = 100.0f;
+            tree_params.g_scale_v = 10.0f;
+            tree_params.levels = 3;  // Need 4 levels to access index 3
+            tree_params.ratio = 0.018f;
+            tree_params.ratio_power = 1.3f;
+            tree_params.flare = 1.2f;
+            tree_params.length[1] = 0.8f;
+            tree_params.length[2] = 0.2f;
+            tree_params.length[3] = 0.4f;
+            tree_params.length_v[1] = 0.1f;
+            tree_params.length_v[2] = 0.05f;
+            tree_params.length_v[3] = 0.0f;
+            tree_params.branches[0] = 1;
+            tree_params.branches[1] = 50;
+            tree_params.branches[2] = 30;
+            tree_params.branches[3] = 10;
+            tree_params.curve_res = { 8, 10, 3, 1 };
+            tree_params.curve[0] = 0.0f;
+            tree_params.curve[1] = 40.0f;
+            tree_params.curve[2] = -40.0f;
+            tree_params.curve[3] = 0.0f;
+            tree_params.curve_back[0] = 0.0f;
+            tree_params.curve_back[1] = -70.0f;
+            tree_params.curve_back[2] = 0.0f;
+            tree_params.curve_back[3] = 0.0f;
+            tree_params.leaves = 25;
+            tree_params.leaf_blos_num = 25;
+            tree_params.leaf_scale = 0.009f;
+        }
+        else if (i == 1) {
+            // Tree 1: Broad oak-like
+            tree_params.shape = 7;  // Spherical with base
+            tree_params.g_scale = 95.0f;
+            tree_params.g_scale_v = 3.0f;
+            tree_params.levels = 3;
+            tree_params.ratio = 0.015f;
+            tree_params.ratio_power = 1.2f;
+            tree_params.length[0] = 1.0f;
+            tree_params.length[1] = 0.3f;
+            tree_params.length[2] = 0.6f;
+            tree_params.length[3] = 0.0f;
+            tree_params.branches[0] = 1;
+            tree_params.branches[1] = 50;
+            tree_params.branches[2] = 30;
+            tree_params.branches[3] = 10;
+            tree_params.curve_res = { 3, 5, 3, 1 };
+            tree_params.leaves = 32;
+            tree_params.leaf_blos_num = 32;
+            tree_params.leaf_scale = 0.011f;
+        }
+        else if (i == 2) {
+            // Tree 2: Weeping willow-like
+            tree_params.shape = 1;  // Spherical
+            tree_params.g_scale = 105.0f;
+            tree_params.g_scale_v = 5.0f;
+            tree_params.levels = 3;
+            tree_params.ratio = 0.015f;
+            tree_params.ratio_power = 1.3f;
+            tree_params.length[0] = 1.0f;
+            tree_params.length[1] = 0.3f;
+            tree_params.length[2] = 0.6f;
+            tree_params.length[3] = 0.0f;
+            tree_params.branches[0] = 1;
+            tree_params.branches[1] = 50;
+            tree_params.branches[2] = 30;
+            tree_params.branches[3] = 10;
+            tree_params.curve_res = { 10, 10, 10, 1 };
+            tree_params.curve[0] = 0.0f;
+            tree_params.curve[1] = 0.0f;
+            tree_params.curve[2] = -10.0f;
+            tree_params.curve[3] = 0.0f;
+            tree_params.leaves = 30;
+            tree_params.leaf_blos_num = 30;
+            tree_params.leaf_scale = 0.010f;
+        }
+        else if (i == 3) {
+            // Tree 3: Flame-shaped cypress-like
+            tree_params.shape = 5;  // Flame
+            tree_params.g_scale = 115.0f;
+            tree_params.g_scale_v = 5.0f;
+            tree_params.levels = 3;
+            tree_params.ratio = 0.03f;
+            tree_params.ratio_power = 2.0f;
+            tree_params.length[0] = 0.8f;
+            tree_params.length[1] = 0.5f;
+            tree_params.length[2] = 1.5f;
+            tree_params.length[3] = 0.1f;
+            tree_params.branches[0] = 1;
+            tree_params.branches[1] = 50;
+            tree_params.branches[2] = 30;
+            tree_params.branches[3] = 10;
+            tree_params.curve_res = { 8, 16, 12, 1 };
+            tree_params.curve[0] = 0.0f;
+            tree_params.curve[1] = 40.0f;
+            tree_params.curve[2] = 0.0f;
+            tree_params.curve[3] = 0.0f;
+            tree_params.curve_back[0] = 20.0f;
+            tree_params.curve_back[1] = 80.0f;
+            tree_params.curve_back[2] = 0.0f;
+            tree_params.curve_back[3] = 0.0f;
+            tree_params.leaves = 22;
+            tree_params.leaf_blos_num = 22;
+            tree_params.leaf_scale = 0.008f;
+        }
+        else if (i == 4) {
+            // Tree 4: Wide-spreading acacia-like
+            tree_params.shape = 4;  // Tapered cylindrical
+            tree_params.g_scale = 88.0f;
+            tree_params.g_scale_v = 3.5f;
+            tree_params.levels = 3;
+            tree_params.ratio = 0.035f;
+            tree_params.length[1] = 0.15f;
+            tree_params.length[2] = 0.55f;
+            tree_params.length[3] = 0.38f;
+            tree_params.branches[0] = 1;
+            tree_params.branches[1] = 25;
+            tree_params.branches[2] = 22;
+            tree_params.branches[3] = 5;
+            tree_params.curve_res = { 5, 5, 4, 2 };
+            tree_params.curve[0] = 0.0f;
+            tree_params.curve[1] = -25.0f;
+            tree_params.curve[2] = 20.0f;
+            tree_params.curve[3] = 0.0f;
+            tree_params.leaves = 34;
+            tree_params.leaf_blos_num = 34;
+            tree_params.leaf_scale = 0.0115f;
+        }
+
+        // Decide leaf texture variation (single color or mixed)
+        uint32_t leaf_seed = tea<4>(seed, 888);
+        vector<int> leaf_texture_ids = { (int)i % static_cast<int>(leafs.size()) };  // Use different texture per tree
+
+        float pos_x = tree_positions_2d[i].x();
+        float pos_z = tree_positions_2d[i].y();
+
+        Vec3f tree_pos(pos_x, 0.0f, pos_z);
+        auto [tree_mesh, leaf_mesh] = buildTreeMesh(seed, tree, tree_params, leaf_texture_ids);
+
+        // Create tree material
+        auto tree_material = make_shared<Diffuse>(diffuse_id, procedural_wooden_texture, false);
+
+        string tree_name = "tree_" + to_string(i);
+        m_scene.addObject(tree_name, tree_mesh, tree_material, mesh_prgs, Matrix4f::translate(tree_pos));
+
+
+        // Add leaves if generated
+        if (leaf_mesh) {
+            string leaf_name = "leaves_" + to_string(i);
+
+            // Create vector of leaf materials (one per texture)
+            vector<shared_ptr<Material>> leaf_materials;
+            for (auto& leaf_tex : leafs) {
+                leaf_tex->copyToDevice();
+                auto leaf_diffuse = make_shared<Diffuse>(diffuse_id, leaf_tex, true);
+                leaf_diffuse->setOpacityTexture(leaf_tex);
+                leaf_materials.push_back(leaf_diffuse);
+            }
+
+            m_scene.addObject(leaf_name, leaf_mesh, leaf_materials, mesh_prgs, Matrix4f::translate(tree_pos));
+        }
+    }
+
+    m_scene.addObject("floor", make_shared<Plane>(Vec2f(-1000), Vec2f(1000)),
+        make_shared<Diffuse>(diffuse_id, checker_texture), plane_prgs);
+}
+
+// ------------------------------------------------------------------
 void App::setup()
 {
     using namespace std::chrono;
@@ -809,820 +2173,11 @@ void App::setup()
     ProgramGroup raygen_prg = m_ppl.createRaygenProgram(m_ctx, module, "__raygen__pinhole");
     m_scene.bindRaygenProgram(raygen_prg);
 
-    // Callable programs 
-    struct Callable {
-        Callable(const pair<ProgramGroup, uint32_t>& callable)
-            : prg(callable.first), ID(callable.second) {};
-        ProgramGroup prg;
-        uint32_t ID;
-    };
-
-    auto setupCallable = [&](const string& dc_name, const string& cc_name) {
-        Callable callable = m_ppl.createCallablesProgram(m_ctx, module, dc_name, cc_name);
-        m_scene.bindCallablesProgram(callable.prg);
-        return callable.ID;
-    };
-    
-    // Texture callables
-    auto bitmap_id = setupCallable("__direct_callable__bitmap", "");
-    auto checker_id = setupCallable("__direct_callable__checker", "");
-    auto constant_id = setupCallable("__direct_callable__constant", "");
-    auto procedural_wooden_id = setupCallable("__direct_callable__procedural_wooden", "");
-    auto terrain_id = setupCallable("__direct_callable__terrain_heightmap", "");
-    auto uv_id = setupCallable("__direct_callable__uv", "");
-    
-    // Register environment map importance sampling callable functions
-    auto envmap_sample_id = setupCallable("__direct_callable__sample_envmap", "");
-    auto envmap_pdf_id = setupCallable("__direct_callable__pdf_envmap", "");
-    
-    // Bake procedural texture and build CDF for importance sampling
-    StarNightTexture::Data star_night_data{
-        .base_color = Vec4f(0.0f, 0.0f, 0.0001f, 1.0f),
-        .noise_data = RandomNoise::Data{
-            .seed = 1234,
-            .width = 4096, 
-            .height = 4096, 
-            .depth = 1
-        },
-        .star_threshold = 0.9996f,
-        .star_intensity = 5.0f,
-        .moon_dir = normalize(Vec3f(1.0f, 0.2f, -1.0f)),
-        .moon_intensity = 100.0f
-    };
-    
-    // Step 1: Bake to device buffer using CUDA kernel (Vec4f for RGBA)
-    uint32_t envmap_width = 4096;
-    uint32_t envmap_height = 4096;
-    Vec4f* d_envmap_colors = bakeProceduralTextureToDevice(
-        star_night_data,
-        envmap_width,
-        envmap_height
-    );
-    
-    // Step 2: Create FloatBitmap from device buffer for texture sampling
-    auto envmap_bitmap = make_shared<FloatBitmap>();
-    envmap_bitmap->allocate(PixelFormat::RGBA, envmap_width, envmap_height);
-    envmap_bitmap->allocateDevicePtr();
-    
-    // Directly copy from d_envmap_colors to device bitmap (no host copy needed)
-    CUDA_CHECK(cudaMemcpy(envmap_bitmap->deviceData(), d_envmap_colors, 
-                         sizeof(Vec4f) * envmap_width * envmap_height, 
-                         cudaMemcpyDeviceToDevice));
-
-    envmap_bitmap->copyFromDevice();
-    auto envmap_texture = make_shared<FloatBitmapTexture>(envmap_bitmap, bitmap_id);
-    envmap_texture->copyToDevice();
-    
-    // Step 3: Build CDF from device buffer
-    auto envmap_data = buildEnvmapSamplingDataFromDevice(
-        d_envmap_colors,
-        4096, 4096,
-        bitmap_id,
-        envmap_bitmap->deviceData()
-    );
-    envmap_data.texture_id = bitmap_id;
-    envmap_data.texture_data = envmap_texture->devicePtr();
-
-    CUDABuffer<EnvmapSamplingData> d_envmap_data;
-    d_envmap_data.copyToDevice(&envmap_data, sizeof(EnvmapSamplingData));
-
-    m_params.envmap_sampling_data = d_envmap_data.deviceData();
-    m_params.envmap_sample_id = envmap_sample_id;
-    m_params.envmap_pdf_id = envmap_pdf_id;
-    m_params.envmap_texture_id = bitmap_id;
-    m_params.envmap_texture_data = envmap_texture->devicePtr();
-    
-    // Free intermediate buffer (data is now in envmap_bitmap)
-    CUDA_CHECK(cudaFree(d_envmap_colors));
-
-    // Miss program & environemnt map
-    array<ProgramGroup, NRay> miss_prgs;
-    miss_prgs[0] = m_ppl.createMissProgram(m_ctx, module, "__miss__envmap");
-    miss_prgs[1] = m_ppl.createMissProgram(m_ctx, module, "__miss__shadow");
-    m_scene.bindMissPrograms(miss_prgs);
-    m_scene.setEnvmap(envmap_texture);
-
-    // Hitgroup programs
-    array<ProgramGroup, NRay> mesh_prgs;
-    mesh_prgs[0] = m_ppl.createHitgroupProgram(m_ctx, module, "__closesthit__mesh", "", "__anyhit__mesh_opacity");
-    mesh_prgs[1] = m_ppl.createHitgroupProgram(m_ctx, module, "__closesthit__shadow", "", "__anyhit__mesh_opacity");
-    // Sphere
-    array<ProgramGroup, NRay> sphere_prgs;
-    sphere_prgs[0] = m_ppl.createHitgroupProgram(m_ctx, module, "__closesthit__sphere", "__intersection__sphere");
-    sphere_prgs[1] = m_ppl.createHitgroupProgram(m_ctx, module, "__closesthit__shadow", "__intersection__sphere");
-    // Plane
-    array<ProgramGroup, NRay> plane_prgs;
-    plane_prgs[0] = m_ppl.createHitgroupProgram(m_ctx, module, "__closesthit__plane", "__intersection__plane");
-    plane_prgs[1] = m_ppl.createHitgroupProgram(m_ctx, module, "__closesthit__shadow", "__intersection__plane");
-    // Curves
-    array<ProgramGroup, NRay> curve_prgs;
-    Module curve_module = m_ppl.createBuiltinIntersectionModule(m_ctx, OPTIX_PRIMITIVE_TYPE_ROUND_CUBIC_BSPLINE);
-    curve_prgs[0] = m_ppl.createHitgroupProgram(m_ctx, { module, "__closesthit__curves" }, { curve_module, "" });
-    curve_prgs[1] = m_ppl.createHitgroupProgram(m_ctx, { module, "__closesthit__shadow" }, { curve_module, "" });
-
-    // Create callables program for surfaces
-    auto setupSurfaceCallable = [&](const string& dc_sample, const string& cc_bsdf, const string& dc_pdf) {
-        uint32_t sample_bsdf_id = setupCallable(dc_sample, cc_bsdf);
-        uint32_t pdf_id = setupCallable(dc_pdf, "");
-
-        return SurfaceCallableID{ sample_bsdf_id, sample_bsdf_id, pdf_id };
-    };
-
-    auto diffuse_id = setupSurfaceCallable(
-        "__direct_callable__sample_diffuse",
-        "__continuation_callable__bsdf_diffuse",
-        "__direct_callable__pdf_diffuse"
-    );
-
-    auto dielectric_id = setupSurfaceCallable(
-        "__direct_callable__sample_dielectric",
-        "__continuation_callable__bsdf_dielectric",
-        "__direct_callable__pdf_dielectric"
-    );
-
-    auto disney_id = setupSurfaceCallable(
-        "__direct_callable__sample_disney",
-        "__continuation_callable__bsdf_disney",
-        "__direct_callable__pdf_disney"
-    );
-
-    uint32_t area_id = setupCallable("__direct_callable__area_emitter", "");
-    SurfaceCallableID area_emitter_id = {
-        area_id,
-        area_id,
-        area_id
-    };
-
     uint32_t seed = tea<4>(0, 0);
 
-    // Light sampling callables for MIS
-    uint32_t sphere_light_sample_id = setupCallable("__direct_callable__sample_sphere_light", "");
-    uint32_t sphere_light_pdf_id = setupCallable("__direct_callable__pdf_sphere_light", "");
-
-    // Textures
-    auto procedural_wooden_texture = make_shared<ProceduralWoodenTexture>(
-        Vec4f(0.76f, 0.60f, 0.42f, 1.0f), Vec4f(0.4f, 0.2f, 0.1f, 1.0f),
-        0.1f, 20.0f, 0.2f,
-        procedural_wooden_id
-    );
-    auto checker_texture = make_shared<CheckerTexture>(
-        Vec4f(0.2f, 0.2f, 0.2f, 1.0f), Vec4f(0.8f, 0.8f, 0.8f, 1.0f), 10.0f, checker_id
-    );
-    auto grey_texture = make_shared<ConstantTexture>(Vec4f(0.5f, 0.5f, 0.5f, 1.0f), constant_id);
-    auto white_texture = make_shared<ConstantTexture>(Vec4f(1.0f), constant_id);
-    auto winered_checker_texture = make_shared<CheckerTexture>(
-        Vec4f(0.5f, 0.0f, 0.0f, 1.0f), Vec4f(0.2f, 0.2f, 0.2f, 1.0f), 5.0f, checker_id
-    );
-
-    // Procedural rock textures
-    RockTexture rock_texture;
-    rock_texture.noise1 = {
-        .depth = 7,
-        .scale = 5.0f,
-        .amplitude = 1.0f
-    };
-    rock_texture.noise2 = {
-        .depth = 7,
-        .scale = 10.0f,
-        .amplitude = 0.5f
-    };
-    
-    // Clear any previous CUDA errors before texture generation
-    cudaGetLastError();
-    
-    float* d_rock_noise_data = bakeRockTexture(seed, rock_texture, 1024, 1024);
-    
-    if (d_rock_noise_data == nullptr) {
-        return;
-    }
-
-    uint32_t rock_bump_width = 1024;
-    uint32_t rock_bump_height = 1024;
-
-    Vec4f* d_rock_bumpmap_data = createBumpTextureFromHeightmap(
-        d_rock_noise_data,
-        rock_bump_width, rock_bump_height,
-        0.3f  // bump strength
-    );
-
-    if (d_rock_bumpmap_data == nullptr) {
-        CUDA_CHECK(cudaFree(d_rock_noise_data));
-        return;
-    }
-
-    Vec4f* h_rock_bumpmap_data = new Vec4f[rock_bump_width * rock_bump_height];
-    CUDA_CHECK(cudaMemcpy(h_rock_bumpmap_data, d_rock_bumpmap_data, sizeof(Vec4f) * rock_bump_width * rock_bump_height, cudaMemcpyDeviceToHost));
-    auto rock_bumpmap_bitmap = make_shared<FloatBitmap>();
-    rock_bumpmap_bitmap->allocate(PixelFormat::RGBA, rock_bump_width, rock_bump_height);
-    rock_bumpmap_bitmap->setData((float*)h_rock_bumpmap_data, 0, 0, rock_bump_width, rock_bump_height);
-    auto rock_bumpmap_texture = make_shared<FloatBitmapTexture>(rock_bumpmap_bitmap, bitmap_id);
-    rock_bumpmap_texture->copyToDevice();
-    delete[] h_rock_bumpmap_data;
-    CUDA_CHECK(cudaFree(d_rock_noise_data));
-    CUDA_CHECK(cudaFree(d_rock_bumpmap_data));
-    
-    // ===== Tree Bark Textures =====
-    // Generate 3 types of bark textures
-    
-    // 1. Rough Bark (Worley crackle - ごつごつ)
-    TreeBarkTexture rough_bark;
-    rough_bark.type = BarkType::ROUGH;
-    rough_bark.rough.cell_scale = 1.0f;
-    rough_bark.rough.vertical_stretch = 1.0f;
-    rough_bark.rough.crack_depth = 0.3f;
-    rough_bark.rough.crack_threshold = 0.15f;
-    rough_bark.bump_strength = 1.0f;
-    rough_bark.seed = tea<4>(seed, 1001);
-    
-    printf("[DEBUG APP] rough_bark.bump_strength = %.4f\n", rough_bark.bump_strength);
-    
-    uint32_t bark_width = 1024;
-    uint32_t bark_height = 1024;
-    
-    float* d_rough_bark_heightmap = bakeTreeBarkTexture(rough_bark, bark_width, bark_height);
-    
-    // Debug: Check heightmap values
-    float* h_rough_heightmap_debug = new float[100];
-    CUDA_CHECK(cudaMemcpy(h_rough_heightmap_debug, d_rough_bark_heightmap, 
-                         sizeof(float) * 100, cudaMemcpyDeviceToHost));
-    printf("[DEBUG Rough Bark] First 10 heightmap values: ");
-    for (int i = 0; i < 10; i++) {
-        printf("%.4f ", h_rough_heightmap_debug[i]);
-    }
-    printf("\n");
-    delete[] h_rough_heightmap_debug;
-
-    Vec4f* d_rough_bark_bumpmap = createBumpTextureFromHeightmap(
-        d_rough_bark_heightmap, bark_width, bark_height, -2.0f  // Negative for inverted normals (凹凸逆転)
-    );
-    
-    Vec4f* h_rough_bark_data = new Vec4f[bark_width * bark_height];
-    CUDA_CHECK(cudaMemcpy(h_rough_bark_data, d_rough_bark_bumpmap, 
-                         sizeof(Vec4f) * bark_width * bark_height, cudaMemcpyDeviceToHost));
-    auto rough_bark_bitmap = make_shared<FloatBitmap>();
-    rough_bark_bitmap->allocate(PixelFormat::RGBA, bark_width, bark_height);
-    rough_bark_bitmap->setData((float*)h_rough_bark_data, 0, 0, bark_width, bark_height);
-    auto rough_bark_texture = make_shared<FloatBitmapTexture>(rough_bark_bitmap, bitmap_id);
-    rough_bark_texture->copyToDevice();
-    delete[] h_rough_bark_data;
-    CUDA_CHECK(cudaFree(d_rough_bark_heightmap));
-    CUDA_CHECK(cudaFree(d_rough_bark_bumpmap));
-    
-    // 2. Aged Bark (Layered FBM - 年季入り)
-    TreeBarkTexture aged_bark;
-    aged_bark.type = BarkType::AGED;
-    aged_bark.aged.octaves = 8;
-    aged_bark.aged.scale = 8.0f;
-    aged_bark.aged.warp_strength = 0.3f;
-    aged_bark.aged.vertical_bias = 0.5f;
-    aged_bark.bump_strength = 1.0f;
-    aged_bark.seed = tea<4>(seed, 1002);
-    
-    printf("[DEBUG APP] aged_bark.bump_strength = %.4f\n", aged_bark.bump_strength);
-    
-    float* d_aged_bark_heightmap = bakeTreeBarkTexture(aged_bark, bark_width, bark_height);
-    
-    // Debug: Check heightmap values
-    float* h_aged_heightmap_debug = new float[100];
-    CUDA_CHECK(cudaMemcpy(h_aged_heightmap_debug, d_aged_bark_heightmap, 
-                         sizeof(float) * 100, cudaMemcpyDeviceToHost));
-    delete[] h_aged_heightmap_debug;
-    
-    Vec4f* d_aged_bark_bumpmap = createBumpTextureFromHeightmap(
-        d_aged_bark_heightmap, bark_width, bark_height, 1.5f  // Increased for stronger bumps
-    );
-    
-    Vec4f* h_aged_bark_data = new Vec4f[bark_width * bark_height];
-    CUDA_CHECK(cudaMemcpy(h_aged_bark_data, d_aged_bark_bumpmap, 
-                         sizeof(Vec4f) * bark_width * bark_height, cudaMemcpyDeviceToHost));
-    auto aged_bark_bitmap = make_shared<FloatBitmap>();
-    aged_bark_bitmap->allocate(PixelFormat::RGBA, bark_width, bark_height);
-    aged_bark_bitmap->setData((float*)h_aged_bark_data, 0, 0, bark_width, bark_height);
-    auto aged_bark_texture = make_shared<FloatBitmapTexture>(aged_bark_bitmap, bitmap_id);
-    aged_bark_texture->copyToDevice();
-    delete[] h_aged_bark_data;
-    CUDA_CHECK(cudaFree(d_aged_bark_heightmap));
-    CUDA_CHECK(cudaFree(d_aged_bark_bumpmap));
-    
-    // 3. Smooth Bark (Color texture - 滑らか)
-    TreeBarkTexture smooth_bark;
-    smooth_bark.type = BarkType::SMOOTH;
-    smooth_bark.smooth.flow_scale = 3.0f;
-    smooth_bark.smooth.flow_strength = 0.3f;
-    smooth_bark.smooth.ripple_frequency = 30.0f;
-    smooth_bark.smooth.smoothness = 1.0f;
-    smooth_bark.bump_strength = 1.0f;
-    smooth_bark.seed = tea<4>(seed, 1003);
-    
-    // Generate color texture (not bumpmap) for smooth bark
-    Vec4f* d_smooth_bark_color = bakeSmoothBarkColorTexture(smooth_bark, bark_width, bark_height);
-    
-    Vec4f* h_smooth_bark_data = new Vec4f[bark_width * bark_height];
-    CUDA_CHECK(cudaMemcpy(h_smooth_bark_data, d_smooth_bark_color, 
-                         sizeof(Vec4f) * bark_width * bark_height, cudaMemcpyDeviceToHost));
-    auto smooth_bark_bitmap = make_shared<FloatBitmap>();
-    smooth_bark_bitmap->allocate(PixelFormat::RGBA, bark_width, bark_height);
-    smooth_bark_bitmap->setData((float*)h_smooth_bark_data, 0, 0, bark_width, bark_height);
-    auto smooth_bark_texture = make_shared<FloatBitmapTexture>(smooth_bark_bitmap, bitmap_id);
-    smooth_bark_texture->copyToDevice();
-    delete[] h_smooth_bark_data;
-    CUDA_CHECK(cudaFree(d_smooth_bark_color));
-
-    auto leaf1 = make_shared<BitmapTexture>("foliage_10.png", bitmap_id);
-    auto leaf2 = make_shared<BitmapTexture>("foliage_15.png", bitmap_id);
-    auto leaf3 = make_shared<BitmapTexture>("foliage_24.png", bitmap_id);
-    auto leaf4 = make_shared<BitmapTexture>("foliage_52.png", bitmap_id);
-    auto leaf5 = make_shared<BitmapTexture>("foliage_82.png", bitmap_id);
-    auto leafs = vector<shared_ptr<BitmapTexture>>{ leaf1, leaf2, leaf3, leaf4, leaf5 };
-
-    auto uv_texture = make_shared<ConstantTexture>(Vec3f(0.0f), uv_id);
-
-    // Surfaces
-    auto floor_diffuse = make_shared<Diffuse>(diffuse_id, checker_texture);
-    auto tree_diffuse = make_shared<Diffuse>(diffuse_id, procedural_wooden_texture, false);
-
-    // Generate terrain first (before placing trees/rocks)
-    TerrainParams terrain_params;
-    terrain_params.terrain_size = 1000.0f;
-    terrain_params.height_scale = 100.0f;
-    auto terrain_result = buildTerrainMesh(terrain_params);
-    auto terrain_mesh = terrain_result.mesh;
-    auto terrain_heightmap = terrain_result.heightmap;
-    auto terrain_texture = make_shared<FloatBitmapTexture>(terrain_heightmap, terrain_id);
-    auto terrain_diffuse = make_shared<Diffuse>(diffuse_id, terrain_texture);
-    
-    // Terrain offset
-    const Vec3f terrain_offset(0, -terrain_params.height_scale / 2.0f, 0);
-    m_scene.addObject("terrain", terrain_mesh, terrain_diffuse, mesh_prgs, Matrix4f::translate(terrain_offset));
-    
-    // Use actual min/max height from terrain generation
-    const float terrain_min_height = terrain_result.min_height;
-    const float terrain_max_height = terrain_result.max_height;
-    
-    // Helper lambda to get terrain height at world position (x, z)
-    auto getTerrainHeight = [&](float world_x, float world_z) -> float {
-        // Convert world coordinates to terrain local coordinates
-        float local_x = world_x - terrain_offset.x();
-        float local_z = world_z - terrain_offset.z();
-        
-        // Convert to UV coordinates (terrain is centered at origin, size is terrain_size)
-        float half_size = terrain_params.terrain_size * 0.5f;
-        float u = (local_x + half_size) / terrain_params.terrain_size;
-        float v = (local_z + half_size) / terrain_params.terrain_size;
-        
-        // Clamp to valid range
-        u = clamp(u, 0.0f, 1.0f);
-        v = clamp(v, 0.0f, 1.0f);
-        
-        // Sample heightmap (bilinear interpolation)
-        int width = terrain_heightmap->width();
-        int height = terrain_heightmap->height();
-        float fx = u * (width - 1);
-        float fy = v * (height - 1);
-        int x0 = static_cast<int>(fx);
-        int y0 = static_cast<int>(fy);
-        int x1 = std::min(x0 + 1, width - 1);
-        int y1 = std::min(y0 + 1, height - 1);
-        
-        float tx = fx - x0;
-        float ty = fy - y0;
-        
-        // Get normalized height values [0,1] from bitmap
-        auto getData = [&](int x, int y) -> float {
-            return get<float>(terrain_heightmap->at(x, y));  // GRAY format, single channel
-        };
-        
-        float h00 = getData(x0, y0);
-        float h10 = getData(x1, y0);
-        float h01 = getData(x0, y1);
-        float h11 = getData(x1, y1);
-        
-        // Bilinear interpolation
-        float h0 = h00 * (1.0f - tx) + h10 * tx;
-        float h1 = h01 * (1.0f - tx) + h11 * tx;
-        float normalized_height = h0 * (1.0f - ty) + h1 * ty;
-        
-        // Convert normalized height [0,1] back to actual height
-        // normalized = (height - min) / (max - min)
-        // height = normalized * (max - min) + min
-        float height_range = terrain_max_height - terrain_min_height;
-        float actual_height = normalized_height * height_range + terrain_min_height;
-        
-        return terrain_offset.y() + actual_height;
-    };
-    
-    Vec3f camera_start(first_point);
-    Vec3f camera_end(final_point);
-    Vec3f camera_direction = camera_end - camera_start;
-    float path_length = length(camera_direction);
-    
-    // Normalize direction for forward axis
-    Vec3f forward = normalize(camera_direction);
-    
-    // Create perpendicular axis for grid (right vector)
-    Vec3f up(0.0f, 1.0f, 0.0f);
-    Vec3f right = normalize(cross(forward, up));
-    
-    const int grid_rows = 8;       // Along camera path
-    const int grid_cols = 8;       // Perpendicular to path
-    const float grid_spacing = 50.0f;  // Distance between grid points
-    const float perturbation = 8.0f;   // Random offset ±8 units
-    
-    vector<Vec2f> tree_positions_2d;
-    
-    // Define exclusion zones (sacred areas where trees should not be placed)
-    struct ExclusionZone {
-        Vec2f center;
-        float radius;
-    };
-    
-    vector<ExclusionZone> exclusion_zones;
-    
-    // Sacred zone 1: Final camera position
-    exclusion_zones.push_back({Vec2f(final_point.x(), final_point.z()), 150.0f});
-    
-    // Sacred zone 2: Bunny1 vicinity (in front of bunny)
-    exclusion_zones.push_back({Vec2f(m_bunny1_pos.x(), m_bunny1_pos.z()), 200.0f});
-    
-    // Sacred zone 3: Bunny2 vicinity
-    exclusion_zones.push_back({Vec2f(m_bunny2_pos.x(), m_bunny2_pos.z()), 200.0f});
-    
-    // Sacred zone 4: Bunny3 vicinity
-    exclusion_zones.push_back({Vec2f(m_bunny3_pos.x(), m_bunny3_pos.z()), 200.0f});
-    
-    // Helper to check if position is in exclusion zone
-    auto isInExclusionZone = [&](const Vec2f& pos) -> bool {
-        for (const auto& zone : exclusion_zones) {
-            Vec2f diff = pos - zone.center;
-            float dist_sq = diff.x() * diff.x() + diff.y() * diff.y();
-            if (dist_sq < zone.radius * zone.radius) {
-                return true;
-            }
-        }
-        return false;
-    };
-
-    m_bunny1_pos = Vec3f(270.0f, -7.0f, -210.0f);
-    m_bunny2_pos = Vec3f(350.0f, -7.0f, -200.0f);
-    m_bunny3_pos = Vec3f(280.0f, -9.0f, -110.0f);
-    
-    // Special tree: Place one tree diagonally behind bunny2 and bunny3
-    {
-        // Calculate position between bunny2 and bunny3, then offset backward
-        Vec3f bunny_midpoint = (m_bunny2_pos + m_bunny3_pos) * 0.5f;
-        
-        // Move backward (opposite of forward direction) by ~80 units
-        Vec3f special_tree_3d = bunny_midpoint + forward * 100.0f;
-        
-        Vec2f special_tree_pos(special_tree_3d.x(), special_tree_3d.z());
-        tree_positions_2d.push_back(special_tree_pos);
-        
-        pgLog("Special tree placed at:", special_tree_3d);
-    }
-    
-    // Generate grid aligned with camera path
-    for (int row = 0; row < grid_rows; row++) {
-        for (int col = 0; col < grid_cols; col++) {
-            // Position along camera path (row) and perpendicular (col)
-            float forward_dist = (row - grid_rows * 0.5f) * grid_spacing;
-            float right_dist = (col - grid_cols * 0.5f) * grid_spacing;
-            
-            // Calculate 3D position
-            Vec3f base_pos = forward * forward_dist + right * right_dist;
-            
-            // Add random perturbation
-            float perturb_x = (rnd(seed) - 0.5f) * perturbation * 2.0f;
-            float perturb_z = (rnd(seed) - 0.5f) * perturbation * 2.0f;
-            
-            float pos_x = base_pos.x() + perturb_x;
-            float pos_z = base_pos.z() + perturb_z;
-            
-            tree_positions_2d.push_back(Vec2f(pos_x, pos_z));
-        }
-    }
-    
-    // Add random trees around the grid (19 trees, since we already have 1 special tree)
-    const int num_random_trees = 19;
-    const float grid_half_width = grid_cols * 0.5f * grid_spacing;
-    const float grid_half_depth = grid_rows * 0.5f * grid_spacing;
-    const float outer_min_distance = grid_spacing * 0.5f;  // Minimum distance from grid edge
-    const float outer_max_distance = grid_spacing * 3.0f;  // Maximum distance from grid edge
-    
-    int attempts = 0;
-    int placed_random_trees = 0;
-    const int max_attempts = 1000;  // Prevent infinite loop
-    
-    while (placed_random_trees < num_random_trees && attempts < max_attempts) {
-        seed = tea<4>(attempts + 10000, 42);  // Different seed offset for random trees
-        
-        // Choose random side: 0=front, 1=back, 2=left, 3=right
-        int side = static_cast<int>(rnd(seed) * 4.0f);
-        
-        float pos_x, pos_z;
-        
-        if (side == 0) {
-            // Front side (positive forward direction)
-            float dist = grid_half_depth + outer_min_distance + rnd(seed) * (outer_max_distance - outer_min_distance);
-            pos_x = (rnd(seed) - 0.5f) * grid_half_width * 3.0f;  // Wider spread
-            Vec3f pos_3d = forward * dist + right * pos_x;
-            pos_x = pos_3d.x();
-            pos_z = pos_3d.z();
-        }
-        else if (side == 1) {
-            // Back side (negative forward direction)
-            float dist = -(grid_half_depth + outer_min_distance + rnd(seed) * (outer_max_distance - outer_min_distance));
-            pos_x = (rnd(seed) - 0.5f) * grid_half_width * 3.0f;
-            Vec3f pos_3d = forward * dist + right * pos_x;
-            pos_x = pos_3d.x();
-            pos_z = pos_3d.z();
-        }
-        else if (side == 2) {
-            // Left side (negative right direction)
-            float dist = -(grid_half_width + outer_min_distance + rnd(seed) * (outer_max_distance - outer_min_distance));
-            float forward_offset = (rnd(seed) - 0.5f) * grid_half_depth * 3.0f;
-            Vec3f pos_3d = right * dist + forward * forward_offset;
-            pos_x = pos_3d.x();
-            pos_z = pos_3d.z();
-        }
-        else {
-            // Right side (positive right direction)
-            float dist = grid_half_width + outer_min_distance + rnd(seed) * (outer_max_distance - outer_min_distance);
-            float forward_offset = (rnd(seed) - 0.5f) * grid_half_depth * 3.0f;
-            Vec3f pos_3d = right * dist + forward * forward_offset;
-            pos_x = pos_3d.x();
-            pos_z = pos_3d.z();
-        }
-        
-        Vec2f candidate_pos(pos_x, pos_z);
-        
-        // Check if position is in exclusion zone
-        if (!isInExclusionZone(candidate_pos)) {
-            tree_positions_2d.push_back(candidate_pos);
-            placed_random_trees++;
-        }
-        
-        attempts++;
-    }
-    
-    pgLog("Random trees placed:", placed_random_trees, "out of", num_random_trees, "attempts:", attempts);
-    
-    float tree_height_offset = -3.0f;
-
-    // Place trees at selected positions
-    for (size_t i = 0; i < tree_positions_2d.size(); i++) {
-        seed = tea<4>(i, 1);
-
-        // Create Tree object with parameters
-        Tree tree(seed);
-        TreeParam& tree_params = tree.getParams();
-
-        // Add variation to tree parameters
-        uint32_t variation_seed = tea<4>(seed, 555);
-        
-        // Random shape variation (0-8)
-        tree_params.shape = rndInt(variation_seed, 0, 8);
-        
-        // Base parameters with variation
-        tree_params.g_scale = 80.0f + rnd(variation_seed) * 40.0f;  // 80-120
-        tree_params.g_scale_v = 2.0f + rnd(variation_seed) * 2.0f;  // 1.5-2.5
-        tree_params.levels = 3;  // 2 or 3 levels
-        tree_params.ratio = 0.025f + rnd(variation_seed) * 0.015f;  // 0.025-0.04 trunk thickness
-        
-        // Branch length variation
-        tree_params.length[1] = 0.2f + rnd(variation_seed) * 0.3f;  // 0.1-0.3
-        tree_params.length[2] = 0.3f + rnd(variation_seed) * 0.4f;  // 0.3-0.7
-        tree_params.length[3] = 0.3f + rnd(variation_seed) * 0.2f;  // 0.3-0.5
-        
-        // Branch count variation
-        tree_params.branches[0] = 1;  // Always single trunk
-        tree_params.branches[1] = rndInt(variation_seed, 20, 40);   // 10-40
-        tree_params.branches[2] = rndInt(variation_seed, 5, 30);   // 5-30
-        tree_params.branches[3] = rndInt(variation_seed, 5, 10);   // 5-10
-
-        tree_params.curve_res = {5,4,3,2};
-        
-        // Leaf parameters with variation
-        tree_params.leaves = rndInt(variation_seed, 20, 35);  // 20-35
-        tree_params.leaf_blos_num = rndInt(variation_seed, 20, 35);
-        tree_params.leaf_scale = 0.008f + rnd(variation_seed) * 0.004f;  // 0.008-0.012
-        
-        float x_power = -2.0f + rnd(variation_seed) * 4.0f;  // -1.0 to 1.0
-        float z_power = -2.0f + rnd(variation_seed) * 4.0f;  // -1.0 to 1.0
-        float y_power = -5.0f + rnd(variation_seed) * 5.0f;
-        tree_params.tropism = {x_power, y_power, z_power};
-        
-        // Decide leaf texture variation (single color or mixed)
-        uint32_t leaf_seed = tea<4>(seed, 888);
-        vector<int> leaf_texture_ids;
-        
-        float single_color_chance = 0.3f;  // 30% chance of single-color tree
-        if (rnd(leaf_seed) < single_color_chance) {
-            // Single-color leaves: pick one texture
-            int tex_id = rndInt(leaf_seed, 0, leafs.size() - 1);
-            leaf_texture_ids.push_back(tex_id);
-        } else {
-            // Mixed leaves: use 2-3 random textures
-            int num_textures = rndInt(leaf_seed, 2, 3);
-            for (int t = 0; t < num_textures; t++) {
-                int tex_id = rndInt(leaf_seed, 0, leafs.size() - 1);
-                leaf_texture_ids.push_back(tex_id);
-            }
-        }
-
-        float pos_x = tree_positions_2d[i].x();
-        float pos_z = tree_positions_2d[i].y();
-        
-        // Get terrain height at this position
-        float terrain_height = getTerrainHeight(pos_x, pos_z);
-        
-        Vec3f tree_pos(pos_x, terrain_height + tree_height_offset, pos_z);
-            auto [tree_mesh, leaf_mesh] = buildTreeMesh(seed, tree, tree_params, leaf_texture_ids);
-            
-            // Select bark type randomly for variety
-            uint32_t bark_seed = tea<4>(seed, 777);
-            int bark_type = rndInt(bark_seed, 0, 2);  // 0=rough, 1=aged, 2=smooth
-            
-            shared_ptr<FloatBitmapTexture> selected_bark;
-            shared_ptr<Texture> bark_base_texture;
-            string bark_type_name;
-            switch(bark_type) {
-                case 0:
-                    selected_bark = rough_bark_texture;
-                    bark_base_texture = procedural_wooden_texture;
-                    bark_type_name = "rough";
-                    break;
-                case 1:
-                    selected_bark = aged_bark_texture;
-                    bark_base_texture = procedural_wooden_texture;
-                    bark_type_name = "aged";
-                    break;
-                case 2:
-                    selected_bark = nullptr;  // No bumpmap for smooth
-                    bark_base_texture = smooth_bark_texture;  // Use color texture
-                    bark_type_name = "smooth";
-                    break;
-            }
-            
-            // Create tree material
-            auto tree_material = make_shared<Diffuse>(diffuse_id, bark_base_texture, false);
-            if (selected_bark) {
-                tree_material->setBumpmap(selected_bark);  // Only rough/aged have bumpmaps
-            }
-            
-            string tree_name = "tree_" + to_string(i);
-            m_scene.addObject(tree_name, tree_mesh, tree_material, mesh_prgs, Matrix4f::translate(tree_pos));
-
-            
-            // Add leaves if generated
-            if (leaf_mesh) {
-                string leaf_name = "leaves_" + to_string(i);
-                
-                // Create vector of leaf materials (one per texture)
-                vector<shared_ptr<Material>> leaf_materials;
-                for (auto& leaf_tex : leafs) {
-                    leaf_tex->copyToDevice();
-                    auto leaf_diffuse = make_shared<Diffuse>(diffuse_id, leaf_tex, true);
-                    leaf_diffuse->setOpacityTexture(leaf_tex);
-                    leaf_materials.push_back(leaf_diffuse);
-                }
-                
-                m_scene.addObject(leaf_name, leaf_mesh, leaf_materials, mesh_prgs, Matrix4f::translate(tree_pos));
-            }
-    }
-
-    // Generate Voronoi rocks at random positions on terrain
-    // NOTE: Each rock must be generated separately because:
-    // 1. Voronoi generation is randomized, creating unique shapes each time
-    // 2. Y-normalization must be applied per-rock to ensure bottom at Y=0
-    // 3. Reusing a single mesh would cause inconsistent ground placement
-    
-    const int num_rocks = 100;  // Increased from 5 to 15
-    for (int i = 0; i < num_rocks; i++) {
-        // Create unique seed for this rock (independent for shape and position)
-        uint32_t rock_seed = tea<4>(seed, i * 137);  // Use prime number for better distribution
-        
-        // Create unique parameters for each rock
-        VoronoiRockParams rock_params = createDefaultRockFieldParams();
-        rock_params.seed_count = 1;             // Generate SINGLE rock (not 30!)
-        rock_params.field_size = 10.0f;         // Small field for single rock
-        rock_params.y_position = 0.0f;          // Base Y position (rock bottom will be at 0)
-        rock_params.min_rock_vertices = 20;     // Minimum vertices per rock
-        rock_params.max_rock_vertices = 40;     // Maximum vertices per rock
-        rock_params.rock_roughness = 0.3f;      // Surface roughness variation
-        rock_params.rock_height_variation = 0.4f; // Y-axis compression variation
-        rock_params.rock_base_size = 1.0f;      // Base size (independent of field_size!)
-        rock_params.random_seed = rock_seed;    // Unique seed for rock generation
-        
-        // Generate unique rock mesh for this position
-        auto rock_mesh = buildVoronoiRockMesh(rock_params);
-        
-        // Random position within terrain bounds (80% of terrain to ensure no overflow)
-        // Use separate seed for position to avoid correlation with rock shape
-        uint32_t pos_seed = tea<4>(seed, i * 239 + 1);  // Different prime for X
-        float rock_x = (rnd(pos_seed) - 0.5f) * terrain_params.terrain_size * 0.8f;
-        
-        pos_seed = tea<4>(seed, i * 239 + 2);  // Different offset for Z
-        float rock_z = (rnd(pos_seed) - 0.5f) * terrain_params.terrain_size * 0.8f;
-        
-        // Get terrain height at this position
-        float rock_height = getTerrainHeight(rock_x, rock_z);
-        
-        // Random scale for variety (medium-sized rocks)
-        pos_seed = tea<4>(seed, i * 239 + 3);  // Different offset for scale
-        float rock_scale = 5.0f + rnd(pos_seed) * 5.0f;  // 5-10 scale
-        
-        // Rock mesh is centered at origin (Y=0 is at rock center, not bottom)
-        // Transform: Scale first, then translate to world position
-        // Rock center will be placed at terrain height
-        
-        auto rock_diffuse = make_shared<Diffuse>(diffuse_id, grey_texture);
-        rock_diffuse->setBumpmap(rock_bumpmap_texture);
-        
-        string rock_name = "rock_" + to_string(i);
-        Matrix4f rock_transform = Matrix4f::translate(Vec3f(rock_x, rock_height, rock_z)) * Matrix4f::scale(rock_scale);
-        m_scene.addObject(rock_name, rock_mesh, rock_diffuse, mesh_prgs, rock_transform);
-    }
-
-    auto bunny_white = make_shared<Diffuse>(diffuse_id, white_texture);
-    auto bunny_glass = make_shared<Dielectric>(dielectric_id, white_texture, 1.5f, 0.01f);
-    auto bunny_disney = make_shared<Disney>(
-        disney_id, 
-        winered_checker_texture, 
-        /* subsurface = */ 0.2f, 
-        /* metallic = */ 0.9f, 
-        /* specular = */ 0.5f, 
-        /* specular_tint = */ 0.5f, 
-        /* roughness = */ 0.3f, 
-        /* anisotropic = */ 0.5f, 
-        /* sheen = */ 0.0f, 
-        /* sheen_tint = */ 0.0f,
-        /* clearcoat = */ 0.0f,
-        /* clearcoat_gloss = */ 0.0f
-    );
-
-    auto bunny_mesh = make_shared<TriangleMesh>("uv_bunny.obj");
-    // Bunny 
-    {
-        m_bunny1_scale = 150.0f;
-        Matrix4f bunny_transform = Matrix4f::translate(m_bunny1_pos) * Matrix4f::scale(m_bunny1_scale);
-        m_scene.addObject("bunny1", bunny_mesh, bunny_white, mesh_prgs, bunny_transform);
-    }
-
-    {
-        m_bunny2_scale = 180.0f;
-        Matrix4f bunny_transform = Matrix4f::translate(m_bunny2_pos) * Matrix4f::rotate(-math::pi / 6.0f, Vec3f(0,1,0)) * Matrix4f::scale(m_bunny2_scale);
-        m_scene.addObject("bunny2", bunny_mesh, bunny_disney, mesh_prgs, bunny_transform);
-    }
-
-    {
-        m_bunny3_scale = 120.0f;
-        Matrix4f bunny_transform = Matrix4f::translate(m_bunny3_pos) * Matrix4f::rotate(-math::two_pi / 3.0f, Vec3f(0, 1, 0)) * Matrix4f::scale(m_bunny3_scale);
-        m_scene.addObject("bunny3", bunny_mesh, bunny_glass, mesh_prgs, bunny_transform);
-    }
-
-    // Area lights
-    auto addLight = [&](const string& name, shared_ptr<Shape> shape, shared_ptr<AreaEmitter> emitter, array<ProgramGroup, NRay>& prgs, const Matrix4f& transform, uint32_t sample_id, uint32_t pdf_id) {
-        emitter->copyToDevice();
-        shape->copyToDevice();
-        m_scene.addLight(name, shape, emitter, prgs, transform);
-        AreaEmitterInfo light_info = {
-            .shape_data = shape->devicePtr(),
-            .surface_info = emitter->surfaceInfoDevicePtr(),
-            .objToWorld = transform,
-            .worldToObj = transform.inverse(),
-            .sample_id = sample_id,
-            .pdf_id = pdf_id
-        };
-        m_light_infos.insert(make_pair(name, light_info));
-    };
-
-    m_light_ease = EaseType::Linear;
-    Vec3f first_light_pos(-200.0f, 15.5f, 53.8f);
-    Vec3f final_light_pos = (m_bunny1_pos + m_bunny2_pos + m_bunny3_pos) / 3.0f;
-    final_light_pos.y() += 40.0f;
-
-    Vec3f second_pos = lerp(first_light_pos, final_light_pos, 2.0f / 7.5f);
-    Vec3f third_pos = lerp(first_light_pos, final_light_pos, 3.5f / 7.5f);
-    third_pos.y() += 15.0f;
-    
-    m_light_points = {
-        {first_light_pos, 0.0f},
-        {second_pos, VIDEO_LENGTH * 0.3f},
-        {third_pos, VIDEO_LENGTH * 0.5f},
-        {final_light_pos, VIDEO_LENGTH * 0.9f}
-    };
-
-    addLight("light1", 
-      make_shared<Sphere>(final_light_pos, 3.0f), 
-      make_shared<AreaEmitter>(area_emitter_id, 
-          make_shared<ConstantTexture>(Vec3f(0.5f, 0.5f, 0.9f), constant_id),
-          10.0f), 
-      sphere_prgs, 
-      Matrix4f::identity(), 
-      sphere_light_sample_id, sphere_light_pdf_id);  // Use sphere light sampling callable
-
-    // Copy light info to GPU
-    copyAreaEmitterToDevice();
+    //submitScene(module, width, height);
+    // treeTropismScene(module, width, height);
+    treeVariationScene(module, width, height);
 
     CUDA_CHECK(cudaStreamCreate(&m_stream));
     m_scene.copyDataToDevice();
@@ -2099,19 +2654,19 @@ void App::draw()
     //    m_scene.updateAccel(m_ctx, m_stream);
     //}
 
-    ImGui::Text("Light Control");
-    auto light1 = m_scene.getLight("light1");
-    // Get sphere pointer from abstract shape class
-    auto light1_sphere = dynamic_pointer_cast<Sphere>(light1->shape);
-    Vec3f center = light1_sphere->center();
-    state_changed |= ImGui::SliderFloat3("Light Position", &center[0], -500.0f, 500.0f, "%.2f");
-    if (state_changed) {
-        light1_sphere->setCenter(center);
-        light1_sphere->copyToDevice();
-        m_scene.updateLightGAS("light1", m_ctx, m_stream);
-        m_scene.updateAccel(m_ctx, m_stream);
-        copyAreaEmitterToDevice();
-    }
+    //ImGui::Text("Light Control");
+    //auto light1 = m_scene.getLight("light1");
+    //// Get sphere pointer from abstract shape class
+    //auto light1_sphere = dynamic_pointer_cast<Sphere>(light1->shape);
+    //Vec3f center = light1_sphere->center();
+    //state_changed |= ImGui::SliderFloat3("Light Position", &center[0], -500.0f, 500.0f, "%.2f");
+    //if (state_changed) {
+    //    light1_sphere->setCenter(center);
+    //    light1_sphere->copyToDevice();
+    //    m_scene.updateLightGAS("light1", m_ctx, m_stream);
+    //    m_scene.updateAccel(m_ctx, m_stream);
+    //    copyAreaEmitterToDevice();
+    //}
 
     ImGui::Separator();
     if (ImGui::Checkbox("Enable Firefly filter", &enable_firefly_filter)) {

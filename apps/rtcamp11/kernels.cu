@@ -253,30 +253,6 @@ extern "C" __global__ void __raygen__pinhole() {
                 params.converged_buffer[image_idx] = 1;
                 return;  // Pixel converged, skip sampling
             }
-            
-            /* ===== PROBABILISTIC VERSION (commented out) =====
-            // Calculate sampling probability based on how close to convergence
-            // variance_ratio = 1.0 → at threshold → 50% sampling
-            // variance_ratio = 0.1 → well converged → 5% sampling
-            // variance_ratio > 1.0 → not converged → 100% sampling
-            float temporal_ratio = temporal_variance / temporal_threshold;
-            float spatial_ratio = spatial_variance / spatial_threshold;
-            float max_ratio = fmaxf(temporal_ratio, spatial_ratio);
-            
-            float sample_prob;
-            if (max_ratio >= 1.0f) {
-                sample_prob = 1.0f;  // Not converged, always sample
-            } else {
-                // Converged: probability proportional to variance ratio
-                // Clamp to [0.05, 0.5] for reasonable range
-                sample_prob = fmaxf(0.05f, fminf(0.3f, max_ratio));
-            }
-            
-            // Probabilistic skip
-            if (rnd(seed) > sample_prob) {
-                return;  // Skip sampling this frame
-            }
-            */
         }
     }
 
@@ -725,9 +701,6 @@ extern "C" __global__ void __raygen__pinhole() {
         
         // Use mean from adaptive sampling statistics directly
         accum_color = sum / float(count);
-        
-        // Note: Convergence detection is now done at kernel start (probabilistic sampling)
-        // No need for duplicate variance calculation here
     }
     // Standard accumulation (non-adaptive sampling)
     else {
@@ -799,10 +772,6 @@ extern "C" __global__ void __miss__envmap() {
     si->trace_terminate = true;
     
     // Evaluate environment map radiance
-    // Note: This handles two cases:
-    // 1. Primary rays (depth=0): Direct view of environment background
-    // 2. Indirect rays (depth>0): BSDF-sampled rays that miss geometry
-    //    These are already weighted by BSDF PDF, so no additional MIS needed here
     Vec4f envmap_color = optixDirectCall<Vec4f, const Vec2f&, void*>(
         env->texture.prg_id, si->shading.uv, env->texture.data);
     
@@ -842,7 +811,6 @@ extern "C" __global__ void __closesthit__mesh() {
     shading.dpdv = normalize(optixTransformVectorFromObjectToWorldSpace(shading.dpdv));
 
     SurfaceInteraction* si = getPtrFromTwoPayloads<SurfaceInteraction, 0>();
-    //si->p = ray.at(ray.tmax) + shading.n * n.z() * 10.0f;
     si->p = ray.at(ray.tmax);
     si->shading = shading;
     si->t = ray.tmax;

@@ -1,5 +1,7 @@
 #include "app.h"
 
+#define ANIMATION 0
+
 void App::initResultBufferOnDevice()
 {
     params.frame = 0;
@@ -20,6 +22,51 @@ void App::handleCameraUpdate() {
     initResultBufferOnDevice();
 }
 
+void App::initParticles() {
+    float particle_radius = 2.0f;
+    uint32_t seed = tea<4>(0, 0);
+    std::vector<SPHParticles::Data> particle_data;
+    
+    // Sphere initialization parameters
+    const Vec3f sphere_center(0.0f, 0.0f, 0.0f);  // Center of the sphere
+    const float sphere_radius = 75.0f;             // Radius of the sphere to fill
+    const float particle_spacing = 2.5f;          // Spacing between particles
+    const int max_attempts = 100000;               // Maximum attempts to place particles
+    
+    // Generate particles inside sphere using rejection sampling
+    for (int attempt = 0; attempt < max_attempts; ++attempt) {
+        // Generate random position inside sphere
+        Vec3f random_dir = normalize(UniformSampler::get3D(seed) * 2.0f - 1.0f);
+        float random_radius = cbrtf(UniformSampler::get1D(seed)) * sphere_radius; // Uniform distribution in volume
+        Vec3f position = sphere_center + random_dir * random_radius;
+        
+        // Check if position is far enough from existing particles
+        bool valid_position = true;
+        for (const auto& existing : particle_data) {
+            if (length(position - existing.position) < particle_spacing) {
+                valid_position = false;
+                break;
+            }
+        }
+        
+        if (valid_position) {
+            Vec3f velocity = Vec3f(0.0f);
+            float mass = 1.0f;
+            
+            // Add small perturbation for natural distribution
+            Vec3f perturbation = (UniformSampler::get3D(seed) - 0.5f) * 0.5f;
+            position += perturbation;
+            
+            auto p = SPHParticles::Data{ position, velocity, mass, particle_radius, 0.0f, 0.0f, Vec3f(0.0f) };
+            particle_data.push_back(p);
+        }
+    }
+    
+    
+    particles->setParticles(particle_data);
+    particles->copyToDevice();
+}
+
 // ------------------------------------------------------------------
 void App::setup()
 {
@@ -37,9 +84,10 @@ void App::setup()
     pipeline.setContinuationCallableDepth(5);
     pipeline.setNumPayloads(5);
     pipeline.setNumAttributes(5);
+    pipeline.setMaxTraversableGraphDepth(3);
 
     // Create module
-    Module module = pipeline.createModuleFromCudaFile(context, "kernels.cu");
+    Module module = pipeline.createModuleFromOptixIr(context, "fluidSimulation_generated_kernels.cu.optixir");
 
     const int width = pgGetWidth();
     const int height = pgGetHeight();
@@ -53,15 +101,18 @@ void App::setup()
     params.height = height;
     params.samples_per_launch = 1;
     params.frame = 0;
-    params.max_depth = 5;
+    params.max_depth = 30;
     params.result_buffer = (Vec4u*)result_bmp.deviceData();
     params.accum_buffer = (Vec4f*)accum_bmp.deviceData();
 
-    scene.setup({ true, true });
+    AppScene::AccelSettings accel_settings;
+    accel_settings.allow_accel_compaction = true;
+    accel_settings.allow_accel_update = true;
+    scene.setup(accel_settings);
 
     // Camera settings
     std::shared_ptr<Camera> camera = make_shared<Camera>();
-    camera->setOrigin(300, 300, 300);
+    camera->setOrigin(300, 200, 300);
     camera->setLookat(0, 0, 0);
     camera->setUp(0, 1, 0);
     camera->setFov(40);
@@ -91,8 +142,6 @@ void App::setup()
     auto checker_id = setupCallable("__direct_callable__checker", "");
     auto constant_id = setupCallable("__direct_callable__constant", "");
 
-    pgLog(bitmap_id, checker_id, constant_id);
-
     // Miss program
     ProgramGroup miss = pipeline.createMissProgram(context, module, "__miss__envmap");
     scene.bindMissPrograms({miss});
@@ -103,6 +152,7 @@ void App::setup()
     ProgramGroup mesh_prg = pipeline.createHitgroupProgram(context, module, "__closesthit__mesh");
     ProgramGroup plane_prg = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", "__intersection__plane");
     ProgramGroup particle_prg = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", "__intersection__particle");
+    ProgramGroup sphere_prg = pipeline.createHitgroupProgram(context, module, "__closesthit__custom", "__intersection__sphere");
 
     // Surface programs
     SurfaceCallableID diffuse_id = {
@@ -127,26 +177,17 @@ void App::setup()
     auto particle_bsdf = make_shared<Dielectric>(dielectric_id, make_shared<ConstantTexture>(Vec3f(0.8f), constant_id), 1.5f);
 
     // Initialize fluid particles
-    float radius = 1.0f;
-    std::vector<SPHParticles::Data> particle_data;
-    for (int x = 0; x < 50; x++) {
-        for (int y = 0; y < 50; y++) {
-            for (int z = 0; z < 50; z++) {
-                Vec3f position = Vec3f(x, y, z) * 3.0f - 75.0f;
-                Vec3f velocity = Vec3f(0);
-                float mass = 1.0f;
-                auto p = SPHParticles::Data{ position, velocity, mass, radius, 0.0f, 0.0f, Vec3f(0.0f)};
-                particle_data.push_back(p);
-            }
-        }
-    }
-    particles = make_shared<SPHParticles>(particle_data);
+    particles = make_shared<SPHParticles>();
+    initParticles();
 
     // Fluid particle
-    scene.addObject("particles", particles, particle_bsdf, { particle_prg }, Matrix4f::identity(), {true, true});
+    AppScene::AccelSettings particle_accel_settings;
+    particle_accel_settings.allow_accel_compaction = true;
+    particle_accel_settings.allow_accel_update = true;
+    scene.addObject("particles", particles, particle_bsdf, { particle_prg }, Matrix4f::identity(), particle_accel_settings);
 
     // Floor
-    scene.addObject("floor", make_shared<Plane>(Vec2f(-100), Vec2f(100)), floor_bsdf, { plane_prg }, Matrix4f::translate(0, -100, 0));
+    scene.addObject("floor", make_shared<Plane>(Vec2f(-200), Vec2f(200)), floor_bsdf, { plane_prg }, Matrix4f::translate(0, -100, 0));
 
     CUDA_CHECK(cudaStreamCreate(&stream));
     scene.copyDataToDevice();
@@ -158,14 +199,64 @@ void App::setup()
 
     // Configuration of SPH parameter
     sph_config = {
-        .kernel_size = radius, 
-        .rest_density = 1.0f,
+        // Basic parameters
+        .kernel_size = 7.0f, 
+        .rest_density = 30.0f,
         .external_force = Vec3f(0, -9.8f, 0),
-        .time_step = 0.1f,
-        .stiffness = 1000.0f
+        .time_step = 0.1f,                 // Smaller initial timestep
+        .stiffness = 0.02f,
+        .viscosity = 0.05f,                 // Increased for better cohesion
+        
+        .ks = 10.0f,
+        .kd = 10.0f
     };
 
-    params.sph_config = sph_config;
+
+    wall = AABB(Vec3f(-100, -97, -100), Vec3f(100, 500, 100));
+
+    // GUI setting
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+    const char* glsl_version = "#version 150";
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(pgGetCurrentWindow()->windowPtr(), true);
+    ImGui_ImplOpenGL3_Init(glsl_version);
+
+    if (ANIMATION) {
+        constexpr int FPS = 60;
+        constexpr int SECONDS = 10;
+        constexpr int SPP = 2048;
+        for (int i = 0; i < FPS * SECONDS; i++) {
+            initResultBufferOnDevice();
+
+            std::cout << "Rendering frame " << i << "..." << std::endl;
+
+            for (int j = 0; j < SPP / params.samples_per_launch; j++) {
+                std::cout << "Sample " << j << "/" << SPP / params.samples_per_launch << "\r" << std::flush;
+                scene.launchRay(context, pipeline, params, stream, result_bmp.width(), result_bmp.height(), 1);
+                CUDA_CHECK(cudaStreamSynchronize(stream));
+                CUDA_SYNC_CHECK();
+                params.frame++;
+            }
+
+            result_bmp.copyFromDevice();
+            
+            auto filename = std::format("frame_{:03d}.png", i);
+            auto filepath = pgPathJoin(pgAppDir(), filename);
+            result_bmp.write(filepath);
+
+            // Update particle physics first
+            solveSPH((SPHParticles::Data*)particles->devicePtr(), particles->numPrimitives(), sph_config, wall);
+
+            // Update geometry and acceleration structure with new particle positions
+            scene.updateObjectGAS("particles", context, stream);
+            scene.updateAccel(context, stream);
+        }
+
+        pgExit();
+    }
 }
 
 // ------------------------------------------------------------------
@@ -174,6 +265,7 @@ void App::update()
     handleCameraUpdate();
     initResultBufferOnDevice();
 
+    // Then render with updated positions
     scene.launchRay(context, pipeline, params, stream, result_bmp.width(), result_bmp.height(), 1);
     CUDA_CHECK(cudaStreamSynchronize(stream));
     CUDA_SYNC_CHECK();
@@ -182,8 +274,10 @@ void App::update()
 
     params.frame++;
 
-    solveSPH((SPHParticles::Data*)particles->devicePtr(), particles->numPrimitives(), params.sph_config);
+    // Update particle physics first
+    solveSPH((SPHParticles::Data*)particles->devicePtr(), particles->numPrimitives(), sph_config, wall);
 
+    // Update geometry and acceleration structure with new particle positions
     scene.updateObjectGAS("particles", context, stream);
     scene.updateAccel(context, stream);
 }
@@ -191,7 +285,29 @@ void App::update()
 // ------------------------------------------------------------------
 void App::draw()
 {
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    ImGui::Begin("Fluid Simulation");
+
+    ImGui::SliderFloat("Kernel Size", &sph_config.kernel_size, 1.0f, 100.0f);
+    ImGui::SliderFloat("Rest Density", &sph_config.rest_density, 0.1f, 100.0f);
+    ImGui::SliderFloat("Time Step", &sph_config.time_step, 0.001f, 0.2f);
+    ImGui::SliderFloat("Stiffness", &sph_config.stiffness, 0.0f, 1.0f);
+    ImGui::SliderFloat("Viscosity", &sph_config.viscosity, 0.0f, 1.0f);
+    ImGui::SliderFloat("Ks", &sph_config.ks, 1.0f, 50.0f);
+    ImGui::SliderFloat("Kd", &sph_config.kd, 1.0f, 50.0f);
+    if (ImGui::Button("Reset")) {
+        initParticles();
+    }
+
+    ImGui::End();
+    ImGui::Render();
+
     result_bmp.draw(0, 0);
+
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
 // ------------------------------------------------------------------
@@ -227,7 +343,8 @@ void App::mouseScrolled(float x, float y)
 // ------------------------------------------------------------------
 void App::keyPressed(int key)
 {
-
+    if (key == Key::S)
+        result_bmp.write("screenshot.png");
 }
 
 // ------------------------------------------------------------------

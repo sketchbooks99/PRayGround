@@ -3,8 +3,16 @@
 namespace prayground {
 
     // ------------------------------------------------------------------
-    Conductor::Conductor(const SurfaceCallableID& surface_callable_id, const std::shared_ptr<Texture>& texture, bool twosided)
-        : Material(surface_callable_id), m_texture(texture), m_twosided(twosided)
+    Conductor::Conductor(
+        const SurfaceCallableID& surface_callable_id, 
+        const std::shared_ptr<Texture>& texture, 
+        bool twosided, 
+        Thinfilm thinfilm
+    )
+        : Material(surface_callable_id), 
+        m_texture(texture), 
+        m_twosided(twosided), 
+        m_thinfilm(thinfilm)
     {
     
     }
@@ -20,22 +28,14 @@ namespace prayground {
         return SurfaceType::Reflection;
     }
 
-    SurfaceInfo Conductor::surfaceInfo() const
-    {
-        ASSERT(d_data, "Material data on device hasn't been allocated yet.");
-
-        return SurfaceInfo{
-            .data = d_data,
-            .callable_id = m_surface_callable_id,
-            .type = SurfaceType::RoughReflection
-        };
-    }
-
     // ------------------------------------------------------------------
     void Conductor::copyToDevice()
     {
+        Material::copyToDevice();
         if (!m_texture->devicePtr())
             m_texture->copyToDevice();
+
+        m_thinfilm.copyToDevice();
 
         Data data = this->getData();
 
@@ -44,6 +44,22 @@ namespace prayground {
         CUDA_CHECK(cudaMemcpy(
             d_data,
             &data, sizeof(Data), 
+            cudaMemcpyHostToDevice
+        ));
+
+        // Copy surface info to the device
+        SurfaceInfo surface_info { 
+            .data = d_data,
+            .callable_id = m_surface_callable_id,
+            .type = this->surfaceType(),
+            .use_bumpmap = this->useBumpmap(),
+            .bumpmap = this->bumpmapData()
+        };
+        if (!d_surface_info)
+            CUDA_CHECK(cudaMalloc(&d_surface_info, sizeof(SurfaceInfo)));
+        CUDA_CHECK(cudaMemcpy(
+            d_surface_info,
+            &surface_info, sizeof(SurfaceInfo),
             cudaMemcpyHostToDevice
         ));
     }
@@ -65,11 +81,31 @@ namespace prayground {
         return m_texture;
     }
 
+    void Conductor::setTwosided(bool twosided)
+    {
+        m_twosided = twosided;
+    }
+
+    bool Conductor::twosided() const
+    {
+        return m_twosided;
+    }
+
+    void Conductor::setThinfilm(const Thinfilm& thinfilm)
+    {
+        m_thinfilm = thinfilm;
+    }
+    Thinfilm Conductor::thinfilm() const
+    {
+        return m_thinfilm;
+    }
+
     Conductor::Data Conductor::getData() const
     {
         return Data{
             .texture = m_texture->getData(),
-            .twosided = m_twosided
+            .twosided = m_twosided,
+            .thinfilm = m_thinfilm.getData()
         };
     }
 

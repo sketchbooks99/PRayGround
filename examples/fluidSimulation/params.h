@@ -20,6 +20,4 @@ struct LaunchParams {
     Vec4u* result_buffer;
     Vec4f* accum_buffer;
     OptixTraversableHandle handle;
-
-    SPHConfig sph_config;
 };

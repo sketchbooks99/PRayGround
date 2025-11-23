@@ -77,12 +77,12 @@ namespace prayground {
         using Type = T;
         static constexpr uint32_t Dim = 2;
 
-        Vec2() = default;
+        HOSTDEVICE Vec2() { e[0] = 0; e[1] = 0; }
         HOSTDEVICE Vec2(T x, T y) { e[0] = x; e[1] = y; }
         HOSTDEVICE Vec2(T t) { e[0] = t; e[1] = t; }
 
         // Copy constructor
-        Vec2(const Vec2& v) = default;
+        HOSTDEVICE Vec2(const Vec2& v) = default;
 
         HOSTDEVICE Vec2(const CUVec& v) { e[0] = v.x; e[1] = v.y; }
 
@@ -169,12 +169,12 @@ namespace prayground {
         using Type = T;
         static constexpr uint32_t Dim = 3;
 
-        Vec3() = default;
+        HOSTDEVICE Vec3() { e[0] = 0; e[1] = 0; e[2] = 0; };
         HOSTDEVICE Vec3(T x, T y, T z) { e[0] = x; e[1] = y; e[2] = z;}
         HOSTDEVICE Vec3(T t) { e[0] = t; e[1] = t; e[2] = t; }
         
         // Copy constructor
-        Vec3(const Vec3& v) = default;
+        HOSTDEVICE Vec3(const Vec3& v) = default;
 
         // From other dimension vector
         HOSTDEVICE Vec3(const Vec2<T>& v, const T& z) { e[0] = v[0]; e[1] = v[1]; e[2] = z; }
@@ -272,12 +272,12 @@ namespace prayground {
         using Type = T;
         static constexpr uint32_t Dim = 4;
 
-        Vec4() = default;
+        HOSTDEVICE Vec4() { e[0] = 0; e[1] = 0; e[2] = 0; e[3] = 0; };
         HOSTDEVICE Vec4(T x, T y, T z, T w) { e[0] = x; e[1] = y; e[2] = z; e[3] = w; }
         HOSTDEVICE Vec4(T t) { e[0] = t; e[1] = t; e[2] = t; e[3] = t; }
 
         // Copy constructor
-        Vec4(const Vec4& v) = default;
+        HOSTDEVICE Vec4(const Vec4& v) = default;
 
         // From other dimension vector
         HOSTDEVICE Vec4(const Vec2<T>& v, const T& z, const T& w) { e[0] = v[0]; e[1] = v[1]; e[2] = z; e[3] = w; }
@@ -628,6 +628,47 @@ namespace prayground {
     INLINE HOSTDEVICE Vec3<T> clamp(const Vec3<T>& v, const T a, const T b)
     {
         return Vec3<T>{clamp(v[0], a, b), clamp(v[1], a, b), clamp(v[2], a, b)};
+    }
+
+    template <typename T>
+    INLINE HOSTDEVICE Vec3<T> clamp(const Vec3<T>& v, const Vec3<T>& a, const Vec3<T>& b)
+    {
+        return Vec3<T>{clamp(v[0], a[0], b[0]), clamp(v[1], a[1], b[1]), clamp(v[2], a[2], b[2])};
+    }
+
+    template <typename T>
+    INLINE HOSTDEVICE Vec3<T> sqrt(const Vec3<T>& v) {
+        return Vec3<T>{sqrtf((float)v[0]), sqrtf((float)v[1]), sqrtf((float)v[2])};
+    }
+
+    template <>
+    INLINE HOSTDEVICE Vec3<float> sqrt(const Vec3<float>& v)
+    {
+        return Vec3<float>{sqrtf(v[0]), sqrtf(v[1]), sqrtf(v[2])};
+    }
+
+    template <typename T>
+    INLINE HOSTDEVICE Vec3<T> max(const Vec3<T>& v, const T t)
+    {
+        return Vec3<T>{max(v[0], t), max(v[1], t), max(v[2], t)};
+    }
+
+    template <typename T>
+    INLINE HOSTDEVICE Vec3<T> max(const Vec3<T>& a, const Vec3<T>& b)
+    {
+        return Vec3<T>{max(a[0], b[0]), max(a[1], b[1]), max(a[2], b[2])};
+    }
+
+    template <typename T>
+    INLINE HOSTDEVICE Vec3<T> min(const Vec3<T>& v, const T t)
+    {
+        return Vec3<T>{min(v[0], t), min(v[1], t), min(v[2], t)};
+    }
+
+    template <typename T>
+    INLINE HOSTDEVICE Vec3<T> min(const Vec3<T>& a, const Vec3<T>& b)
+    {
+        return Vec3<T>{min(a[0], b[0]), min(a[1], b[1]), min(a[2], b[2])};
     }
 
     template <typename T>

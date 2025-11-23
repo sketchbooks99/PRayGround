@@ -33,13 +33,28 @@ namespace prayground {
 
     void copyToDevice() override
     {
-      if (!d_data)
-        CUDA_CHECK(cudaMalloc(&d_data, sizeof(DataT)));
-      CUDA_CHECK(cudaMemcpy(
-        d_data, 
-        &m_data, sizeof(DataT), 
-        cudaMemcpyHostToDevice
-      ));
+        Material::copyToDevice();
+        if (!d_data)
+            CUDA_CHECK(cudaMalloc(&d_data, sizeof(DataT)));
+        CUDA_CHECK(cudaMemcpy(
+            d_data, 
+            &m_data, sizeof(DataT), 
+            cudaMemcpyHostToDevice
+        ));
+
+        // Copy surface info
+        SurfaceInfo surface_info{
+          .data = d_data,
+          .callable_id = m_surface_callable_id,
+          .type = surfaceType()
+        };
+        if (!d_surface_info)
+            CUDA_CHECK(cudaMalloc(&d_surface_info, sizeof(SurfaceInfo)));
+        CUDA_CHECK(cudaMemcpy(
+            d_surface_info,
+            &surface_info, sizeof(SurfaceInfo),
+            cudaMemcpyHostToDevice
+        ));
     }
 
     void free() override 
@@ -55,6 +70,10 @@ namespace prayground {
     DataT data() const { 
       return m_data; 
     }
+    
+    // Dummy override
+    void setTexture(const std::shared_ptr<Texture>& texture) override {}
+    std::shared_ptr<Texture> texture() const override { return nullptr; }
 
   private:
     SurfaceType m_surface_type;

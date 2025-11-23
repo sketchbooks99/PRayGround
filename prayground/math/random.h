@@ -29,7 +29,7 @@
 #pragma once
 
 template <unsigned int N>
-HOSTDEVICE INLINE unsigned int tea(unsigned int val0, unsigned int val1)
+static HOSTDEVICE INLINE unsigned int tea(unsigned int val0, unsigned int val1)
 {
     unsigned int v0 = val0;
     unsigned int v1 = val1;
@@ -46,7 +46,7 @@ HOSTDEVICE INLINE unsigned int tea(unsigned int val0, unsigned int val1)
 }
 
 // Generate random unsigned int in [0, 2^24)
-HOSTDEVICE INLINE unsigned int lcg(unsigned int &prev)
+static HOSTDEVICE INLINE unsigned int lcg(unsigned int &prev)
 {
     const unsigned int LCG_A = 1664525u;
     const unsigned int LCG_C = 1013904223u;
@@ -54,29 +54,29 @@ HOSTDEVICE INLINE unsigned int lcg(unsigned int &prev)
     return prev & 0x00FFFFFF;
 }
 
-HOSTDEVICE INLINE unsigned int lcg2(unsigned int& prev)
+static HOSTDEVICE INLINE unsigned int lcg2(unsigned int& prev)
 {
     prev = (prev*8121 + 28411)  % 134456;
     return prev;
 }
 
 // Generate random float in [0, 1)
-HOSTDEVICE INLINE float rnd(unsigned int &prev)
+static HOSTDEVICE INLINE float rnd(unsigned int &prev)
 {
     return ((float) lcg(prev) / (float) 0x01000000);
 }
 
-HOSTDEVICE INLINE float rnd(unsigned int& prev, const float min, const float max)
+static HOSTDEVICE INLINE float rnd(unsigned int& prev, const float min, const float max)
 {
     return min + (max - min) * rnd(prev);
 }
 
-HOSTDEVICE INLINE unsigned int rotSeed(unsigned int seed, unsigned int frame)
+static HOSTDEVICE INLINE unsigned int rotSeed(unsigned int seed, unsigned int frame)
 {
     return seed ^ frame;
 }
 
-HOSTDEVICE INLINE int rndInt(unsigned int& prev, int min, int max)
+static HOSTDEVICE INLINE int rndInt(unsigned int& prev, int min, int max)
 {
     return static_cast<int>(rnd(prev, min, max + 1));
 }

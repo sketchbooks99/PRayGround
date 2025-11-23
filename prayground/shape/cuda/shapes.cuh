@@ -301,7 +301,7 @@ namespace prayground {
     INLINE DEVICE Vec2f pgGetSphereUV(const Vec3f& p) {
         float phi = atan2(p.z(), p.x());
         if (phi < 0) phi += 2.0f * math::pi;
-        float theta = acos(p.y());
+        float theta = acosf(p.y());
         float u = phi / (2.0f * math::pi);
         float v = theta * math::inv_pi;
         return Vec2f(u, v);
@@ -310,10 +310,16 @@ namespace prayground {
     INLINE DEVICE bool pgIntersectionSphere(
         const Sphere::Data* sphere, const Ray& ray, Shading* shading, float* time)
     {
-        const Vec3f oc = ray.o - sphere->center;
-        const float a = dot(ray.d, ray.d);
-        const float half_b = dot(oc, ray.d);
-        const float c = dot(oc, oc) - pow2(sphere->radius);
+        const Vec3f center = sphere->center;
+        const float radius = sphere->radius;
+
+        const Vec3f o = ray.o;
+        const Vec3f v = ray.d;
+
+        const Vec3f oc = o - center;
+        const float a = dot(v, v);
+        const float half_b = dot(oc, v);
+        const float c = dot(oc, oc) - radius * radius;
         const float discriminant = half_b * half_b - a * c;
 
         if (discriminant <= 0.0f)
@@ -330,8 +336,9 @@ namespace prayground {
         }
 
         const Vec3f p = ray.at(t);
-        shading->n = p / sphere->radius;
+        shading->n = (p - center) / radius;
         shading->uv = pgGetSphereUV(shading->n);
+        *time = t;
 
         float phi = atan2(shading->n.z(), shading->n.x());
         if (phi < 0) phi += math::two_pi;
@@ -339,15 +346,13 @@ namespace prayground {
         shading->dpdu = Vec3f(-math::two_pi * shading->n.z(), 0, math::two_pi * shading->n.x());
         shading->dpdv = math::pi * Vec3f(shading->n.y() * cosf(phi), -sinf(theta), shading->n.y() * sinf(phi));
 
-        *time = t;
-
         return true;
     }
 
     INLINE DEVICE void pgReportIntersectionSphere(const Sphere::Data* sphere, const Ray& ray)
     {
-        Shading shading;
-        float time;
+        Shading shading = {};
+        float time = 0.0f;
         if (pgIntersectionSphere(sphere, ray, &shading, &time))
         {
             // Pack shading pointer to two attributes
@@ -376,18 +381,18 @@ namespace prayground {
 
         const Face face = mesh->faces[primitive_index];
 
-        const Vec3f p0 = mesh->vertices[face.vertex_id.x()];
-        const Vec3f p1 = mesh->vertices[face.vertex_id.y()];
-        const Vec3f p2 = mesh->vertices[face.vertex_id.z()];
+        const Vec3f p0 = mesh->vertices[face.vertex_id[0]];
+        const Vec3f p1 = mesh->vertices[face.vertex_id[1]];
+        const Vec3f p2 = mesh->vertices[face.vertex_id[2]];
 
-        const Vec2f texcoord0 = mesh->texcoords[face.texcoord_id.x()];
-        const Vec2f texcoord1 = mesh->texcoords[face.texcoord_id.y()];
-        const Vec2f texcoord2 = mesh->texcoords[face.texcoord_id.z()];
+        const Vec2f texcoord0 = mesh->texcoords[face.texcoord_id[0]];
+        const Vec2f texcoord1 = mesh->texcoords[face.texcoord_id[1]];
+        const Vec2f texcoord2 = mesh->texcoords[face.texcoord_id[2]];
         shading.uv = barycentricInterop(texcoord0, texcoord1, texcoord2, bc);
 
-        const Vec3f n0 = mesh->normals[face.normal_id.x()];
-        const Vec3f n1 = mesh->normals[face.normal_id.y()];
-        const Vec3f n2 = mesh->normals[face.normal_id.z()];
+        const Vec3f n0 = mesh->normals[face.normal_id[0]];
+        const Vec3f n1 = mesh->normals[face.normal_id[1]];
+        const Vec3f n2 = mesh->normals[face.normal_id[2]];
         shading.n = barycentricInterop(n0, n1, n2, bc);
 
         const Vec2f duv02 = texcoord0 - texcoord2, duv12 = texcoord1 - texcoord2;

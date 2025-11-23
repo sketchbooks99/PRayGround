@@ -39,7 +39,7 @@ namespace prayground {
  
     // Class definition
     template <typename T, uint32_t N>
-    class Matrix
+    class Matrix 
     {
     public:
         using VecT = typename Vector<T, N>::Type;

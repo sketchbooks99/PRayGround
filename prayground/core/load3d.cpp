@@ -16,15 +16,16 @@ namespace prayground {
 
     // -------------------------------------------------------------------------------
     void loadObj(
-        const fs::path& filepath, 
+        const fs::path& filepath,
         std::vector<Vec3f>& vertices,
-        std::vector<Face>& faces, 
-        std::vector<Vec3f>& normals,  
-        std::vector<Vec2f>& texcoords
+        std::vector<Face>& faces,
+        std::vector<Vec3f>& normals,
+        std::vector<Vec2f>& texcoords, 
+        bool triangulate
     )
     {
         tinyobj::ObjReaderConfig reader_config;
-        reader_config.triangulate = true; // triangulate mesh
+        reader_config.triangulate = triangulate; // triangulate mesh
         tinyobj::ObjReader reader;
 
         if (!reader.ParseFromFile(filepath.string(), reader_config))
@@ -45,26 +46,28 @@ namespace prayground {
         for (size_t s = 0; s < shapes.size(); s++)
         {
             size_t index_offset = 0;
+
             for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++)
             {
-                Face face{{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
-                for (size_t v = 0; v < 3; v++)
+                size_t fv = size_t(shapes[s].mesh.num_face_vertices[f]);
+                Face face{ {0, 0, 0}, {0, 0, 0}, {0, 0, 0} };
+                for (size_t v = 0; v < fv; v++)
                 {
                     // access to vertex
                     tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
                     face.vertex_id[v] = idx.vertex_index;
-                    tinyobj::real_t vx = attrib.vertices[3 * size_t(idx.vertex_index) + 0];
-                    tinyobj::real_t vy = attrib.vertices[3 * size_t(idx.vertex_index) + 1];
-                    tinyobj::real_t vz = attrib.vertices[3 * size_t(idx.vertex_index) + 2];
+                    tinyobj::real_t vx = attrib.vertices[3 * idx.vertex_index + 0];
+                    tinyobj::real_t vy = attrib.vertices[3 * idx.vertex_index + 1];
+                    tinyobj::real_t vz = attrib.vertices[3 * idx.vertex_index + 2];
                     vertices[idx.vertex_index] = Vec3f(vx, vy, vz);
 
                     // Normals if exists
                     if (idx.normal_index >= 0)
                     {
                         face.normal_id[v] = idx.normal_index;
-                        tinyobj::real_t nx = attrib.normals[3 * size_t(idx.normal_index) + 0];
-                        tinyobj::real_t ny = attrib.normals[3 * size_t(idx.normal_index) + 1];
-                        tinyobj::real_t nz = attrib.normals[3 * size_t(idx.normal_index) + 2];
+                        tinyobj::real_t nx = attrib.normals[3 * idx.normal_index + 0];
+                        tinyobj::real_t ny = attrib.normals[3 * idx.normal_index + 1];
+                        tinyobj::real_t nz = attrib.normals[3 * idx.normal_index + 2];
                         normals[idx.normal_index] = Vec3f(nx, ny, nz);
                     }
 
@@ -72,23 +75,24 @@ namespace prayground {
                     if (idx.texcoord_index >= 0)
                     {
                         face.texcoord_id[v] = idx.texcoord_index;
-                        tinyobj::real_t tx = attrib.texcoords[2 * size_t(idx.texcoord_index) + 0];
-                        tinyobj::real_t ty = attrib.texcoords[2 * size_t(idx.texcoord_index) + 1];
+                        tinyobj::real_t tx = attrib.texcoords[2 * idx.texcoord_index + 0];
+                        tinyobj::real_t ty = attrib.texcoords[2 * idx.texcoord_index + 1];
                         texcoords[idx.texcoord_index] = Vec2f(tx, ty);
                     }
                 }
                 faces.push_back(face);
-                index_offset += 3;
+                index_offset += fv;
             }
         }
     }
 
     void loadObj(
         const fs::path& filepath, 
-        TriangleMesh& mesh
+        TriangleMesh& mesh, 
+        bool triangulate
     )
     {
-        mesh.load(filepath);
+        mesh.load(filepath, triangulate);
     }
 
     // -------------------------------------------------------------------------------
@@ -100,12 +104,13 @@ namespace prayground {
         std::vector<Vec2f>& texcoords, 
         std::vector<uint32_t>& face_indices,
         std::vector<Attributes>& material_attribs, 
-        const fs::path& mtlpath = ""
+        const fs::path& mtlpath = "",
+        bool triangulate
     )
     {
         tinyobj::ObjReaderConfig reader_config;
         // trianglulate mesh
-        reader_config.triangulate = true; 
+        reader_config.triangulate = triangulate; 
         // .mth filepath
         std::string mtl_dir = pgGetDir(objpath).string();
         if (mtlpath.string() != "")
@@ -224,7 +229,8 @@ namespace prayground {
         const fs::path& objpath, 
         const fs::path& mtlpath, 
         TriangleMesh& mesh, 
-        std::vector<Attributes>& material_attribs
+        std::vector<Attributes>& material_attribs, 
+        bool triangulate
     )
     {
         std::vector<Vec3f> vertices;
@@ -233,7 +239,7 @@ namespace prayground {
         std::vector<Vec2f> texcoords;
         std::vector<uint32_t> face_indices;
 
-        loadObjWithMtl(objpath, vertices, faces, normals, texcoords, face_indices, material_attribs, mtlpath);
+        loadObjWithMtl(objpath, vertices, faces, normals, texcoords, face_indices, material_attribs, mtlpath, triangulate);
         mesh.addVertices(vertices);
         mesh.addFaces(faces, face_indices);
         mesh.addNormals(normals);
@@ -243,7 +249,8 @@ namespace prayground {
     void loadObjWithMtl(
         const fs::path& filepath, 
         TriangleMesh& mesh, 
-        std::vector<Attributes>& material_attribs
+        std::vector<Attributes>& material_attribs, 
+        bool triangulate
     )
     {
         std::vector<Vec3f> vertices;
@@ -252,7 +259,7 @@ namespace prayground {
         std::vector<Vec2f> texcoords;
         std::vector<uint32_t> face_indices;
 
-        loadObjWithMtl(filepath, vertices, faces, normals, texcoords, face_indices, material_attribs);
+        loadObjWithMtl(filepath, vertices, faces, normals, texcoords, face_indices, material_attribs, "", triangulate);
         mesh.addVertices(vertices);
         mesh.addFaces(faces, face_indices);
         mesh.addNormals(normals);

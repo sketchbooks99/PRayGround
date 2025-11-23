@@ -14,12 +14,14 @@ namespace prayground {
         std::vector<Vec3f>& vertices,
         std::vector<Face>& faces,
         std::vector<Vec3f>& normals,
-        std::vector<Vec2f>& texcoords
+        std::vector<Vec2f>& texcoords,
+        bool trianglate = true
     );
 
     void loadObj(
         const std::filesystem::path& filepath, 
-        TriangleMesh& mesh
+        TriangleMesh& mesh, 
+        bool trianglate = true
     );
 
     void loadObjWithMtl(
@@ -30,21 +32,24 @@ namespace prayground {
         std::vector<Vec2f>& texcoords, 
         std::vector<uint32_t>& face_indices,
         std::vector<Attributes>& material_attribs,
-        const std::filesystem::path& mtlpath
+        const std::filesystem::path& mtlpath,
+        bool triangulate = true
     );
 
     void loadObjWithMtl(
         const std::filesystem::path& objpath, 
         const std::filesystem::path& mtlpath, 
         TriangleMesh& mesh, 
-        std::vector<Attributes>& material_attribs
+        std::vector<Attributes>& material_attribs,
+        bool trianglate = true
     );
 
     // If .mtl file exists in same directory of .obj file
     void loadObjWithMtl(
         const std::filesystem::path& filepath, 
         TriangleMesh& mesh, 
-        std::vector<Attributes>& material_attribs
+        std::vector<Attributes>& material_attribs,
+        bool trianglate = true
     );
 
     void loadPly(

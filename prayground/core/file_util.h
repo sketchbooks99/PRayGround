@@ -21,6 +21,8 @@ namespace prayground {
         return path;
     }
 
+    std::filesystem::path pgGetExecutableDir();
+
     // Check if the file specified by relative path exists. 
     // Parent directories to seek the file are pgRootDir(), pgAppDir(), pgAppDir()/data and <path/to/app.exe>
     std::optional<std::filesystem::path> pgFindDataPath( const std::filesystem::path& relative_path );
@@ -34,12 +36,15 @@ namespace prayground {
     // This return the empty path unless to set the path to app using pgSetAppDir(APP_DIR). 
     std::filesystem::path pgAppDir();
 
+    void pgAddSearchDir(const std::filesystem::path& dir);
+
     /// @todo: Add 'pg' prefix to get~~() functions
     // Get the extension of file. 
     std::string pgGetExtension( const std::filesystem::path& filepath );
 
     std::string pgGetStem(const std::filesystem::path& filepath, bool is_dir = true);
 
+    std::filesystem::path pgGetFilename(const std::filesystem::path& filepath);
     std::filesystem::path pgGetDir(const std::filesystem::path& filepath);
 
     // Create a single directory

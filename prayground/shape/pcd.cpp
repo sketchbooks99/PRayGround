@@ -5,26 +5,24 @@ namespace prayground {
     // ------------------------------------------------------------------
     PointCloud::PointCloud()
     {
-        m_points = std::make_unique<Vec3f>();
+        m_points = std::make_unique<Data[]>(0);
         m_num_points = 0;
-        m_radius = 1.0f;
     }
 
     // ------------------------------------------------------------------
-    PointCloud::PointCloud(Vec3f* points, uint32_t num_points, float radius)
-        : m_num_points{num_points}, m_radius{ radius }
+    PointCloud::PointCloud(const std::vector<PointCloud::Data>& points)
     {
-        m_points = std::make_unique<Vec3f>(num_points);
-        memcpy(m_points.get(), points, sizeof(Vec3f) * num_points);
-    }
-
-    // ------------------------------------------------------------------
-    PointCloud::PointCloud(const std::vector<Vec3f>& points, float radius)
-        : m_radius{radius}
-    {
+        m_points = std::make_unique<Data[]>(points.size());
+        memcpy(m_points.get(), points.data(), sizeof(Data) * points.size());
         m_num_points = static_cast<uint32_t>(points.size());
-        m_points = std::make_unique<Vec3f>(m_num_points);
-        memcpy(m_points.get(), points.data(), sizeof(Vec3f) * m_num_points);
+    }
+
+    // ------------------------------------------------------------------
+    PointCloud::PointCloud(PointCloud::Data* points, uint32_t num_points)
+    {
+        m_points = std::make_unique<Data[]>(m_num_points);
+        memcpy(m_points.get(), points, sizeof(Data) * num_points);
+        m_num_points = num_points;
     }
 
     // ------------------------------------------------------------------
@@ -39,27 +37,31 @@ namespace prayground {
         OptixBuildInput build_input = {};
 
         // Copy SBT indices to device
-        CUDABuffer<uint32_t> d_sbt_indices;
-        uint32_t* sbt_indices = new uint32_t[1];
-        sbt_indices[0] = m_sbt_index;
-        d_sbt_indices.copyToDevice(sbt_indices, sizeof(uint32_t));
+        std::vector<uint32_t> sbt_indices;
+        uint32_t* input_flags = new uint32_t[m_num_points];
+        for (int i = 0; i < m_num_points; i++) {
+            input_flags[i] = OPTIX_GEOMETRY_FLAG_NONE;
+            sbt_indices.push_back(m_sbt_index);
+        }
 
-        // Initialize input flags
-        std::vector<uint32_t> input_flags(m_num_points, OPTIX_GEOMETRY_FLAG_NONE);
+        CUDABuffer<uint32_t> d_sbt_indices;
+        d_sbt_indices.copyToDevice(sbt_indices);
 
         // Create AABB buffer
         std::vector<OptixAabb> aabbs(m_num_points);
-        for (int i = 0; i < m_num_points; i++) 
-            aabbs[i] = static_cast<OptixAabb>(AABB(m_points.get()[i] - Vec3f(m_radius), m_points.get()[i] + Vec3f(m_radius)));
+        for (int i = 0; i < m_num_points; i++) {
+            PointCloud::Data data = m_points.get()[i];
+            aabbs[i] = static_cast<OptixAabb>(AABB(data.point - data.radius, data.point + data.radius));
+        }
         CUDABuffer<OptixAabb> d_aabbs;
         d_aabbs.copyToDevice(aabbs);
         d_aabb_buffer = d_aabbs.devicePtr();
 
         build_input.type = static_cast<OptixBuildInputType>(this->type());
         build_input.customPrimitiveArray.aabbBuffers = &d_aabb_buffer;
-        build_input.customPrimitiveArray.numPrimitives = m_num_points;
-        build_input.customPrimitiveArray.flags = input_flags.data();
-        build_input.customPrimitiveArray.numSbtRecords = 1;
+        build_input.customPrimitiveArray.numPrimitives = static_cast<uint32_t>(m_num_points);
+        build_input.customPrimitiveArray.flags = input_flags;
+        build_input.customPrimitiveArray.numSbtRecords = 1u;
         build_input.customPrimitiveArray.sbtIndexOffsetBuffer = d_sbt_indices.devicePtr();
         build_input.customPrimitiveArray.sbtIndexOffsetSizeInBytes = sizeof(uint32_t);
         build_input.customPrimitiveArray.sbtIndexOffsetStrideInBytes = sizeof(uint32_t);
@@ -76,47 +78,42 @@ namespace prayground {
     // ------------------------------------------------------------------
     void PointCloud::copyToDevice()
     {
-        Data data = this->getData();
-
         if (!d_data)
-            CUDA_CHECK(cudaMalloc(&d_data, sizeof(Data)));
-        CUDA_CHECK(cudaMemcpy(d_data, &data, sizeof(Data), cudaMemcpyHostToDevice));
+            CUDA_CHECK(cudaMalloc(&d_data, sizeof(Data) * m_num_points));
+        CUDA_CHECK(cudaMemcpy(d_data, m_points.get(), sizeof(Data) * m_num_points, cudaMemcpyHostToDevice));
     }
 
     // ------------------------------------------------------------------
     AABB PointCloud::bound() const
     {
         /* NOTE: Should I aggreagte all points into single AABB? */
-        return AABB();
+        AABB aabb;
+        for (uint32_t i = 0; i < m_num_points; i++) {
+            auto p = m_points.get()[i];
+            aabb = AABB::merge(aabb, AABB(p.point - p.radius, p.point + p.radius));
+        }
+        return aabb;
     }
 
     // ------------------------------------------------------------------
-    PointCloud::Data PointCloud::getData() const
-    {
-        CUDABuffer<Vec3f> d_points;
-        d_points.copyToDevice(m_points.get(), m_num_points);
-        Data data = { d_points.deviceData(), m_num_points, m_radius };
-
-        return data;
-    }
-
-    // ------------------------------------------------------------------
-    void PointCloud::updatePoints(Vec3f* points, uint32_t num_points)
+    void PointCloud::updatePoints(PointCloud::Data* points, uint32_t num_points)
     {
         m_points.reset(points);
         m_num_points = num_points;
     }
 
-    // ------------------------------------------------------------------
-    const Vec3f* PointCloud::points()
+    void PointCloud::updatePoints(const std::vector<PointCloud::Data>& points)
     {
-        return m_points.get();
+        if (!m_points)
+            m_points = std::make_unique<Data[]>(points.size());
+        memcpy(m_points.get(), points.data(), sizeof(Data) * points.size());
+        m_num_points = static_cast<uint32_t>(points.size());
     }
 
     // ------------------------------------------------------------------
-    Vec3f* PointCloud::devicePoints()
+    const PointCloud::Data* PointCloud::points()
     {
-        return reinterpret_cast<Vec3f*>(d_points);
+        return m_points.get();
     }
 
 } // namespace prayground

@@ -43,7 +43,7 @@ extern "C" __device__ void __closesthit__plane()
     si->n = faceforward(world_n, -ray.d, world_n);
     si->uv = uv;
     float3 albedo = optixDirectCall<float3, SurfaceInteraction*, void*>(
-        data->tex_data.prg_id, si, data->tex_data.data
+        data->texture.prg_id, si, data->texture.data
     );
     si->albedo = albedo;
 

@@ -42,6 +42,11 @@ struct LaunchParams
     int num_lights;
 
     float white;
+
+    EnvmapSampleData envmap_sample_data;
+    uint32_t envmap_sample_id;
+    uint32_t envmap_pdf_id;
+    Texture::Data envmap_texture;
 };
 
 struct RaygenData

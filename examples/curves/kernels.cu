@@ -3,7 +3,7 @@
 
 #define MY_DEBUG 0
 
-extern "C" { __constant__ LaunchParams params; }
+extern "C" __constant__ LaunchParams params;
 
 using SurfaceInteraction = SurfaceInteraction_<Vec3f>;
 
@@ -30,7 +30,7 @@ static __forceinline__ __device__ void trace(
 }
 
 // raygen
-extern "C" __device__ void __raygen__pinhole()
+extern "C" __global__ void __raygen__pinhole()
 {
 	const pgRaygenData<Camera>* raygen = (pgRaygenData<Camera>*)optixGetSbtDataPointer();
 
@@ -62,6 +62,9 @@ extern "C" __device__ void __raygen__pinhole()
 		si.emission = 0.0f;
 		si.albedo = 0.0f;
 		si.trace_terminate = false;
+        SurfaceInfo surface_info;
+        surface_info.type = SurfaceType::None;
+        si.surface_info = &surface_info;
 
 		int depth = 0;
 		for (;;)
@@ -80,42 +83,42 @@ extern "C" __device__ void __raygen__pinhole()
                 normal = si.shading.n;
 
             // Get emission from area emitter
-            if ( si.surface_info.type == SurfaceType::AreaEmitter )
+            if ( si.surface_info->type == SurfaceType::AreaEmitter )
             {
                 // Evaluating emission from emitter
                 optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
+                    si.surface_info->callable_id.bsdf, &si, si.surface_info->data);
 
                 result += si.emission * throughput;
                 if (si.trace_terminate)
                     break;
             }
             // Specular sampling
-            else if (+(si.surface_info.type & SurfaceType::Delta))
+            else if (+(si.surface_info->type & SurfaceType::Delta))
             {
                 // Sampling scattered direction
                 optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.callable_id.sample, &si, si.surface_info.data);
+                    si.surface_info->callable_id.sample, &si, si.surface_info->data);
                 
                 // Evaluate bsdf
                 Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
-                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
+                    si.surface_info->callable_id.bsdf, &si, si.surface_info->data);
                 throughput *= bsdf_val;
             }
             // Rough surface sampling with applying MIS
-            else if ( +(si.surface_info.type & (SurfaceType::Rough | SurfaceType::Diffuse)) )
+            else if ( +(si.surface_info->type & (SurfaceType::Rough | SurfaceType::Diffuse)) )
             {
                 // Importance sampling according to the BSDF
                 optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.callable_id.sample, &si, si.surface_info.data);
+                    si.surface_info->callable_id.sample, &si, si.surface_info->data);
 
                 // Evaluate PDF of area emitter
                 float pdf = optixDirectCall<float, SurfaceInteraction*, void*>(
-                    si.surface_info.callable_id.pdf, &si, si.surface_info.data);
+                    si.surface_info->callable_id.pdf, &si, si.surface_info->data);
 
                 // Evaluate BSDF
                 Vec3f bsdf = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
-                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
+                    si.surface_info->callable_id.bsdf, &si, si.surface_info->data);
 
                 if (pdf == 0.0f) break;
 
@@ -148,7 +151,7 @@ extern "C" __device__ void __raygen__pinhole()
 }
 
 // Miss
-extern "C" __device__ void __miss__envmap()
+extern "C" __global__ void __miss__envmap()
 {
     pgMissData* data = reinterpret_cast<pgMissData*>(optixGetSbtDataPointer());
     auto* env = reinterpret_cast<EnvironmentEmitter::Data*>(data->env_data);
@@ -172,18 +175,17 @@ extern "C" __device__ void __miss__envmap()
     float v = 1.0f - (theta + math::pi / 2.0f) * math::inv_pi;
     si->shading.uv = Vec2f(u, v);
     si->trace_terminate = true;
-    si->surface_info.type = SurfaceType::None;
     si->emission = optixDirectCall<Vec3f, const Vec2f&, void*>(
         env->texture.prg_id, si->shading.uv, env->texture.data);
 }
 
-extern "C" __device__ void __miss__shadow()
+extern "C" __global__ void __miss__shadow()
 {
     setPayload<0>(1);
 }
 
 // Hitgroups 
-extern "C" __device__ void __intersection__box()
+extern "C" __global__ void __intersection__box()
 {
     pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
     auto* box = reinterpret_cast<Box::Data*>(data->shape_data);
@@ -191,7 +193,7 @@ extern "C" __device__ void __intersection__box()
     pgReportIntersectionBox(box, ray);
 }
 
-extern "C" __device__ void __intersection__sphere()
+extern "C" __global__ void __intersection__sphere()
 {
     pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
     auto* sphere = reinterpret_cast<Sphere::Data*>(data->shape_data);
@@ -199,7 +201,7 @@ extern "C" __device__ void __intersection__sphere()
     pgReportIntersectionSphere(sphere, ray);
 }
 
-extern "C" __device__ void __intersection__plane()
+extern "C" __global__ void __intersection__plane()
 {
     pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
     auto* plane = reinterpret_cast<Plane::Data*>(data->shape_data);
@@ -207,7 +209,7 @@ extern "C" __device__ void __intersection__plane()
     pgReportIntersectionPlane(plane, ray);
 }
 
-extern "C" __device__ void __closesthit__custom()
+extern "C" __global__ void __closesthit__custom()
 {
     pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
 
@@ -227,11 +229,11 @@ extern "C" __device__ void __closesthit__custom()
     si->p = ray.at(ray.tmax);
     si->shading = *shading;
     si->t = ray.tmax;
-    si->wo = ray.d;
+    si->wo = -ray.d;
     si->surface_info = data->surface_info;
 }
 
-extern "C" __device__ void __closesthit__mesh()
+extern "C" __global__ void __closesthit__mesh()
 {
     pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
     const TriangleMesh::Data* mesh_data = reinterpret_cast<TriangleMesh::Data*>(data->shape_data);
@@ -249,11 +251,11 @@ extern "C" __device__ void __closesthit__mesh()
     si->p = ray.at(ray.tmax);
     si->shading = shading;
     si->t = ray.tmax;
-    si->wo = ray.d;
+    si->wo = -ray.d;
     si->surface_info = data->surface_info;
 }
 
-extern "C" __device__ void __closesthit__curves()
+extern "C" __global__ void __closesthit__curves()
 {
     const pgHitgroupData* data = reinterpret_cast<pgHitgroupData*>(optixGetSbtDataPointer());
     const Curves::Data* curves = reinterpret_cast<Curves::Data*>(data->shape_data);
@@ -274,11 +276,11 @@ extern "C" __device__ void __closesthit__curves()
     si->p = optixTransformPointFromObjectToWorldSpace(hit_point);
     si->shading = shading;
     si->t = ray.tmax;
-    si->wo = ray.d;
+    si->wo = -ray.d;
     si->surface_info = data->surface_info;
 }
 
-extern "C" __device__ void __closesthit__shadow()
+extern "C" __global__ void __closesthit__shadow()
 {
     setPayload<0>(0);
 }
@@ -339,7 +341,7 @@ extern "C" __device__ void __direct_callable__sample_disney(SurfaceInteraction* 
 extern "C" __device__ Vec3f __continuation_callable__bsdf_disney(SurfaceInteraction* si, void* data)
 {
     const Disney::Data* disney = reinterpret_cast<Disney::Data*>(data);
-    const Vec3f base = optixDirectCall<Vec3f, const Vec2f&, void*>(disney->base.prg_id, si->shading.uv, disney->base.data);
+    const Vec3f base = optixDirectCall<Vec3f, const Vec2f&, void*>(disney->albedo.prg_id, si->shading.uv, disney->albedo.data);
     return pgGetDisneyBRDF(disney, si->wo, si->wi, si->shading, base);
 }
 
@@ -354,11 +356,11 @@ extern "C" __device__ Vec3f __direct_callable__area_emitter(SurfaceInteraction* 
 {
     const auto* area = reinterpret_cast<AreaEmitter::Data*>(data);
     si->trace_terminate = true;
-    float is_emitted = dot(si->wo, si->shading.n) < 0.0f ? 1.0f : 0.0f;
+    float is_emitted = dot(si->wo, si->shading.n) > 0.0f ? 1.0f : 0.0f;
     if (area->twosided)
     {
         is_emitted = 1.0f;
-        si->shading.n = faceforward(si->shading.n, -si->wo, si->shading.n);
+        si->shading.n = faceforward(si->shading.n, si->wo, si->shading.n);
     }
 
     const Vec3f base = optixDirectCall<Vec3f, const Vec2f&, void*>(area->texture.prg_id, si->shading.uv, area->texture.data);

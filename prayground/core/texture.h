@@ -15,7 +15,8 @@ namespace prayground {
         Constant = 1 << 0,
         Checkerboard = 1 << 1,
         Bitmap = 1 << 2,
-        Custom = 1 << 3
+        Gradient = 1 << 3,
+        Custom = 1 << 4
     };
 
 #ifndef __CUDACC__
@@ -27,6 +28,7 @@ namespace prayground {
         case TextureType::Constant:     return out << "TextureType::Constant";
         case TextureType::Checkerboard: return out << "TextureType::Checkerboard";
         case TextureType::Bitmap:       return out << "TextureType::Bitmap";
+        case TextureType::Gradient:     return out << "TextureType::Gradient";
         case TextureType::Custom:       return out << "TextureType::Custom";
         }
     }
@@ -39,7 +41,7 @@ namespace prayground {
             void* data;
 
             /* SBT index of direct/continuation callable program for texture fetch */
-            uint32_t prg_id;
+            int32_t prg_id;
         };
 
 #ifndef __CUDACC__
@@ -61,12 +63,12 @@ namespace prayground {
 
         Data getData() const { return { d_data, m_prg_id }; }
 
-        void setProgramId(const uint32_t prg_id) { m_prg_id = prg_id; }
-        uint32_t programId() const { return m_prg_id; }
+        void setProgramId(const int32_t prg_id) { m_prg_id = prg_id; }
+        int32_t programId() const { return m_prg_id; }
 
     protected:
         void* d_data{ nullptr };
-        uint32_t m_prg_id;
+        int32_t m_prg_id;
 #endif
     };
 

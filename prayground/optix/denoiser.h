@@ -33,6 +33,7 @@ public:
     void draw(const Data& data);
     void draw(const Data& data, int x, int y);
     void draw(const Data& data, int x, int y, int w, int h);
+    void write(const Data& data, const std::filesystem::path& filepath);
     // Copy results from GPU to host memory
     void copyFromDevice();
     // Finialize denoiser

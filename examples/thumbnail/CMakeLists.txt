@@ -1,4 +1,4 @@
-PRAYGROUND_add_executalbe(thumbnail target_name
+PRAYGROUND_add_executable(thumbnail target_name
     main.cpp 
     app.cpp 
     app.h
@@ -9,12 +9,14 @@ PRAYGROUND_add_executalbe(thumbnail target_name
     cuda/raygen.cu
     cuda/textures.cu
     cuda/util.cuh
+    OPTIONS -rdc true
 )
 
 target_compile_definitions(
     ${target_name}
     PRIVATE
     APP_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+    APP_NAME_DEFINE="${target_name}"
 )
 
 target_link_libraries(${target_name} ${CUDA_LIBRARIES})

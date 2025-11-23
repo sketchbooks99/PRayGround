@@ -112,7 +112,7 @@ extern "C" __device__ void __direct_callable__sample_disney(SurfaceInteraction *
 extern "C" __device__ Vec3f __continuation_callable__bsdf_disney(SurfaceInteraction * si, void* mat_data)
 {
     const Disney::Data* disney = reinterpret_cast<Disney::Data*>(mat_data);
-    const Vec3f base = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(disney->base.prg_id, si, disney->base.data);
+    const Vec3f base = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(disney->albedo.prg_id, si, disney->albedo.data);
     si->albedo = base;
     return pgGetDisneyBRDF(disney, si->wo, si->wi, si->shading, base);
 }

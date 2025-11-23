@@ -22,12 +22,11 @@ public:
 
     explicit operator OptixModule() const { return m_module; }
     explicit operator OptixModule&() { return m_module; }
-    
     void createFromCudaFile(const Context& ctx, const std::filesystem::path& filename, OptixPipelineCompileOptions pipeline_options);
     void createFromCudaSource(const Context& ctx, const std::string& source, OptixPipelineCompileOptions pipeline_options);
-
     void createFromPtxFile(const Context& ctx, const std::filesystem::path& filename, OptixPipelineCompileOptions pipeline_options);
     void createFromPtxSource(const Context& ctx, const std::string& source, OptixPipelineCompileOptions pipeline_options);
+    void createFromOptixIr(const Context& ctx, const std::filesystem::path& filename, OptixPipelineCompileOptions pipeline_options);
 
     void destroy();
 

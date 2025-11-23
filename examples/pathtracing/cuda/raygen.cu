@@ -39,6 +39,9 @@ extern "C" __device__ void __raygen__pinhole()
         si.seed = seed;
         si.emission = Vec3f(0.0f);
         si.albedo = Vec3f(0.0f);
+        SurfaceInfo surface_info;
+        surface_info.type = SurfaceType::None;
+        si.surface_info = &surface_info;
         bool trace_terminate = false;
 
         float tmax = raygen->camera.farclip / dot(rd, normalize(raygen->camera.lookat - ro));
@@ -49,11 +52,11 @@ extern "C" __device__ void __raygen__pinhole()
             trace(params.handle, ro, rd, 0.01f, tmax, 0, &si);
 
             // Get emission from area emitter
-            if (si.surface_info.type == SurfaceType::AreaEmitter)
+            if (si.surface_info->type == SurfaceType::AreaEmitter)
             {
                 // Evaluating emission from emitter
                 optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
+                    si.surface_info->callable_id.bsdf, &si, si.surface_info->data);
 
                 if (depth == 0) {
                     albedo = si.albedo;
@@ -65,37 +68,37 @@ extern "C" __device__ void __raygen__pinhole()
                 }
             }
             // Specular sampling
-            else if (+(si.surface_info.type & SurfaceType::Delta))
+            else if (+(si.surface_info->type & SurfaceType::Delta))
             {
                 // Sampling scattered direction
                 optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.callable_id.sample, &si, si.surface_info.data);
+                    si.surface_info->callable_id.sample, &si, si.surface_info->data);
 
                 // Evaluate bsdf
                 Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
-                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
+                    si.surface_info->callable_id.bsdf, &si, si.surface_info->data);
                 throughput *= bsdf_val;
             }
             // Rough surface sampling with applying MIS
-            else if (+(si.surface_info.type & (SurfaceType::Rough)))
+            else if (+(si.surface_info->type & (SurfaceType::Rough)))
             {
                 // Importance sampling according to the BSDF
                 optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.callable_id.sample, &si, si.surface_info.data);
+                    si.surface_info->callable_id.sample, &si, si.surface_info->data);
 
                 // Evaluate BSDF
                 Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
-                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
+                    si.surface_info->callable_id.bsdf, &si, si.surface_info->data);
 
                 float pdf_val = optixDirectCall<float, SurfaceInteraction*, void*>(
-                    si.surface_info.callable_id.pdf, &si, si.surface_info.data);
+                    si.surface_info->callable_id.pdf, &si, si.surface_info->data);
                 throughput *= bsdf_val / pdf_val;
             }
 
             result += si.emission * throughput;
 
             // Store surface information at primary intersections except for environment sphere
-            if (depth == 0 && si.surface_info.type != SurfaceType::None) {
+            if (depth == 0 && si.surface_info->type != SurfaceType::None) {
                 albedo += si.albedo;
                 Vec3f op = si.p - ro;
                 float op_length = length(si.p - ro);

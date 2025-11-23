@@ -1,6 +1,6 @@
 #include "util.cuh"
 
-extern "C" __device__ void __closesthit__shadow()
+extern "C" GLOBAL void __closesthit__shadow()
 {
     setPayload<0>(1u);
 }
@@ -84,7 +84,7 @@ static INLINE DEVICE int hitBox(
     return -1;
 }
 
-extern "C" __device__ void __intersection__box()
+extern "C" GLOBAL void __intersection__box()
 {
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
     const int prim_id = optixGetPrimitiveIndex();
@@ -99,7 +99,7 @@ extern "C" __device__ void __intersection__box()
     }
 }
 
-extern "C" __device__ void __closesthit__box()
+extern "C" GLOBAL void __closesthit__box()
 {
     HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
 
@@ -117,7 +117,7 @@ extern "C" __device__ void __closesthit__box()
     si->p = ray.at(ray.tmax);
     si->shading.n = world_n;
     si->t = ray.tmax;
-    si->wo = ray.d;
+    si->wo = -ray.d;
     si->shading.uv = uv;
     si->surface_info = data->surface_info;
 
@@ -163,7 +163,7 @@ static INLINE DEVICE Vec2f getCylinderUV(
     }
 }
 
-extern "C" __device__ void __intersection__cylinder()
+extern "C" GLOBAL void __intersection__cylinder()
 {
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
     const Cylinder::Data* cylinder = reinterpret_cast<Cylinder::Data*>(data->shape_data);
@@ -252,7 +252,7 @@ extern "C" __device__ void __intersection__cylinder()
     }
 }
 
-extern "C" __device__ void __closesthit__cylinder()
+extern "C" GLOBAL void __closesthit__cylinder()
 {
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
     const Cylinder::Data* cylinder = reinterpret_cast<Cylinder::Data*>(data->shape_data);
@@ -268,7 +268,7 @@ extern "C" __device__ void __closesthit__cylinder()
     si->p = ray.at(ray.tmax);
     si->shading.n = normalize(world_n);
     si->t = ray.tmax;
-    si->wo = ray.d;
+    si->wo = -ray.d;
     si->shading.uv = uv;
     si->surface_info = data->surface_info;
 
@@ -278,7 +278,7 @@ extern "C" __device__ void __closesthit__cylinder()
 }
 
 // Plane -------------------------------------------------------------------------------
-static __forceinline__ __device__ bool hitPlane(
+static INLINE DEVICE bool hitPlane(
     const Plane::Data* plane, const Vec3f& o, const Vec3f& v, const float tmin, const float tmax, SurfaceInteraction& si)
 {
     const Vec2f min = plane->min;
@@ -299,7 +299,7 @@ static __forceinline__ __device__ bool hitPlane(
     return false;
 }
 
-extern "C" __device__ void __intersection__plane()
+extern "C" GLOBAL void __intersection__plane()
 {
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
     const Plane::Data* plane = reinterpret_cast<Plane::Data*>(data->shape_data);
@@ -322,7 +322,7 @@ extern "C" __device__ void __intersection__plane()
         optixReportIntersection(t, 0, Vec3f_as_ints(n), Vec2f_as_ints(uv));
 }
 
-extern "C" __device__ void __closesthit__plane()
+extern "C" GLOBAL void __closesthit__plane()
 {
     HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
     
@@ -338,14 +338,14 @@ extern "C" __device__ void __closesthit__plane()
     si->p = ray.at(ray.tmax);
     si->shading.n = world_n;
     si->t = ray.tmax;
-    si->wo = ray.d;
+    si->wo = -ray.d;
     si->shading.uv = uv;
     si->surface_info = data->surface_info;
     si->shading.dpdu = optixTransformNormalFromObjectToWorldSpace(Vec3f(1.0f, 0.0f, 0.0f));
     si->shading.dpdv = optixTransformNormalFromObjectToWorldSpace(Vec3f(0.0f, 0.0f, 1.0f));
 }
 
-extern "C" __device__ float __continuation_callable__pdf_plane(
+extern "C" DEVICE float __continuation_callable__pdf_plane(
     const AreaEmitterInfo& area_info, const Vec3f& origin, const Vec3f& direction)
 {
     const Plane::Data* plane_data = reinterpret_cast<Plane::Data*>(area_info.shape_data);
@@ -370,7 +370,7 @@ extern "C" __device__ float __continuation_callable__pdf_plane(
 }
 
 // グローバル空間における si.p -> 光源上の点 のベクトルを返す
-extern "C" __device__ Vec3f __direct_callable__rnd_sample_plane(const AreaEmitterInfo& area_info, SurfaceInteraction * si)
+extern "C" DEVICE Vec3f __direct_callable__rnd_sample_plane(const AreaEmitterInfo& area_info, SurfaceInteraction * si)
 {
     const Plane::Data* plane_data = reinterpret_cast<Plane::Data*>(area_info.shape_data);
     // サーフェスの原点をローカル空間に移す
@@ -385,7 +385,7 @@ extern "C" __device__ Vec3f __direct_callable__rnd_sample_plane(const AreaEmitte
 }
 
 // Sphere -------------------------------------------------------------------------------
-static __forceinline__ __device__ bool hitSphere(
+static INLINE DEVICE bool hitSphere(
     const Sphere::Data* sphere, const Vec3f& o, const Vec3f& v, const float tmin, const float tmax, SurfaceInteraction& si)
 {
     const Vec3f center = sphere->center;
@@ -416,7 +416,7 @@ static __forceinline__ __device__ bool hitSphere(
     return true;
 }
 
-extern "C" __device__ void __intersection__sphere() {
+extern "C" GLOBAL void __intersection__sphere() {
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
     const Sphere::Data* sphere = reinterpret_cast<Sphere::Data*>(data->shape_data);
 
@@ -453,7 +453,7 @@ extern "C" __device__ void __intersection__sphere() {
     }
 }
 
-extern "C" __device__ void __closesthit__sphere() {
+extern "C" GLOBAL void __closesthit__sphere() {
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
     const Sphere::Data* sphere = reinterpret_cast<Sphere::Data*>(data->shape_data);
 
@@ -468,7 +468,7 @@ extern "C" __device__ void __closesthit__sphere() {
     si->p = ray.at(ray.tmax);
     si->shading.n = world_n;
     si->t = ray.tmax;
-    si->wo = ray.d;
+    si->wo = -ray.d;
     si->shading.uv = uv;
     si->surface_info = data->surface_info;
 
@@ -482,7 +482,7 @@ extern "C" __device__ void __closesthit__sphere() {
     si->shading.dpdv = normalize(optixTransformVectorFromObjectToWorldSpace(dpdv));
 }
 
-extern "C" __device__ float __continuation_callable__pdf_sphere(const AreaEmitterInfo& area_info, const Vec3f & origin, const Vec3f & direction)
+extern "C" DEVICE float __continuation_callable__pdf_sphere(const AreaEmitterInfo& area_info, const Vec3f & origin, const Vec3f & direction)
 {
     const Sphere::Data* sphere = reinterpret_cast<Sphere::Data*>(area_info.shape_data);
     SurfaceInteraction si;
@@ -499,7 +499,7 @@ extern "C" __device__ float __continuation_callable__pdf_sphere(const AreaEmitte
     return 1.0f / solid_angle;
 }
 
-extern "C" __device__ Vec3f __direct_callable__rnd_sample_sphere(const AreaEmitterInfo& area_info, SurfaceInteraction* si)
+extern "C" DEVICE Vec3f __direct_callable__rnd_sample_sphere(const AreaEmitterInfo& area_info, SurfaceInteraction* si)
 {
     const Sphere::Data* sphere = reinterpret_cast<Sphere::Data*>(area_info.shape_data);
     const Vec3f center = sphere->center;
@@ -515,7 +515,7 @@ extern "C" __device__ Vec3f __direct_callable__rnd_sample_sphere(const AreaEmitt
 }
 
 // Triangle mesh -------------------------------------------------------------------------------
-extern "C" __device__ void __closesthit__mesh()
+extern "C" GLOBAL void __closesthit__mesh()
 {
     HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
     const TriangleMesh::Data* mesh_data = reinterpret_cast<TriangleMesh::Data*>(data->shape_data);
@@ -549,7 +549,7 @@ extern "C" __device__ void __closesthit__mesh()
     si->p = ray.at(ray.tmax);
     si->shading.n = world_n;
     si->t = ray.tmax;
-    si->wo = ray.d;
+    si->wo = -ray.d;
     si->shading.uv = texcoords;
     si->surface_info = data->surface_info;
 
@@ -576,7 +576,7 @@ extern "C" __device__ void __closesthit__mesh()
     si->shading.dpdv = normalize(optixTransformNormalFromObjectToWorldSpace(dpdv));
 }
 
-extern "C" __device__ void __anyhit__alpha_discard()
+extern "C" GLOBAL void __anyhit__alpha_discard()
 {
     const HitgroupData* data = reinterpret_cast<HitgroupData*>(optixGetSbtDataPointer());
     if (!data->alpha_texture.data) return;

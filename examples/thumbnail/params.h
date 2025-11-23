@@ -46,7 +46,7 @@ struct RaygenData
 struct HitgroupData
 {
     void* shape_data;
-    SurfaceInfo surface_info;
+    SurfaceInfo* surface_info;
     Texture::Data alpha_texture;
 };
 

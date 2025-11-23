@@ -31,6 +31,7 @@ public:
 private:
     void initResultBufferOnDevice();
     void handleCameraUpdate();
+    void initParticles();
 
     LaunchParams params;
     CUDABuffer<LaunchParams> d_params;
@@ -47,4 +48,6 @@ private:
     bool camera_update;
 
     EnvironmentEmitter env;
+
+    shared_ptr<SPHParticles> particles;
 };

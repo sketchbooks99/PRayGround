@@ -36,7 +36,7 @@ static INLINE DEVICE void trace(
 }
 
 // Raygen ----------------------------------------------------------------
-extern "C" __device__ void __raygen__pinhole()
+extern "C" GLOBAL void __raygen__pinhole()
 {
     const RaygenData* raygen = reinterpret_cast<RaygenData*>(optixGetSbtDataPointer());
 
@@ -64,7 +64,7 @@ extern "C" __device__ void __raygen__pinhole()
 }
 
 // Miss ----------------------------------------------------------------
-extern "C" __device__ void __miss__envmap()
+extern "C" GLOBAL void __miss__envmap()
 {
     const auto* data = (MissData*)optixGetSbtDataPointer();
     const auto* env = (EnvironmentEmitter::Data*)(data->env_data);
@@ -93,7 +93,7 @@ extern "C" __device__ void __miss__envmap()
 }
 
 // Hitgroups ----------------------------------------------------------------
-extern "C" __device__ void __intersection__plane()
+extern "C" GLOBAL void __intersection__plane()
 {
     const auto* data = (HitgroupData*)optixGetSbtDataPointer();
     const auto* plane = (Plane::Data*)data->shape_data;
@@ -114,7 +114,7 @@ extern "C" __device__ void __intersection__plane()
         optixReportIntersection(t, 0, Vec2f_as_ints(uv));
 }
 
-extern "C" __device__ void __closesthit__plane()
+extern "C" GLOBAL void __closesthit__plane()
 {
     const auto* data = (HitgroupData*)(optixGetSbtDataPointer());
 
@@ -134,7 +134,7 @@ extern "C" __device__ void __closesthit__plane()
         data->texture.prg_id, si, data->texture.data);
 }
 
-extern "C" __device__ void __closesthit__mesh()
+extern "C" GLOBAL void __closesthit__mesh()
 {
     const auto* data = (HitgroupData*)optixGetSbtDataPointer();
     const auto* mesh_data = (TriangleMesh::Data*)data->shape_data;
@@ -169,18 +169,18 @@ extern "C" __device__ void __closesthit__mesh()
 }
 
 // Textures ----------------------------------------------------------------
-extern "C" __device__ Vec3f __direct_callable__bitmap(SurfaceInteraction* si, void* tex_data) {
+extern "C" DEVICE Vec3f __direct_callable__bitmap(SurfaceInteraction* si, void* tex_data) {
     const auto* image = reinterpret_cast<BitmapTexture::Data*>(tex_data);
     Vec4f c = tex2D<float4>(image->texture, si->shading.uv.x(), si->shading.uv.y());
     return Vec3f(c);
 }
 
-extern "C" __device__ Vec3f __direct_callable__constant(SurfaceInteraction* si, void* tex_data) {
+extern "C" DEVICE Vec3f __direct_callable__constant(SurfaceInteraction* si, void* tex_data) {
     const auto* constant = reinterpret_cast<ConstantTexture::Data*>(tex_data);
     return constant->color;
 }
 
-extern "C" __device__ Vec3f __direct_callable__checker(SurfaceInteraction* si, void* tex_data) {
+extern "C" DEVICE Vec3f __direct_callable__checker(SurfaceInteraction* si, void* tex_data) {
     const auto* checker = reinterpret_cast<CheckerTexture::Data*>(tex_data);
     const bool is_odd = sinf(si->shading.uv.x() * math::pi * checker->scale) * sinf(si->shading.uv.y() * math::pi * checker->scale) < 0;
     return is_odd ? checker->color1 : checker->color2;

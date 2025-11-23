@@ -2,6 +2,7 @@
 
 #include <prayground/core/material.h>
 #include <prayground/core/texture.h>
+#include "thinfilm.h"
 
 namespace prayground {
 
@@ -15,22 +16,29 @@ namespace prayground {
     class Dielectric final : public Material {
     public:
         struct Data {
+            // Dielectric data
             Texture::Data texture;
             float ior;
             float absorb_coeff; 
             Sellmeier sellmeier;
+
+            // Thinfilm
+            bool use_thinfilm;
+            Thinfilm::Data thinfilm;
         };
 
 #ifndef __CUDACC__
         Dielectric(
             const SurfaceCallableID& surface_callable_id, 
-            const std::shared_ptr<Texture>& texture, float ior, 
-            float absorb_coeff = 0.0f, Sellmeier sellmeier = Sellmeier::None);
+            const std::shared_ptr<Texture>& texture, 
+            float ior, 
+            float absorb_coeff = 0.0f, 
+            Sellmeier sellmeier = Sellmeier::None, 
+            Thinfilm thinfilm = Thinfilm()
+        );
         ~Dielectric();
 
         SurfaceType surfaceType() const override;
-
-        SurfaceInfo surfaceInfo() const override;
 
         void copyToDevice() override;
         void free() override;
@@ -42,9 +50,13 @@ namespace prayground {
         float absorbCoeff() const;
 
         void setSellmeierType(Sellmeier ior_func);
+        Sellmeier sellmeierType() const;
 
         void setTexture(const std::shared_ptr<Texture>& texture);
         std::shared_ptr<Texture> texture() const;
+
+        void setThinfilm(const Thinfilm& thinfilm);
+        Thinfilm thinfilm() const;
 
         Data getData() const;
     private:
@@ -63,6 +75,8 @@ namespace prayground {
         */
         Sellmeier m_sellmeier;
 
+        // Thin film
+        Thinfilm m_thinfilm;
 #endif
     };
 

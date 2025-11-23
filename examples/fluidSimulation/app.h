@@ -3,6 +3,10 @@
 #include <prayground/prayground.h>
 #include "params.h"
 
+#include <prayground/ext/imgui/imgui.h>
+#include <prayground/ext/imgui/imgui_impl_glfw.h>
+#include <prayground/ext/imgui/imgui_impl_opengl3.h>
+
 using namespace std;
 
 class App : public BaseApp 
@@ -23,6 +27,7 @@ public:
 private:
     void initResultBufferOnDevice();
     void handleCameraUpdate();
+    void initParticles();
 
     Context context;
     CUstream stream;
@@ -34,10 +39,12 @@ private:
     FloatBitmap accum_bmp;
 
     static constexpr uint32_t NRay = 1;
-    Scene<Camera, NRay> scene;
+    using AppScene = Scene<Camera, NRay>;
+    AppScene scene;
 
     bool is_camera_updated;
 
     SPHConfig sph_config;
     shared_ptr<SPHParticles> particles;
+    AABB wall;
 };

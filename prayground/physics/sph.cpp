@@ -1,4 +1,5 @@
 #include "sph.h"
+#include <format>
 #include <prayground/physics/cuda/sph.cuh>
 
 namespace prayground {
@@ -23,6 +24,25 @@ namespace prayground {
         memcpy(m_particles.get(), particles, sizeof(Data) * num_particles);
     }
 
+
+    // ------------------------------------------------------------------
+    void SPHParticles::setParticles(std::vector<SPHParticles::Data> particles)
+    {
+        if (m_particles)
+            m_particles.reset();
+        m_particles = std::make_unique<Data[]>(particles.size());
+        memcpy(m_particles.get(), particles.data(), sizeof(Data) * particles.size());
+        m_num_particles = static_cast<uint32_t>(particles.size());
+    }
+
+    void SPHParticles::setParticles(const SPHParticles::Data* particles, uint32_t num_particles)
+    {
+        if (m_particles)
+            m_particles.reset();
+        m_particles = std::make_unique<Data[]>(num_particles);
+        memcpy(m_particles.get(), particles, sizeof(Data) * num_particles);
+        m_num_particles = num_particles;
+    }
 
     // ------------------------------------------------------------------
     constexpr ShapeType SPHParticles::type()
@@ -54,19 +74,21 @@ namespace prayground {
         // The device buffer will be updated by the kernel function of SPH. 
         if (!d_data)
             this->copyToDevice();
-        updateParticleAABB((SPHParticles::Data*)d_data, m_num_particles, d_aabb.deviceData());
-        CUDA_SYNC_CHECK();
+         updateParticleAABB((SPHParticles::Data*)d_data, m_num_particles, d_aabb.deviceData());
+         CUDA_SYNC_CHECK();
 
         d_aabb_buffer = d_aabb.devicePtr();
 
         bi.type = static_cast<OptixBuildInputType>(type());
         bi.customPrimitiveArray.aabbBuffers = &d_aabb_buffer;
+        bi.customPrimitiveArray.strideInBytes = sizeof(OptixAabb);
         bi.customPrimitiveArray.numPrimitives = static_cast<uint32_t>(m_num_particles);
         bi.customPrimitiveArray.flags = input_flags;
         bi.customPrimitiveArray.numSbtRecords = 1u;
         bi.customPrimitiveArray.sbtIndexOffsetBuffer = d_sbt_indices.devicePtr();
         bi.customPrimitiveArray.sbtIndexOffsetSizeInBytes = sizeof(uint32_t);
         bi.customPrimitiveArray.sbtIndexOffsetStrideInBytes = sizeof(uint32_t);
+        bi.customPrimitiveArray.primitiveIndexOffset = 0;
 
         return bi;
     }

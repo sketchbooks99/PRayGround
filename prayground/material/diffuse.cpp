@@ -19,21 +19,21 @@ namespace prayground {
     {
         return SurfaceType::Diffuse;
     }
-    
-    SurfaceInfo Diffuse::surfaceInfo() const
+   
+    void Diffuse::setTexture(const std::shared_ptr<Texture>& texture)
     {
-        ASSERT(d_data, "Material data on device hasn't been allocated yet.");
+        m_texture = texture;
+    }
 
-        return SurfaceInfo{
-            .data = d_data,
-            .callable_id = m_surface_callable_id,
-            .type = SurfaceType::Diffuse
-        };
+    std::shared_ptr<Texture> Diffuse::texture() const
+    {
+        return m_texture;
     }
 
     // ------------------------------------------------------------------
     void Diffuse::copyToDevice()
     {
+        Material::copyToDevice();
         if (!m_texture->devicePtr())
             m_texture->copyToDevice();
 
@@ -44,6 +44,22 @@ namespace prayground {
         CUDA_CHECK(cudaMemcpy(
             d_data,
             &data, sizeof(Data), 
+            cudaMemcpyHostToDevice
+        ));
+
+        // Copy surface info to the device
+        SurfaceInfo surface_info{
+            .data = d_data,
+            .callable_id = m_surface_callable_id,
+            .type = surfaceType(),
+            .use_bumpmap = useBumpmap(),
+            .bumpmap = bumpmapData()
+        };
+        if (!d_surface_info)
+            CUDA_CHECK(cudaMalloc(&d_surface_info, sizeof(SurfaceInfo)));
+        CUDA_CHECK(cudaMemcpy(
+            d_surface_info,
+            &surface_info, sizeof(SurfaceInfo),
             cudaMemcpyHostToDevice
         ));
     }

@@ -79,6 +79,9 @@ extern "C" __device__ void __raygen__pinhole()
         si.albedo = Vec3f(0.0f);
         si.shading.n = Vec3f(0.0f);
         si.trace_terminate = false;
+        SurfaceInfo surface_info;
+        surface_info.type = SurfaceType::None;
+        si.surface_info = &surface_info;
 
         float tmax = raygen->camera.farclip / dot(rd, normalize(raygen->camera.W));
 
@@ -98,11 +101,11 @@ extern "C" __device__ void __raygen__pinhole()
             }
 
             // Get emission from area emitter
-            if (si.surface_info.type == SurfaceType::AreaEmitter)
+            if (si.surface_info->type == SurfaceType::AreaEmitter)
             {
                 // Evaluate emission from emitter
                 optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
+                    si.surface_info->callable_id.bsdf, &si, si.surface_info->data);
                 result += throughput * si.emission;
                 
                 if (depth == 0)
@@ -115,33 +118,31 @@ extern "C" __device__ void __raygen__pinhole()
                     break;
             }
             // Specular sampling
-            else if (+(si.surface_info.type & SurfaceType::Delta))
+            else if (+(si.surface_info->type & SurfaceType::Delta))
             {
                 // Sampling scattered direction
                 optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.callable_id.sample, &si, si.surface_info.data);
+                    si.surface_info->callable_id.sample, &si, si.surface_info->data);
 
                 // Evaluate BSDF
                 const Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
-                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
+                    si.surface_info->callable_id.bsdf, &si, si.surface_info->data);
                 throughput *= bsdf_val;
             }
             // Rough surface sampling
-            else if (+(si.surface_info.type & (SurfaceType::Rough | SurfaceType::Diffuse)))
+            else if (+(si.surface_info->type & (SurfaceType::Rough | SurfaceType::Diffuse)))
             {
                 // Importance sampling according to the BSDF
                 optixDirectCall<void, SurfaceInteraction*, void*>(
-                    si.surface_info.callable_id.sample, &si, si.surface_info.data);
+                    si.surface_info->callable_id.sample, &si, si.surface_info->data);
 
                 // Evaluate PDF depends on BSDF
                 float bsdf_pdf = optixDirectCall<float, SurfaceInteraction*, void*>(
-                    si.surface_info.callable_id.pdf, &si, si.surface_info.data);
+                    si.surface_info->callable_id.pdf, &si, si.surface_info->data);
 
                 // Evaluate BSDF
                 Vec3f bsdf_val = optixContinuationCall<Vec3f, SurfaceInteraction*, void*>(
-                    si.surface_info.callable_id.bsdf, &si, si.surface_info.data);
-
-                if (bsdf_pdf <= 0.0f) break;
+                    si.surface_info->callable_id.bsdf, &si, si.surface_info->data);
 
                 throughput *= bsdf_val / bsdf_pdf;
             }
@@ -215,7 +216,6 @@ extern "C" __device__ void __miss__envmap()
     float v = 1.0f - (theta + math::pi / 2.0f) * math::inv_pi;
     si->shading.uv = Vec2f(u, v);
     si->trace_terminate = true;
-    si->surface_info.type = SurfaceType::None;
     si->emission = optixDirectCall<Vec4f, SurfaceInteraction*, void*>(
         env->texture.prg_id, si, env->texture.data);
 }
@@ -269,9 +269,9 @@ extern "C" __device__ float __direct_callable__pdf_dielectric(SurfaceInteraction
 extern "C" __device__ void __direct_callable__sample_conductor(SurfaceInteraction* si, void* mat_data) {
     const auto* conductor = reinterpret_cast<Conductor::Data*>(mat_data);
     if (conductor->twosided)
-        si->shading.n = faceforward(si->shading.n, -si->wo, si->shading.n);
+        si->shading.n = faceforward(si->shading.n, si->wo, si->shading.n);
 
-    si->wi = reflect(si->wo, si->shading.n);
+    si->wi = reflect(-si->wo, si->shading.n);
     si->trace_terminate = false;
 }
 
@@ -300,7 +300,7 @@ extern "C" __device__ void __direct_callable__sample_disney(SurfaceInteraction *
 extern "C" __device__ Vec3f __continuation_callable__bsdf_disney(SurfaceInteraction * si, void* data)
 {
     const Disney::Data* disney = reinterpret_cast<Disney::Data*>(data);
-    const Vec3f base = optixDirectCall<Vec3f, const Vec2f&, void*>(disney->base.prg_id, si->shading.uv, disney->base.data);
+    const Vec3f base = optixDirectCall<Vec3f, const Vec2f&, void*>(disney->albedo.prg_id, si->shading.uv, disney->albedo.data);
     return pgGetDisneyBRDF(disney, si->wo, si->wi, si->shading, base);
 }
 
@@ -315,11 +315,11 @@ extern "C" __device__ void __direct_callable__area_emitter(SurfaceInteraction* s
 {
     const AreaEmitter::Data* area = reinterpret_cast<AreaEmitter::Data*>(surface_data);
     si->trace_terminate = true;
-    float is_emitted = dot(si->wo, si->shading.n) < 0.0f ? 1.0f : 0.0f;
+    float is_emitted = dot(si->wo, si->shading.n) > 0.0f ? 1.0f : 0.0f;
     if (area->twosided)
     {
         is_emitted = 1.0f;
-        si->shading.n = faceforward(si->shading.n, -si->wi, si->shading.n);
+        si->shading.n = faceforward(si->shading.n, si->wi, si->shading.n);
     }
 
     // Get texture
@@ -364,8 +364,7 @@ static __forceinline__ __device__ bool hitPlane(
     const float x = o.x() + t * v.x();
     const float z = o.z() + t * v.z();
 
-    if (min.x() < x && x < max.x() && min.y() < z && z < max.y() && tmin < t && t < tmax)
-    {
+    if (min.x() < x && x < max.x() && min.y() < z && z < max.y() && tmin < t && t < tmax){
         si.shading.uv = Vec2f((x - min.x()) / (max.x() - min.x()), (z - min.y()) / max.y() - min.y());
         si.shading.n = Vec3f(0, 1, 0);
         si.t = t;
@@ -412,7 +411,7 @@ extern "C" __device__ void __closesthit__plane()
     si->p = ray.at(ray.tmax);
     si->shading.n = world_n;
     si->t = ray.tmax;
-    si->wo = ray.d;
+    si->wo = -ray.d;
     si->shading.uv = uv;
     si->surface_info = data->surface_info;
 
@@ -540,7 +539,7 @@ extern "C" __device__ void __closesthit__sphere() {
     si->p = ray.at(ray.tmax);
     si->shading.n = world_n;
     si->t = ray.tmax;
-    si->wo = ray.d;
+    si->wo = -ray.d;
     si->shading.uv = pgGetSphereUV(local_n);
     si->surface_info = data->surface_info;
 
@@ -681,7 +680,7 @@ extern "C" __device__ void __closesthit__cylinder()
     si->p = ray.at(ray.tmax);
     si->shading.n = normalize(world_n);
     si->t = ray.tmax;
-    si->wo = ray.d;
+    si->wo = -ray.d;
     si->shading.uv = uv;
     si->surface_info = data->surface_info;
 
@@ -709,7 +708,7 @@ extern "C" __device__ void __closesthit__mesh()
     si->p = ray.at(ray.tmax);
     si->shading = shading;
     si->t = ray.tmax;
-    si->wo = ray.d;
+    si->wo = -ray.d;
     si->surface_info = data->surface_info;
 }
 

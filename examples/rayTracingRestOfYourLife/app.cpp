@@ -37,30 +37,31 @@ void App::handleCameraUpdate()
 // ----------------------------------------------------------------
 void App::setup()
 {
-    // CUDAの初期化とOptixDeviceContextの生成
+    // OptiX/CUDA initialization
     stream = 0;
     CUDA_CHECK(cudaFree(0));
     OPTIX_CHECK(optixInit());
     context.create();
 
-    // Instance acceleration structureの初期化
+    // Initialization of instance accel structure
     scene_ias = InstanceAccel{InstanceAccel::Type::Instances};
 
-    // パイプラインの設定
+    // Pipeline settings
     pipeline.setLaunchVariableName("params");
     pipeline.setDirectCallableDepth(5);
     pipeline.setContinuationCallableDepth(5);
     pipeline.setNumPayloads(5);
     pipeline.setNumAttributes(5);
+    pipeline.setMaxTraversableGraphDepth(3);
 
-    // OptixModuleをCUDAファイルから生成
-    Module module = pipeline.createModuleFromCudaFile(context, "kernels.cu");
+    // Create OptiX module from OptiX-IR
+    Module module = pipeline.createModuleFromOptixIr(context, "rayTracingRestOfYourLife_generated_kernels.cu.optixir");
 
-    // レンダリング結果を保存する用のBitmapを用意
+    // Prepare bitmap data to store rendered result
     result_bitmap.allocate(PixelFormat::RGBA, pgGetWidth(), pgGetHeight());
     accum_bitmap.allocate(PixelFormat::RGBA, pgGetWidth(), pgGetHeight());
 
-    // LaunchParamsの設定
+    // Launch parameter settings
     params.width = result_bitmap.width();
     params.height = result_bitmap.height();
     params.samples_per_launch = 1;
@@ -69,7 +70,7 @@ void App::setup()
 
     initResultBufferOnDevice();
 
-    // カメラの設定
+    // Camera settings
     camera.setOrigin(278.0f, 278.0f, -800.0f);
     camera.setLookat(278.0f, 278.0f, 0.0f);
     camera.setUp(0.0f, 1.0f, 0.0f);
@@ -77,15 +78,13 @@ void App::setup()
     camera.setFov(40.0f);
     camera.enableTracking(pgGetCurrentWindow());
 
-    // Raygenプログラム
+    // Raygen program
     ProgramGroup raygen_prg = pipeline.createRaygenProgram(context, module, "__raygen__pinhole");
-    // Raygenプログラム用のShader Binding Tableデータ
     RaygenRecord raygen_record;
     raygen_prg.recordPackHeader(&raygen_record);
     raygen_record.data.camera = camera.getData();
     sbt.setRaygenRecord(raygen_record);
 
-    // Callable関数とShader Binding TableにCallable関数用のデータを登録するLambda関数
     auto setupCallable = [&](const std::string& dc, const std::string& cc)
         -> uint32_t
     {
@@ -96,10 +95,10 @@ void App::setup()
         return id;
     };
 
-    // テクスチャ用のCallableプログラム
+    // Callable program for texture
     uint32_t constant_prg_id = setupCallable(DC_FUNC_TEXT("constant"), "");
 
-    // Surface用のCallableプログラム 
+    // Callable programs for surfaces
     // Diffuse
     uint32_t diffuse_sample_bsdf_prg_id = setupCallable(DC_FUNC_TEXT("sample_diffuse"), CC_FUNC_TEXT("bsdf_diffuse"));
     uint32_t diffuse_pdf_prg_id = setupCallable(DC_FUNC_TEXT("pdf_diffuse"), "");
@@ -113,19 +112,19 @@ void App::setup()
     SurfaceCallableID dielectric_id{ dielectric_sample_bsdf_prg_id, dielectric_sample_bsdf_prg_id, dielectric_pdf_prg_id };
     SurfaceCallableID area_emitter_id{ area_emitter_prg_id, area_emitter_prg_id, area_emitter_prg_id };
 
-    // Shape用のCallableプログラム(主に面光源サンプリング用)
+    // Callable program to sample area light
     uint32_t plane_sample_pdf_prg_id = setupCallable(DC_FUNC_TEXT("sample_light_plane"), CC_FUNC_TEXT("pdf_light_plane"));
 
-    // 環境マッピング (Sphere mapping) 用のテクスチャとデータ準備
+    // Texture setup for envmap sampling
     auto env_texture = make_shared<ConstantTexture>(Vec3f(0.0f), constant_prg_id);
     env_texture->copyToDevice();
     env = EnvironmentEmitter{env_texture};
     env.copyToDevice();
 
-    // Missプログラム
+    // Miss program
     ProgramGroup miss_prg = pipeline.createMissProgram(context, module, "__miss__envmap");
     ProgramGroup miss_shadow_prg = pipeline.createMissProgram(context, module, "__miss__shadow");
-    // Missプログラム用のShader Binding Tableデータ
+    // SBT data for miss program
     MissRecord miss_record, miss_shadow_record;
     miss_prg.recordPackHeader(&miss_record);
     miss_record.data.env_data = env.devicePtr();
@@ -134,7 +133,7 @@ void App::setup()
 
     sbt.setMissRecord({ miss_record, miss_shadow_record });
 
-    // Hitgroupプログラム
+    // Hitgroup programs
     // Plane
     auto plane_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_TEXT("plane"), IS_FUNC_TEXT("plane"));
     auto plane_shadow_prg = pipeline.createHitgroupProgram(context, module, CH_FUNC_TEXT("shadow"), IS_FUNC_TEXT("plane"));
@@ -149,33 +148,25 @@ void App::setup()
     {
         shared_ptr<Shape> shape;
         shared_ptr<Material> material;
-        uint32_t sample_bsdf_id;
-        uint32_t pdf_id;
     };
 
     uint32_t sbt_idx = 0;
     uint32_t sbt_offset = 0;
     uint32_t instance_id = 0;
-    // ShapeとMaterialのデータをGPU上に準備しHitgroup用のSBTデータを追加するLambda関数
-    auto setupPrimitive = [&](ProgramGroup& prg, ProgramGroup& shadow_prg, const Primitive& primitive, const Matrix4f& transform)
+    // Lambda function to prepare shape and material data on GPU, and setup SBT data
+    auto setupPrimitive = [&](ProgramGroup& prg, ProgramGroup& shadow_prg, Primitive& primitive, const Matrix4f& transform)
     {
-        // データをGPU側に用意
+        // Prepare data on GPU
         primitive.shape->copyToDevice();
-        primitive.shape->setSbtIndex(sbt_idx);
         primitive.material->copyToDevice();
 
-        // Shader Binding Table へのデータの登録
+        // Data registration to SBT
         HitgroupRecord record;
         prg.recordPackHeader(&record);
-        HitgroupData record_data = 
+        HitgroupData record_data =
         {
             .shape_data = primitive.shape->devicePtr(),
-            .surface_info =
-            {
-                .data = primitive.material->devicePtr(),
-                .callable_id = primitive.material->surfaceCallableID(),
-                .type = primitive.material->surfaceType()
-            }
+            .surface_info = primitive.material->surfaceInfoDevicePtr()
         };
         record.data = record_data;
 
@@ -186,7 +177,6 @@ void App::setup()
         sbt.addHitgroupRecord({ record, shadow_record });
         sbt_idx += SBT::NRay;
 
-        // GASをビルドし、IASに追加
         ShapeInstance instance{primitive.shape->type(), primitive.shape, transform};
         instance.allowCompaction();
         instance.buildAccel(context, stream);
@@ -200,10 +190,6 @@ void App::setup()
     };
 
     std::vector<AreaEmitterInfo> area_emitter_infos;
-    // 面光源用のSBTデータを用意しグローバル情報としての光源情報を追加するLambda関数
-    // 光源サンプリング時にCallable関数ではOptixInstanceに紐づいた行列情報を取得できないので
-    // 行列情報をAreaEmitterInfoに一緒に設定しておく
-    // ついでにShapeInstanceによって光源用のGASも追加
     auto setupAreaEmitter = [&](
         ProgramGroup& prg, ProgramGroup& shadow_prg,
         shared_ptr<Shape> shape,
@@ -211,21 +197,15 @@ void App::setup()
         uint32_t sample_pdf_id
     )
     {
-        // Plane or Sphereにキャスト可能かチェック
         ASSERT(dynamic_pointer_cast<Plane>(shape) || dynamic_pointer_cast<Sphere>(shape), "The shape of area emitter must be a plane or sphere.");
         
         shape->copyToDevice();
-        shape->setSbtIndex(sbt_idx);
         area.copyToDevice();
 
         HitgroupRecord record;
         prg.recordPackHeader(&record);
 
-        SurfaceInfo surface_info = {
-            .data = area.devicePtr(), 
-            .callable_id = area.surfaceCallableID(),
-            .type = SurfaceType::AreaEmitter
-        };
+        SurfaceInfo* surface_info = area.surfaceInfoDevicePtr();
 
         HitgroupData record_data = { shape->devicePtr(), surface_info };
         record.data = record_data;
@@ -329,7 +309,7 @@ void App::setup()
         setupPrimitive(sphere_prg, sphere_shadow_prg, glass_sphere, transform);
     }
 
-    // Ceiling light
+    // // Ceiling light
     {
         // Shape
         auto plane_light = make_shared<Plane>(Vec2f(213.0f, 227.0f), Vec2f(343.0f, 332.0f));
@@ -342,7 +322,7 @@ void App::setup()
         setupAreaEmitter(plane_prg, plane_shadow_prg, plane_light, plane_area_emitter, transform, plane_sample_pdf_prg_id);
     }
 
-    // 光源データをGPU側にコピー
+    // Copy area light information to device
     CUDABuffer<AreaEmitterInfo> d_area_emitter_infos;
     d_area_emitter_infos.copyToDevice(area_emitter_infos);
     params.lights = d_area_emitter_infos.deviceData();
@@ -374,7 +354,7 @@ void App::update()
     params.frame++;
     d_params.copyToDeviceAsync(&params, sizeof(LaunchParams), stream);
 
-    // OptiX レイトレーシングカーネルの起動
+    // Launch OptiX ray tracing kernel
     optixLaunch(
         static_cast<OptixPipeline>(pipeline),
         stream,
@@ -389,7 +369,7 @@ void App::update()
     CUDA_CHECK(cudaStreamSynchronize(stream));
     CUDA_SYNC_CHECK();
 
-    // レンダリング結果をデバイスから取ってくる
+    // Get rendered result from device
     result_bitmap.copyFromDevice();
 }
 
@@ -425,11 +405,6 @@ void App::draw()
     result_bitmap.draw(0, 0);
 
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-    if (params.frame == 4096) {
-        result_bitmap.write(pgPathJoin(pgAppDir(), "rtRestOfYourLife.jpg"));
-        pgExit();
-    }
 }
 
 // ----------------------------------------------------------------

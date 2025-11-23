@@ -13,10 +13,18 @@
 
 namespace prayground {
 
-    enum class EnvmapSampleType : uint32_t {
-        Uniform = 0, 
-        SphericalHarmonic = 1, 
-        Pixel = 2
+    struct EnvmapSampleData {
+        float* d_conditional_cdf; // [width * height]
+        float* d_row_luminance;   // [height]
+        float* d_marginal_cdf;    // [height]
+
+        // Texture data
+        Texture::Data texture;
+        // Resolution
+        uint32_t width;
+        uint32_t height;
+        // Total luminance
+        float total_luminance;
     };
 
     class EnvironmentEmitter final : public Emitter {
@@ -43,5 +51,6 @@ namespace prayground {
 #endif
     };
 
+    EnvmapSampleData createEnvmapSampleDataOnDevice(Vec4f* envmap_data, uint32_t width, uint32_t height);
 
 } // namespace prayground

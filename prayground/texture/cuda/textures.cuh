@@ -3,6 +3,7 @@
 #include <optix.h>
 #include <prayground/math/vec.h>
 #include <prayground/core/spectrum.h>
+#include <prayground/core/keypoint.h>
 #include <prayground/texture/constant.h>
 #include <prayground/texture/checker.h>
 #include <prayground/texture/bitmap.h>
@@ -90,6 +91,34 @@ namespace prayground {
         const BitmapTexture::Data* bitmap = reinterpret_cast<BitmapTexture::Data*>(tex_data);
         const float4 c = tex2D<float4>(bitmap->texture, uv.x(), uv.y());
         return rgb2spectrum(Vec3f(c));
+    }
+
+    template <typename ReturnSpectrumT>
+    DEVICE INLINE ReturnSpectrumT pgGetGradientTextureValue(const Vec2f& uv, void* tex_data)
+    {
+        const typename GradientTexture_<ReturnSpectrumT>::Data* gradient = reinterpret_cast<typename GradientTexture_<ReturnSpectrumT>::Data*>(tex_data);
+        // Calculate t value in [0, 1] range from uv coordinates and gradient direction
+        const float t = dot(uv, normalize(gradient->dir));
+        // Find two key points that sandwich t
+        float min_t = 0.0f;
+        float max_t = 1.0f;
+        for (int i = 0; i < gradient->num_keypoints - 1; i++) {
+            min_t = fminf(min_t, gradient->keypoints[i].t);
+            max_t = fmaxf(max_t, gradient->keypoints[i].t);
+            if (t >= gradient->keypoints[i].t && t < gradient->keypoints[i + 1].t) {
+                return Keypoint<ReturnSpectrumT>::ease(gradient->keypoints[i], gradient->keypoints[i + 1], t, gradient->ease_type);
+            }
+        }
+        min_t = fminf(min_t, gradient->keypoints[gradient->num_keypoints - 1].t);
+        max_t = fmaxf(max_t, gradient->keypoints[gradient->num_keypoints - 1].t);
+
+        // If t is out of range, return the color of the nearest keypoint
+        if (t < min_t) {
+            return gradient->keypoints[0].value;
+        } else if (t > max_t) {
+            return gradient->keypoints[gradient->num_keypoints - 1].value;
+        }
+        return ReturnSpectrumT();
     }
 
 //#endif

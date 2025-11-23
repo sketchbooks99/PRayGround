@@ -32,11 +32,11 @@ namespace prayground {
         TriangleMesh();
         TriangleMesh(const std::filesystem::path& filename);
         TriangleMesh(
-            const std::vector<Vec3f>& vertices, 
-            const std::vector<Face>& faces, 
-            const std::vector<Vec3f>& normals, 
-            const std::vector<Vec2f>& texcoords, 
-            const std::vector<uint32_t>& sbt_indices = std::vector<uint32_t>() );
+            const std::vector<Vec3f>& vertices,
+            const std::vector<Face>& faces,
+            const std::vector<Vec3f>& normals,
+            const std::vector<Vec2f>& texcoords,
+            const std::vector<uint32_t>& sbt_indices = std::vector<uint32_t>());
         TriangleMesh(const TriangleMesh& mesh) = default;
         TriangleMesh(TriangleMesh&& mesh) = default;
 
@@ -59,21 +59,21 @@ namespace prayground {
         // For opacity micromap
         void setupOpacitymap(const Context& ctx,
             CUstream stream,
-            uint32_t subdivision_level, 
-            OptixOpacityMicromapFormat format, 
-            OpacityMicromap::OpacityFunction function, 
-            uint32_t build_flags=OPTIX_OPACITY_MICROMAP_FLAG_NONE);
-        void setupOpacitymap(const Context& ctx, 
-            CUstream stream,
-            uint32_t subdivision_level, 
-            OptixOpacityMicromapFormat format, 
-            const std::shared_ptr<BitmapTexture>& bitmap, 
+            uint32_t subdivision_level,
+            OptixOpacityMicromapFormat format,
+            OpacityMicromap::OpacityFunction function,
             uint32_t build_flags = OPTIX_OPACITY_MICROMAP_FLAG_NONE);
-        void setupOpacitymap(const Context& ctx, 
+        void setupOpacitymap(const Context& ctx,
             CUstream stream,
-            uint32_t subdivision_level, 
-            OptixOpacityMicromapFormat format, 
-            const std::shared_ptr<FloatBitmapTexture>& float_bitmap, 
+            uint32_t subdivision_level,
+            OptixOpacityMicromapFormat format,
+            const std::shared_ptr<BitmapTexture>& bitmap,
+            uint32_t build_flags = OPTIX_OPACITY_MICROMAP_FLAG_NONE);
+        void setupOpacitymap(const Context& ctx,
+            CUstream stream,
+            uint32_t subdivision_level,
+            OptixOpacityMicromapFormat format,
+            const std::shared_ptr<FloatBitmapTexture>& float_bitmap,
             uint32_t build_flags = OPTIX_OPACITY_MICROMAP_FLAG_NONE);
 
         // For displaced micromesh
@@ -82,7 +82,7 @@ namespace prayground {
         /**
          * @note
          * Be careful when updating GAS/IAS after modifying the number of vertices, indices
-         * because you must `rebuild` AS, not `update` 
+         * because you must `rebuild` AS, not `update`
          */
         void addVertices(const std::vector<Vec3f>& verts);
         void addFaces(const std::vector<Face>& faces);
@@ -99,14 +99,14 @@ namespace prayground {
         void addTexcoord(const Vec2f& texcoord);
         void addTexcoord(float x, float y);
 
-        void load(const std::filesystem::path& filename);
+        void load(const std::filesystem::path& filename, bool triangulate = true);
         void loadWithMtl(
-            const std::filesystem::path& objpath, 
-            std::vector<Attributes>& material_attribs, 
+            const std::filesystem::path& objpath,
+            std::vector<Attributes>& material_attribs,
             const std::filesystem::path& mtlpath = ""
         );
 
-        /* Calculate normals based on triangle faces. The normals are stored for each faces, 
+        /* Calculate normals based on triangle faces. The normals are stored for each faces,
          * so more memory size will be required than smoothed normals. */
         void calculateNormalFlat();
         /* Calculate smooth normals for all vertices. The number of vertices and normals is same. */
@@ -147,11 +147,17 @@ namespace prayground {
         std::vector<Vec2f> m_texcoords;
         std::vector<uint32_t> m_sbt_indices;
 
-        CUdeviceptr d_vertices { 0 };
-        CUdeviceptr d_faces { 0 };
-        CUdeviceptr d_normals { 0 };
-        CUdeviceptr d_texcoords { 0 };
+        CUdeviceptr d_vertices{ 0 };
+        CUdeviceptr d_faces{ 0 };
+        CUdeviceptr d_normals{ 0 };
+        CUdeviceptr d_texcoords{ 0 };
         CUdeviceptr d_sbt_indices{ 0 };
+
+        CUDABuffer<Vec3f> d_vertices_buf;
+        CUDABuffer<Face> d_faces_buf;
+        CUDABuffer<Vec3f> d_normals_buf;
+        CUDABuffer<Vec2f> d_texcoords_buf;
+        CUDABuffer<uint32_t> d_sbt_indices_buf;
 
 #if OPTIX_VERSION >= 70600
         bool m_use_opacitymap{ false };

@@ -271,29 +271,29 @@ namespace prayground {
             return sum;
         }
 
-        friend SampledSpectrum sqrtf(const SampledSpectrum& s)
-        {
-            SampledSpectrum ret;
-            for (int i = 0; i < nSamples; i++)
-                ret.c[i] = sqrtf(s.c[i]);
-            return ret;
-        }
+        //friend SampledSpectrum sqrtf(const SampledSpectrum& s)
+        //{
+        //    SampledSpectrum ret;
+        //    for (int i = 0; i < nSamples; i++)
+        //        ret.c[i] = sqrtf(s.c[i]);
+        //    return ret;
+        //}
 
-        friend SampledSpectrum expf(const SampledSpectrum& s)
-        {
-            SampledSpectrum ret;
-            for (int i = 0; i < nSamples; i++)
-                ret.c[i] = expf(s.c[i]);
-            return ret;
-        }
+        //friend SampledSpectrum expf(const SampledSpectrum& s)
+        //{
+        //    SampledSpectrum ret;
+        //    for (int i = 0; i < nSamples; i++)
+        //        ret.c[i] = expf(s.c[i]);
+        //    return ret;
+        //}
 
-        friend SampledSpectrum powf(const SampledSpectrum& s, float t)
-        {
-            SampledSpectrum ret;
-            for (int i = 0; i < nSamples; i++)
-                ret.c[i] = powf(s.c[i], t);
-            return ret;
-        }
+        //friend SampledSpectrum powf(const SampledSpectrum& s, float t)
+        //{
+        //    SampledSpectrum ret;
+        //    for (int i = 0; i < nSamples; i++)
+        //        ret.c[i] = powf(s.c[i], t);
+        //    return ret;
+        //}
     };
 
     // Tables to reconstruct SampledSpectrum from RGB value.

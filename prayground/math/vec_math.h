@@ -44,50 +44,50 @@
 
 using prayground::clamp;
 
-#if !defined(__CUDACC_RTC__)
+#if !defined(__CUDACC_RTC__) || !defined(__CUDACC__)
 #include <cmath>
 #include <cstdlib>
 #endif
 
-INLINE HOSTDEVICE int max(int a, int b)
-{
-    return a > b ? a : b;
-}
-
-INLINE HOSTDEVICE int min(int a, int b)
-{
-    return a < b ? a : b;
-}
-
-INLINE HOSTDEVICE long long max(long long a, long long b)
-{
-    return a > b ? a : b;
-}
-
-INLINE HOSTDEVICE long long min(long long a, long long b)
-{
-    return a < b ? a : b;
-}
-
-INLINE HOSTDEVICE unsigned int max(unsigned int a, unsigned int b)
-{
-    return a > b ? a : b;
-}
-
-INLINE HOSTDEVICE unsigned int min(unsigned int a, unsigned int b)
-{
-    return a < b ? a : b;
-}
-
-INLINE HOSTDEVICE unsigned long long max(unsigned long long a, unsigned long long b)
-{
-    return a > b ? a : b;
-}
-
-INLINE HOSTDEVICE unsigned long long min(unsigned long long a, unsigned long long b)
-{
-    return a < b ? a : b;
-}
+//INLINE HOSTDEVICE int max(int a, int b)
+//{
+//    return a > b ? a : b;
+//}
+//
+//INLINE HOSTDEVICE int min(int a, int b)
+//{
+//    return a < b ? a : b;
+//}
+//
+//INLINE HOSTDEVICE long long max(long long a, long long b)
+//{
+//    return a > b ? a : b;
+//}
+//
+//INLINE HOSTDEVICE long long min(long long a, long long b)
+//{
+//    return a < b ? a : b;
+//}
+//
+//INLINE HOSTDEVICE unsigned int max(unsigned int a, unsigned int b)
+//{
+//    return a > b ? a : b;
+//}
+//
+//INLINE HOSTDEVICE unsigned int min(unsigned int a, unsigned int b)
+//{
+//    return a < b ? a : b;
+//}
+//
+//INLINE HOSTDEVICE unsigned long long max(unsigned long long a, unsigned long long b)
+//{
+//    return a > b ? a : b;
+//}
+//
+//INLINE HOSTDEVICE unsigned long long min(unsigned long long a, unsigned long long b)
+//{
+//    return a < b ? a : b;
+//}
 
 INLINE HOSTDEVICE float inverseSqrt(float x)
 {

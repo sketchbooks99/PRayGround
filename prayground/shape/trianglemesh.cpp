@@ -21,18 +21,18 @@ namespace prayground {
     }
 
     TriangleMesh::TriangleMesh(
-        const std::vector<Vec3f>& vertices, 
-        const std::vector<Face>& faces, 
-        const std::vector<Vec3f>& normals, 
-        const std::vector<Vec2f>& texcoords, 
-        const std::vector<uint32_t>& sbt_indices) 
-        : m_vertices(vertices), 
-          m_faces(faces), 
-          m_normals(normals),
-          m_texcoords(texcoords), 
-          m_sbt_indices(sbt_indices)
+        const std::vector<Vec3f>& vertices,
+        const std::vector<Face>& faces,
+        const std::vector<Vec3f>& normals,
+        const std::vector<Vec2f>& texcoords,
+        const std::vector<uint32_t>& sbt_indices)
+        : m_vertices(vertices),
+        m_faces(faces),
+        m_normals(normals),
+        m_texcoords(texcoords),
+        m_sbt_indices(sbt_indices)
     {
-    
+
     }
 
     // ------------------------------------------------------------------
@@ -42,11 +42,11 @@ namespace prayground {
     }
 
     // ------------------------------------------------------------------
-    void TriangleMesh::copyToDevice() 
+    void TriangleMesh::copyToDevice()
     {
         Data data = this->getData();
 
-        if (!d_data) 
+        if (!d_data)
             CUDA_CHECK(cudaMalloc(&d_data, sizeof(Data)));
         CUDA_CHECK(cudaMemcpy(
             d_data,
@@ -56,10 +56,9 @@ namespace prayground {
     }
 
     // ------------------------------------------------------------------
-    OptixBuildInput TriangleMesh::createBuildInput() 
+    OptixBuildInput TriangleMesh::createBuildInput()
     {
         OptixBuildInput bi = {};
-        CUDABuffer<uint32_t> d_sbt_indices_buf;
 
         d_sbt_indices_buf.copyToDevice(m_sbt_indices);
         d_sbt_indices = d_sbt_indices_buf.devicePtr();
@@ -68,7 +67,7 @@ namespace prayground {
         uint32_t* triangle_input_flags = new uint32_t[num_materials];
         for (uint32_t i = 0; i < num_materials; i++)
             triangle_input_flags[i] = OPTIX_GEOMETRY_FLAG_NONE;
-    
+
         bi.type = static_cast<OptixBuildInputType>(this->type());
         bi.triangleArray.vertexFormat = OPTIX_VERTEX_FORMAT_FLOAT3;
         bi.triangleArray.vertexStrideInBytes = sizeof(Vec3f);
@@ -100,7 +99,7 @@ namespace prayground {
         return static_cast<uint32_t>(m_faces.size());
     }
 
-    AABB TriangleMesh::bound() const 
+    AABB TriangleMesh::bound() const
     {
         return AABB{};
     }
@@ -130,10 +129,6 @@ namespace prayground {
     // ------------------------------------------------------------------
     TriangleMesh::Data TriangleMesh::getData()
     {
-        CUDABuffer<Vec3f> d_vertices_buf;
-        CUDABuffer<Face> d_faces_buf;
-        CUDABuffer<Vec3f> d_normals_buf;
-        CUDABuffer<Vec2f> d_texcoords_buf;
         d_vertices_buf.copyToDevice(m_vertices);
         d_faces_buf.copyToDevice(m_faces);
         d_normals_buf.copyToDevice(m_normals);
@@ -157,11 +152,11 @@ namespace prayground {
 
     // ------------------------------------------------------------------
     void TriangleMesh::setupOpacitymap(
-        const Context& ctx, 
+        const Context& ctx,
         CUstream stream,
-        uint32_t subdivision_level, 
-        OptixOpacityMicromapFormat format, 
-        OpacityMicromap::OpacityFunction function, 
+        uint32_t subdivision_level,
+        OptixOpacityMicromapFormat format,
+        OpacityMicromap::OpacityFunction function,
         uint32_t build_flags)
     {
         std::vector<Vec3i> faces;
@@ -181,18 +176,18 @@ namespace prayground {
     }
 
     void TriangleMesh::setupOpacitymap(
-        const Context& ctx, 
+        const Context& ctx,
         CUstream stream,
         uint32_t subdivision_level,
-        OptixOpacityMicromapFormat format, 
-        const std::shared_ptr<BitmapTexture>& bitmap, 
+        OptixOpacityMicromapFormat format,
+        const std::shared_ptr<BitmapTexture>& bitmap,
         uint32_t build_flags)
     {
         std::vector<Vec3i> faces;
         std::for_each(m_faces.begin(), m_faces.end(), [&faces](const Face& face) { faces.push_back(face.texcoord_id); });
         OpacityMicromap::Input input = {
-            .subdivision_level = subdivision_level, 
-            .format = format, 
+            .subdivision_level = subdivision_level,
+            .format = format,
             .num_texcoords = static_cast<uint32_t>(m_texcoords.size()),
             .texcoords = m_texcoords.data(),
             .num_faces = static_cast<uint32_t>(faces.size()),
@@ -205,11 +200,11 @@ namespace prayground {
     }
 
     void TriangleMesh::setupOpacitymap(
-        const Context& ctx, 
+        const Context& ctx,
         CUstream stream,
         uint32_t subdivision_level,
-        OptixOpacityMicromapFormat format, 
-        const std::shared_ptr<FloatBitmapTexture>& float_bitmap, 
+        OptixOpacityMicromapFormat format,
+        const std::shared_ptr<FloatBitmapTexture>& float_bitmap,
         uint32_t build_flags)
     {
         std::vector<Vec3i> faces;
@@ -318,7 +313,7 @@ namespace prayground {
     }
 
     // ------------------------------------------------------------------
-    void TriangleMesh::load(const fs::path& filename)
+    void TriangleMesh::load(const fs::path& filename, bool triangulate)
     {
         std::string ext = pgGetExtension(filename);
         if (ext == ".obj") {
@@ -326,7 +321,7 @@ namespace prayground {
             ASSERT(filepath, "The OBJ file '" + filename.string() + "' is not found.");
 
             pgLog("Loading OBJ file '" + filepath.value().string() + "' ...");
-            loadObj(filepath.value(), m_vertices, m_faces, m_normals, m_texcoords);
+            loadObj(filepath.value(), m_vertices, m_faces, m_normals, m_texcoords, triangulate);
         }
         else if (ext == ".ply") {
             std::optional<fs::path> filepath = pgFindDataPath(filename);
@@ -403,8 +398,8 @@ namespace prayground {
     void TriangleMesh::calculateNormalFlat()
     {
         // Check if faces/vertices are empty.
-        ASSERT(m_faces.empty(), "Face array to construct triangle mesh is empty.");
-        ASSERT(m_vertices.empty(), "Vertex array to construct triangle mesh is empty.");
+        ASSERT(!m_faces.empty(), "Face array to construct triangle mesh is empty.");
+        ASSERT(!m_vertices.empty(), "Vertex array to construct triangle mesh is empty.");
 
         m_normals.clear();
         for (auto& face : m_faces)

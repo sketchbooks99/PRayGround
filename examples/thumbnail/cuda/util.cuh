@@ -3,9 +3,8 @@
 #include <prayground/prayground.h>
 #include "../params.h"
 
-extern "C" {
-__constant__ LaunchParams params;
-}
+extern "C" __constant__ LaunchParams params;
+
 
 using SurfaceInteraction = SurfaceInteraction_<Vec3f>;
 

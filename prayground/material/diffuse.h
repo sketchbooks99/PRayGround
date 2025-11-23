@@ -18,7 +18,8 @@ public:
 
     SurfaceType surfaceType() const override;
 
-    SurfaceInfo surfaceInfo() const override;
+    void setTexture(const std::shared_ptr<Texture>& texture) override;
+    std::shared_ptr<Texture> texture() const override;
 
     void copyToDevice() override;
     void free() override;

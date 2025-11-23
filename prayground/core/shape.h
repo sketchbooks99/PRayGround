@@ -14,7 +14,8 @@ namespace prayground {
     {
         Mesh = OPTIX_BUILD_INPUT_TYPE_TRIANGLES,
         Custom = OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES,
-        Curves = OPTIX_BUILD_INPUT_TYPE_CURVES
+        Curves = OPTIX_BUILD_INPUT_TYPE_CURVES,
+        Spheres = OPTIX_BUILD_INPUT_TYPE_SPHERES
     };
 
     class Shape {

@@ -7,16 +7,15 @@ namespace prayground {
     class PointCloud : public Shape {
     public:
         struct Data {
-            Vec3f* points;
-            uint32_t num_points;
+            Vec3f point;
             float radius;
         };
 
 #ifndef __CUDACC__
 
         PointCloud();
-        PointCloud(Vec3f* points, uint32_t num_points, float radius);
-        PointCloud(const std::vector<Vec3f>& points, float radius);
+        PointCloud(const std::vector<PointCloud::Data>& points);
+        PointCloud(PointCloud::Data* points, uint32_t num_points);
 
         constexpr ShapeType type() override;
         OptixBuildInput createBuildInput() override;
@@ -27,22 +26,16 @@ namespace prayground {
 
         AABB bound() const override;
 
-        Data getData() const;
-
-        void updatePoints(Vec3f* points, uint32_t num_points);
+        void updatePoints(PointCloud::Data* points, uint32_t num_points);
+        void updatePoints(const std::vector<PointCloud::Data>& points);
 
         /* Getter of host-side pointer for points */
-        const Vec3f* points();
-
-        /* Getter of device-side pointer for points */
-        Vec3f* devicePoints();
+        const PointCloud::Data* points();
     private:
-        std::unique_ptr<Vec3f> m_points;
+        std::unique_ptr<Data[]> m_points;
         CUdeviceptr d_points{ 0 };
 
         uint32_t m_num_points;
-
-        float m_radius;
 
         CUdeviceptr d_aabb_buffer{ 0 };
 #endif

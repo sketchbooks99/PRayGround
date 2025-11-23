@@ -24,7 +24,7 @@ enum class RayType : uint32_t
 struct AreaEmitterInfo
 {
     void* shape_data;
-    SurfaceInfo surface_info;
+    SurfaceInfo* surface_info;
 
     Matrix4f objToWorld;
     Matrix4f worldToObj;
@@ -73,7 +73,7 @@ struct RaygenData
 struct HitgroupData
 {
     void* shape_data;
-    SurfaceInfo surface_info;
+    SurfaceInfo* surface_info;
 };
 
 struct MissData

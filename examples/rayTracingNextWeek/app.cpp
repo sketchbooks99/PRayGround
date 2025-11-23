@@ -34,6 +34,28 @@ void App::handleCameraUpdate()
     initResultBufferOnDevice();
 }
 
+void App::initParticles() {
+    float radius = 5.0f;
+    uint32_t seed = tea<4>(0, 0);
+    std::vector<SPHParticles::Data> particle_data;
+    constexpr int NUM_GRID = 25;
+    for (int x = 0; x < NUM_GRID; x++) {
+        for (int y = 0; y < NUM_GRID; y++) {
+            for (int z = 0; z < NUM_GRID; z++) {
+                Vec3f position = Vec3f(x, y, z) * 10.0 - 125.0f;
+                Vec3f velocity = Vec3f(0.0f);
+                float mass = 0.5f;
+                Vec3f perturbation = (UniformSampler::get3D(seed) - 0.5f) * 5.0f;
+                position += perturbation;
+                auto p = SPHParticles::Data{ position, velocity, mass, radius, 0.0f, 0.0f, Vec3f(0.0f) };
+                particle_data.push_back(p);
+            }
+        }
+    }
+    particles->setParticles(particle_data);
+    particles->copyToDevice();
+}
+
 // ----------------------------------------------------------------
 void App::setup()
 {
@@ -60,6 +82,7 @@ void App::setup()
     pipeline.setNumPayloads(5);
     pipeline.setNumAttributes(6);
     pipeline.enableMotionBlur();
+    pipeline.setMaxTraversableGraphDepth(3);
 
     // OptixModuleをCUDAファイルから生成
     Module module = pipeline.createModuleFromCudaFile(context, "kernels.cu");
@@ -79,7 +102,6 @@ void App::setup()
     initResultBufferOnDevice();
 
     // カメラの設定
-    // camera.setOrigin(478.0f, 278.0f, -600.0f);
     camera.setOrigin(478, 278, -600);
     camera.setLookat(278, 278, 0);
     camera.setUp(0, 1, 0);
@@ -182,12 +204,7 @@ void App::setup()
         record.data =
         {
             .shape_data = primitive.shape->devicePtr(),
-            .surface_info =
-            {
-                .data = primitive.material->devicePtr(),
-                .callable_id = primitive.material->surfaceCallableID(),
-                .type = primitive.material->surfaceType()
-            }
+            .surface_info = primitive.material->surfaceInfoDevicePtr()
         };
 
         sbt.addHitgroupRecord({ record });
@@ -228,16 +245,7 @@ void App::setup()
         record.data = 
         {
             .shape_data = shape->devicePtr(), 
-            .surface_info = 
-            {
-                .data = area.devicePtr(),
-                .callable_id = {
-                    .sample = sample_pdf_id, 
-                    .bsdf = area_emitter_prg_id, 
-                    .pdf = sample_pdf_id
-                },
-                .type = SurfaceType::AreaEmitter
-            }
+            .surface_info = area.surfaceInfoDevicePtr()
         };
 
         sbt.addHitgroupRecord({ record });
@@ -372,12 +380,7 @@ void App::setup()
         record.data =
         {
             .shape_data = sphere->devicePtr(),
-            .surface_info =
-            {
-                .data = diffuse->devicePtr(),
-                .callable_id = diffuse_id,
-                .type = diffuse->surfaceType()
-            }
+            .surface_info = diffuse->surfaceInfoDevicePtr()
         };
 
         sbt.addHitgroupRecord({ record });

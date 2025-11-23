@@ -24,7 +24,7 @@ extern "C" __device__ void __miss__envmap()
     float v = 1.0f - (theta + math::pi / 2.0f) / math::pi;
     si->shading.uv = Vec2f(u, v);
     si->trace_terminate = true;
-    si->surface_info.type = SurfaceType::None;
+    si->surface_info->type = SurfaceType::None;
     si->emission = optixDirectCall<Vec3f, SurfaceInteraction*, void*>(
         env->texture.prg_id, si, env->texture.data);
 }

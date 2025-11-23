@@ -10,19 +10,36 @@ namespace prayground {
     namespace {
         // Application directory
         fs::path app_dir = fs::path("");
+        std::vector<fs::path> search_dirs;
 
     } // nonamed namespace
+
+    fs::path pgGetExecutableDir()
+    {
+#if defined(_MSC_VER)
+        char path[FILENAME_MAX] = { 0 };
+        GetModuleFileName(nullptr, path, FILENAME_MAX);
+        return fs::path(path).parent_path().string();
+#else
+        char path[FILENAME_MAX];
+        ssize_t count = readlink("/proc/self/exe", path, FILENAME_MAX);
+        return fs::path(std::string(path, (count > 0) ? count : 0)).parent_path().string();
+#endif
+    }
 
     // -------------------------------------------------------------------------------
     std::optional<fs::path> pgFindDataPath( const fs::path& relative_path )
     {
-        std::array<std::string, 4> parent_dirs = 
-        {
-            pgAppDir().string(), 
-            pgPathJoin(pgAppDir(), "data").string(), 
+        std::vector<std::string> parent_dirs = {
+            pgAppDir().string(),
+            pgPathJoin(pgAppDir(), "data").string(),
             "",
             pgRootDir().string(),
+            pgGetExecutableDir().string()
         };
+
+        for (auto& dir : search_dirs)
+            parent_dirs.push_back(dir.string());
 
         for (auto &parent : parent_dirs)
         {
@@ -48,6 +65,11 @@ namespace prayground {
         return app_dir;
     }
 
+    void pgAddSearchDir(const fs::path& dir)
+    {
+        search_dirs.push_back(dir);
+    }
+
     // -------------------------------------------------------------------------------
     std::string pgGetExtension( const fs::path& filepath )
     {
@@ -61,7 +83,12 @@ namespace prayground {
         return is_dir ? dirpath + "/" + stem : stem;
     }
 
-    std::filesystem::path pgGetDir(const fs::path& filepath)
+    fs::path pgGetFilename(const fs::path& filepath)
+    {
+        return filepath.has_filename() ? filepath.filename().string() : "";
+    }
+
+    fs::path pgGetDir(const fs::path& filepath)
     {
         return filepath.has_parent_path() ? filepath.parent_path() : "";
     }

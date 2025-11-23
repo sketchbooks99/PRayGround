@@ -16,4 +16,9 @@ mkdir -p $1
 
 cp ./apps/empty_app/* $1
 
+APP_NAME=$(basename $1)
+
+# Replace the app name in CMakeLists.txt
+sed -i "s/empty_app/$APP_NAME/g" $1/CMakeLists.txt
+
 echo "$1 is created."

@@ -6,6 +6,7 @@
 
 #include <prayground/core/material.h>
 #include <prayground/core/texture.h>
+#include "thinfilm.h"
 
 namespace prayground {
 
@@ -14,15 +15,22 @@ namespace prayground {
         struct Data {
             Texture::Data texture;
             bool twosided;
+
+            // Thinfilm
+            bool use_thinfilm;
+            Thinfilm::Data thinfilm;
         };
 
 #ifndef __CUDACC__
-        Conductor(const SurfaceCallableID& surface_callable_id, const std::shared_ptr<Texture>& texture, bool twosided=true);
+        Conductor(
+            const SurfaceCallableID& surface_callable_id, 
+            const std::shared_ptr<Texture>& texture, 
+            bool twosided=true, 
+            Thinfilm thinfilm = Thinfilm()
+        );
         ~Conductor();
 
         SurfaceType surfaceType() const override;
-
-        SurfaceInfo surfaceInfo() const override;
 
         void copyToDevice() override;
         void free() override;
@@ -30,10 +38,18 @@ namespace prayground {
         void setTexture(const std::shared_ptr<Texture>& texture);
         std::shared_ptr<Texture> texture() const;
 
+        void setTwosided(bool twosided);
+        bool twosided() const;
+
+        void setThinfilm(const Thinfilm& thinfilm);
+        Thinfilm thinfilm() const;
+
         Data getData() const;
     private:
         std::shared_ptr<Texture> m_texture;
         bool m_twosided;
+
+        Thinfilm m_thinfilm;
 #endif
     };
 
